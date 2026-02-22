@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost']
+ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com']
 
 
 # Application definition
