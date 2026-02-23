@@ -1,8 +1,8 @@
 name: Incidencia
 description: Reportar un error o incidencia
-labels: ["tipo: Bug"]
-projects: [app/user-search]
-assignees: ["PFerreria", "bocheti"]
+type: "Bug"
+projects: []
+assignees: []
 body:
   - type: input
     id: description
