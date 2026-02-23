@@ -2,58 +2,144 @@ import { Slot } from "expo-router";
 import { View, Pressable, StyleSheet, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useWindowDimensions } from "react-native";
+import { Link, type Href } from "expo-router";
+import { Image } from "react-native";
+import { useState } from "react";
+import { Text } from "react-native";
 
 export default function CustomTabLayout() {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 768; // puedes ajustar el breakpoint
+  const isDesktop = width >= 768;
+  const [expanded, setExpanded] = useState(false);
 
   const NavButton = ({
     icon,
-    isCenter = false,
+    href,
   }: {
     icon: any;
-    isCenter?: boolean;
+    href?: any;
   }) => {
-    return (
-      <Pressable
-        style={[
-          styles.navButton,
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={isCenter ? 32 : 24}
-          color="#ffffff"
-        />
+    const button = (
+      <Pressable style={styles.navButton}>
+        <Ionicons name={icon} size={24} color="#ffffff" />
       </Pressable>
     );
+
+    if (href) {
+      return (
+        <Link href={href} asChild>
+          {button}
+        </Link>
+      );
+    }
+
+    return button;
+  };
+
+  const SidebarItem = ({
+    icon,
+    label,
+    expanded,
+    href,
+  }: {
+    icon: any;
+    label: string;
+    expanded: boolean;
+    href?: Href;
+  }) => {
+    const content = (
+      <Pressable style={styles.sidebarItem}>
+        <Ionicons name={icon} size={22} color="#ffffff" />
+        {expanded && <Text style={styles.sidebarText}>{label}</Text>}
+      </Pressable>
+    );
+
+    if (href) {
+      return (
+        <Link href={href} asChild>
+          {content}
+        </Link>
+      );
+    }
+
+    return content;
   };
 
   return (
     <View style={styles.container}>
       {/* WEB SIDEBAR */}
       {isDesktop && (
-        <View style={styles.sidebar}>
-          <NavButton icon="home" />
-          <NavButton icon="search" />
-          <NavButton icon="calendar" />
-          <NavButton icon="people" />
-          <NavButton icon="compass" />
-          <NavButton icon="settings" />
-          <NavButton icon="person" />
+        <View
+          style={[
+            styles.sidebar,
+            expanded && styles.sidebarExpanded,
+          ]}
+        >
+          {/* TOP: Logo */}
+          <View style={styles.sidebarTop}>
+            <Image
+              source={require("../../assets/images/icon-current-white.png")}
+              style={[
+                styles.sidebarLogo,
+                expanded && styles.sidebarLogoExpanded,
+              ]}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* CENTER: Iconos */}
+          <View style={styles.sidebarCenter}>
+            <SidebarItem icon="home" label="Home" expanded={expanded} href="/" />
+            <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
+            <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
+            <SidebarItem icon="people" label="Our Team" expanded={expanded} />
+            <SidebarItem icon="compass" label="Map" expanded={expanded} />
+            <SidebarItem icon="settings" label="Settings" expanded={expanded} />
+            <SidebarItem icon="person" label="Profile" expanded={expanded} />
+          </View>
+
+          {/* BOTTOM: Flecha */}
+          <Pressable
+            style={styles.expandButton}
+            onPress={() => setExpanded(!expanded)}
+          >
+            <Ionicons
+              name={expanded ? "chevron-back" : "chevron-forward"}
+              size={22}
+              color="#ffffff"
+            />
+          </Pressable>
         </View>
       )}
 
       {/* CONTENIDO */}
       <View style={styles.content}>
+        {!isDesktop && (
+          <View style={styles.topBar}>
+            <Pressable style={styles.profileContainer}>
+              <View style={styles.profileAvatar} />
+            </Pressable>
+
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("../../assets/images/icon-current-white.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
+            <View style={styles.sidePlaceholder} />
+          </View>
+        )}
+
         <Slot />
       </View>
 
       {/* MOBILE BOTTOM BAR */}
       {!isDesktop && (
         <View style={styles.bottomBar}>
-          <NavButton icon="home" />
-          <NavButton icon="search" />
+          <NavButton icon="home" href="/"/>
+          <NavButton icon="search" href="/search" />
           <NavButton icon="add-circle" />
           <NavButton icon="chatbubble-ellipses" />
           <NavButton icon="compass" />
@@ -73,29 +159,127 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8E5D8",
   },
 
-  // WEB SIDEBAR
-  sidebar: {
-    width: 90,
-    backgroundColor: "#10464d",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 30,
-  },
-
   // MOBILE BAR
   bottomBar: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 75,
+    bottom: 20,
+    left: 20,
+    right: 20,
+    height: 60,
     backgroundColor: "#10464d",
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-  },
+    borderRadius: 35,
 
+    // sombra iOS
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+
+    // sombra Android
+    elevation: 8,
+  },
   navButton: {
     padding: 10,
+  },
+
+  topBar: {
+    height: 60,
+    backgroundColor: "#10464d",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+
+  logoContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  sidePlaceholder: {
+    width: 35,
+  },
+
+  profileContainer: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+
+  profileAvatar: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#ccc",
+    borderRadius: 18,
+  },
+
+  logo: {
+    width: 120,
+    height: 40,
+  },
+
+  sidebarLogoImage: {
+    width: 50,
+    height: 50,
+  },
+
+  sidebarButtons: {
+    gap: 30,
+  },
+
+  sidebar: {
+    width: 80,
+    backgroundColor: "#10464d",
+    paddingVertical: 20,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  sidebarExpanded: {
+    width: 170,
+    alignItems: "flex-start",
+    paddingLeft: 20,
+  },
+
+  sidebarTop: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  sidebarLogo: {
+    width: 50,
+    height: 50,
+  },
+
+  sidebarLogoExpanded: {
+    width: 110,
+    height: 110,
+    transform: [{ translateX: -10 }],
+  },
+
+  sidebarCenter: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 30,
+  },
+
+  sidebarItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+  },
+
+  sidebarText: {
+    color: "#ffffff",
+    fontSize: 18,
+  },
+
+  expandButton: {
+    marginBottom: 10,
   },
 });
