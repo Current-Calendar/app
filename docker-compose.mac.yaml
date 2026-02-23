@@ -19,6 +19,7 @@ services:
       - current_network
       
   db:
+    platform: linux/amd64
     image: postgis/postgis:16-3.5
     container_name: db_container
     env_file:
