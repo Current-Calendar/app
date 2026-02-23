@@ -1,6 +1,6 @@
 name: Tarea
 description: Tarea a realizar
-labels: ["type: Task"]
+type: "Task"
 projects: []
 assignees: []
 body:
