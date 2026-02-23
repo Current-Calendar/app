@@ -1,0 +1,38 @@
+name: Mejora
+description: Proponer una mejora o nueva funcionalidad
+type: "Improvement"
+projects: []
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: ¿En qué consiste la mejora y qué problema resuelve?
+      placeholder: Breve resumen de la mejora propuesta.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivación
+      description: ¿Por qué es necesaria esta mejora? ¿Qué beneficios aporta?
+      placeholder: Explica el contexto o la necesidad que ha llevado a proponer esta mejora.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta de Solución
+      description: ¿Cómo se podría implementar esta mejora?
+      placeholder: Describe la solución propuesta, si tienes alguna en mente.
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Información Adicional
+      description: Cualquier contexto adicional, capturas de pantalla o referencias útiles.
+      placeholder: Añade aquí cualquier detalle relevante.
+    validations:
+      required: false
