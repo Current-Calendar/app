@@ -22,8 +22,7 @@ class RegistroUsuarioTests(APITestCase):
             'password': 'TestPassword123!',
             'password2': 'TestPassword123!',
             'pronombres': 'él/he',
-            'biografia': 'Esta es mi biografía de prueba',
-            'link': 'https://example.com'
+            'biografia': 'Esta es mi biografía de prueba'
         }
 
     def test_registro_exitoso(self):
@@ -47,7 +46,6 @@ class RegistroUsuarioTests(APITestCase):
         self.assertEqual(usuario.email, 'test@example.com')
         self.assertEqual(usuario.pronombres, 'él/he')
         self.assertEqual(usuario.biografia, 'Esta es mi biografía de prueba')
-        self.assertEqual(usuario.link, 'https://example.com')
 
     def test_password_hasheada_correctamente(self):
         """Test: La contraseña debe estar hasheada con Argon2."""
