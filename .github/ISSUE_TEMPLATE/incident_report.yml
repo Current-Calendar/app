@@ -1,0 +1,62 @@
+name: Incidencia
+description: Reportar un error o incidencia
+type: "Bug"
+projects: []
+assignees: []
+body:
+  - type: input
+    id: description
+    attributes:
+      label: "Descripción"
+      description: "Describe brevemente la incidencia"
+      placeholder: "Ejemplo: Al hacer clic en el botón de enviar, la aplicación se cierra inesperadamente"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Pasos para Reproducir"
+      description: "Lista los pasos para reproducir el problema"
+      placeholder: "1. Abrir la aplicación\n2. Hacer clic en enviar\n3. Observar el cierre inesperado"
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: "Comportamiento Esperado"
+      description: "¿Qué debería haber ocurrido?"
+      placeholder: "El formulario debería enviarse correctamente"
+    validations:
+      required: true
+  - type: input
+    id: actual
+    attributes:
+      label: "Comportamiento Actual"
+      description: "¿Qué ocurrió realmente?"
+      placeholder: "La aplicación se cierra y muestra un mensaje de error"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: "Versión del Software"
+      description: "Especifica la versión del software"
+      placeholder: "Ejemplo: v2.3.1"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: "Navegador / Entorno"
+      description: "Nombre y versión del navegador o entorno donde ocurre el error"
+      placeholder: "Ejemplo: Chrome 118.0, Windows 11, contenedor Docker, entorno Render"
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: "Detalles Adicionales / Capturas de Pantalla"
+      description: "Cualquier información adicional, registros o capturas de pantalla"
+      placeholder: "Adjunta capturas de pantalla o registros aquí"
+    validations:
+      required: false
