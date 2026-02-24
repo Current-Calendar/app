@@ -28,6 +28,12 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('api/v1/mock', views.hola_mundo),
+    path('api/v1/google-auth', views.google_authorization),
+    path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
+    path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),
+    path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
+    path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
+
 ]
 
 
