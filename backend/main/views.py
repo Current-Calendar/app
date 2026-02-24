@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from django.core.cache import cache
 from django.contrib.gis.geos import Point
 from main.models import MockElement
-
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 @api_view(['GET'])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
@@ -37,3 +38,11 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+class UsuarioPropioView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request):
+        request.user.delete()
+        return Response(
+            {"message": "Usuario eliminado satisfactoriamente"},
+            status=202
+        )
