@@ -91,7 +91,7 @@ export default function CustomTabLayout() {
           <View style={styles.sidebarCenter}>
             <SidebarItem icon="home" label="Home" expanded={expanded} href="/" />
             <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
-            <SidebarItem icon="calendar" label="Calendars" expanded={expanded} href="/calendar" />
+            <SidebarItem icon="calendar" label="Calendars" expanded={expanded} href="/calendars" />
             <SidebarItem icon="people" label="Our Team" expanded={expanded} />
             <SidebarItem icon="compass" label="Map" expanded={expanded} />
             <SidebarItem icon="settings" label="Settings" expanded={expanded} />
@@ -138,7 +138,7 @@ export default function CustomTabLayout() {
       {/* MOBILE BOTTOM BAR */}
       {!isDesktop && (
         <View style={styles.bottomBar}>
-          <NavButton icon="home" href="/"/>
+          <NavButton icon="home" href="/" />
           <NavButton icon="search" href="/search" />
           <NavButton icon="add-circle" />
           <NavButton icon="chatbubble-ellipses" />
