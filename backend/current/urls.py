@@ -21,13 +21,14 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-
+from django.urls import reverse
 
 urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('api/v1/mock', views.hola_mundo),
+    path('api/v1/users/me',views.editar_usuario_propio,name="editar-mi-usuario"),
 ]
 
 

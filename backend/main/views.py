@@ -1,9 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
 from django.core.cache import cache
 from django.contrib.gis.geos import Point
 from main.models import MockElement
-
+from main.serializers import UserSerializer
+from main.models import Usuario
 @api_view(['GET'])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
@@ -37,3 +40,11 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def editar_usuario_propio(request):
+    serializer=UserSerializer(request.user,data=request.data,partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data,status=200)
+    return Response(serializer.errors,status=400)
