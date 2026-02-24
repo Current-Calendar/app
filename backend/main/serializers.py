@@ -30,11 +30,10 @@ class UsuarioRegistroSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ('id', 'username', 'email', 'password', 'password2', 'pronombres', 'biografia', 'link')
+        fields = ('id', 'username', 'email', 'password', 'password2', 'pronombres', 'biografia')
         extra_kwargs = {
             'pronombres': {'required': False},
-            'biografia': {'required': False},
-            'link': {'required': False}
+            'biografia': {'required': False}
         }
 
     def validate_email(self, value):
@@ -60,7 +59,7 @@ class UsuarioRegistroSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El nombre de usuario no puede tener más de 150 caracteres.")
         
         return value
-      
+
     def validate(self, attrs):
         """
         Validación a nivel de objeto: 
@@ -102,8 +101,7 @@ class UsuarioRegistroSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             password=validated_data['password'],
             pronombres=validated_data.get('pronombres', ''),
-            biografia=validated_data.get('biografia', ''),
-            link=validated_data.get('link', '')
+            biografia=validated_data.get('biografia', '')
         )
         
         return usuario
@@ -113,9 +111,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
     """
     Serializer para mostrar información del usuario (sin contraseña).
     """
-    seguidores_count = serializers.SerializerMethodField()
-    seguidos_count = serializers.SerializerMethodField()
-    calendarios_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
@@ -125,23 +120,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'email',
             'pronombres',
             'biografia',
-            'link',
-            'foto',
-            'date_joined',
-            'seguidores_count',
-            'seguidos_count',
-            'calendarios_count'
         )
         read_only_fields = ('id', 'date_joined')
 
-    def get_seguidores_count(self, obj):
-        """Retorna el número de seguidores del usuario."""
-        return obj.seguidores_set.count()
-
-    def get_seguidos_count(self, obj):
-        """Retorna el número de usuarios que sigue."""
-        return obj.seguidos.count()
-
-    def get_calendarios_count(self, obj):
-        """Retorna el número de calendarios creados por el usuario."""
-        return obj.calendarios_creados.count()
