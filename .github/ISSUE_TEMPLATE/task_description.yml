@@ -1,0 +1,22 @@
+name: Tarea
+description: Tarea a realizar
+type: "Task"
+projects: ["Current Calendar"]
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: ¿Qué hay que hacer?
+      placeholder: Breve resumen de la tarea.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Detalles
+      description: Contexto adicional, requisitos o aclaraciones.
+      placeholder: Añade aquí cualquier detalle relevante.
+    validations:
+      required: false

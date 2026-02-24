@@ -1,0 +1,46 @@
+name: Review
+description: Revisión de una tarea o entregable
+type: "Review"
+projects: []
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: ¿Qué debe revisarse y en qué contexto?
+      placeholder: Breve resumen de lo que se solicita revisar.
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: Enlace al Recurso
+      description: Enlace a la pull request, documento o recurso a revisar.
+      placeholder: "Ejemplo: https://github.com/app/repo/pull/42"
+    validations:
+      required: false
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Criterios de Revisión
+      description: ¿Qué aspectos deben comprobarse durante la revisión?
+      placeholder: "Ejemplo: Comprobar que el código sigue las convenciones del proyecto, que los tests pasan, etc."
+    validations:
+      required: false
+  - type: textarea
+    id: improvements
+    attributes:
+      label: ¿Qué tiene que mejorarse?
+      description: Indica los puntos concretos que deben corregirse o mejorarse.
+      placeholder: "Ejemplo: La validación del formulario no cubre todos los casos, falta documentación en los métodos, etc."
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Información Adicional
+      description: Cualquier contexto adicional relevante para la revisión.
+      placeholder: Añade aquí cualquier detalle relevante.
+    validations:
+      required: false
