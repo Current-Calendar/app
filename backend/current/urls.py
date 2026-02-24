@@ -28,6 +28,9 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('api/v1/mock', views.hola_mundo),
+    path('calendarios/<int:calendario_id>/eliminar/', views.eliminar_calendario, name='eliminar_calendario'),
+    path('calendarios/<int:calendario_id>/editar/', views.editar_calendario, name='editar_calendario'),
+
 ]
 
 
