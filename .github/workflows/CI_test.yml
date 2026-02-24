@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: feature/ci-test
+    branches: "**"
 
 jobs:
   test:
