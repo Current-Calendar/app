@@ -91,7 +91,7 @@ export default function CustomTabLayout() {
           <View style={styles.sidebarCenter}>
             <SidebarItem icon="home" label="Home" expanded={expanded} href="/" />
             <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
-            <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
+            <SidebarItem icon="calendar" label="Calendars" expanded={expanded} href="/calendar" />
             <SidebarItem icon="people" label="Our Team" expanded={expanded} />
             <SidebarItem icon="compass" label="Map" expanded={expanded} />
             <SidebarItem icon="settings" label="Settings" expanded={expanded} />
