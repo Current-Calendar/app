@@ -16,7 +16,7 @@ class EditarUsuarioTestCase(TestCase):
         self.user = Usuario.objects.create_user(
             email="user@example.com", password="password123", username="user1"
         )
-        self.url=reverse("editar-mi-usuario")
+        self.url=reverse("usuario-propio-view")
     def test_usuario_actualiza_su_perfil(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.put(
@@ -36,4 +36,3 @@ class EditarUsuarioTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.user.refresh_from_db()
         self.assertNotEqual(self.user.username, "hackeado")
-    
