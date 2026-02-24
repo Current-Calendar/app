@@ -135,7 +135,7 @@ def import_google_calendar(request):
     """Endpoint para importar eventos del calendario de Google."""
     momento_actual = timezone.now().isoformat()
     events = []
-    usuario_creador = Usuario.objects.filter(id=20).first()
+    usuario_creador = Usuario.objects.filter().first()
     estado_solicitado = 'AMIGOS'
     raw_credentials = request.session.get('google_credentials')
     if not raw_credentials:
@@ -321,3 +321,25 @@ def ics_import(request):
         evento.calendarios.add(calendario)
 
     return Response({"message": "Archivo ICS importado exitosamente"}, headers={"Access-Control-Allow-Origin": "*"})
+
+@api_view(['GET'])
+def export_to_ics(request, calendario_id):
+    """Endpoint para exportar un calendario a formato ICS."""
+    try:
+        calendario = Calendario.objects.get(id=calendario_id)
+    except Calendario.DoesNotExist:
+        return Response({"error": "Calendario no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
+
+    cal = Calendar()
+    cal.add('prodid', '-//Current Calendar//')
+    cal.add('version', '2.0')
+
+    for evento in calendario.eventos.all():
+        event = evento.to_ical_event()
+        cal.add_component(event)
+
+    ics_content = cal.to_ical()
+    response = Response(ics_content, content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
