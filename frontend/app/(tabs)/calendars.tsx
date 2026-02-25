@@ -1,0 +1,133 @@
+import React, { useMemo, useState } from 'react';
+import { View, ScrollView, StyleSheet } from 'react-native';
+
+import { CalendarHeader } from '@/components/calendar-header';
+import { CalendarSelector } from '@/components/calendar-selector';
+import { EventFilterBar } from '@/components/event-filter-bar';
+import { CalendarGrid } from '@/components/calendar-grid';
+import { EventDetailModal } from '@/components/event-detail-modal';
+import { CalendarInfoModal } from '@/components/calendar-info-modal';
+
+import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
+import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+
+// TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
+//   GET /calendars          -> CalendarsResponse
+//   GET /events?calendarId= -> EventsResponse
+
+const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export default function CalendarScreen() {
+    const today = new Date();
+    const [year, setYear] = useState(today.getFullYear());
+    const [month, setMonth] = useState(today.getMonth());
+
+    const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
+    const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
+
+    const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+    const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
+
+    // TODO BACKEND - Once endpoints exist, move filtering server-side
+    const filteredEvents = useMemo(() => {
+        let list = MOCK_EVENTS;
+        if (selectedCalendarId) {
+            list = list.filter((e) => e.calendarId === selectedCalendarId);
+        }
+        if (selectedEventType) {
+            list = list.filter((e) => e.type === selectedEventType);
+        }
+        return list;
+    }, [selectedCalendarId, selectedEventType]);
+
+    const goToPrevMonth = () => {
+        if (month === 0) {
+            setMonth(11);
+            setYear((y) => y - 1);
+        } else {
+            setMonth((m) => m - 1);
+        }
+    };
+
+    const goToNextMonth = () => {
+        if (month === 11) {
+            setMonth(0);
+            setYear((y) => y + 1);
+        } else {
+            setMonth((m) => m + 1);
+        }
+    };
+
+    const goToToday = () => {
+        const now = new Date();
+        setYear(now.getFullYear());
+        setMonth(now.getMonth());
+    };
+
+    return (
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={styles.toolbar}>
+                <CalendarSelector
+                    calendars={MOCK_CALENDARS}
+                    selectedId={selectedCalendarId}
+                    onChange={setSelectedCalendarId}
+                    onInfoPress={setInfoCalendar}
+                />
+            </View>
+
+            <View style={styles.headerBlock}>
+                <CalendarHeader
+                    monthLabel={`${MONTH_NAMES[month]} ${year}`}
+                    onPrevMonth={goToPrevMonth}
+                    onNextMonth={goToNextMonth}
+                    onTodayPress={goToToday}
+                />
+            </View>
+
+            <View style={styles.filterBlock}>
+                <EventFilterBar selected={selectedEventType} onChange={setSelectedEventType} />
+            </View>
+
+            <CalendarGrid
+                year={year}
+                month={month}
+                events={filteredEvents}
+                onEventPress={setActiveEvent}
+            />
+
+            <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
+            <CalendarInfoModal calendar={infoCalendar} onClose={() => setInfoCalendar(null)} />
+        </ScrollView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#E8E5D8',
+    },
+    contentContainer: {
+        flexGrow: 1,
+        paddingBottom: 100, // room for mobile bottom bar
+    },
+    toolbar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        marginBottom: 8,
+    },
+    headerBlock: {
+        marginBottom: 12,
+    },
+    filterBlock: {
+        marginBottom: 20,
+    },
+});
