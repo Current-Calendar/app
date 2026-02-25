@@ -6,57 +6,57 @@ from main.models import Usuario, Calendario, Evento
 
 # Create your tests here.
 
-ENDPOINT_EDITAR_EVENTO = "/api/v1/eventos/{}"
+EDIT_EVENT_ENDPOINT = "/api/v1/eventos/{}"
 
 
-class EditarEventoTests(TestCase):
+class EditEventTests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
 
-        self.usuario = Usuario.objects.create_user(
+        self.user = Usuario.objects.create_user(
             username="eventuser",
             email="event@example.com",
             password="testpass123",
         )
 
-        self.calendario1 = Calendario.objects.create(
-            creador=self.usuario,
+        self.calendar1 = Calendario.objects.create(
+            creador=self.user,
             nombre="Calendario 1",
             estado="PUBLICO",
         )
 
-        self.calendario2 = Calendario.objects.create(
-            creador=self.usuario,
+        self.calendar2 = Calendario.objects.create(
+            creador=self.user,
             nombre="Calendario 2",
             estado="PUBLICO",
         )
 
-        self.evento = Evento.objects.create(
+        self.event = Evento.objects.create(
             titulo="Evento Original",
             descripcion="Descripcion original",
             nombre_lugar="Lugar original",
             fecha="2026-03-01",
             hora="18:00:00",
         )
-        self.evento.calendarios.set([self.calendario1])
+        self.event.calendarios.set([self.calendar1])
 
-    def endpoint(self, evento_id=None):
-        return ENDPOINT_EDITAR_EVENTO.format(evento_id or self.evento.id)
+    def endpoint(self, event_id=None):
+        return EDIT_EVENT_ENDPOINT.format(event_id or self.event.id)
 
-    # ── Casos de éxito ──
+    # ── Success cases ──
 
-    def test_editar_titulo(self):
+    def test_edit_title(self):
         response = self.client.put(
             self.endpoint(),
             {"titulo": "Titulo Nuevo"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertEqual(self.evento.titulo, "Titulo Nuevo")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, "Titulo Nuevo")
 
-    def test_editar_varios_campos(self):
+    def test_edit_multiple_fields(self):
         response = self.client.put(
             self.endpoint(),
             {
@@ -67,58 +67,58 @@ class EditarEventoTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertEqual(self.evento.titulo, "Nuevo titulo")
-        self.assertEqual(self.evento.descripcion, "Nueva descripcion")
-        self.assertEqual(self.evento.nombre_lugar, "Nuevo lugar")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, "Nuevo titulo")
+        self.assertEqual(self.event.descripcion, "Nueva descripcion")
+        self.assertEqual(self.event.nombre_lugar, "Nuevo lugar")
 
-    def test_editar_fecha_y_hora(self):
+    def test_edit_date_and_time(self):
         response = self.client.put(
             self.endpoint(),
             {"fecha": "2026-06-15", "hora": "20:30:00"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertEqual(str(self.evento.fecha), "2026-06-15")
-        self.assertEqual(str(self.evento.hora), "20:30:00")
+        self.event.refresh_from_db()
+        self.assertEqual(str(self.event.fecha), "2026-06-15")
+        self.assertEqual(str(self.event.hora), "20:30:00")
 
-    def test_cambiar_calendarios(self):
+    def test_change_calendars(self):
         response = self.client.put(
             self.endpoint(),
-            {"calendarios": [self.calendario2.id]},
+            {"calendarios": [self.calendar2.id]},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        cals = list(self.evento.calendarios.values_list("id", flat=True))
-        self.assertEqual(cals, [self.calendario2.id])
+        cals = list(self.event.calendarios.values_list("id", flat=True))
+        self.assertEqual(cals, [self.calendar2.id])
 
-    def test_editar_ubicacion(self):
+    def test_edit_location(self):
         response = self.client.put(
             self.endpoint(),
             {"latitud": 37.3861, "longitud": -5.9926},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertIsNotNone(self.evento.ubicacion)
-        self.assertAlmostEqual(self.evento.ubicacion.y, 37.3861, places=4)
-        self.assertAlmostEqual(self.evento.ubicacion.x, -5.9926, places=4)
+        self.event.refresh_from_db()
+        self.assertIsNotNone(self.event.ubicacion)
+        self.assertAlmostEqual(self.event.ubicacion.y, 37.3861, places=4)
+        self.assertAlmostEqual(self.event.ubicacion.x, -5.9926, places=4)
 
-    def test_editar_recurrencia_e_id_externo(self):
+    def test_edit_recurrence_and_external_id(self):
         response = self.client.put(
             self.endpoint(),
             {"recurrencia": 7, "id_externo": "ext-123"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertEqual(self.evento.recurrencia, 7)
-        self.assertEqual(self.evento.id_externo, "ext-123")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.recurrencia, 7)
+        self.assertEqual(self.event.id_externo, "ext-123")
 
-    def test_campos_no_enviados_no_se_modifican(self):
-        titulo_original = self.evento.titulo
-        descripcion_original = self.evento.descripcion
+    def test_unsent_fields_remain_unchanged(self):
+        original_title = self.event.titulo
+        original_description = self.event.descripcion
 
         response = self.client.put(
             self.endpoint(),
@@ -126,36 +126,36 @@ class EditarEventoTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.evento.refresh_from_db()
-        self.assertEqual(self.evento.titulo, titulo_original)
-        self.assertEqual(self.evento.descripcion, descripcion_original)
-        self.assertEqual(self.evento.nombre_lugar, "Solo cambio lugar")
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, original_title)
+        self.assertEqual(self.event.descripcion, original_description)
+        self.assertEqual(self.event.nombre_lugar, "Solo cambio lugar")
 
-    def test_respuesta_contiene_keys_esperadas(self):
+    def test_response_contains_expected_keys(self):
         response = self.client.put(
             self.endpoint(),
             {"titulo": "Check keys"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        keys_esperadas = {
+        expected_keys = {
             "id", "titulo", "descripcion", "nombre_lugar",
             "fecha", "hora", "recurrencia", "id_externo",
             "calendarios", "fecha_creacion",
         }
-        self.assertEqual(set(response.data.keys()), keys_esperadas)
+        self.assertEqual(set(response.data.keys()), expected_keys)
 
-    # ── Casos de error ──
+    # ── Error cases ──
 
-    def test_evento_no_existe(self):
+    def test_event_not_found(self):
         response = self.client.put(
-            self.endpoint(evento_id=9999),
+            self.endpoint(event_id=9999),
             {"titulo": "No existe"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_titulo_vacio(self):
+    def test_empty_title(self):
         response = self.client.put(
             self.endpoint(),
             {"titulo": ""},
@@ -164,7 +164,7 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_fecha_vacia(self):
+    def test_empty_date(self):
         response = self.client.put(
             self.endpoint(),
             {"fecha": ""},
@@ -173,7 +173,7 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_hora_vacia(self):
+    def test_empty_time(self):
         response = self.client.put(
             self.endpoint(),
             {"hora": ""},
@@ -182,7 +182,7 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_calendario_inexistente(self):
+    def test_nonexistent_calendar(self):
         response = self.client.put(
             self.endpoint(),
             {"calendarios": [9999]},
@@ -191,7 +191,7 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("errors", response.data)
 
-    def test_lista_calendarios_vacia(self):
+    def test_empty_calendar_list(self):
         response = self.client.put(
             self.endpoint(),
             {"calendarios": []},
@@ -200,7 +200,7 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_latlon_invalidas(self):
+    def test_invalid_lat_lon(self):
         response = self.client.put(
             self.endpoint(),
             {"latitud": "abc", "longitud": "xyz"},
@@ -209,11 +209,11 @@ class EditarEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_get_no_permitido(self):
+    def test_get_not_allowed(self):
         response = self.client.get(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_post_no_permitido(self):
+    def test_post_not_allowed(self):
         response = self.client.post(
             self.endpoint(),
             {"titulo": "No permitido"},

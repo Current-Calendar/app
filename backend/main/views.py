@@ -44,11 +44,11 @@ def hola_mundo(request):
 
 
 @api_view(['PUT'])
-def editar_evento(request, evento_id):
-    evento = get_object_or_404(Evento, id=evento_id)
+def edit_event(request, evento_id):
+    event = get_object_or_404(Evento, id=evento_id)
     data = request.data
 
-    # Validar que campos requeridos no vengan vacios si se envian
+    # Validate required fields are not empty if provided
     if "titulo" in data and not data["titulo"]:
         return Response(
             {"errors": ["El campo 'titulo' no puede estar vacío."]},
@@ -67,49 +67,49 @@ def editar_evento(request, evento_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Actualizar campos escalares si estan presentes
-    campos_editables = [
+    # Update scalar fields if present
+    editable_fields = [
         "titulo", "descripcion", "nombre_lugar",
         "fecha", "hora", "recurrencia", "id_externo",
     ]
-    for campo in campos_editables:
-        if campo in data:
-            setattr(evento, campo, data[campo])
+    for field in editable_fields:
+        if field in data:
+            setattr(event, field, data[field])
 
-    # Ubicacion via lat/lon
+    # Location via lat/lon
     if "latitud" in data or "longitud" in data:
         lat = data.get("latitud")
         lon = data.get("longitud")
         try:
-            evento.ubicacion = Point(float(lon), float(lat))
+            event.ubicacion = Point(float(lon), float(lat))
         except Exception:
             return Response(
                 {"errors": ["Latitud o longitud inválidas."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    # Calendarios M2M
-    calendarios = None
+    # Calendars M2M
+    calendars = None
     if "calendarios" in data:
-        calendarios_ids = data["calendarios"]
-        if not calendarios_ids or not isinstance(calendarios_ids, list):
+        calendar_ids = data["calendarios"]
+        if not calendar_ids or not isinstance(calendar_ids, list):
             return Response(
                 {"errors": ["Debe indicar al menos un calendario válido."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        calendarios = Calendario.objects.filter(id__in=calendarios_ids)
-        if calendarios.count() != len(calendarios_ids):
+        calendars = Calendario.objects.filter(id__in=calendar_ids)
+        if calendars.count() != len(calendar_ids):
             return Response(
                 {"errors": ["Algún calendario no existe."]},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
     try:
-        evento.full_clean()
+        event.full_clean()
         with transaction.atomic():
-            evento.save()
-            if calendarios is not None:
-                evento.calendarios.set(calendarios)
+            event.save()
+            if calendars is not None:
+                event.calendarios.set(calendars)
 
     except ValidationError as exc:
         raw_messages = []
@@ -126,16 +126,16 @@ def editar_evento(request, evento_id):
 
     return Response(
         {
-            "id": evento.id,
-            "titulo": evento.titulo,
-            "descripcion": evento.descripcion,
-            "nombre_lugar": evento.nombre_lugar,
-            "fecha": evento.fecha,
-            "hora": evento.hora,
-            "recurrencia": evento.recurrencia,
-            "id_externo": evento.id_externo,
-            "calendarios": list(evento.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": evento.fecha_creacion,
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
         },
         status=status.HTTP_200_OK,
     )
