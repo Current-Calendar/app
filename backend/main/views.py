@@ -1,20 +1,16 @@
-
 from rest_framework.decorators import api_view, permission_classes, action
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
-
-from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
-
 from main.models import MockElement, Calendario, Evento, Usuario
 
 
@@ -43,14 +39,6 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
-
-
-@api_view(["GET"])
-from django.shortcuts import get_object_or_404
-from main.models import MockElement
-from .models import Calendario
-from rest_framework import status
-
 
 
 @api_view(['GET'])

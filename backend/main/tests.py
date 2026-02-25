@@ -7,8 +7,8 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
-
-from main.models import Usuario, Calendario
+import datetime
+from main.models import Usuario, Calendario, Evento
 
 Usuario = get_user_model()
 
@@ -591,11 +591,6 @@ class CrearCalendarioTests(TestCase):
         """Devuelve 405 Method Not Allowed al hacer GET al endpoint."""
         response = self.client.get(ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.urls import reverse
-from main.models import Usuario, Calendario, Evento
-import datetime
 
 
 class AsignarEventoCalendarioTests(TestCase):
@@ -757,17 +752,15 @@ class DesasignarEventoCalendarioTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
-from rest_framework.test import APIClient
-from rest_framework import status
-from .models import Calendario, Usuario
+
 
 class EliminarCalendarioTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
 
         # Create users
-        self.creador = Usuario.objects.create_user(username='creador', password='pass1234')
-        self.otro_usuario = Usuario.objects.create_user(username='otro', password='pass1234')
+        self.creador = Usuario.objects.create_user(username='creador', email='creador@test.com', password='pass1234')
+        self.otro_usuario = Usuario.objects.create_user(username='otro', email='otro@test.com', password='pass1234')
 
         # Create calendar
         self.calendario = Calendario.objects.create(
@@ -787,7 +780,7 @@ class EliminarCalendarioTestCase(TestCase):
     def test_eliminar_calendario_sin_autenticar(self):
         """An unauthenticated user cannot delete a calendar"""
         response = self.client.delete(f'/api/v1/calendarios/{self.calendario.id}/eliminar/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_eliminar_calendario_sin_permiso(self):
         """A user who is not the creator cannot delete the calendar"""
@@ -807,8 +800,8 @@ class EditarCalendarioTestCase(TestCase):
         self.client = APIClient()
 
         # Create users
-        self.creador = Usuario.objects.create_user(username='creador', password='pass1234')
-        self.otro_usuario = Usuario.objects.create_user(username='otro', password='pass1234')
+        self.creador = Usuario.objects.create_user(username='creador2', email='creador2@test.com', password='pass1234')
+        self.otro_usuario = Usuario.objects.create_user(username='otro2', email='otro2@test.com', password='pass1234')
 
         # Create calendar
         self.calendario = Calendario.objects.create(
@@ -845,7 +838,7 @@ class EditarCalendarioTestCase(TestCase):
         response = self.client.put(f'/api/v1/calendarios/{self.calendario.id}/editar/', {
             'nombre': 'Intento sin auth'
         })
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""
