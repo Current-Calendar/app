@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
+from django.db.models import Q
 
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 
@@ -76,6 +77,39 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+
+@api_view(['GET'])
+def buscar_usuarios(request):
+    query = request.GET.get("search")
+
+    if not query:
+        return Response(
+            {"errors": ["El parámetro 'search' es obligatorio."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    usuarios = Usuario.objects.filter(
+        Q(username__icontains=query) |
+        Q(email__icontains=query) |
+        Q(pronombres__icontains=query)
+    ).distinct()
+
+    resultados = [
+        {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "pronombres": user.pronombres,
+            "biografia": user.biografia,
+            "foto": user.foto.url if user.foto else None,
+            "total_seguidores": user.total_seguidores,
+            "total_seguidos": user.total_seguidos,
+            "total_calendarios_seguidos": user.total_calendarios_seguidos,
+        }
+        for user in usuarios
+    ]
+
+    return Response(resultados, status=status.HTTP_200_OK)
     
 
 @api_view(['POST'])

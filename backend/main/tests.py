@@ -1,14 +1,60 @@
 import json
 
-from django.contrib.auth.hashers import identify_hasher
+from django.contrib.auth.hashers import identify_hasher, check_password
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APITestCase, APIClient
-from rest_framework import status
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
+from rest_framework import status
+from rest_framework.test import APITestCase, APIClient
 
 from main.models import Usuario, Calendario
+
+# Create your tests here.
+ENDPOINT_BUSCAR_USUARIOS = "/api/v1/usuarios"
+
+
+class BuscarUsuariosTests(TestCase):
+
+    def setUp(self):
+        self.client = APIClient()
+
+        self.user1 = Usuario.objects.create_user(
+            username="lucia",
+            email="lucia@example.com",
+            password="123",
+            pronombres="ella",
+        )
+
+        self.user2 = Usuario.objects.create_user(
+            username="antonio",
+            email="antonio@example.com",
+            password="123",
+            pronombres="él",
+        )
+
+    def test_busqueda_por_username(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=luc")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["username"], "lucia")
+
+    def test_busqueda_por_pronombres(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=ella")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+
+    def test_busqueda_sin_parametro(self):
+        response = self.client.get(ENDPOINT_BUSCAR_USUARIOS)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_busqueda_sin_resultados(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=zzz")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 0)
 
 Usuario = get_user_model()
 
