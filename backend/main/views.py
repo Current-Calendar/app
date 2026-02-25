@@ -9,11 +9,9 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
-<<<<<<< feature/create-calendar
 from main.models import MockElement, Calendario, Usuario
-=======
+
 from main.models import MockElement, Calendario, Evento, Usuario
->>>>>>> main
 
 
 class UserViewSet(viewsets.GenericViewSet):
@@ -79,7 +77,6 @@ def hola_mundo(request):
 
 
 @api_view(['POST'])
-<<<<<<< feature/create-calendar
 def crear_calendario(request):
     data = request.data
 
@@ -160,7 +157,6 @@ def crear_calendario(request):
         },
         status=status.HTTP_201_CREATED,
     )
-=======
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -226,4 +222,3 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
->>>>>>> main
