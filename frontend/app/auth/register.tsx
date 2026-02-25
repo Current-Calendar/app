@@ -17,7 +17,7 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
-// ✅ Cambia esto según dónde esté tu API
+// Cambia esto según dónde esté tu API
 // - Web: normalmente http://localhost:8000
 // - Android emulator: http://10.0.2.2:8000
 // - iPhone físico: http://TU_IP_LOCAL:8000
@@ -45,7 +45,6 @@ export default function SignUpScreen() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Validación mínima frontend (para UX)
     if (!username.trim() || !email.trim() || !password || !password2) {
       setErrorMsg("Fill all fields.");
       return;
@@ -61,7 +60,6 @@ export default function SignUpScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // si tu backend requiere CORS, esto no hace daño
           Accept: "application/json",
         },
         body: JSON.stringify({
@@ -75,7 +73,6 @@ export default function SignUpScreen() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        // DRF suele devolver errors por campo: {email:[...], username:[...], non_field_errors:[...]}
         const msg =
           (data &&
             (data.message ||
@@ -91,8 +88,7 @@ export default function SignUpScreen() {
       }
 
       setSuccessMsg("Usuario registrado exitosamente");
-      // opcional: navegar a login
-      setTimeout(() => router.push("/auth/login"), 400);
+      setTimeout(() => router.push("/auth/login"), 400); // Redirige al login para que el usuario inicie sesión después de registrarse
     } catch (e: any) {
       setErrorMsg("No connection to API. Check API_BASE / backend running.");
     } finally {
@@ -182,7 +178,6 @@ export default function SignUpScreen() {
           </Link>
         </View>
 
-        {/* Ayuda visual rápida */}
         <Text style={styles.apiHint}>API: {API_BASE}</Text>
       </View>
     </View>
