@@ -80,7 +80,7 @@ export default function LoginScreen() {
 
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Don’t have an account?</Text>
-          <Link href="/auth/signup" asChild>
+          <Link href="/auth/register" asChild>
             <Pressable>
               <Text style={styles.bottomLink}>Sign Up</Text>
             </Pressable>
