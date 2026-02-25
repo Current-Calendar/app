@@ -38,6 +38,13 @@ urlpatterns = [
     path('api/v1/calendarios', views.crear_calendario),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
+    path('api/v1/google-auth', views.google_authorization),
+    path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
+    path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),
+    path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
+    path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
+    path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
+
 ]
 
 

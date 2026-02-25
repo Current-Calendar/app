@@ -32,6 +32,26 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com']
 
+ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
+
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+GOOGLE_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID')
+
+GOOGLE_REDIRECT_URIS = os.getenv('GOOGLE_REDIRECT_URIS')
+
+GOOGLE_OAUTH2_CLIENT_CONFIG = {
+    "web": {
+        "client_id": GOOGLE_CLIENT_ID,
+        "project_id": GOOGLE_PROJECT_ID,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uris": GOOGLE_REDIRECT_URIS.split(',') if GOOGLE_REDIRECT_URIS else [],
+    }
+}
+
 
 # Application definition
 
