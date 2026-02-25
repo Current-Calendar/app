@@ -4,6 +4,7 @@ import {
     Text,
     Modal,
     Alert,
+    ActivityIndicator,
     Pressable,
     TouchableOpacity,
     StyleSheet,
@@ -27,7 +28,8 @@ const ORIGIN_LABELS: Record<string, { label: string; icon: React.ComponentProps<
 interface CalendarInfoModalProps {
     calendar: Calendar | null;
     onClose: () => void;
-    onDelete?: (calendar: Calendar) => void;
+    onDelete?: (calendar: Calendar) => Promise<void> | void;
+    isDeleting?: boolean;
 }
 
 /**
@@ -35,7 +37,12 @@ interface CalendarInfoModalProps {
  *
  * TODO BACKEND - Data should come from GET /calendars/:id
  */
-export function CalendarInfoModal({ calendar, onClose, onDelete }: CalendarInfoModalProps) {
+export function CalendarInfoModal({
+    calendar,
+    onClose,
+    onDelete,
+    isDeleting = false,
+}: CalendarInfoModalProps) {
     if (!calendar) return null;
 
     const accent = calendar.color;
@@ -109,12 +116,19 @@ export function CalendarInfoModal({ calendar, onClose, onDelete }: CalendarInfoM
                     {onDelete && (
                         <View style={styles.actions}>
                             <TouchableOpacity
-                                style={styles.deleteButton}
+                                style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
                                 onPress={handleDeletePress}
+                                disabled={isDeleting}
                                 activeOpacity={0.75}
                             >
-                                <Ionicons name="trash-outline" size={16} color="#B33F37" />
-                                <Text style={styles.deleteButtonLabel}>Delete calendar</Text>
+                                {isDeleting ? (
+                                    <ActivityIndicator size="small" color="#B33F37" />
+                                ) : (
+                                    <Ionicons name="trash-outline" size={16} color="#B33F37" />
+                                )}
+                                <Text style={styles.deleteButtonLabel}>
+                                    {isDeleting ? 'Deleting...' : 'Delete calendar'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -227,6 +241,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#eb8c8514',
         borderRadius: 14,
         paddingVertical: 11,
+    },
+    deleteButtonDisabled: {
+        opacity: 0.7,
     },
     deleteButtonLabel: {
         fontSize: 14,
