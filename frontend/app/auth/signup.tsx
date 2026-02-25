@@ -22,7 +22,13 @@ export default function SignUpScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Sign Up</Text>
 
+        
+
         <View style={[styles.form, { width: formWidth }]}>
+          
+           <Text style={[styles.label, { marginTop: 14 }]}>Username</Text>
+          <TextInput placeholder="" placeholderTextColor="#999" style={styles.input} />
+          
           <Text style={styles.label}>Email Address</Text>
           <TextInput
             placeholder=""
