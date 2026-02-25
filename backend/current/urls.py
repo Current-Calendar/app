@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario
 from rest_framework import routers
 
 api_router = routers.DefaultRouter()
@@ -32,6 +33,8 @@ urlpatterns = [
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
     path('api/v1/mock', views.hola_mundo),
+    path('api/eventos/asignar/', asignar_evento_a_calendario),
+    path('api/eventos/desasignar/', desasignar_evento_de_calendario),
 ]
 
 
