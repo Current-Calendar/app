@@ -3,6 +3,7 @@ import {
     View,
     Text,
     Modal,
+    Alert,
     Pressable,
     TouchableOpacity,
     StyleSheet,
@@ -26,6 +27,7 @@ const ORIGIN_LABELS: Record<string, { label: string; icon: React.ComponentProps<
 interface CalendarInfoModalProps {
     calendar: Calendar | null;
     onClose: () => void;
+    onDelete?: (calendar: Calendar) => void;
 }
 
 /**
@@ -33,12 +35,29 @@ interface CalendarInfoModalProps {
  *
  * TODO BACKEND - Data should come from GET /calendars/:id
  */
-export function CalendarInfoModal({ calendar, onClose }: CalendarInfoModalProps) {
+export function CalendarInfoModal({ calendar, onClose, onDelete }: CalendarInfoModalProps) {
     if (!calendar) return null;
 
     const accent = calendar.color;
     const privacy = PRIVACY_LABELS[calendar.estado] ?? PRIVACY_LABELS.PRIVADO;
     const origin = ORIGIN_LABELS[calendar.origen] ?? ORIGIN_LABELS.CURRENT;
+
+    const handleDeletePress = () => {
+        if (!onDelete) return;
+
+        Alert.alert(
+            'Delete calendar',
+            `Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => onDelete(calendar),
+                },
+            ]
+        );
+    };
 
     return (
         <Modal visible={!!calendar} transparent animationType="fade" onRequestClose={onClose}>
@@ -86,6 +105,19 @@ export function CalendarInfoModal({ calendar, onClose }: CalendarInfoModalProps)
                             </View>
                         </View>
                     </View>
+
+                    {onDelete && (
+                        <View style={styles.actions}>
+                            <TouchableOpacity
+                                style={styles.deleteButton}
+                                onPress={handleDeletePress}
+                                activeOpacity={0.75}
+                            >
+                                <Ionicons name="trash-outline" size={16} color="#B33F37" />
+                                <Text style={styles.deleteButtonLabel}>Delete calendar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </Pressable>
             </Pressable>
         </Modal>
@@ -181,5 +213,24 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#2D2D2D',
+    },
+    actions: {
+        marginTop: 16,
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderWidth: 1.5,
+        borderColor: '#EB8C85',
+        backgroundColor: '#eb8c8514',
+        borderRadius: 14,
+        paddingVertical: 11,
+    },
+    deleteButtonLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#B33F37',
     },
 });

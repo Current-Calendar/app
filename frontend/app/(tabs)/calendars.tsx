@@ -24,6 +24,8 @@ export default function CalendarScreen() {
     const today = new Date();
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
+    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -33,7 +35,7 @@ export default function CalendarScreen() {
 
     // TODO BACKEND - Once endpoints exist, move filtering server-side
     const filteredEvents = useMemo(() => {
-        let list = MOCK_EVENTS;
+        let list = events;
         if (selectedCalendarId) {
             list = list.filter((e) => e.calendarId === selectedCalendarId);
         }
@@ -41,7 +43,15 @@ export default function CalendarScreen() {
             list = list.filter((e) => e.type === selectedEventType);
         }
         return list;
-    }, [selectedCalendarId, selectedEventType]);
+    }, [events, selectedCalendarId, selectedEventType]);
+
+    const handleDeleteCalendar = (calendar: Calendar) => {
+        setCalendars((current) => current.filter((item) => item.id !== calendar.id));
+        setEvents((current) => current.filter((event) => event.calendarId !== calendar.id));
+        setSelectedCalendarId((current) => (current === calendar.id ? null : current));
+        setActiveEvent((current) => (current?.calendarId === calendar.id ? null : current));
+        setInfoCalendar(null);
+    };
 
     const goToPrevMonth = () => {
         if (month === 0) {
@@ -75,7 +85,7 @@ export default function CalendarScreen() {
         >
             <View style={styles.toolbar}>
                 <CalendarSelector
-                    calendars={MOCK_CALENDARS}
+                    calendars={calendars}
                     selectedId={selectedCalendarId}
                     onChange={setSelectedCalendarId}
                     onInfoPress={setInfoCalendar}
@@ -103,7 +113,11 @@ export default function CalendarScreen() {
             />
 
             <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
-            <CalendarInfoModal calendar={infoCalendar} onClose={() => setInfoCalendar(null)} />
+            <CalendarInfoModal
+                calendar={infoCalendar}
+                onClose={() => setInfoCalendar(null)}
+                onDelete={handleDeleteCalendar}
+            />
         </ScrollView>
     );
 }
