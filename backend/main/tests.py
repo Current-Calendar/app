@@ -3,11 +3,12 @@ import json
 from django.contrib.auth.hashers import identify_hasher
 from django.test import TestCase
 from django.urls import reverse
-<<<<<<< feature/register
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
+
+from main.models import Usuario, Calendario
 
 Usuario = get_user_model()
 
@@ -284,12 +285,6 @@ class UsuarioModelTests(TestCase):
                 email='test@example.com',
                 password='Password123!'
             )
-=======
-from rest_framework.test import APIClient
-from rest_framework import status
-from main.models import Usuario, Calendario
-
-from main.models import Usuario
 
 
 class LoginMutationTests(TestCase):
@@ -762,4 +757,3 @@ class DesasignarEventoCalendarioTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
->>>>>>> main

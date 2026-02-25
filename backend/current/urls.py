@@ -33,13 +33,10 @@ urlpatterns = [
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
     path('api/v1/mock', views.hola_mundo),
-<<<<<<< feature/register
     path('api/v1/auth/registro/', views.registro_usuario, name='registro'),
-=======
     path('api/v1/calendarios', views.crear_calendario),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
->>>>>>> main
 ]
 
 
