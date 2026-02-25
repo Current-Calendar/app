@@ -157,6 +157,7 @@ def crear_calendario(request):
         },
         status=status.HTTP_201_CREATED,
     )
+@api_view(['POST'])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
