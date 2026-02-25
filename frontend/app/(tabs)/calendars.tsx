@@ -226,11 +226,11 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
     screenWrapper: {
         flex: 1,
-        backgroundColor: '#E8E5D8',
+        backgroundColor: '#FFFDED',
     },
     container: {
         flex: 1,
-        backgroundColor: '#E8E5D8',
+        backgroundColor: '#FFFDED',
     },
     contentContainer: {
         flexGrow: 1,
