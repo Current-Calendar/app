@@ -6,6 +6,10 @@ import { Link, type Href } from "expo-router";
 import { Image } from "react-native";
 import { useState } from "react";
 import { Text } from "react-native";
+import { useState } from "react";
+import TopBar from "../../components/nav_bar/top-bar";
+import BottomBar from "../../components/nav_bar/bottom-bar";
+import Sidebar from "../../components/nav_bar/side-bar";
 
 export default function CustomTabLayout() {
   const { width } = useWindowDimensions();
@@ -131,6 +135,12 @@ export default function CustomTabLayout() {
             <View style={styles.sidePlaceholder} />
           </View>
         )}
+        <Sidebar expanded={expanded} setExpanded={setExpanded} />
+      )}
+
+      {/* MOBILE TOP BAR */}
+      <View style={styles.content}>
+        {!isDesktop && <TopBar />}
 
         <Slot />
       </View>
@@ -145,6 +155,7 @@ export default function CustomTabLayout() {
           <NavButton icon="compass" />
         </View>
       )}
+      {!isDesktop && <BottomBar NavButton={NavButton} />}
     </View>
   );
 }
@@ -281,5 +292,8 @@ const styles = StyleSheet.create({
 
   expandButton: {
     marginBottom: 10,
+  },
+  navButton: {
+    padding: 10,
   },
 });
