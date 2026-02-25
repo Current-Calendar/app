@@ -1,6 +1,15 @@
-import React from "react";
-import { View, Text, StyleSheet, TextInput, Pressable, Platform, useWindowDimensions } from "react-native";
-import { Link } from "expo-router";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  Platform,
+  useWindowDimensions,
+  ActivityIndicator,
+} from "react-native";
+import { Link, useRouter } from "expo-router";
 
 const BG = "#FBF7EA";
 const PINK = "#F2A3A6";
@@ -8,10 +17,88 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
+// ✅ Cambia esto según dónde esté tu API
+// - Web: normalmente http://localhost:8000
+// - Android emulator: http://10.0.2.2:8000
+// - iPhone físico: http://TU_IP_LOCAL:8000
+const API_BASE =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:8000"
+    : "http://localhost:8000";
+
 export default function SignUpScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const onSignup = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    // Validación mínima frontend (para UX)
+    if (!username.trim() || !email.trim() || !password || !password2) {
+      setErrorMsg("Fill all fields.");
+      return;
+    }
+    if (password !== password2) {
+      setErrorMsg("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/registro/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // si tu backend requiere CORS, esto no hace daño
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+          password2,
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        // DRF suele devolver errors por campo: {email:[...], username:[...], non_field_errors:[...]}
+        const msg =
+          (data &&
+            (data.message ||
+              data.detail ||
+              data.non_field_errors?.[0] ||
+              data.email?.[0] ||
+              data.username?.[0] ||
+              data.password?.[0] ||
+              data.password2?.[0])) ||
+          "Register failed.";
+        setErrorMsg(String(msg));
+        return;
+      }
+
+      setSuccessMsg("Usuario registrado exitosamente");
+      // opcional: navegar a login
+      setTimeout(() => router.push("/auth/login"), 400);
+    } catch (e: any) {
+      setErrorMsg("No connection to API. Check API_BASE / backend running.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -22,15 +109,21 @@ export default function SignUpScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Sign Up</Text>
 
-        
-
         <View style={[styles.form, { width: formWidth }]}>
-          
-           <Text style={[styles.label, { marginTop: 14 }]}>Username</Text>
-          <TextInput placeholder="" placeholderTextColor="#999" style={styles.input} />
-          
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>Username</Text>
           <TextInput
+            value={username}
+            onChangeText={setUsername}
+            placeholder=""
+            placeholderTextColor="#999"
+            style={styles.input}
+            autoCapitalize="none"
+          />
+
+          <Text style={[styles.label, { marginTop: 14 }]}>Email Address</Text>
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
             placeholder=""
             placeholderTextColor="#999"
             autoCapitalize="none"
@@ -39,12 +132,29 @@ export default function SignUpScreen() {
           />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput placeholder="" placeholderTextColor="#999" secureTextEntry style={styles.input} />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder=""
+            placeholderTextColor="#999"
+            secureTextEntry
+            style={styles.input}
+          />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Confirm Password</Text>
-          <TextInput placeholder="" placeholderTextColor="#999" secureTextEntry style={styles.input} />
+          <TextInput
+            value={password2}
+            onChangeText={setPassword2}
+            placeholder=""
+            placeholderTextColor="#999"
+            secureTextEntry
+            style={styles.input}
+          />
 
-          <Pressable style={styles.btn}>
+          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
+
+          <Pressable style={styles.btn} onPress={onSignup} disabled={loading}>
             <View style={styles.btnBubbles} pointerEvents="none">
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
               <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
@@ -55,7 +165,11 @@ export default function SignUpScreen() {
               <View style={[styles.bubbleDot, { bottom: 10, right: 16, width: 10, height: 10 }]} />
             </View>
 
-            <Text style={styles.btnText}>Sign Up</Text>
+            {loading ? (
+              <ActivityIndicator color="#EAF7F6" />
+            ) : (
+              <Text style={styles.btnText}>Sign Up</Text>
+            )}
           </Pressable>
         </View>
 
@@ -67,6 +181,9 @@ export default function SignUpScreen() {
             </Pressable>
           </Link>
         </View>
+
+        {/* Ayuda visual rápida */}
+        <Text style={styles.apiHint}>API: {API_BASE}</Text>
       </View>
     </View>
   );
@@ -78,7 +195,6 @@ const styles = StyleSheet.create({
   topSmall: { color: TEXT, opacity: 0.65, fontSize: 14, textTransform: "lowercase" },
 
   content: { flex: 1, alignItems: "center", paddingHorizontal: 22, paddingTop: 52 },
-
   title: { fontSize: 34, color: TEXT, fontWeight: "800", marginBottom: 18 },
 
   form: { marginTop: 6 },
@@ -91,6 +207,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: "rgba(255,255,255,0.45)",
   },
+
+  errorText: { marginTop: 10, color: "#C43B3B", fontWeight: "800" },
+  successText: { marginTop: 10, color: "#1F6A6A", fontWeight: "900" },
 
   btn: {
     marginTop: 18,
@@ -108,6 +227,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     position: "relative",
     overflow: "hidden",
+    opacity: 1,
   },
   btnBubbles: { position: "absolute", inset: 0 },
   bubbleDot: {
@@ -124,4 +244,6 @@ const styles = StyleSheet.create({
   bottomRow: { marginTop: 30, alignItems: "center" },
   bottomText: { color: TEXT, opacity: 0.65, fontSize: 13 },
   bottomLink: { marginTop: 4, color: PINK, fontSize: 13, fontWeight: "800", textDecorationLine: "underline" },
+
+  apiHint: { marginTop: 16, fontSize: 11, color: TEXT, opacity: 0.45 },
 });
