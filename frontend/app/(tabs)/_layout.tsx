@@ -1,28 +1,22 @@
-import { Slot } from "expo-router";
-import { View, Pressable, StyleSheet, Platform } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Image,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useWindowDimensions } from "react-native";
-import { Link, type Href } from "expo-router";
-import { Image } from "react-native";
-import { useState } from "react";
-import { Text } from "react-native";
-import { useState } from "react";
-import TopBar from "../../components/nav_bar/top-bar";
-import BottomBar from "../../components/nav_bar/bottom-bar";
-import Sidebar from "../../components/nav_bar/side-bar";
+import { Link, Slot, Href } from "expo-router";
 
 export default function CustomTabLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
   const [expanded, setExpanded] = useState(false);
 
-  const NavButton = ({
-    icon,
-    href,
-  }: {
-    icon: any;
-    href?: any;
-  }) => {
+  // Componente interno para los botones de navegación (Mobile)
+  const NavButton = ({ icon, href }: { icon: any; href?: Href }) => {
     const button = (
       <Pressable style={styles.navButton}>
         <Ionicons name={icon} size={24} color="#ffffff" />
@@ -36,10 +30,10 @@ export default function CustomTabLayout() {
         </Link>
       );
     }
-
     return button;
   };
 
+  // Componente interno para los items del Sidebar (Web)
   const SidebarItem = ({
     icon,
     label,
@@ -65,13 +59,12 @@ export default function CustomTabLayout() {
         </Link>
       );
     }
-
     return content;
   };
 
   return (
     <View style={styles.container}>
-      {/* WEB SIDEBAR */}
+      {/* --- WEB SIDEBAR --- */}
       {isDesktop && (
         <View
           style={[
@@ -102,7 +95,7 @@ export default function CustomTabLayout() {
             <SidebarItem icon="person" label="Profile" expanded={expanded} />
           </View>
 
-          {/* BOTTOM: Flecha */}
+          {/* BOTTOM: Botón Expandir */}
           <Pressable
             style={styles.expandButton}
             onPress={() => setExpanded(!expanded)}
@@ -116,8 +109,9 @@ export default function CustomTabLayout() {
         </View>
       )}
 
-      {/* CONTENIDO */}
+      {/* --- CONTENIDO PRINCIPAL --- */}
       <View style={styles.content}>
+        {/* TOP BAR (Solo Mobile) */}
         {!isDesktop && (
           <View style={styles.topBar}>
             <Pressable style={styles.profileContainer}>
@@ -135,27 +129,21 @@ export default function CustomTabLayout() {
             <View style={styles.sidePlaceholder} />
           </View>
         )}
-        <Sidebar expanded={expanded} setExpanded={setExpanded} />
-      )}
 
-      {/* MOBILE TOP BAR */}
-      <View style={styles.content}>
-        {!isDesktop && <TopBar />}
-
+        {/* Renderiza la pantalla actual */}
         <Slot />
-      </View>
 
-      {/* MOBILE BOTTOM BAR */}
-      {!isDesktop && (
-        <View style={styles.bottomBar}>
-          <NavButton icon="home" href="/" />
-          <NavButton icon="search" href="/search" />
-          <NavButton icon="add-circle" />
-          <NavButton icon="chatbubble-ellipses" />
-          <NavButton icon="compass" />
-        </View>
-      )}
-      {!isDesktop && <BottomBar NavButton={NavButton} />}
+        {/* BOTTOM BAR (Solo Mobile) */}
+        {!isDesktop && (
+          <View style={styles.bottomBar}>
+            <NavButton icon="home" href="/" />
+            <NavButton icon="search" href="/search" />
+            <NavButton icon="add-circle" />
+            <NavButton icon="chatbubble-ellipses" />
+            <NavButton icon="compass" />
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -169,7 +157,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#E8E5D8",
   },
-
   // MOBILE BAR
   bottomBar: {
     position: "absolute",
@@ -182,20 +169,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     borderRadius: 35,
-
-    // sombra iOS
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
-
-    // sombra Android
     elevation: 8,
   },
-  navButton: {
-    padding: 10,
-  },
-
   topBar: {
     height: 60,
     backgroundColor: "#10464d",
@@ -204,44 +183,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
   },
-
   logoContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
-
   sidePlaceholder: {
     width: 35,
   },
-
   profileContainer: {
     width: 35,
     height: 35,
     borderRadius: 18,
     overflow: "hidden",
   },
-
   profileAvatar: {
     width: "100%",
     height: "100%",
     backgroundColor: "#ccc",
     borderRadius: 18,
   },
-
   logo: {
     width: 120,
     height: 40,
   },
-
-  sidebarLogoImage: {
-    width: 50,
-    height: 50,
-  },
-
-  sidebarButtons: {
-    gap: 30,
-  },
-
+  // SIDEBAR (WEB)
   sidebar: {
     width: 80,
     backgroundColor: "#10464d",
@@ -249,47 +214,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   sidebarExpanded: {
     width: 170,
     alignItems: "flex-start",
     paddingLeft: 20,
   },
-
   sidebarTop: {
     width: "100%",
     alignItems: "center",
     marginBottom: 20,
   },
-
   sidebarLogo: {
     width: 50,
     height: 50,
   },
-
   sidebarLogoExpanded: {
     width: 110,
     height: 110,
     transform: [{ translateX: -10 }],
   },
-
   sidebarCenter: {
     flex: 1,
     justifyContent: "center",
     gap: 30,
   },
-
   sidebarItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 15,
   },
-
   sidebarText: {
     color: "#ffffff",
     fontSize: 18,
   },
-
   expandButton: {
     marginBottom: 10,
   },
