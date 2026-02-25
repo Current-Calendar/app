@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework import status
 from django.core.cache import cache
 from django.contrib.gis.geos import Point
-from main.models import MockElement
+from django.shortcuts import get_object_or_404
+from main.models import MockElement, Calendario
 
 @api_view(['GET'])
 def hola_mundo(request):
@@ -37,3 +39,30 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+
+
+@api_view(['PUT'])
+def publish_calendar(request, calendario_id):
+    calendar = get_object_or_404(Calendario, id=calendario_id)
+
+    if calendar.estado == 'PUBLICO':
+        return Response(
+            {"errors": ["El calendario ya es público."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    calendar.estado = 'PUBLICO'
+    calendar.save()
+
+    return Response(
+        {
+            "id": calendar.id,
+            "nombre": calendar.nombre,
+            "descripcion": calendar.descripcion,
+            "estado": calendar.estado,
+            "origen": calendar.origen,
+            "creador": calendar.creador.id,
+            "fecha_creacion": calendar.fecha_creacion,
+        },
+        status=status.HTTP_200_OK,
+    )
