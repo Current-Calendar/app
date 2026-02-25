@@ -1,15 +1,17 @@
-from rest_framework.decorators import action, api_view
-from rest_framework import viewsets
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
+
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.request import Request
+from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
-from main.models import MockElement, Calendario, Usuario
+
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
 
@@ -74,6 +76,36 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+    
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def registro_usuario(request):
+    """
+    Endpoint para registrar un nuevo usuario.
+    
+    POST /api/v1/auth/registro/
+    Body: {
+        "username": "string",
+        "email": "string",
+        "password": "string",
+        "password2": "string"
+    }
+    """
+    serializer = UsuarioRegistroSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        usuario = serializer.save()
+        
+        # Devolver datos del usuario creado
+        usuario_serializer = UsuarioSerializer(usuario)
+        
+        return Response({
+            'message': 'Usuario registrado exitosamente',
+            'usuario': usuario_serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

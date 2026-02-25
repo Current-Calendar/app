@@ -20,7 +20,6 @@ class LoginMutation(graphene.Mutation):
         user = authenticate(username=username, password=password)
 
         if user is None:
-            logger.warning("Fallo de login para el usuario: %s", username)
             return cls(success=False, message="Credenciales invalidas.")
         
         login(info.context, user)
