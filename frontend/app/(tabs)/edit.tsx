@@ -1,16 +1,32 @@
-import { View, Text, ScrollView, TextInput, Switch, Pressable, StyleSheet, useWindowDimensions, Alert } from "react-native";
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, useWindowDimensions, Alert, ActivityIndicator } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 
+type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
+type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
+
 export default function EditScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [privacyStatus, setPrivacyStatus] = useState<PrivacyStatus>('PRIVADO');
+  const [origin, setOrigin] = useState<CalendarOrigin>('CURRENT');
   const [isLoading, setIsLoading] = useState(false);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
+
+  const privacyOptions: { label: string; value: PrivacyStatus; icon: string }[] = [
+    { label: "Private", value: "PRIVADO", icon: "lock-closed-outline" },
+    { label: "Friends", value: "AMIGOS", icon: "people-outline" },
+    { label: "Public", value: "PUBLICO", icon: "globe-outline" },
+  ];
+
+  const originOptions: { label: string; value: CalendarOrigin }[] = [
+    { label: "Current", value: "CURRENT" },
+    { label: "Google", value: "GOOGLE" },
+    { label: "Apple", value: "APPLE" },
+  ];
 
   const handleDelete = () => {
     Alert.alert(
@@ -25,8 +41,9 @@ export default function EditScreen() {
         {
           text: "Delete",
           onPress: () => {
-            // TODO: Implement delete logic
+            // TODO: Implement delete logic with GraphQL mutation
             console.log("Calendar deleted");
+            Alert.alert("Success", "Calendar deleted");
           },
           style: "destructive",
         },
@@ -42,11 +59,23 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      // TODO: Implement update logic
-      console.log("Calendar updated:", { title, description, isPrivate });
+      // TODO: Implement update logic with GraphQL mutation
+      const updatePayload = {
+        nombre: title,
+        descripcion: description,
+        estado: privacyStatus,
+        origen: origin,
+      };
+
+      console.log("Calendar updated:", updatePayload);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       Alert.alert("Success", "Calendar updated successfully");
     } catch (error) {
       Alert.alert("Error", "Failed to update calendar");
+      console.error("Update error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -102,22 +131,58 @@ export default function EditScreen() {
             numberOfLines={4}
           />
 
-          {/* PRIVATE + FRIENDS ROW */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleItem}>
-              <Text style={styles.toggleLabel}>Private</Text>
-              <Switch
-                value={isPrivate}
-                onValueChange={setIsPrivate}
-                trackColor={{ false: "#ccc", true: "#10464d" }}
-                thumbColor="#fff"
-              />
-            </View>
+          {/* ORIGIN */}
+          <Text style={styles.label}>Calendar Source:</Text>
+          <View style={styles.originButtons}>
+            {originOptions.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.originBtn,
+                  origin === option.value && styles.originBtnActive,
+                ]}
+                onPress={() => setOrigin(option.value)}
+              >
+                <Text
+                  style={[
+                    styles.originBtnText,
+                    origin === option.value && styles.originBtnTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
-            <Pressable style={styles.friendsButton}>
-              <Ionicons name="people-outline" size={16} color="#10464d" style={{ marginRight: 6 }} />
-              <Text style={styles.friendsButtonText}>Friends</Text>
-            </Pressable>
+          {/* PRIVACY SETTING */}
+          <Text style={styles.label}>Privacy:</Text>
+          <View style={styles.privacyButtons}>
+            {privacyOptions.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.privacyBtn,
+                  privacyStatus === option.value && styles.privacyBtnActive,
+                ]}
+                onPress={() => setPrivacyStatus(option.value)}
+              >
+                <Ionicons
+                  name={option.icon as any}
+                  size={16}
+                  color={privacyStatus === option.value ? "#10464d" : "#999"}
+                  style={{ marginRight: 6 }}
+                />
+                <Text
+                  style={[
+                    styles.privacyBtnText,
+                    privacyStatus === option.value && styles.privacyBtnTextActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
           </View>
 
           {/* DELETE BUTTON */}
@@ -132,11 +197,15 @@ export default function EditScreen() {
           {/* UPDATE BUTTON — inside card on desktop, absolute on mobile */}
           {isDesktop && (
             <Pressable 
-              style={[styles.updateButton, { marginTop: 32 }]}
+              style={[styles.updateButton, { marginTop: 32 }, isLoading && styles.updateButtonDisabled]}
               onPress={handleUpdate}
               disabled={isLoading}
             >
-              <Text style={styles.updateText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.updateText}>Save Changes</Text>
+              )}
             </Pressable>
           )}
 
@@ -147,11 +216,15 @@ export default function EditScreen() {
       {!isDesktop && (
         <View style={styles.updateContainer}>
           <Pressable 
-            style={styles.updateButton}
+            style={[styles.updateButton, isLoading && styles.updateButtonDisabled]}
             onPress={handleUpdate}
             disabled={isLoading}
           >
-            <Text style={styles.updateText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.updateText}>Save Changes</Text>
+            )}
           </Pressable>
         </View>
       )}
@@ -242,6 +315,64 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
 
+  // ORIGIN BUTTONS
+  originButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 24,
+  },
+  originBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#c0756a",
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  originBtnActive: {
+    borderColor: "#10464d",
+    backgroundColor: "#f0f5f5",
+  },
+  originBtnText: {
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  originBtnTextActive: {
+    color: "#10464d",
+  },
+
+  // PRIVACY BUTTONS
+  privacyButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 24,
+  },
+  privacyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#c0756a",
+    borderRadius: 10,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+  },
+  privacyBtnActive: {
+    borderColor: "#10464d",
+    backgroundColor: "#f0f5f5",
+  },
+  privacyBtnText: {
+    color: "#999",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  privacyBtnTextActive: {
+    color: "#10464d",
+  },
+
   // TOGGLES
   toggleRow: {
     flexDirection: "row",
@@ -308,6 +439,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+  },
+  updateButtonDisabled: {
+    opacity: 0.6,
   },
   updateText: {
     color: "#fff",
