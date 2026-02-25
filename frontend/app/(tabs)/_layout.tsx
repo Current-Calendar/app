@@ -15,7 +15,6 @@ export default function CustomTabLayout() {
   const isDesktop = width >= 768;
   const [expanded, setExpanded] = useState(false);
 
-  // Componente interno para los botones de navegación (Mobile)
   const NavButton = ({ icon, href }: { icon: any; href?: Href }) => {
     const button = (
       <Pressable style={styles.navButton}>
@@ -33,7 +32,6 @@ export default function CustomTabLayout() {
     return button;
   };
 
-  // Componente interno para los items del Sidebar (Web)
   const SidebarItem = ({
     icon,
     label,
