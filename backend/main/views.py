@@ -602,8 +602,8 @@ def desasignar_evento_de_calendario(request):
         status=status.HTTP_200_OK
     )
   
-  @api_view(['PUT'])
-  def edit_event(request, evento_id):
+@api_view(['PUT'])
+def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
     data = request.data
 
