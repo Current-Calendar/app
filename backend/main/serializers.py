@@ -122,4 +122,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'biografia',
         )
         read_only_fields = ('id', 'date_joined')
-
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Usuario
+        fields=['foto','email','username','password','pronombres','link','biografia']

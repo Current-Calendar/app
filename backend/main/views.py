@@ -27,9 +27,10 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 import requests
+from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
 
@@ -97,7 +98,9 @@ class UserViewSet(viewsets.GenericViewSet):
         )
 
 
-@api_view(["GET"])
+
+
+@api_view(['GET'])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
@@ -131,14 +134,7 @@ def hola_mundo(request):
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
  
-class UsuarioPropioView(APIView):
-    permission_classes = [IsAuthenticated]
-    def delete(self, request):
-        request.user.delete()
-        return Response(
-            {"message": "Usuario eliminado satisfactoriamente"},
-            status=202
-        )
+
 
 
 def google_authorization(request):
@@ -661,6 +657,27 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
+
+
+class UsuarioPropioView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        serializer = UserSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+    def delete(self, request):
+        request.user.delete()
+        return Response(
+            {"message": "Usuario eliminado satisfactoriamente"},
+            status=202
+        )
   
 @api_view(['PUT'])
 def edit_event(request, evento_id):
