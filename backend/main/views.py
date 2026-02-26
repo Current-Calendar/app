@@ -25,9 +25,10 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 import requests
+from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
 
@@ -94,15 +95,7 @@ class UserViewSet(viewsets.GenericViewSet):
         )
 
 
-@api_view(["GET"])
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
-from django.core.cache import cache
-from django.contrib.gis.geos import Point
-from main.models import MockElement
-from main.serializers import UserSerializer
-from main.models import Usuario
-from rest_framework.views import APIView
+
 
 @api_view(['GET'])
 def hola_mundo(request):
