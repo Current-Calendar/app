@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   Dimensions,
   Platform,
   useWindowDimensions,
+  ActivityIndicator,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 
 const BG = "#FBF7EA";
 const PINK = "#F2A3A6";
@@ -19,15 +20,87 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
+// Ajusta esto según tu entorno de desarrollo y dónde esté corriendo tu backend Django.
+// Web: http://localhost:8000
+// Android emulator: http://10.0.2.2:8000
+// iPhone físico: http://TU_IP_LOCAL:8000
+const API_BASE =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:8000"
+    : "http://localhost:8000";
+
 const Otter = require("../../assets/images/Mascota.png");
 const Cloud = require("../../assets/images/nube_login.png");
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
-  // Inputs: 50% en web, más anchos en móvil
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const onLogin = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!username.trim() || !password) {
+      setErrorMsg("Rellena username y password.");
+      return;
+    }
+
+    setLoading(true);
+
+    const query = `
+      mutation Login($username: String!, $password: String!) {
+        login(username: $username, password: $password) {
+          success
+          message
+        }
+      }
+    `;
+
+    try {
+      const res = await fetch(`${API_BASE}/graphql/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok || !data) {
+        setErrorMsg("Error conectando con la API (GraphQL).");
+        return;
+      }
+
+      if (data.errors?.length) {
+        setErrorMsg(data.errors[0]?.message ?? "Login error.");
+        return;
+      }
+
+      const result = data.data?.login;
+      if (!result?.success) {
+        setErrorMsg(result?.message ?? "Credenciales inválidas.");
+        return;
+      }
+
+      setSuccessMsg(result.message ?? "Login exitoso.");
+      setTimeout(() => router.push("/"), 400);
+    } catch (e) {
+      setErrorMsg("No se puede conectar con la API. Revisa API_BASE y que el backend esté levantado.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -47,23 +120,34 @@ export default function LoginScreen() {
         <Text style={styles.title}>Log In</Text>
 
         <View style={[styles.form, { width: formWidth }]}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>Username</Text>
           <TextInput
+            value={username}
+            onChangeText={setUsername}
             placeholder=""
             placeholderTextColor="#999"
             autoCapitalize="none"
-            keyboardType="email-address"
             style={styles.input}
           />
 
           <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
-          <TextInput placeholder="" placeholderTextColor="#999" secureTextEntry style={styles.input} />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder=""
+            placeholderTextColor="#999"
+            secureTextEntry
+            style={styles.input}
+          />
 
           <Pressable style={styles.forgot}>
             <Text style={styles.forgotText}>Forgot password?</Text>
           </Pressable>
 
-          <Pressable style={styles.btn}>
+          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
+
+          <Pressable style={[styles.btn, loading && { opacity: 0.75 }]} onPress={onLogin} disabled={loading}>
             <View style={styles.btnBubbles} pointerEvents="none">
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
               <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
@@ -74,7 +158,11 @@ export default function LoginScreen() {
               <View style={[styles.bubbleDot, { bottom: 10, right: 16, width: 10, height: 10 }]} />
             </View>
 
-            <Text style={styles.btnText}>Login</Text>
+            {loading ? (
+              <ActivityIndicator color="#EAF7F6" />
+            ) : (
+              <Text style={styles.btnText}>Login</Text>
+            )}
           </Pressable>
         </View>
 
@@ -115,9 +203,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingHorizontal: 22,
-    paddingTop: 14, 
+    paddingTop: 14,
   },
-
 
   hero: {
     width: "100%",
@@ -125,14 +212,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     marginTop: 4,
-    marginBottom: 4, 
-    height: 190,     
+    marginBottom: 4,
+    height: 190,
   },
 
   otter: {
-    width: Math.min(150, W * 0.32), 
+    width: Math.min(150, W * 0.32),
     height: Math.min(150, W * 0.32),
-    marginTop: 30, 
+    marginTop: 30,
   },
 
   cloudImg: {
@@ -140,7 +227,7 @@ const styles = StyleSheet.create({
     top: 6,
     left: "50%",
     transform: [{ translateX: -20 }],
-    width: 210, 
+    width: 210,
     height: 110,
     alignItems: "center",
     justifyContent: "center",
@@ -180,6 +267,9 @@ const styles = StyleSheet.create({
 
   forgot: { alignSelf: "flex-end", marginTop: 8, marginBottom: 8 },
   forgotText: { color: "#3A9A9A", fontSize: 12, fontWeight: "700" },
+
+  errorText: { marginTop: 6, color: "#C43B3B", fontWeight: "800" },
+  successText: { marginTop: 6, color: TEAL, fontWeight: "900" },
 
   btn: {
     marginTop: 4,
