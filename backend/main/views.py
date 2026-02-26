@@ -133,14 +133,7 @@ def hola_mundo(request):
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
  
-class UsuarioPropioView(APIView):
-    permission_classes = [IsAuthenticated]
-    def delete(self, request):
-        request.user.delete()
-        return Response(
-            {"message": "Usuario eliminado satisfactoriamente"},
-            status=202
-        )
+
 
 
 def google_authorization(request):
@@ -631,6 +624,12 @@ class UsuarioPropioView(APIView):
             serializer.save()
             return Response(serializer.data, status=200)
         return Response(serializer.errors, status=400)
+    def delete(self, request):
+        request.user.delete()
+        return Response(
+            {"message": "Usuario eliminado satisfactoriamente"},
+            status=202
+        )
   
 @api_view(['PUT'])
 def edit_event(request, evento_id):
