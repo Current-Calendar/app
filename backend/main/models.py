@@ -1,3 +1,6 @@
+import datetime
+
+from icalendar import Event
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
@@ -81,6 +84,25 @@ class Evento(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.fecha}"
+
+    def to_ical_event(self):
+        """Build an iCalendar VEVENT component for this event."""
+        event = Event()
+        event.add('summary', self.titulo)
+        if self.descripcion:
+            event.add('description', self.descripcion)
+        if self.nombre_lugar:
+            event.add('location', self.nombre_lugar)
+
+        start_dt = datetime.datetime.combine(self.fecha, self.hora)
+        if timezone.is_naive(start_dt):
+            start_dt = timezone.make_aware(start_dt, timezone.get_current_timezone())
+        event.add('dtstart', start_dt)
+        event.add('dtend', start_dt + datetime.timedelta(hours=1))
+
+        uid = self.id_externo or f"evento-{self.pk}@current"
+        event.add('uid', uid)
+        return event
 
 class MockElement(models.Model):
     nombre = models.CharField(max_length=100)
