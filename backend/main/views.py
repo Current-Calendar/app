@@ -131,7 +131,6 @@ def hola_mundo(request):
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
  
-@api_view(['GET'])
 class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
     def delete(self, request):
