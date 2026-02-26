@@ -276,12 +276,23 @@ def editar_calendario(request, calendario_id):
     if calendario.creador != request.user:
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
-    # fields that you can edit
+    ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
     campos_editables = ['nombre', 'descripcion', 'estado']
 
     for campo in campos_editables:
         if campo in request.data:
-            setattr(calendario, campo, request.data[campo])
+            valor = request.data[campo]
+            if isinstance(valor, str) and valor.strip() == '':
+                return Response(
+                    {'error': f"El campo '{campo}' no puede ser una cadena vacía."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if campo == 'estado' and valor not in ESTADOS_VALIDOS:
+                return Response(
+                    {'error': f"El estado '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            setattr(calendario, campo, valor)
 
     calendario.save()
     return Response({
