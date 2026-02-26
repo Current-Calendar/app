@@ -6,9 +6,29 @@ import { Platform } from "react-native";
 export const downloadCalendar = async (id: string, token?: string) => {
   const url = `api/calendars/${id}/export/`
 
-  const file = new File(Paths.document, `calendar-${id}.ics`);
-
   try {
+    if (Platform.OS === "web") {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("No se pudo descargar el calendario");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = `calendar-${id}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return;
+  } else {
+    const file = new File(Paths.document, `calendar-${id}.ics`);
     const response = await fetch(url, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
@@ -20,6 +40,7 @@ export const downloadCalendar = async (id: string, token?: string) => {
     await file.write(new Uint8Array(arrayBuffer));
 
     return file.uri;
+  }
   } catch (error) {
     console.error("Error descargando calendario:", error);
     throw error;
