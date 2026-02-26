@@ -3,7 +3,7 @@ name: CD - Docker Hub
 on:
   push:
     branches:
-      - feature/CD
+      - main
 
 jobs:
   build-and-push-pre:
