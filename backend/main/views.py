@@ -25,6 +25,7 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 import requests
+from utils.security import get_safe_ip
 
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 
@@ -236,12 +237,19 @@ def iOS_calendar_import(request):
     else:
         http_url = webcal_url
     
+   
     is_safe, reason = _is_safe_calendar_url(http_url)
     if not is_safe:
         return Response({"error": f"URL no permitida: {reason}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
+  
+    safe_ip = get_safe_ip(http_url)
+    if not safe_ip:
+        return Response({"error": "La URL apunta a un destino no permitido por motivos de seguridad"}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+
     try:
-        response = requests.get(http_url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False)
+    
+        response = requests.get(http_url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False)  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests
         response.raise_for_status()
 
         cal = Calendar.from_ical(response.content)
@@ -272,7 +280,7 @@ def iOS_calendar_import(request):
             if inicio_dt < momento_actual:
                 continue
             
-            # Extraer los datos
+            
             titulo = str(component.get('summary', 'Sin título'))
             descripcion = str(component.get('description', ''))
             uid = str(component.get('uid'))
