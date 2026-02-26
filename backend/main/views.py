@@ -37,6 +37,7 @@ GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 REQUEST_TIMEOUT_SECONDS = 5
 
+#if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -235,7 +236,7 @@ def import_google_calendar(request):
 def iOS_calendar_import(request):
     """Endpoint para importar eventos desde iOS Calendar."""
 
-    webcal_url = request.data.get('webcal_url')
+    webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
     user_id = request.data.get('user')
     estado_solicitado = request.data.get('estado', 'PRIVADO') 
     usuario_creador = Usuario.objects.filter(id=user_id).first()
@@ -547,6 +548,53 @@ def crear_calendario(request):
         },
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(['GET'])
+def list_calendars(request):
+    """
+    List and search calendars.
+
+    GET /api/v1/calendarios/list
+
+    Query parameters:
+        q       (str)  -- case-insensitive substring match on calendar name
+        estado  (str)  -- filter by privacy status (PRIVADO | AMIGOS | PUBLICO)
+    """
+    queryset = Calendario.objects.select_related('creador').all()
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        queryset = queryset.filter(nombre__icontains=q)
+
+    estado = request.GET.get('estado', '').strip().upper()
+    valid_estados = {choice[0] for choice in Calendario.ESTADOS_PRIVACIDAD}
+    if estado:
+        if estado not in valid_estados:
+            return Response(
+                {"errors": [f"Invalid 'estado' value. Allowed values: {', '.join(sorted(valid_estados))}."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        queryset = queryset.filter(estado=estado)
+
+    queryset = queryset.order_by('-fecha_creacion')
+
+    results = [
+        {
+            "id": cal.id,
+            "nombre": cal.nombre,
+            "descripcion": cal.descripcion,
+            "estado": cal.estado,
+            "origen": cal.origen,
+            "creador_id": cal.creador_id,
+            "creador_username": cal.creador.username,
+            "fecha_creacion": cal.fecha_creacion,
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
