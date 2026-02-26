@@ -19,7 +19,7 @@ from rest_framework.response import Response
 import requests
 
 from main.models import MockElement, Usuario, Calendario, Evento
-from backend.utils.security import get_safe_ip
+from utils.security import get_safe_ip
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
