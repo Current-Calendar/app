@@ -8,6 +8,9 @@ import socket
 from urllib.parse import urlparse
 from django.conf import settings
 from django.contrib.gis.geos import Point
+from main.models import MockElement
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, get_object_or_404
@@ -126,6 +129,15 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
+ 
+class UsuarioPropioView(APIView):
+    permission_classes = [IsAuthenticated]
+    def delete(self, request):
+        request.user.delete()
+        return Response(
+            {"message": "Usuario eliminado satisfactoriamente"},
+            status=202
+        )
 
 
 def google_authorization(request):
