@@ -1,0 +1,137 @@
+import { View, Pressable, StyleSheet, Image, Text } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Link, type Href } from "expo-router";
+
+interface Props {
+  expanded: boolean;
+  setExpanded: (value: boolean) => void;
+}
+
+export default function Sidebar({ expanded, setExpanded }: Props) {
+  const SidebarItem = ({
+    icon,
+    label,
+    expanded,
+    href,
+  }: {
+    icon: any;
+    label: string;
+    expanded: boolean;
+    href?: Href;
+  }) => {
+    const content = (
+      <Pressable style={styles.sidebarItem}>
+        <Ionicons name={icon} size={22} color="#ffffff" />
+        {expanded && <Text style={styles.sidebarText}>{label}</Text>}
+      </Pressable>
+    );
+
+    if (href) {
+      return (
+        <Link href={href} asChild>
+          {content}
+        </Link>
+      );
+    }
+
+    return content;
+  };
+
+  return (
+    <View
+      style={[
+        styles.sidebar,
+        expanded && styles.sidebarExpanded,
+      ]}
+    >
+      {/* TOP */}
+      <View style={styles.sidebarTop}>
+        <Image
+          source={require("../../assets/images/icon-current-white.png")}
+          style={[
+            styles.sidebarLogo,
+            expanded && styles.sidebarLogoExpanded,
+          ]}
+          resizeMode="contain"
+        />
+      </View>
+
+      {/* CENTER */}
+      <View style={styles.sidebarCenter}>
+        <SidebarItem icon="home" label="Home" expanded={expanded} href="/switch-events" />
+        <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
+        <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
+        <SidebarItem icon="people" label="Our Team" expanded={expanded} />
+        <SidebarItem icon="compass" label="Map" expanded={expanded} />
+        <SidebarItem icon="settings" label="Settings" expanded={expanded} />
+        <SidebarItem icon="person" label="Profile" expanded={expanded} />
+      </View>
+
+      {/* BOTTOM */}
+      <Pressable
+        style={styles.expandButton}
+        onPress={() => setExpanded(!expanded)}
+      >
+        <Ionicons
+          name={expanded ? "chevron-back" : "chevron-forward"}
+          size={22}
+          color="#ffffff"
+        />
+      </Pressable>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  sidebar: {
+    width: 80,
+    backgroundColor: "#10464d",
+    paddingVertical: 20,
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  sidebarExpanded: {
+    width: 170,
+    alignItems: "flex-start",
+    paddingLeft: 20,
+  },
+
+  sidebarTop: {
+    width: "100%",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  sidebarLogo: {
+    width: 50,
+    height: 50,
+  },
+
+  sidebarLogoExpanded: {
+    width: 110,
+    height: 110,
+    transform: [{ translateX: -10 }],
+  },
+
+  sidebarCenter: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 30,
+  },
+
+  sidebarItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+  },
+
+  sidebarText: {
+    color: "#ffffff",
+    fontSize: 18,
+  },
+
+  expandButton: {
+    marginBottom: 10,
+  },
+});
