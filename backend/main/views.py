@@ -279,6 +279,7 @@ def editar_calendario(request, calendario_id):
     ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
     campos_editables = ['nombre', 'descripcion', 'estado']
 
+
     for campo in campos_editables:
         if campo in request.data:
             valor = request.data[campo]
