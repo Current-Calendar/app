@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars
 from rest_framework import routers
 
 api_router = routers.DefaultRouter()
@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/v1/usuarios', views.buscar_usuarios),
     path('api/v1/auth/registro/', views.registro_usuario, name='registro'),
     path('api/v1/calendarios', views.crear_calendario),
+    path('api/v1/calendarios/list', list_calendars, name='list_calendarios'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
     path('api/v1/google-auth', views.google_authorization),

@@ -1085,3 +1085,203 @@ class EditarUsuarioTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.user.refresh_from_db()
         self.assertNotEqual(self.user.username, "hackeado")
+
+# ---------------------------------------------------------------------------
+# List & search calendars tests
+# ---------------------------------------------------------------------------
+
+ENDPOINT_LIST_CALENDARIOS = "/api/v1/calendarios/list"
+
+
+class ListCalendariosTests(TestCase):
+    """Tests for GET /api/v1/calendarios/list (list_calendarios view)."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+        self.owner = Usuario.objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="pass123",
+        )
+        self.other = Usuario.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="pass123",
+        )
+
+        # Create a variety of calendars for filtering tests
+        self.cal_privado = Calendario.objects.create(
+            nombre="Private Events",
+            descripcion="Private calendar",
+            estado="PRIVADO",
+            origen="CURRENT",
+            creador=self.owner,
+        )
+        self.cal_amigos = Calendario.objects.create(
+            nombre="Friends Events",
+            descripcion="Friends calendar",
+            estado="AMIGOS",
+            origen="GOOGLE",
+            creador=self.owner,
+        )
+        self.cal_publico = Calendario.objects.create(
+            nombre="Public Events",
+            descripcion="Public calendar",
+            estado="PUBLICO",
+            origen="APPLE",
+            creador=self.other,
+        )
+        self.cal_publico2 = Calendario.objects.create(
+            nombre="Open Events",
+            descripcion="Another public calendar",
+            estado="PUBLICO",
+            origen="CURRENT",
+            creador=self.other,
+        )
+
+    # ------------------------------------------------------------------
+    # Basic listing
+    # ------------------------------------------------------------------
+
+    def test_list_all_calendars_returns_200(self):
+        """GET without filters returns 200 and all calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_list_all_calendars_returns_all_records(self):
+        """All created calendars (setUp + extra) are returned without truncation."""
+        # Create 4 additional calendars explicitly inside this test
+        for i in range(4):
+            Calendario.objects.create(
+                nombre=f"Extra Calendar {i}",
+                estado="PUBLICO",
+                creador=self.owner,
+            )
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # setUp already created 4 calendars; we added 4 more → must be > 4
+        self.assertGreater(len(response.json()), 4)
+
+    def test_response_contains_expected_fields(self):
+        """Each item in the response has the expected fields."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        item = response.json()[0]
+        for field in ("id", "nombre", "descripcion", "estado", "origen", "creador_id", "creador_username", "fecha_creacion"):
+            self.assertIn(field, item)
+
+    def test_results_ordered_by_fecha_creacion_newest_first(self):
+        """Results are ordered newest-first."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        ids = [item["id"] for item in response.json()]
+        # The last-created calendar should appear first
+        self.assertEqual(ids[0], self.cal_publico2.id)
+
+    # ------------------------------------------------------------------
+    # Name search (q parameter)
+    # ------------------------------------------------------------------
+
+    def test_search_by_name_returns_matching_calendars(self):
+        """q parameter filters calendars by name substring (case-insensitive)."""
+        # 'Friends' only appears in 'Friends Events', so exactly 1 match expected
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Friends"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [item["nombre"] for item in response.json()]
+        self.assertIn("Friends Events", names)
+        self.assertNotIn("Private Events", names)
+        self.assertNotIn("Public Events", names)
+        self.assertNotIn("Open Events", names)
+
+    def test_search_is_case_insensitive(self):
+        """Name search is case-insensitive."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "PRIVATE"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["nombre"], "Private Events")
+
+    def test_search_with_no_matches_returns_empty_list(self):
+        """q parameter that matches nothing returns an empty list, not an error."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "zzznomatch"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+    def test_search_with_empty_q_returns_all(self):
+        """An empty q string is ignored and all calendars are returned."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": ""})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 4)
+
+    # ------------------------------------------------------------------
+    # Status filter (estado parameter)
+    # ------------------------------------------------------------------
+
+    def test_filter_by_estado_publico(self):
+        """estado=PUBLICO returns only public calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["estado"], "PUBLICO")
+
+    def test_filter_by_estado_privado(self):
+        """estado=PRIVADO returns only private calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PRIVADO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["estado"], "PRIVADO")
+
+    def test_filter_by_estado_amigos(self):
+        """estado=AMIGOS returns only friends calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "AMIGOS"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["estado"], "AMIGOS")
+
+    def test_filter_by_estado_case_insensitive(self):
+        """estado filter is case-insensitive (lowercase is accepted)."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "publico"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 2)
+
+    def test_invalid_estado_returns_400(self):
+        """An unrecognised estado value returns 400 Bad Request."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "SECRETO"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
+
+    # ------------------------------------------------------------------
+    # Combined filters
+    # ------------------------------------------------------------------
+
+    def test_combined_q_and_estado_filter(self):
+        """q and estado can be combined to narrow results."""
+        # 'Public' only appears in 'Public Events', which is also PUBLICO → exactly 1
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Public Events", "estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["nombre"], "Public Events")
+
+    def test_combined_filters_no_match_returns_empty(self):
+        """Combined filters that match nothing return an empty list."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Private", "estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+    # ------------------------------------------------------------------
+    # HTTP method enforcement
+    # ------------------------------------------------------------------
+
+    def test_post_not_allowed(self):
+        """POST to list endpoint returns 405 Method Not Allowed."""
+        response = self.client.post(ENDPOINT_LIST_CALENDARIOS, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_creador_username_matches_actual_user(self):
+        """The creador_username in the response matches the creator's username."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PRIVADO"})
+        self.assertEqual(response.json()[0]["creador_username"], self.owner.username)
+
