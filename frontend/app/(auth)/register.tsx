@@ -88,7 +88,7 @@ export default function SignUpScreen() {
       }
 
       setSuccessMsg("Usuario registrado exitosamente");
-      setTimeout(() => router.push("/auth/login"), 400); // Redirige al login para que el usuario inicie sesión después de registrarse
+      setTimeout(() => router.push("/login"), 400); // Redirige al login para que el usuario inicie sesión después de registrarse
     } catch (e: any) {
       setErrorMsg("No connection to API. Check API_BASE / backend running.");
     } finally {
@@ -171,7 +171,7 @@ export default function SignUpScreen() {
 
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Already have an account?</Text>
-          <Link href="/auth/login" asChild>
+          <Link href="/login" asChild>
             <Pressable>
               <Text style={styles.bottomLink}>Login</Text>
             </Pressable>
