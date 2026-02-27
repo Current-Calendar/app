@@ -64,7 +64,6 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T;
 }
 
-// =================== MINI CALENDAR ===================
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTH_NAMES = [
   "January",
@@ -96,9 +95,9 @@ function startOfDay(d: Date) {
 }
 
 type MiniMonthCalendarProps = {
-  value: Date; // fecha seleccionada
-  onChange: (d: Date) => void; // ✅ al clicar día cambia la fecha del evento
-  size?: number; // default 240
+  value: Date; 
+  onChange: (d: Date) => void; 
+  size?: number; 
 };
 
 function MiniMonthCalendar({ value, onChange, size = 240 }: MiniMonthCalendarProps) {
@@ -116,7 +115,6 @@ function MiniMonthCalendar({ value, onChange, size = 240 }: MiniMonthCalendarPro
 
   const days = useMemo(() => {
     const first = new Date(viewYear, viewMonth, 1);
-    // JS: 0 domingo..6 sábado -> lunes-based 0 lunes..6 domingo
     const firstDowMondayBased = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
@@ -194,7 +192,7 @@ function MiniMonthCalendar({ value, onChange, size = 240 }: MiniMonthCalendarPro
             <Pressable
               key={idx}
               disabled={!d}
-              onPress={() => d && onChange(startOfDay(d))} // ✅ clic día cambia la fecha
+              onPress={() => d && onChange(startOfDay(d))}
               style={[
                 miniStyles.dayCell,
                 { width: cellW, height: cellH },
@@ -290,7 +288,6 @@ const miniStyles = StyleSheet.create({
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
 
-  // ✅ Ir a la ruta base / pantalla inicial del stack actual
   const goToRoot = () => {
     // vuelve a la primera pantalla del stack (la “base” al entrar)
     navigation.popToTop();
@@ -347,7 +344,6 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
-  // ✅ Esta fecha se actualiza al clicar en el mini calendario
   const [date, setDate] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -396,7 +392,6 @@ export default function CreateEventsScreen() {
     setShowWebTimePicker(false);
   };
 
-  // (esto sigue existiendo por si quieres editar fecha con selector, además del mini calendario)
   const openDatePicker = () => {
     if (Platform.OS === "web") {
       const current = toISODate(date);
@@ -468,7 +463,7 @@ export default function CreateEventsScreen() {
       titulo,
       descripcion: description?.trim() ?? "",
       nombre_lugar: place?.trim() ?? "",
-      fecha: toISODate(date), // ✅ usa la fecha seleccionada (mini calendario o picker)
+      fecha: toISODate(date), 
       hora: toHM(time),
       calendarios: [Number(selectedCalendar.id)],
     };
