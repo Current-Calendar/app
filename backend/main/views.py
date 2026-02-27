@@ -26,6 +26,13 @@ from rest_framework.request import Request
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
+from django.shortcuts import get_object_or_404
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
+from django.contrib.gis.geos import Point
+
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
@@ -658,6 +665,54 @@ def desasignar_evento_de_calendario(request):
         status=status.HTTP_200_OK
     )
 
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def eliminar_calendario(request, calendario_id):
+    calendario = get_object_or_404(Calendario, id=calendario_id)
+    
+    # Only the creator can delete the calendar
+    if calendario.creador != request.user:
+        return Response({'error': 'You do not have permission to delete this calendar.'}, status=status.HTTP_403_FORBIDDEN)
+    
+    calendario.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def editar_calendario(request, calendario_id):
+    calendario = get_object_or_404(Calendario, id=calendario_id)
+
+    if calendario.creador != request.user:
+        return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
+
+    ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
+    campos_editables = ['nombre', 'descripcion', 'estado']
+
+
+    for campo in campos_editables:
+        if campo in request.data:
+            valor = request.data[campo]
+            if isinstance(valor, str) and valor.strip() == '':
+                return Response(
+                    {'error': f"El campo '{campo}' no puede ser una cadena vacía."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if campo == 'estado' and valor not in ESTADOS_VALIDOS:
+                return Response(
+                    {'error': f"El estado '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            setattr(calendario, campo, valor)
+
+    calendario.save()
+    return Response({
+        'id': calendario.id,
+        'nombre': calendario.nombre,
+        'descripcion': calendario.descripcion,
+        'estado': calendario.estado,
+    }, status=status.HTTP_200_OK)
 
 class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
