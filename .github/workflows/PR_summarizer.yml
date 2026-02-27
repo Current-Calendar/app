@@ -1,0 +1,97 @@
+name: "AI PR Summarizer"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Analizar Diff y Comentar con IA
+        uses: actions/github-script@v7
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            const prNumber = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            console.log(`Obteniendo diff para la PR #${prNumber}...`);
+            
+            // 1. Obtenemos el diff de la PR usando la terminal de GitHub
+            let diff = "";
+            try {
+              diff = execSync(`gh pr diff ${prNumber} --repo ${owner}/${repo}`).toString();
+            } catch (error) {
+              console.error("Error obteniendo el diff:", error);
+              return;
+            }
+
+            // 2. Control de daños: Si la PR es monstruosa (>20.000 caracteres), la recortamos 
+            // para no superar el límite de lectura de la IA y que no pete.
+            if (diff.length > 20000) {
+              diff = diff.substring(0, 20000) + "\n\n...[DIFF TRUNCADO POR TAMAÑO EXCESIVO]...";
+            }
+
+            // 3. El Prompt del CTO
+            const prompt = `Eres un Tech Lead experto revisando código. Analiza el siguiente diff de una Pull Request. 
+            Devuelve un resumen en ESPAÑOL con estas 3 secciones estructuradas:
+            
+            ### 🎯 Resumen general
+            (Explica en 2 líneas qué problema resuelve o qué añade esta PR)
+            
+            ### 📂 Archivos clave modificados
+            (Lista en viñetas los 2 o 3 archivos más importantes que cambian y qué lógica se ha tocado)
+            
+            ### ⚠️ Posibles riesgos
+            (Indica si ves algún riesgo de rendimiento, seguridad o deuda técnica a revisar. Si está perfecto, di "Todo parece en orden").
+            
+            Sé directo, sin saludos ni despedidas.
+            
+            CÓDIGO A REVISAR:
+            ${diff}`;
+
+            console.log("Llamando a la API de Groq...");
+
+            // 4. Llamada a la IA
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3 // Baja temperatura para que sea analítico y no invente
+              })
+            });
+
+            const data = await response.json();
+            
+            if (!data.choices || !data.choices[0]) {
+               console.error("Error de la API:", data);
+               return;
+            }
+            
+            const aiSummary = data.choices[0].message.content;
+
+            // 5. Publicar el comentario en GitHub
+            await github.rest.issues.createComment({
+              owner: owner,
+              repo: repo,
+              issue_number: prNumber,
+              body: `🤖 **Resumen Automático de la PR**\n\n${aiSummary}`
+            });
