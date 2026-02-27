@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 
-export const useUserProfile = (userId) => {
-    const [userBeingViewed, setUserBeingViewed] = useState(null);
-    const [events, setEvents] = useState([]); 
-    const [calendars, setCalendars] = useState([]);
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+export const useUserProfile = (userId : string) => {
+    const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
+    const [events, setEvents] = useState<any[]>([]); 
+    const [calendars, setCalendars] = useState<any[]>([]);
+    const [isFollowing, setIsFollowing] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);  //por si el usuario no está disponible o no es encontrado
 
     useEffect(() => {
@@ -25,7 +25,7 @@ export const useUserProfile = (userId) => {
                     setUserBeingViewed(userData);
                     setIsFollowing(userData.is_following || false);
                 } else {
-                    // Si falla, activamos el error
+                    // Si fallagit, activamos el error
                     setUserNotFound(true);
                 }
 

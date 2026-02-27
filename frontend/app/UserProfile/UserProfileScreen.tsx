@@ -5,34 +5,43 @@ import {
     Image, 
     ScrollView, 
     TouchableOpacity, 
-    SafeAreaView, 
     ActivityIndicator 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native'; 
+import { useRoute, RouteProp } from '@react-navigation/native';
 
 // Importaciones de archivos locales
 import { styles } from './UserProfileStyles';
-import { useUserProfile } from './useUserProfile'; 
-import EventCard from './EventCard'; 
+import { useUserProfile } from '../../hooks/useUserProfile';
+import EventCard from './EventCard';
 import CalendarCard from './CalendarCard';
 
-export default function UserProfileScreen() {
-    const route = useRoute();
-    const userId = route.params?.userId || '1'; 
-    const [activeTab, setActiveTab] = useState('events');
+// ---------- Tipos ----------
+type RootStackParamList = {
+    UserProfile: { userId: string };
+};
 
-    const { 
-        userBeingViewed, 
-        events, 
-        calendars, 
-        isFollowing, 
-        isLoading, 
+type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
+
+export default function UserProfileScreen() {
+    const route = useRoute<UserProfileRouteProp>();
+    const userId = route.params?.userId ?? '1';
+
+    const [activeTab, setActiveTab] = useState<'events' | 'calendars'>('events');
+
+    // Tipos del hook (puedes ajustarlos según tus datos reales)
+    const {
+        userBeingViewed,
+        events,
+        calendars,
+        isFollowing,
+        isLoading,
         userNotFound,
-        handleFollowToggle 
+        handleFollowToggle,
     } = useUserProfile(userId);
-        
-    // 1. Estado de Carga
+
+    // ---------------- LOADING ----------------
     if (isLoading) {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -41,7 +50,7 @@ export default function UserProfileScreen() {
         );
     }
 
-    // 2. Manejo de Errores (Usuario no encontrado o error de red)
+    // ---------------- ERROR ----------------
     if (userNotFound || !userBeingViewed) {
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -51,9 +60,10 @@ export default function UserProfileScreen() {
         );
     }
 
+    // ---------------- UI PRINCIPAL ----------------
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header superior decorativo */}
+            {/* Header superior */}
             <View style={styles.topHeader}>
                 <Ionicons name="water" size={30} color="white" />
             </View>
@@ -62,7 +72,7 @@ export default function UserProfileScreen() {
                 contentContainerStyle={styles.scrollContent} 
                 showsVerticalScrollIndicator={false}
             >
-                {/* --- SECCIÓN PERFIL --- */}
+                {/* --- PERFIL --- */}
                 <View style={styles.profileContainer}>
                     <View style={styles.profileMainRow}>
                         <View>
@@ -94,22 +104,23 @@ export default function UserProfileScreen() {
                     </View>
 
                     <Text style={styles.followersText}>
-                        Followed by ...{/*TODO*/}
+                        Followed by ...
                     </Text>
                 </View>
 
-                {/* --- SECCIÓN ÚNICA: PUBLICATIONS --- */}
+                {/* --- PUBLICATIONS --- */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Publications</Text>
                     
-                    {/* Mini selector de tipo de publicación */}
                     <View style={styles.miniTabRow}>
                         <TouchableOpacity onPress={() => setActiveTab('events')}>
                             <Text style={[styles.miniTabText, activeTab === 'events' && styles.miniTabActive]}>
                                 Events
                             </Text>
                         </TouchableOpacity>
+
                         <Text style={styles.miniTabSeparator}>|</Text>
+
                         <TouchableOpacity onPress={() => setActiveTab('calendars')}>
                             <Text style={[styles.miniTabText, activeTab === 'calendars' && styles.miniTabActive]}>
                                 Calendars
@@ -118,22 +129,25 @@ export default function UserProfileScreen() {
                     </View>
                 </View>
 
-                {/* Renderizado condicional del feed */}
+                {/* Render dinámico */}
                 <View style={styles.feedContainer}>
                     {activeTab === 'events' ? (
-                        events.length > 0 
-                            ? events.map(ev => <EventCard key={`ev-${ev.id}`} event={ev} />)
-                            : <Text style={styles.emptyText}>No hay eventos publicados.</Text>
+                        events.length > 0 ? (
+                            events.map(ev => <EventCard key={`ev-${ev.id}`} event={ev} />)
+                        ) : (
+                            <Text style={styles.emptyText}>No hay eventos publicados.</Text>
+                        )
                     ) : (
-                        calendars.length > 0 
-                            ? calendars.map(cal => <CalendarCard key={`cal-${cal.id}`} calendario={cal} />)
-                            : <Text style={styles.emptyText}>No hay calendarios publicados.</Text>
+                        calendars.length > 0 ? (
+                            calendars.map(cal => <CalendarCard key={`cal-${cal.id}`} calendario={cal} />)
+                        ) : (
+                            <Text style={styles.emptyText}>No hay calendarios publicados.</Text>
+                        )
                     )}
                 </View>
-
             </ScrollView>
             
-            {/* Bottom Navigation persistente */}
+            {/* Bottom Navigation */}
             <View style={styles.bottomNav}>
                 <Ionicons name="home-outline" size={24} color="white" />
                 <Ionicons name="search-outline" size={24} color="white" />

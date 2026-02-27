@@ -1,14 +1,36 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { 
+    View, 
+    Text, 
+    Image, 
+    StyleSheet, 
+    TouchableOpacity 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function CalendarCard({ calendario, onPress }) {
+// ---------- Tipos ----------
+export interface CalendarData {
+    id: string | number;
+    nombre: string;
+    descripcion?: string;
+    portada?: string;
+    estado?: 'AMIGOS' | 'PUBLICO' | 'PRIVADO' | string; // ← puedes ajustar
+}
+
+interface CalendarCardProps {
+    calendario: CalendarData;
+    onPress?: () => void;
+}
+
+export default function CalendarCard({ calendario, onPress }: CalendarCardProps) {
     if (!calendario) return null;
 
     return (
-        // Envolvemos toda la tarjeta en un TouchableOpacity 
-        // por si quieres que al tocarla en cualquier parte pase algo
-        <TouchableOpacity style={styles.cardContainer} onPress={onPress} activeOpacity={0.8}>
+        <TouchableOpacity 
+            style={styles.cardContainer} 
+            onPress={onPress} 
+            activeOpacity={0.8}
+        >
             <View style={styles.cardContent}>
 
                 <Image 
@@ -22,7 +44,7 @@ export default function CalendarCard({ calendario, onPress }) {
                         <Text style={styles.cardTitle} numberOfLines={1}>
                             {calendario.nombre}
                         </Text>
-                        
+
                         {calendario.estado === 'AMIGOS' && (
                             <Ionicons name="star" size={18} color="#A0D842" style={{ marginLeft: 6 }} />
                         )}
@@ -37,6 +59,7 @@ export default function CalendarCard({ calendario, onPress }) {
     );
 }
 
+// ---------- Estilos ----------
 const styles = StyleSheet.create({
     cardContainer: { 
         backgroundColor: 'white', 
@@ -73,7 +96,7 @@ const styles = StyleSheet.create({
     cardTitle: { 
         fontWeight: 'bold', 
         fontSize: 17, 
-        color: '#164E52', 
+        color: '#164E52',
         flexShrink: 1 
     },
     cardDesc: { 

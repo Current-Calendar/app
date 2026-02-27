@@ -1,6 +1,36 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ViewStyle, TextStyle, ImageStyle } from 'react-native';
 
-export const styles = StyleSheet.create({
+interface Styles {
+  container: ViewStyle;
+  topHeader: ViewStyle;
+  scrollContent: ViewStyle;
+  profileContainer: ViewStyle;
+  profileMainRow: ViewStyle;
+  avatar: ImageStyle;
+  badge: ViewStyle;
+  userInfo: ViewStyle;
+  userName: TextStyle;
+  pronouns: TextStyle;
+  bio: TextStyle;
+  followButtonContainer: ViewStyle;
+  followButton: ViewStyle;
+  followButtonActive: ViewStyle;
+  followButtonText: TextStyle;
+  followButtonTextActive: TextStyle;
+  followersText: TextStyle;
+  sectionHeader: ViewStyle;
+  sectionTitle: TextStyle;
+  miniTabRow: ViewStyle;
+  miniTabText: TextStyle;
+  miniTabActive: TextStyle;
+  miniTabSeparator: TextStyle;
+  feedContainer: ViewStyle;
+  emptyText: TextStyle;
+  errorText: TextStyle;
+  bottomNav: ViewStyle;
+}
+
+export const styles = StyleSheet.create<Styles>({
   container: {
     flex: 1,
     backgroundColor: '#FAF8F0',
@@ -14,7 +44,7 @@ export const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 15,
-    paddingBottom: 120, 
+    paddingBottom: 120,
   },
   profileContainer: {
     marginBottom: 10,
@@ -29,13 +59,13 @@ export const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: '#FFD1DC', 
+    borderColor: '#FFD1DC',
   },
   badge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#A0D842', 
+    backgroundColor: '#A0D842',
     borderRadius: 12,
     padding: 4,
   },
@@ -46,7 +76,7 @@ export const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#B8C42F', 
+    color: '#B8C42F',
   },
   pronouns: {
     fontSize: 12,
@@ -60,17 +90,17 @@ export const styles = StyleSheet.create({
   },
   followButtonContainer: {
     alignItems: 'flex-end',
-    marginTop: -25, 
+    marginTop: -25,
     marginBottom: 10,
   },
   followButton: {
-    backgroundColor: '#F29B93', 
+    backgroundColor: '#F29B93',
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderRadius: 20,
   },
   followButtonActive: {
-    backgroundColor: '#E0E0E0', 
+    backgroundColor: '#E0E0E0',
   },
   followButtonText: {
     color: 'white',
@@ -85,7 +115,6 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-  // --- NUEVOS ESTILOS PARA PUBLICATIONS ---
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -146,5 +175,5 @@ export const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.3,
     shadowRadius: 10,
-  }
+  },
 });

@@ -1,8 +1,30 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { 
+    View, 
+    Text, 
+    Image, 
+    StyleSheet, 
+    TouchableOpacity 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function EventCard({ event, onPress }) {
+// ---------- Tipos ----------
+export interface EventData {
+    id: string | number;
+    titulo: string;
+    descripcion?: string;
+    foto?: string;
+    nombre_lugar?: string;
+    fecha?: string;
+    hora?: string;
+}
+
+interface EventCardProps {
+    event: EventData;
+    onPress?: () => void;
+}
+
+export default function EventCard({ event, onPress }: EventCardProps) {
     if (!event) return null;
 
     return (
@@ -37,7 +59,7 @@ export default function EventCard({ event, onPress }) {
                         <View style={[styles.infoCol, { flex: 0, marginLeft: 10 }]}> 
                             <Ionicons name="calendar-sharp" size={14} color="#F29B93" />
                             <Text style={styles.infoText}>
-                                {event.fecha} • {event.hora?.substring(0, 5)} 
+                                {event.fecha} • {event.hora?.substring(0, 5)}
                             </Text>
                         </View>
                     </View>
@@ -47,6 +69,7 @@ export default function EventCard({ event, onPress }) {
     );
 }
 
+// ---------- Estilos ----------
 const styles = StyleSheet.create({
     cardContainer: { 
         backgroundColor: 'white', 
