@@ -34,6 +34,7 @@ export default function CalendarScreen() {
     const [month, setMonth] = useState(today.getMonth());
     const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
     const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+    const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -207,51 +208,52 @@ export default function CalendarScreen() {
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={false}
-        >
-            <View style={styles.toolbar}>
-                <CalendarSelector
-                    calendars={calendars}
-                    selectedId={selectedCalendarId}
-                    onChange={setSelectedCalendarId}
-                    onInfoPress={setInfoCalendar}
-                />
-            </View>
+        <View style={styles.container}>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.contentContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.toolbar}>
+                    <CalendarSelector
+                        calendars={calendars}
+                        selectedId={selectedCalendarId}
+                        onChange={setSelectedCalendarId}
+                        onInfoPress={setInfoCalendar}
+                    />
+                </View>
 
-            <View style={styles.headerBlock}>
-                <CalendarHeader
-                    monthLabel={`${MONTH_NAMES[month]} ${year}`}
-                    onPrevMonth={goToPrevMonth}
-                    onNextMonth={goToNextMonth}
-                    onTodayPress={goToToday}
-                />
-            </View>
+                <View style={styles.headerBlock}>
+                    <CalendarHeader
+                        monthLabel={`${MONTH_NAMES[month]} ${year}`}
+                        onPrevMonth={goToPrevMonth}
+                        onNextMonth={goToNextMonth}
+                        onTodayPress={goToToday}
+                    />
+                </View>
 
-            <View style={styles.filterBlock}>
-                <EventFilterBar selected={selectedEventType} onChange={setSelectedEventType} />
-            </View>
-            <View
-                id="calendar-web"
-                ref={calendarRef}
-                style={styles.container}>
-                <CalendarGrid
-                    year={year}
-                    month={month}
-                    events={filteredEvents}
-                    onEventPress={setActiveEvent}
-                />
-            </View>
+                <View style={styles.filterBlock}>
+                    <EventFilterBar selected={selectedEventType} onChange={setSelectedEventType} />
+                </View>
+                <View
+                    id="calendar-web"
+                    ref={calendarRef}
+                    style={styles.container}>
+                    <CalendarGrid
+                        year={year}
+                        month={month}
+                        events={filteredEvents}
+                        onEventPress={setActiveEvent}
+                    />
+                </View>
 
-            <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
-            <CalendarInfoModal calendar={infoCalendar} onClose={() => setInfoCalendar(null)} />
-
+                <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
+                <CalendarInfoModal calendar={infoCalendar} onClose={() => setInfoCalendar(null)} />
+            </ScrollView>
             {optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
-
+                const fabBottom = Platform.OS === "web" ? 30 : 90;
                 const isCalendar = index === 1;
                 const text = isCalendar ? "Exportar calendario" : "Descargar como PNG";
                 const onPress = isCalendar ? exportarCalendar : exportarPng;
@@ -261,7 +263,7 @@ export default function CalendarScreen() {
                         key={index}
                         style={{
                             position: "absolute",
-                            bottom: 100 + index * 45,
+                            bottom: fabBottom + 60 + index * 45,
                             right: 20,
                             opacity,
                             transform: [{ translateY }],
@@ -274,13 +276,12 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-
-            <Pressable style={styles.fab} onPress={toggleMenu}>
+            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
                 <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
                     <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
                 </Animated.View>
             </Pressable>
-        </ScrollView>
+        </View>
     );
 }
 
@@ -307,16 +308,16 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     fab: {
-        position: "absolute",
-        bottom: 30,
+        position: 'absolute',
         right: 20,
-        width: 60,
-        height: 60,
+        bottom: 30,
+        width: 55,
+        height: 55,
         borderRadius: 30,
         backgroundColor: "#10464d",
         justifyContent: "center",
         alignItems: "center",
-        elevation: 6,
+        elevation: 10,
         shadowColor: "#000",
         shadowOpacity: 0.3,
         shadowRadius: 4,
