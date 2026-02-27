@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars
 from rest_framework import routers
 
 api_router = routers.DefaultRouter()
@@ -33,9 +33,26 @@ urlpatterns = [
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
     path('api/v1/mock', views.hola_mundo),
+    path('api/v1/calendarios/<int:calendario_id>/publicar', views.publish_calendar),
+    path('api/v1/calendarios/<int:calendario_id>/eliminar/', views.eliminar_calendario, name='eliminar_calendario'),
+    path('api/v1/calendarios/<int:calendario_id>/editar/', views.editar_calendario, name='editar_calendario'),
+    path('api/v1/eventos', views.crear_evento),
+    path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
+    path('api/v1/eventos/<int:evento_id>', views.edit_event),
+    path('api/v1/usuarios', views.buscar_usuarios),
+    path('api/v1/auth/registro/', views.registro_usuario, name='registro'),
     path('api/v1/calendarios', views.crear_calendario),
+    path('api/v1/calendarios/list', list_calendars, name='list_calendarios'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
+    path('api/v1/google-auth', views.google_authorization),
+    path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
+    path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),
+    path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
+    path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
+    path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
+
+    path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
 ]
 
 

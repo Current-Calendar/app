@@ -58,7 +58,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
 
       {/* CENTER */}
       <View style={styles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" expanded={expanded} href="/" />
+        <SidebarItem icon="home" label="Home" expanded={expanded} href="/switch-events" />
         <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
         <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
         <SidebarItem icon="people" label="Our Team" expanded={expanded} />

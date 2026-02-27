@@ -60,6 +60,10 @@ jobs:
         POSTGRES_PORT: 5432
         REDIS_HOST: localhost
         REDIS_PORT: 6379
+        GOOGLE_REDIRECT_URIS: localhost
+        GOOGLE_CLIENT_ID: 'tu-client-id-de-google'
+        GOOGLE_CLIENT_SECRET: 'tu-client-secret-de-google'
+        GOOGLE_PROJECT_ID: 'tu-project-id-de-google'
         PYTHONPATH: .
       run: |
         python manage.py test

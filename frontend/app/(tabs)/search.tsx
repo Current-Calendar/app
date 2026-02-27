@@ -55,6 +55,7 @@ export default function SearchScreen() {
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
+                    placeholder="Search users, calendars..."
                     placeholder="Search users..."
                     value={query}
                     onChangeText={setQuery}
