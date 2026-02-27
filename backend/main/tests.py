@@ -1,14 +1,316 @@
 import json
 
-from django.contrib.auth.hashers import identify_hasher
+from django.contrib.auth.hashers import identify_hasher, check_password
 from django.test import TestCase
-from django.urls import reverse
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 import datetime
 from main.models import Usuario, Calendario, Evento
+from django.urls import reverse
+Usuario = get_user_model()
+class BorrarUsuarioTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        self.user = Usuario.objects.create_user(
+            email="user@example.com", password="password123", username="user1"
+        )
+        self.url=reverse("usuario-propio-view")
+    def test_borrar(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(
+            self.url,
+        )
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertRaises(Usuario.DoesNotExist,self.user.refresh_from_db)
+    def test_borrar_no_autenticado(self):
+        response = self.client.delete(
+            self.url,
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+class BorrarUsuarioTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        self.user = Usuario.objects.create_user(
+            email="user@example.com", password="password123", username="user1"
+        )
+        self.url=reverse("usuario-propio-view")
+    def test_borrar(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(
+            self.url,
+        )
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertRaises(Usuario.DoesNotExist,self.user.refresh_from_db)
+    def test_borrar_no_autenticado(self):
+        response = self.client.delete(
+            self.url,
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+from rest_framework import status
+from main.models import Usuario, Calendario, Evento
+from django.urls import reverse
+from django.contrib.auth import get_user_model
+from rest_framework.test import APITestCase, APIClient
+
+EDIT_EVENT_ENDPOINT = "/api/v1/eventos/{}"
+ENDPOINT_BUSCAR_USUARIOS = "/api/v1/usuarios"
+
+
+class EditEventTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = Usuario.objects.create_user(
+            username="eventuser",
+            email="event@example.com",
+            password="testpass123",
+        )
+
+        self.calendar1 = Calendario.objects.create(
+            creador=self.user,
+            nombre="Calendario 1",
+            estado="PUBLICO",
+        )
+
+        self.calendar2 = Calendario.objects.create(
+            creador=self.user,
+            nombre="Calendario 2",
+            estado="PUBLICO",
+        )
+
+        self.event = Evento.objects.create(
+            titulo="Evento Original",
+            descripcion="Descripcion original",
+            nombre_lugar="Lugar original",
+            fecha="2026-03-01",
+            hora="18:00:00",
+        )
+        self.event.calendarios.set([self.calendar1])
+
+    def endpoint(self, event_id=None):
+        return EDIT_EVENT_ENDPOINT.format(event_id or self.event.id)
+
+    # ── Success cases ──
+
+    def test_edit_title(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"titulo": "Titulo Nuevo"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, "Titulo Nuevo")
+
+    def test_edit_multiple_fields(self):
+        response = self.client.put(
+            self.endpoint(),
+            {
+                "titulo": "Nuevo titulo",
+                "descripcion": "Nueva descripcion",
+                "nombre_lugar": "Nuevo lugar",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, "Nuevo titulo")
+        self.assertEqual(self.event.descripcion, "Nueva descripcion")
+        self.assertEqual(self.event.nombre_lugar, "Nuevo lugar")
+
+    def test_edit_date_and_time(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"fecha": "2026-06-15", "hora": "20:30:00"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(str(self.event.fecha), "2026-06-15")
+        self.assertEqual(str(self.event.hora), "20:30:00")
+
+    def test_change_calendars(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"calendarios": [self.calendar2.id]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        cals = list(self.event.calendarios.values_list("id", flat=True))
+        self.assertEqual(cals, [self.calendar2.id])
+
+    def test_edit_location(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"latitud": 37.3861, "longitud": -5.9926},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertIsNotNone(self.event.ubicacion)
+        self.assertAlmostEqual(self.event.ubicacion.y, 37.3861, places=4)
+        self.assertAlmostEqual(self.event.ubicacion.x, -5.9926, places=4)
+
+    def test_edit_recurrence_and_external_id(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"recurrencia": 7, "id_externo": "ext-123"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.recurrencia, 7)
+        self.assertEqual(self.event.id_externo, "ext-123")
+
+    def test_unsent_fields_remain_unchanged(self):
+        original_title = self.event.titulo
+        original_description = self.event.descripcion
+
+        response = self.client.put(
+            self.endpoint(),
+            {"nombre_lugar": "Solo cambio lugar"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.titulo, original_title)
+        self.assertEqual(self.event.descripcion, original_description)
+        self.assertEqual(self.event.nombre_lugar, "Solo cambio lugar")
+
+    def test_response_contains_expected_keys(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"titulo": "Check keys"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected_keys = {
+            "id", "titulo", "descripcion", "nombre_lugar",
+            "fecha", "hora", "recurrencia", "id_externo",
+            "calendarios", "fecha_creacion",
+        }
+        self.assertEqual(set(response.data.keys()), expected_keys)
+
+    # ── Error cases ──
+
+    def test_event_not_found(self):
+        response = self.client.put(
+            self.endpoint(event_id=9999),
+            {"titulo": "No existe"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_empty_title(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"titulo": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_empty_date(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"fecha": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_empty_time(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"hora": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_nonexistent_calendar(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"calendarios": [9999]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("errors", response.data)
+
+    def test_empty_calendar_list(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"calendarios": []},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_invalid_lat_lon(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"latitud": "abc", "longitud": "xyz"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_get_not_allowed(self):
+        response = self.client.get(self.endpoint())
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_post_not_allowed(self):
+        response = self.client.post(
+            self.endpoint(),
+            {"titulo": "No permitido"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        
+class BuscarUsuariosTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user1 = Usuario.objects.create_user(
+            username="lucia",
+            email="lucia@example.com",
+            password="123",
+            pronombres="ella",
+        )
+
+        self.user2 = Usuario.objects.create_user(
+            username="antonio",
+            email="antonio@example.com",
+            password="123",
+            pronombres="él",
+        )
+
+    def test_busqueda_por_username(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=luc")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["username"], "lucia")
+
+    def test_busqueda_por_pronombres(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=ella")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+
+    def test_busqueda_sin_parametro(self):
+        response = self.client.get(ENDPOINT_BUSCAR_USUARIOS)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_busqueda_sin_resultados(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=zzz")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 0)
 
 Usuario = get_user_model()
 
@@ -855,3 +1157,231 @@ class EditarCalendarioTestCase(TestCase):
             'nombre': 'No existe'
         })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+class EditarUsuarioTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        # Usuario normal
+        self.user = Usuario.objects.create_user(
+            email="user@example.com", password="password123", username="user1"
+        )
+        self.url=reverse("usuario-propio-view")
+    def test_usuario_actualiza_su_perfil(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(
+            self.url,
+            {"username": "nuevo_nombre"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "nuevo_nombre")
+    def test_usuario_no_autenticado_no_puede_editar(self):
+        response = self.client.put(
+            self.url,
+            {"email": self.user.email, "username": "hackeado"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.user.refresh_from_db()
+        self.assertNotEqual(self.user.username, "hackeado")
+
+# ---------------------------------------------------------------------------
+# List & search calendars tests
+# ---------------------------------------------------------------------------
+
+ENDPOINT_LIST_CALENDARIOS = "/api/v1/calendarios/list"
+
+
+class ListCalendariosTests(TestCase):
+    """Tests for GET /api/v1/calendarios/list (list_calendarios view)."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+        self.owner = Usuario.objects.create_user(
+            username="owner",
+            email="owner@example.com",
+            password="pass123",
+        )
+        self.other = Usuario.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="pass123",
+        )
+
+        # Create a variety of calendars for filtering tests
+        self.cal_privado = Calendario.objects.create(
+            nombre="Private Events",
+            descripcion="Private calendar",
+            estado="PRIVADO",
+            origen="CURRENT",
+            creador=self.owner,
+        )
+        self.cal_amigos = Calendario.objects.create(
+            nombre="Friends Events",
+            descripcion="Friends calendar",
+            estado="AMIGOS",
+            origen="GOOGLE",
+            creador=self.owner,
+        )
+        self.cal_publico = Calendario.objects.create(
+            nombre="Public Events",
+            descripcion="Public calendar",
+            estado="PUBLICO",
+            origen="APPLE",
+            creador=self.other,
+        )
+        self.cal_publico2 = Calendario.objects.create(
+            nombre="Open Events",
+            descripcion="Another public calendar",
+            estado="PUBLICO",
+            origen="CURRENT",
+            creador=self.other,
+        )
+
+    # ------------------------------------------------------------------
+    # Basic listing
+    # ------------------------------------------------------------------
+
+    def test_list_all_calendars_returns_200(self):
+        """GET without filters returns 200 and all calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_list_all_calendars_returns_all_records(self):
+        """All created calendars (setUp + extra) are returned without truncation."""
+        # Create 4 additional calendars explicitly inside this test
+        for i in range(4):
+            Calendario.objects.create(
+                nombre=f"Extra Calendar {i}",
+                estado="PUBLICO",
+                creador=self.owner,
+            )
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # setUp already created 4 calendars; we added 4 more → must be > 4
+        self.assertGreater(len(response.json()), 4)
+
+    def test_response_contains_expected_fields(self):
+        """Each item in the response has the expected fields."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        item = response.json()[0]
+        for field in ("id", "nombre", "descripcion", "estado", "origen", "creador_id", "creador_username", "fecha_creacion"):
+            self.assertIn(field, item)
+
+    def test_results_ordered_by_fecha_creacion_newest_first(self):
+        """Results are ordered newest-first."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+        ids = [item["id"] for item in response.json()]
+        # The last-created calendar should appear first
+        self.assertEqual(ids[0], self.cal_publico2.id)
+
+    # ------------------------------------------------------------------
+    # Name search (q parameter)
+    # ------------------------------------------------------------------
+
+    def test_search_by_name_returns_matching_calendars(self):
+        """q parameter filters calendars by name substring (case-insensitive)."""
+        # 'Friends' only appears in 'Friends Events', so exactly 1 match expected
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Friends"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [item["nombre"] for item in response.json()]
+        self.assertIn("Friends Events", names)
+        self.assertNotIn("Private Events", names)
+        self.assertNotIn("Public Events", names)
+        self.assertNotIn("Open Events", names)
+
+    def test_search_is_case_insensitive(self):
+        """Name search is case-insensitive."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "PRIVATE"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["nombre"], "Private Events")
+
+    def test_search_with_no_matches_returns_empty_list(self):
+        """q parameter that matches nothing returns an empty list, not an error."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "zzznomatch"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+    def test_search_with_empty_q_returns_all(self):
+        """An empty q string is ignored and all calendars are returned."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": ""})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 4)
+
+    # ------------------------------------------------------------------
+    # Status filter (estado parameter)
+    # ------------------------------------------------------------------
+
+    def test_filter_by_estado_publico(self):
+        """estado=PUBLICO returns only public calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["estado"], "PUBLICO")
+
+    def test_filter_by_estado_privado(self):
+        """estado=PRIVADO returns only private calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PRIVADO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["estado"], "PRIVADO")
+
+    def test_filter_by_estado_amigos(self):
+        """estado=AMIGOS returns only friends calendars."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "AMIGOS"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["estado"], "AMIGOS")
+
+    def test_filter_by_estado_case_insensitive(self):
+        """estado filter is case-insensitive (lowercase is accepted)."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "publico"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 2)
+
+    def test_invalid_estado_returns_400(self):
+        """An unrecognised estado value returns 400 Bad Request."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "SECRETO"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
+
+    # ------------------------------------------------------------------
+    # Combined filters
+    # ------------------------------------------------------------------
+
+    def test_combined_q_and_estado_filter(self):
+        """q and estado can be combined to narrow results."""
+        # 'Public' only appears in 'Public Events', which is also PUBLICO → exactly 1
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Public Events", "estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["nombre"], "Public Events")
+
+    def test_combined_filters_no_match_returns_empty(self):
+        """Combined filters that match nothing return an empty list."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Private", "estado": "PUBLICO"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+    # ------------------------------------------------------------------
+    # HTTP method enforcement
+    # ------------------------------------------------------------------
+
+    def test_post_not_allowed(self):
+        """POST to list endpoint returns 405 Method Not Allowed."""
+        response = self.client.post(ENDPOINT_LIST_CALENDARIOS, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_creador_username_matches_actual_user(self):
+        """The creador_username in the response matches the creator's username."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PRIVADO"})
+        self.assertEqual(response.json()[0]["creador_username"], self.owner.username)
+
