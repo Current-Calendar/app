@@ -929,3 +929,28 @@ def crear_evento(request):
         },
         status=status.HTTP_201_CREATED,
     )
+@api_view(['PUT'])
+def publish_calendar(request, calendario_id):
+    calendar = get_object_or_404(Calendario, id=calendario_id)
+
+    if calendar.estado == 'PUBLICO':
+        return Response(
+            {"errors": ["El calendario ya es público."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    calendar.estado = 'PUBLICO'
+    calendar.save()
+
+    return Response(
+        {
+            "id": calendar.id,
+            "nombre": calendar.nombre,
+            "descripcion": calendar.descripcion,
+            "estado": calendar.estado,
+            "origen": calendar.origen,
+            "creador": calendar.creador.id,
+            "fecha_creacion": calendar.fecha_creacion,
+        },
+        status=status.HTTP_200_OK,
+    )
