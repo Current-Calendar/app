@@ -363,7 +363,6 @@ export default function CreateEventsScreen() {
   const [showWebTimePicker, setShowWebTimePicker] = useState(false);
   const [webHour, setWebHour] = useState(time.getHours());
   const [webMinute, setWebMinute] = useState(time.getMinutes());
-  const [showNativeDatePicker, setShowNativeDatePicker] = useState(false);
 
   const timeLabel = useMemo(() => `${toHM(time)} h`, [time]);
   const dateLabel = useMemo(() => toISODate(date), [date]);
@@ -392,33 +391,6 @@ export default function CreateEventsScreen() {
     setShowWebTimePicker(false);
   };
 
-  const openDatePicker = () => {
-    if (Platform.OS === "web") {
-      const current = toISODate(date);
-      // @ts-ignore
-      const picked = window?.prompt?.("Fecha (YYYY-MM-DD):", current);
-      if (!picked) return;
-
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(picked.trim());
-      if (!m) return;
-
-      const d = new Date(date);
-      d.setFullYear(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-      d.setHours(0, 0, 0, 0);
-      setDate(d);
-    } else {
-      setShowNativeDatePicker(true);
-    }
-  };
-
-  const onPickNativeDate = (_event: any, selected?: Date) => {
-    if (Platform.OS !== "ios") setShowNativeDatePicker(false);
-    if (selected) {
-      const d = new Date(selected);
-      d.setHours(0, 0, 0, 0);
-      setDate(d);
-    }
-  };
 
   const pickCoverImage = async () => {
     if (Platform.OS !== "web") {
@@ -573,10 +545,10 @@ export default function CreateEventsScreen() {
 
             {/* Date */}
             <View style={styles.timeRow}>
-              <Text style={styles.fieldLabel}>Date:</Text>
-              <Pressable style={styles.timePill} onPress={openDatePicker}>
-                <Text style={styles.timeText}>{dateLabel}</Text>
-              </Pressable>
+            <Text style={styles.fieldLabel}>Date:</Text>
+            <View style={styles.timePill}>
+              <Text style={styles.timeText}>{dateLabel}</Text>
+            </View>
             </View>
 
             {/* Time */}
@@ -659,29 +631,6 @@ export default function CreateEventsScreen() {
           </View>
         </Pressable>
       </Modal>
-
-      {/* Native date picker (iOS/Android) */}
-      {showNativeDatePicker && (
-        <>
-          {Platform.OS === "ios" ? (
-            <Modal transparent animationType="fade">
-              <View style={styles.pickerOverlay}>
-                <View style={styles.pickerCard}>
-                  <Text style={styles.pickerTitle}>Select date</Text>
-
-                  <DateTimePicker value={date} mode="date" display="spinner" onChange={onPickNativeDate} />
-
-                  <Pressable style={styles.pickerDone} onPress={() => setShowNativeDatePicker(false)}>
-                    <Text style={styles.pickerDoneText}>Done</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
-          ) : (
-            <DateTimePicker value={date} mode="date" display="spinner" onChange={onPickNativeDate} />
-          )}
-        </>
-      )}
 
       {/* Native time picker (iOS/Android) */}
       {showNativeTimePicker && (
