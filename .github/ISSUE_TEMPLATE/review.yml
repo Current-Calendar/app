@@ -1,7 +1,7 @@
 name: Review
 description: Revisión de una tarea o entregable
 type: "Review"
-projects: []
+projects: [Current-Calendar/1]
 assignees: []
 body:
   - type: textarea
