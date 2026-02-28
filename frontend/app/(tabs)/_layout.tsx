@@ -72,15 +72,19 @@ export default function CustomTabLayout() {
         >
           {/* TOP: Logo */}
           <View style={styles.sidebarTop}>
-            <Image
-              source={require("../../assets/images/icon-current-white.png")}
-              style={[
-                styles.sidebarLogo,
-                expanded && styles.sidebarLogoExpanded,
-              ]}
-              resizeMode="contain"
-            />
-          </View>
+          <Link href="/login" asChild>
+            <Pressable>
+              <Image
+                source={require("../../assets/images/icon-current-white.png")}
+                style={[
+                  styles.sidebarLogo,
+                  expanded && styles.sidebarLogoExpanded,
+                ]}
+                resizeMode="contain"
+              />
+            </Pressable>
+          </Link>
+        </View>
 
           {/* CENTER: Iconos */}
           <View style={styles.sidebarCenter}>
@@ -116,13 +120,15 @@ export default function CustomTabLayout() {
               <View style={styles.profileAvatar} />
             </Pressable>
 
-            <View style={styles.logoContainer}>
-              <Image
-                source={require("../../assets/images/icon-current-white.png")}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+            <Link href="/login" asChild>
+              <Pressable style={styles.logoContainer}>
+                <Image
+                  source={require("../../assets/images/icon-current-white.png")}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </Pressable>
+            </Link>
 
             <View style={styles.sidePlaceholder} />
           </View>
