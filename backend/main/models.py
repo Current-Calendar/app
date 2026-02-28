@@ -80,6 +80,7 @@ class Evento(models.Model):
     recurrencia = models.IntegerField(null=True, blank=True)
     id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     calendarios = models.ManyToManyField(Calendario, related_name='eventos')
+    creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='eventos_creados')
     fecha_creacion = models.DateTimeField(default=timezone.now)
 
     def __str__(self):

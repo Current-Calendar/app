@@ -1,7 +1,7 @@
 name: Tarea
 description: Tarea a realizar
 type: "Task"
-projects: ["Current Calendar"]
+projects: [Current-Calendar/1]
 assignees: []
 body:
   - type: textarea
