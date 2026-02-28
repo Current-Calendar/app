@@ -87,6 +87,7 @@ export default function CustomTabLayout() {
             <SidebarItem icon="home" label="Home" expanded={expanded} href="/" />
             <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
             <SidebarItem icon="calendar" label="Calendars" expanded={expanded} href="/calendars" />
+            <SidebarItem  icon="download"  label="Import Calendar"  expanded={expanded} href="/importCalendar"/>
             <SidebarItem icon="people" label="Our Team" expanded={expanded} />
             <SidebarItem icon="compass" label="Map" expanded={expanded} />
             <SidebarItem icon="settings" label="Settings" expanded={expanded} />
@@ -137,6 +138,7 @@ export default function CustomTabLayout() {
             <NavButton icon="home" href="/" />
             <NavButton icon="search" href="/search" />
             <NavButton icon="add-circle" />
+                        <NavButton  icon="download" href="/importCalendar"/>
             <NavButton icon="chatbubble-ellipses" />
             <NavButton icon="compass" />
           </View>

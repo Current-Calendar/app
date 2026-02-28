@@ -4,12 +4,16 @@ import * as Linking from "expo-linking";
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from "react-native";
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_API_URL!.endsWith('/')
-  ? process.env.EXPO_PUBLIC_API_URL
-  : process.env.EXPO_PUBLIC_API_URL + '/';
+const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL!;
+
+const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
+  ? RAW_BACKEND_URL
+  : RAW_BACKEND_URL + '/';
+
+const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
 
 export const downloadCalendar = async (id: string, token?: string) => {
-  const url = `${BACKEND_URL}api/calendars/${id}/export`;
+  const url = `${BACKEND_URL}calendars/${id}/export`;
 
   try {
     if (Platform.OS === "web") {
@@ -43,33 +47,41 @@ export const downloadCalendar = async (id: string, token?: string) => {
   }
 };
 
-export const importIOSCalendar = async (calendarUrl: string, token?: string) => {
+export async function importIOSCalendar(calendarUrl: string, userId: number) {
   try {
-    const res = await fetch(`${BACKEND_URL}api/calendars/import-ios-calendar`, {
-      method: "POST",
+    const response = await fetch(`${BACKEND_URL}calendars/import-ios-calendar`, {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ url: calendarUrl }),
+      body: JSON.stringify({
+        webcal_url: calendarUrl,
+        user: userId,
+        estado: 'PRIVADO',
+      }),
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || "Error importando calendario iOS");
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error('Error importando calendario iOS: ' + text);
     }
 
-    return await res.json();
+    const data = await response.json();
+    console.log('Calendario iOS importado:', data);
+    alert(`Calendario iOS importado con ${data.count || 0} eventos`);
+    return data;
+
   } catch (error) {
-    console.error("Error importando calendario iOS:", error);
+    console.error('Error en importIOSCalendar:', error);
+    alert('Error importando calendario iOS: ' + error);
     throw error;
   }
-};
+}
 
 export async function importGoogleCalendar() {
   try {
-    const authUrl = `${BACKEND_URL}api/v1/google-auth`;
-    const importUrl = `${BACKEND_URL}api/calendars/import-google-calendar`;
+    const authUrl = `${BACKEND_URL}google-auth`;
+    const importUrl = `${BACKEND_URL}calendars/import-google-calendar`;
 
     if (Platform.OS === 'web') {
       window.location.href = authUrl;
@@ -77,6 +89,7 @@ export async function importGoogleCalendar() {
     }
 
     const redirectUri = Linking.createURL('/');
+
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type === 'success') {
@@ -86,46 +99,74 @@ export async function importGoogleCalendar() {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      if (!response.ok) throw new Error('Error al importar calendario');
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error('Error al importar calendario: ' + text);
+      }
 
       const data = await response.json();
       console.log('Eventos importados:', data);
+      alert(`Google Calendar importado. Eventos: ${data.count || 0}`);
       return data;
+    } else {
+      console.log('Autenticación cancelada o fallida', result);
     }
+
   } catch (error) {
     console.error('Error en importGoogleCalendar:', error);
+    alert('Error importando Google Calendar: ' + error);
     throw error;
   }
 }
 
 export async function importICS(userId: number) {
   try {
+    if (!userId) throw new Error("UserId requerido");
+
     const result = await DocumentPicker.getDocumentAsync({
       type: 'text/calendar',
       copyToCacheDirectory: true,
     });
 
-    if (result.canceled) return;
+    const isCanceled = Platform.OS === 'web'
+      ? !('uri' in result) || !result.uri
+      : !result.assets || result.assets.length === 0;
 
-    const file = result.assets[0];
+    if (isCanceled) return;
+
+    let fileUri: string;
+    let fileName: string;
+
+    if (Platform.OS === 'web') {
+      fileUri = (result as any).uri;
+      fileName = (result as any).name;
+    } else {
+      const asset = result.assets![0];
+      fileUri = asset.uri;
+      fileName = asset.name;
+    }
+
+    if (!fileUri || !fileName) throw new Error("Archivo ICS requerido");
+
     const formData = new FormData();
-
-    formData.append('file', { uri: file.uri, name: file.name, type: 'text/calendar' } as any);
-    formData.append('user', userId.toString());
+    formData.append('file', { uri: fileUri, name: fileName, type: 'text/calendar' } as any);
+    formData.append('user', String(userId));
     formData.append('estado', 'PRIVADO');
 
-    const response = await fetch(`${BACKEND_URL}api/calendars/import-ics`, {
+    const response = await fetch(`${ROOT_BACKEND_URL}api/calendars/import-ics`, {
       method: 'POST',
       body: formData,
-      headers: {},
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Error importando ICS');
+    const contentType = response.headers.get("content-type");
+    if (!contentType?.includes("application/json")) {
+      const text = await response.text();
+      throw new Error("El backend no devolvió JSON: " + text);
     }
 
     const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Error importando ICS");
+
     console.log('Calendario importado:', data);
     return data;
 
