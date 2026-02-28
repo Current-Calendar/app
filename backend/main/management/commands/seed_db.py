@@ -87,7 +87,8 @@ class Command(BaseCommand):
             ubicacion=Point(-3.7038, 40.4168, srid=4326),
             fecha=date(2026, 3, 15), 
             hora=time(18, 30),
-            foto='fotos_eventos/evento.jpg'
+            foto='fotos_eventos/evento.jpg',
+            creador=user1
         )
         evento_tech.calendarios.add(cal_ana_pub)
 
@@ -95,7 +96,8 @@ class Command(BaseCommand):
             titulo="Cena cumpleaños", 
             descripcion="Nos vemos en el restaurante de siempre.",
             fecha=date(2026, 3, 20), 
-            hora=time(21, 00)
+            hora=time(21, 00),
+            creador=user2
         )
         evento_cena.calendarios.add(cal_carlos_amigos, cal_ana_priv)
 
@@ -104,7 +106,8 @@ class Command(BaseCommand):
             nombre_lugar="Sala Principal",
             ubicacion=Point(-3.6900, 40.4200, srid=4326),
             fecha=date(2026, 2, 25), 
-            hora=time(10, 00)
+            hora=time(10, 00),
+            creador=user3
         )
         evento_gym.calendarios.add(cal_gym, cal_carlos_amigos)
 
