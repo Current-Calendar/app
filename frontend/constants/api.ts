@@ -17,7 +17,9 @@ export const API_CONFIG = {
   baseURL: normalizedBaseURL,
   endpoints: {
     mock: buildEndpoint('mock'),
-    deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    getCalendars: buildEndpoint('calendarios/list'),
+    getEvents: buildEndpoint('eventos/list'),
+    deleteCalendar: (calendarId: number) => buildEndpoint(`api/v1/calendarios/${calendarId}/eliminar/`),
   },
 };
 

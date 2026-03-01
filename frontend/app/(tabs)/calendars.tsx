@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     ScrollView,
@@ -10,6 +10,7 @@ import {
     useWindowDimensions,
     Alert,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -23,7 +24,6 @@ import { EventDetailModal } from '@/components/event-detail-modal';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
-import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
 import { API_CONFIG } from '@/constants/api';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
@@ -54,8 +54,9 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
-    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
-    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+    const [calendars, setCalendars] = useState<Calendar[]>([]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -64,6 +65,63 @@ export default function CalendarScreen() {
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [calRes, evRes] = await Promise.all([
+                    fetch(API_CONFIG.endpoints.getCalendars),
+                    fetch(API_CONFIG.endpoints.getEvents),
+                ]);
+
+                if (!calRes.ok || !evRes.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                const calData = await calRes.json();
+                const evData = await evRes.json();
+
+                const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+
+                const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+                    id: String(c.id),
+                    nombre: c.nombre,
+                    descripcion: c.descripcion || '',
+                    estado: c.estado,
+                    origen: c.origen,
+                    creador: c.creador_username || 'unknown',
+                    color: COLORS[index % COLORS.length],
+                }));
+
+                const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
+                    const calendar = mappedCalendars.find(c => e.calendarios.includes(Number(c.id)));
+                    return {
+                        id: String(e.id),
+                        calendarId: String(e.calendarios[0] || ''),
+                        titulo: e.titulo,
+                        descripcion: e.descripcion || '',
+                        nombre_lugar: e.nombre_lugar || '',
+                        fecha: e.fecha,
+                        hora: e.hora.substring(0, 5),
+                        recurrencia: e.recurrencia,
+                        type: 'other', // Default type
+                        color: calendar?.color || '#6C63FF',
+                    };
+                });
+
+                setCalendars(mappedCalendars);
+                setEvents(mappedEvents);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                Alert.alert('Error', 'Could not load calendars or events.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void fetchData();
+    }, []);
 
     // Animation for the bottom sheet
     const sheetY = useRef(new Animated.Value(120)).current;
@@ -171,6 +229,14 @@ export default function CalendarScreen() {
         setYear(now.getFullYear());
         setMonth(now.getMonth());
     };
+    // Added loading para esperar a datos
+    if (loading) {
+        return (
+            <View style={[styles.screenWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#10464d" />
+            </View>
+        );
+    }
 
     return (
         <View style={styles.screenWrapper}>

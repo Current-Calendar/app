@@ -598,6 +598,40 @@ def list_calendars(request):
     return Response(results, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+def list_events(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        calendarId (int) -- filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+    calendar_id = request.GET.get('calendarId')
+
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+        }
+        for event in queryset
+    ]
+    return Response(results, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
