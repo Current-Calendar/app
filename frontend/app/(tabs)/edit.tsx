@@ -1,52 +1,94 @@
-import { View, Text, ScrollView, TextInput, Switch, Pressable, StyleSheet, useWindowDimensions, Alert } from "react-native";
+import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, useWindowDimensions, Alert, ActivityIndicator } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import API_CONFIG from "@/constants/api";
+
+type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 
 export default function EditScreen() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+    id: string;
+    nombre: string;
+    descripcion: string;
+    estado: PrivacyStatus;
+  }>();
+
+  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.estado ?? 'PRIVADO');
   const [isLoading, setIsLoading] = useState(false);
+  const [calendarData, setCalendarData] = useState({
+    nombre: params.nombre ?? "",
+    descripcion: params.descripcion ?? "",
+  });
+
+  const calendarId = params.id;
+
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Calendar",
-      "Are you sure you want to delete this calendar? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          onPress: () => {},
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          onPress: () => {
-            // TODO: Implement delete logic
-            console.log("Calendar deleted");
-          },
-          style: "destructive",
-        },
-      ]
-    );
-  };
+  const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
+    {
+      label: "Private",
+      value: "PRIVADO",
+      icon: "lock-closed-outline",
+      description: "Only you can see this calendar",
+    },
+    {
+      label: "Friends",
+      value: "AMIGOS",
+      icon: "people-outline",
+      description: "Visible to your friends only",
+    },
+    {
+      label: "Public",
+      value: "PUBLICO",
+      icon: "globe-outline",
+      description: "Visible to everyone",
+    },
+  ];
 
-  const handleUpdate = async () => {
-    if (!title.trim()) {
-      Alert.alert("Error", "Please enter a calendar title");
+  const handleEdit = async () => {
+    if (!calendarData.nombre.trim()) {
+      Alert.alert("Error", "Calendar name is required.");
+      return;
+    }
+
+    if (!calendarId) {
+      Alert.alert("Error", "Calendar ID is missing.");
       return;
     }
 
     setIsLoading(true);
     try {
-      // TODO: Implement update logic
-      console.log("Calendar updated:", { title, description, isPrivate });
-      Alert.alert("Success", "Calendar updated successfully");
+      const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: calendarData.nombre,
+          descripcion: calendarData.descripcion,
+          estado: selectedPrivacy,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
+      }
+
+      Alert.alert("Success", "Calendar updated successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            router.replace('/(tabs)/calendars');
+          },
+        },
+      ]);
     } catch (error) {
-      Alert.alert("Error", "Failed to update calendar");
+      Alert.alert("Error", "Failed to update calendar. Please try again.");
+      console.error("Edit error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +100,7 @@ export default function EditScreen() {
         contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
         showsVerticalScrollIndicator={false}
       >
-        {/* FORM CARD — centered on desktop */}
+        {/* FORM CARD */}
         <View style={[styles.card, isDesktop && styles.cardDesktop]}>
 
           {/* TITLE */}
@@ -71,87 +113,120 @@ export default function EditScreen() {
             Edit Calendar
           </ThemedText>
 
-          {/* COVER */}
-          <View style={styles.coverRow}>
-            <Text style={styles.label}>Cover:</Text>
-            <Pressable style={styles.coverBox}>
-              <Ionicons name="camera-outline" size={44} color="#aaa" />
-              <Text style={styles.coverHint}>Tap to change</Text>
-            </Pressable>
+          {/* CALENDAR DETAILS */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Calendar Details</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Calendar name"
+              placeholderTextColor="#aaa"
+              value={calendarData.nombre}
+              onChangeText={(text) => setCalendarData({ ...calendarData, nombre: text })}
+            />
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Description (optional)"
+              placeholderTextColor="#aaa"
+              value={calendarData.descripcion}
+              onChangeText={(text) => setCalendarData({ ...calendarData, descripcion: text })}
+              multiline
+              numberOfLines={3}
+            />
           </View>
 
-          {/* TITLE INPUT */}
-          <Text style={styles.label}>Title:</Text>
-          <TextInput
-            style={styles.input}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Calendar name..."
-            placeholderTextColor="#bbb"
-          />
+          {/* DIVIDER */}
+          <View style={styles.divider} />
 
-          {/* DESCRIPTION INPUT */}
-          <Text style={styles.label}>Description:</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="What is this calendar about?"
-            placeholderTextColor="#bbb"
-            multiline
-            numberOfLines={4}
-          />
+          {/* PRIVACY */}
+          <View style={styles.privacySection}>
+            <Text style={styles.sectionTitle}>Who can see this?</Text>
 
-          {/* PRIVATE + FRIENDS ROW */}
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleItem}>
-              <Text style={styles.toggleLabel}>Private</Text>
-              <Switch
-                value={isPrivate}
-                onValueChange={setIsPrivate}
-                trackColor={{ false: "#ccc", true: "#10464d" }}
-                thumbColor="#fff"
-              />
-            </View>
+            {privacyOptions.map((option) => (
+              <Pressable
+                key={option.value}
+                style={[
+                  styles.privacyOption,
+                  selectedPrivacy === option.value && styles.privacyOptionSelected,
+                ]}
+                onPress={() => setSelectedPrivacy(option.value)}
+              >
+                <View style={styles.privacyIconRadius}>
+                  <Ionicons
+                    name={option.icon as any}
+                    size={20}
+                    color={selectedPrivacy === option.value ? "#10464d" : "#999"}
+                  />
+                </View>
+                <View style={styles.privacyContent}>
+                  <Text
+                    style={[
+                      styles.privacyLabel,
+                      selectedPrivacy === option.value && styles.privacyLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text style={styles.privacyDescription}>{option.description}</Text>
+                </View>
 
-            <Pressable style={styles.friendsButton}>
-              <Ionicons name="people-outline" size={16} color="#10464d" style={{ marginRight: 6 }} />
-              <Text style={styles.friendsButtonText}>Friends</Text>
-            </Pressable>
+                {/* Radio Button */}
+                <View
+                  style={[
+                    styles.radioButton,
+                    selectedPrivacy === option.value && styles.radioButtonSelected,
+                  ]}
+                >
+                  {selectedPrivacy === option.value && (
+                    <View style={styles.radioButtonInner} />
+                  )}
+                </View>
+              </Pressable>
+            ))}
           </View>
 
-          {/* DELETE BUTTON */}
-          <Pressable 
-            style={[styles.deleteButton, { marginTop: 16 }]}
-            onPress={handleDelete}
-          >
-            <Ionicons name="trash-outline" size={16} color="#c0756a" style={{ marginRight: 6 }} />
-            <Text style={styles.deleteButtonText}>Delete Calendar</Text>
-          </Pressable>
+          {/* INFO BOX */}
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle-outline" size={20} color="#10464d" style={{ marginRight: 12 }} />
+            <Text style={styles.infoText}>
+              {selectedPrivacy === "PRIVADO"
+                ? "Only you can access and modify this calendar."
+                : selectedPrivacy === "AMIGOS"
+                ? "Your friends will receive an invitation to view this calendar."
+                : "Anyone with the link can view this calendar."}
+            </Text>
+          </View>
 
-          {/* UPDATE BUTTON — inside card on desktop, absolute on mobile */}
+          {/* DESKTOP BUTTON */}
           {isDesktop && (
-            <Pressable 
-              style={[styles.updateButton, { marginTop: 32 }]}
-              onPress={handleUpdate}
+            <Pressable
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+              onPress={handleEdit}
               disabled={isLoading}
             >
-              <Text style={styles.updateText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.saveText}>Save Changes</Text>
+              )}
             </Pressable>
           )}
 
         </View>
       </ScrollView>
 
-      {/* UPDATE BUTTON — fixed at bottom on mobile only */}
+      {/* SAVE BUTTON — fixed at bottom on mobile */}
       {!isDesktop && (
-        <View style={styles.updateContainer}>
-          <Pressable 
-            style={styles.updateButton}
-            onPress={handleUpdate}
+        <View style={styles.saveContainer}>
+          <Pressable
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={handleEdit}
             disabled={isLoading}
           >
-            <Text style={styles.updateText}>{isLoading ? "Saving..." : "Save Changes"}</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.saveText}>Save Changes</Text>
+            )}
           </Pressable>
         </View>
       )}
@@ -166,15 +241,13 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 24,
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   containerDesktop: {
     alignItems: "center",
     paddingVertical: 40,
     paddingBottom: 40,
   },
-
-  // CARD (wraps the form)
   card: {
     width: "100%",
   },
@@ -191,114 +264,125 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // COVER
-  coverRow: {
-    alignItems: "center",
+  // INPUT SECTION
+  inputSection: {
     marginBottom: 24,
-    marginTop: 4,
   },
-  coverBox: {
-    width: 140,
-    height: 140,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "#aaa",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    gap: 6,
-  },
-  coverHint: {
-    fontSize: 12,
-    color: "#aaa",
-  },
-
-  // INPUTS
-  label: {
-    fontSize: 13,
-    color: "#10464d",
-    fontWeight: "600",
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  toggleLabel: {
+  sectionTitle: {
     fontSize: 15,
     color: "#10464d",
-    fontWeight: "600",
+    fontWeight: "700",
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: "#c0756a",
+    borderColor: "#e0e0e0",
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: "#fff",
+    paddingVertical: 12,
+    fontSize: 14,
     color: "#333",
+    backgroundColor: "#fff",
+    marginBottom: 12,
   },
-  textArea: {
-    height: 100,
+  inputMultiline: {
+    height: 90,
     textAlignVertical: "top",
   },
+  divider: {
+    height: 1,
+    backgroundColor: "#e8e8e8",
+    marginVertical: 24,
+  },
 
-  // TOGGLES
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 24,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  // PRIVACY SECTION
+  privacySection: {
+    marginBottom: 24,
   },
-  toggleItem: {
+  privacyOption: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-  },
-  friendsButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1.5,
+    borderColor: "#e0e0e0",
+    borderRadius: 10,
+    backgroundColor: "#fff",
+  },
+  privacyOptionSelected: {
     borderColor: "#10464d",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
     backgroundColor: "#f0f5f5",
   },
-  friendsButtonText: {
-    color: "#10464d",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  // DELETE BUTTON
-  deleteButton: {
-    flexDirection: "row",
+  privacyIconRadius: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f0f5f5",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#c0756a",
-    borderRadius: 10,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
+    marginRight: 12,
   },
-  deleteButtonText: {
-    color: "#c0756a",
-    fontSize: 15,
+  privacyContent: {
+    flex: 1,
+  },
+  privacyLabel: {
+    fontSize: 14,
+    color: "#333",
     fontWeight: "600",
+    marginBottom: 2,
+  },
+  privacyLabelSelected: {
+    color: "#10464d",
+  },
+  privacyDescription: {
+    fontSize: 12,
+    color: "#999",
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#999",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioButtonSelected: {
+    borderColor: "#10464d",
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#10464d",
   },
 
-  // UPDATE
-  updateContainer: {
+  // INFO BOX
+  infoBox: {
+    flexDirection: "row",
+    backgroundColor: "#f0f5f5",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: "#10464d",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#10464d",
+    lineHeight: 16,
+  },
+
+  // BUTTONS
+  saveContainer: {
     position: "absolute",
     bottom: 24,
     left: 24,
     right: 24,
   },
-  updateButton: {
+  saveButton: {
+    flex: 1,
     backgroundColor: "#10464d",
     borderRadius: 30,
     paddingVertical: 16,
@@ -309,7 +393,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  updateText: {
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
