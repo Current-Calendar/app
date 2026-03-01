@@ -21,6 +21,7 @@ import { CalendarInfoModal } from '@/components/calendar-info-modal';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
 import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+import { API_CONFIG } from '@/constants/api';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -50,6 +51,8 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
+    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -88,7 +91,7 @@ export default function CalendarScreen() {
 
     // TODO BACKEND - Once endpoints exist, move filtering server-side
     const filteredEvents = useMemo(() => {
-        let list = MOCK_EVENTS;
+        let list = events;
         if (selectedCalendarId) {
             list = list.filter((e) => e.calendarId === selectedCalendarId);
         }
@@ -96,7 +99,50 @@ export default function CalendarScreen() {
             list = list.filter((e) => e.type === selectedEventType);
         }
         return list;
-    }, [selectedCalendarId, selectedEventType]);
+    }, [events, selectedCalendarId, selectedEventType]);
+
+    const removeCalendarFromState = (calendarId: string) => {
+        setCalendars((current) => current.filter((item) => item.id !== calendarId));
+        setEvents((current) => current.filter((event) => event.calendarId !== calendarId));
+        setSelectedCalendarId((current) => (current === calendarId ? null : current));
+        setActiveEvent((current) => (current?.calendarId === calendarId ? null : current));
+        setInfoCalendar(null);
+    };
+
+    const handleDeleteCalendar = async (calendar: Calendar) => {
+        const calendarId = Number(calendar.id);
+
+        // Fallback for mock/local calendars that do not map to backend integer IDs.
+        if (!Number.isInteger(calendarId) || calendarId <= 0) {
+            removeCalendarFromState(calendar.id);
+            return;
+        }
+
+        setDeletingCalendarId(calendar.id);
+        try {
+            const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            removeCalendarFromState(calendar.id);
+        } catch {
+            Alert.alert('Delete failed', 'Could not delete the calendar. Please try again.');
+        } finally {
+            setDeletingCalendarId(null);
+        }
+    };
+
+    const handleDeleteCalendarPress = (calendar: Calendar) => {
+        if (deletingCalendarId) {
+            return;
+        }
+
+        void handleDeleteCalendar(calendar);
+    };
 
     const goToPrevMonth = () => {
         if (month === 0) {
