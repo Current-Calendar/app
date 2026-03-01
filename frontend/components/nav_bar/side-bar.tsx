@@ -1,6 +1,7 @@
 import { View, Pressable, StyleSheet, Image, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, type Href } from "expo-router";
+import { useAuth } from "../../app/context/AuthContext"; 
 
 interface Props {
   expanded: boolean;
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export default function Sidebar({ expanded, setExpanded }: Props) {
+  const { isAuthenticated } = useAuth(); 
+
   const SidebarItem = ({
     icon,
     label,
@@ -37,21 +40,18 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
     return content;
   };
 
+  // ✅ lógica Profile/Login
+  const profileLabel = isAuthenticated ? "Profile" : "Login";
+  const profileHref: Href = isAuthenticated ? ("/" as Href/*"/profile" as Href*/) : ("/login" as Href);
+
+
   return (
-    <View
-      style={[
-        styles.sidebar,
-        expanded && styles.sidebarExpanded,
-      ]}
-    >
+    <View style={[styles.sidebar, expanded && styles.sidebarExpanded]}>
       {/* TOP */}
       <View style={styles.sidebarTop}>
         <Image
           source={require("../../assets/images/icon-current-white.png")}
-          style={[
-            styles.sidebarLogo,
-            expanded && styles.sidebarLogoExpanded,
-          ]}
+          style={[styles.sidebarLogo, expanded && styles.sidebarLogoExpanded]}
           resizeMode="contain"
         />
       </View>
@@ -60,17 +60,15 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
       <View style={styles.sidebarCenter}>
         <SidebarItem icon="home" label="Home" expanded={expanded} href="/calendars" />
         <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
-        <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/switch-calendar" />
+        <SidebarItem icon="calendar" label="Discover" expanded={expanded} href="/switch-calendar" />
         {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
         {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
-        <SidebarItem icon="person" label="Profile" expanded={expanded} />
+        <SidebarItem icon="person" label={profileLabel} expanded={expanded} href={profileHref} />
+        
       </View>
 
       {/* BOTTOM */}
-      <Pressable
-        style={styles.expandButton}
-        onPress={() => setExpanded(!expanded)}
-      >
+      <Pressable style={styles.expandButton} onPress={() => setExpanded(!expanded)}>
         <Ionicons
           name={expanded ? "chevron-back" : "chevron-forward"}
           size={22}
