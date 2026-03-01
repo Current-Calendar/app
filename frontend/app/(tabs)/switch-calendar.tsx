@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet, Alert } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
@@ -8,43 +8,45 @@ import { API_CONFIG } from '@/constants/api';
 export default function CalendarsScreen() {
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-          const fetchData = async () => {
-              try {
-                  const [calRes] = await Promise.all([
-                      fetch(API_CONFIG.endpoints.getCalendars),
-                  ]);
-  
-                  if (!calRes.ok) {
-                      throw new Error('Failed to fetch calendars data');
-                  }
-  
-                  const calData = await calRes.json();
-  
-                  const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
-  
-                  const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
-                      id: String(c.id),
-                      nombre: c.nombre,
-                      descripcion: c.descripcion || '',
-                      estado: c.estado,
-                      origen: c.origen,
-                      creador: c.creador_username || 'unknown',
-                      color: COLORS[index % COLORS.length],
-                  }));
-  
-                  
-  
-                  setCalendars(mappedCalendars);
-              } catch (error) {
-                  console.error('Error fetching data:', error);
-                  Alert.alert('Error', 'Could not load calendars or events.');
-              }
-          };
-  
-          void fetchData();
-      }, []);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [calRes] = await Promise.all([
+          fetch(API_CONFIG.endpoints.getCalendars),
+        ]);
+
+        if (!calRes.ok) {
+          throw new Error('Failed to fetch calendars data');
+        }
+
+        const calData = await calRes.json();
+
+        const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+
+        const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+          id: String(c.id),
+          nombre: c.nombre,
+          descripcion: c.descripcion || '',
+          estado: c.estado,
+          origen: c.origen,
+          creador: c.creador_username || 'unknown',
+          color: COLORS[index % COLORS.length],
+        }));
+
+        setCalendars(mappedCalendars);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Could not load calendars or events.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchData();
+  }, []);
 
   const handleOpenCalendar = (id: string) => {
     // Connect with calendar detail screen
@@ -54,6 +56,14 @@ export default function CalendarsScreen() {
   const handleSubscribe = (id: string) => {
     console.log("Subscribe to calendar:", id);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#10464d" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
