@@ -90,7 +90,7 @@ export default function CustomTabLayout() {
             <SidebarItem icon="people" label="Our Team" expanded={expanded} />
             <SidebarItem icon="compass" label="Map" expanded={expanded} />
             <SidebarItem icon="settings" label="Settings" expanded={expanded} />
-            <SidebarItem icon="person" label="Profile" expanded={expanded} />
+            <SidebarItem icon="person" label="Profile" expanded={expanded} href="/UserProfileScreen" />
           </View>
 
           {/* BOTTOM: Botón Expandir */}

@@ -6,9 +6,11 @@ import {
     StyleSheet,
     Image,
     Pressable,
+    GestureResponderEvent,
 } from "react-native";
 import { useState, useMemo } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 interface User {
     id: string;
@@ -32,6 +34,7 @@ const mockUsers: User[] = [
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const [users, setUsers] = useState(mockUsers);
+    const router = useRouter();
 
     const filtered = useMemo(() => {
         if (!query.trim()) return [];
@@ -49,13 +52,21 @@ export default function SearchScreen() {
         );
     };
 
+    const handleUserSelect = (id: string) => {
+        router.push(`/UserProfileScreen?userId=${encodeURIComponent(id)}`);
+    };
+
+    const handleFollowPress = (id: string) => (event: GestureResponderEvent) => {
+        event.stopPropagation();
+        toggleFollow(id);
+    };
+
     return (
         <View style={styles.container}>
             {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
-                    placeholder="Search users, calendars..."
                     placeholder="Search users..."
                     value={query}
                     onChangeText={setQuery}
@@ -68,7 +79,13 @@ export default function SearchScreen() {
                 data={filtered}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
-                    <View style={styles.userCard}>
+                    <Pressable
+                        onPress={() => handleUserSelect(item.id)}
+                        style={({ pressed }) => [
+                            styles.userCard,
+                            pressed && styles.userCardPressed,
+                        ]}
+                    >
                         <View style={styles.userInfo}>
                             <Image
                                 source={{ uri: "https://i.pravatar.cc/100" }}
@@ -85,13 +102,13 @@ export default function SearchScreen() {
                                 styles.followButton,
                                 item.followed && styles.followingButton,
                             ]}
-                            onPress={() => toggleFollow(item.id)}
+                            onPress={handleFollowPress(item.id)}
                         >
                             <Text style={styles.followText}>
                                 {item.followed ? "Following" : "Follow"}
                             </Text>
                         </Pressable>
-                    </View>
+                    </Pressable>
                 )}
             />
         </View>
@@ -128,6 +145,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+    },
+
+    userCardPressed: {
+        opacity: 0.8,
     },
 
     userInfo: {

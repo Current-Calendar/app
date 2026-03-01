@@ -10,12 +10,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 
 // Importaciones de archivos locales
-import { styles } from './UserProfileStyles';
+import { styles } from '../UserProfile/UserProfileStyles';
 import { useUserProfile } from '../../hooks/useUserProfile';
-import EventCard from './EventCard';
-import CalendarCard from './CalendarCard';
+import EventCard from '../UserProfile/EventCard';
+import CalendarCard from '../UserProfile/CalendarCard';
 
 // ---------- Tipos ----------
 type RootStackParamList = {
@@ -26,7 +27,8 @@ type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 
 export default function UserProfileScreen() {
     const route = useRoute<UserProfileRouteProp>();
-    const userId = route.params?.userId ?? '1';
+    const searchParams = useLocalSearchParams<{ userId?: string }>();
+    const userId = searchParams.userId ?? route.params?.userId ?? '1';
 
     const [activeTab, setActiveTab] = useState<'events' | 'calendars'>('events');
 
@@ -147,14 +149,6 @@ export default function UserProfileScreen() {
                 </View>
             </ScrollView>
             
-            {/* Bottom Navigation */}
-            <View style={styles.bottomNav}>
-                <Ionicons name="home-outline" size={24} color="white" />
-                <Ionicons name="search-outline" size={24} color="white" />
-                <Ionicons name="add-circle" size={35} color="white" />
-                <Ionicons name="chatbubble-outline" size={24} color="white" />
-                <Ionicons name="locate-outline" size={24} color="white" />
-            </View>
         </SafeAreaView>
     );
 }
