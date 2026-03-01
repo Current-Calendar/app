@@ -81,13 +81,8 @@ export default function LoginScreen() {
         });
 
       const raw = await res.text();
-      // Si quieres ver lo que envías y lo que responde:
-      // console.log("payload", payload);
-      // console.log("status", res.status);
-      // console.log("raw response", raw);
 
       if (!res.ok) {
-        // Graphene suele devolver JSON incluso en error, pero por si acaso:
         try {
           const j = JSON.parse(raw);
           const msg =
@@ -196,7 +191,6 @@ export default function LoginScreen() {
 
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Don’t have an account?</Text>
-          {/* Si tu carpeta es app/(auth)/register.tsx, la ruta correcta es /register */}
           <Link href="/register" asChild>
             <Pressable>
               <Text style={styles.bottomLink}>Sign Up</Text>

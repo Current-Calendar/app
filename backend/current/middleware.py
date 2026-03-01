@@ -8,7 +8,6 @@ class CorsMiddleware(MiddlewareMixin):
     }
 
     def process_request(self, request):
-        # ✅ Responder preflight antes de que GraphQLView devuelva 405
         if request.method == "OPTIONS":
             response = HttpResponse(status=200)
             return self._add_cors_headers(request, response)
