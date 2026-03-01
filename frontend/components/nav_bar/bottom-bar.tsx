@@ -13,7 +13,7 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" />
       <NavButton icon="calendar" href="/switch-calendar" />
-      <NavButton icon="compass" />
+      {/*<NavButton icon="compass" />*/}
     </View>
   );
 }
