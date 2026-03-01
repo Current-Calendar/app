@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { User } from '../../../types/user';
@@ -27,6 +28,8 @@ const ProfileScreen = () => {
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isMe) {
@@ -99,11 +102,12 @@ const ProfileScreen = () => {
 
   const deleteOwnProfile = async () => {
     if (!currentUser) {
-      Alert.alert('Session required', 'You must be logged in to delete your profile.');
+      setDeleteError('You must be logged in to delete your profile.');
       return;
     }
 
     setIsDeletingProfile(true);
+    setDeleteError(null);
     try {
       const response = await fetch(API_CONFIG.endpoints.deleteOwnProfile, {
         method: 'DELETE',
@@ -111,19 +115,30 @@ const ProfileScreen = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        let errorMessage = `Delete failed (HTTP ${response.status}).`;
+        try {
+          const data = await response.json();
+          if (typeof data?.message === 'string' && data.message.trim()) {
+            errorMessage = data.message;
+          }
+        } catch {
+          // Keep fallback error message when response is not JSON.
+        }
+
+        if (response.status === 401 || response.status === 403) {
+          errorMessage = 'Your session is not valid. Log in again and retry.';
+        }
+
+        throw new Error(errorMessage);
       }
 
+      setShowDeleteConfirm(false);
       setUser(null);
-      Alert.alert('Profile deleted', 'Your profile was deleted successfully.', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/calendars'),
-        },
-      ]);
+      router.replace('/calendars');
     } catch (error) {
       console.error('Error deleting profile:', error);
-      Alert.alert('Delete failed', 'Could not delete your profile. Please try again.');
+      const message = error instanceof Error ? error.message : 'Could not delete your profile. Please try again.';
+      setDeleteError(message);
     } finally {
       setIsDeletingProfile(false);
     }
@@ -133,21 +148,8 @@ const ProfileScreen = () => {
     if (isDeletingProfile) {
       return;
     }
-
-    Alert.alert(
-      'Delete profile',
-      'Are you sure you want to delete your profile? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deleteOwnProfile();
-          },
-        },
-      ]
-    );
+    setDeleteError(null);
+    setShowDeleteConfirm(true);
   };
 
   if (!shownUser) return null;
@@ -197,6 +199,7 @@ const ProfileScreen = () => {
                   <Text style={styles.deleteProfileButtonText}>Delete Profile</Text>
                 )}
               </TouchableOpacity>
+              {deleteError ? <Text style={styles.deleteErrorText}>{deleteError}</Text> : null}
             </View>
           ) : (
             <TouchableOpacity style={styles.followButton} onPress={handleFollow}>
@@ -241,6 +244,55 @@ const ProfileScreen = () => {
         </View>
 
       </ScrollView>
+
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isDeletingProfile) {
+            setShowDeleteConfirm(false);
+          }
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            if (!isDeletingProfile) {
+              setShowDeleteConfirm(false);
+            }
+          }}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Delete profile</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to delete your profile? This action cannot be undone.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDeleteConfirm(false)}
+                disabled={isDeletingProfile}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
+                onPress={() => {
+                  void deleteOwnProfile();
+                }}
+                disabled={isDeletingProfile}
+              >
+                {isDeletingProfile ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalDeleteButtonText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -350,6 +402,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#B33F37',
+  },
+  deleteErrorText: {
+    fontSize: 13,
+    color: '#B33F37',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000050',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    backgroundColor: '#FFFDED',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#eadfc0',
+    padding: 18,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#262626',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#4d4d4d',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  modalCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3a3a3a',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B33F37',
+  },
+  modalDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   postsGrid: {
     marginTop: 8,
