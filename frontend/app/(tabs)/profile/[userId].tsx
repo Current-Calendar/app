@@ -32,14 +32,14 @@ const ProfileScreen = () => {
         _username: isMe ? currentUser?._username : 'Other User',
         _firstName: isMe ? currentUser?._firstName : undefined,
         _lastName: isMe ? currentUser?._lastName : undefined,
-        _bio: 'Seville, Spain | Travel Enthusiast | Food Lover',
-        _pronouns: 'she/her',
+        _bio: isMe ? currentUser?._bio : 'This is a sample bio for an unknown user.',
+        _pronouns: isMe ? currentUser?._pronouns : 'they/them',
         _email: 'example@example.com'
       };
 
       setShownUser(mockUser);
 
-      // Mock calendars
+      // mock calendars, TODO: fetch calendars from API based on userId
       setMyCalendars([
         {
           id: '1',
@@ -138,7 +138,7 @@ const ProfileScreen = () => {
                 <CalendarCard
                   key={cal.id}
                   calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page (not my responsibility)
+                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page
                 />
               ))}
 
@@ -147,7 +147,7 @@ const ProfileScreen = () => {
                 <CalendarCard
                   key={cal.id}
                   calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page (not my responsibility)
+                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page 
                 />
               ))}
             </>
@@ -158,7 +158,7 @@ const ProfileScreen = () => {
                 <CalendarCard
                   key={cal.id}
                   calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page (not my responsibility)
+                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page
                 />
               ))}
             </>

@@ -113,7 +113,7 @@ const EditProfileScreen = () => {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.photoSection}>
-          <Image source={photo ? { uri: photo } : require('../../assets/images/default-user.jpg')} style={styles.profilePicture} // TODO: change manually imported pic 
+          <Image source={photo ? { uri: photo } : require('../../assets/images/default-user.jpg')} style={styles.profilePicture} 
           /> 
           <TouchableOpacity style={styles.changePhotoButton} onPress={handleChangePhoto}>
             <Text style={styles.changePhotoText}>Change Profile Photo</Text>
