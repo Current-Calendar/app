@@ -1,7 +1,7 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
-
+import PublicUserSerializer
 import os
 import ipaddress
 import socket
@@ -106,7 +106,7 @@ class UserViewSet(viewsets.GenericViewSet):
         )
     def retrieve(self, request, pk) -> Response:
         user = self.get_object()
-        user_data = UsuarioSerializer(user).data
+        user_data = PublicUserSerializer(user, context={'request': request}).data
         public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
                 "id", "nombre", "descripcion", "portada", "fecha_creacion"
             ))
