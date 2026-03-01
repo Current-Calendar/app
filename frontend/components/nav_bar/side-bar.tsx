@@ -1,6 +1,7 @@
 import { View, Pressable, StyleSheet, Image, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, type Href } from "expo-router";
+import { useAuth } from "@/context/authContext";
 
 interface Props {
   expanded: boolean;
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export default function Sidebar({ expanded, setExpanded }: Props) {
+  const { user } = useAuth();
+
   const SidebarItem = ({
     icon,
     label,
@@ -63,7 +66,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
         <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/switch-calendar" />
         {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
         {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
-        <SidebarItem icon="person" label="Profile" expanded={expanded} />
+        <SidebarItem icon="person" label="Profile" expanded={expanded} href={`/profile/${user?._id}`}/>
       </View>
 
       {/* BOTTOM */}
