@@ -44,6 +44,9 @@ export const useUserProfile = (userId?: string) => {
                     pronombres: "he/him",
                     biografia: "I'm a mock user for testing 😄",
                     foto: "https://i.pravatar.cc/300",
+                    is_following: false,
+                    total_seguidores: 123,
+                    total_seguidos: 456,
                     public_calendars: [
                         {
                             id: 1,
@@ -62,8 +65,7 @@ export const useUserProfile = (userId?: string) => {
 
             // -------- API REAL --------
             try {
-                // 👇 AÑADIDO: Pasamos el token en el GET para que el backend sepa quién lee el perfil
-                const response = await fetch(`http://10.0.2.2:3000/api/v1/users/${userId}/`, {
+                const response = await fetch(`api/v1/users/${userId}/`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -93,11 +95,11 @@ export const useUserProfile = (userId?: string) => {
         setIsFollowing(prev => !prev); 
         
         try {
-            const response = await fetch(`http://10.0.2.2:3000/api/v1/users/${userId}/follow/`, {
+            const response = await fetch(`api/v1/users/${userId}/follow/`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // 👇 Usamos el mismo token
+                    'Authorization': `Bearer ${token}`
                 },
             });
             

@@ -67,6 +67,9 @@ export default function UserProfileScreen() {
     }
 
     // ---------------- UI PRINCIPAL ----------------
+    const followerCount = userBeingViewed.total_seguidores ?? 0;
+    const followingCount = userBeingViewed.total_seguidos ?? 0;
+
     return (
         <SafeAreaView style={styles.container}>
 
@@ -103,6 +106,17 @@ export default function UserProfileScreen() {
                                 {isFollowing ? 'Following' : 'Follow'}
                             </Text>
                         </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.followStatsRow}>
+                        <View style={styles.followStat}>
+                            <Text style={styles.followStatValue}>{followerCount}</Text>
+                            <Text style={styles.followStatLabel}>Seguidores</Text>
+                        </View>
+                        <View style={styles.followStat}>
+                            <Text style={styles.followStatValue}>{followingCount}</Text>
+                            <Text style={styles.followStatLabel}>Seguidos</Text>
+                        </View>
                     </View>
 
                     <Text style={styles.followersText}>

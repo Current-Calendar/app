@@ -18,6 +18,10 @@ interface Styles {
   followButtonText: TextStyle;
   followButtonTextActive: TextStyle;
   followersText: TextStyle;
+  followStatsRow: ViewStyle;
+  followStat: ViewStyle;
+  followStatValue: TextStyle;
+  followStatLabel: TextStyle;
   sectionHeader: ViewStyle;
   sectionTitle: TextStyle;
   miniTabRow: ViewStyle;
@@ -114,6 +118,23 @@ export const styles = StyleSheet.create<Styles>({
     color: '#888',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  followStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+  },
+  followStat: {
+    alignItems: 'center',
+  },
+  followStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#164E52',
+  },
+  followStatLabel: {
+    fontSize: 12,
+    color: '#888',
   },
   sectionHeader: {
     flexDirection: 'row',
