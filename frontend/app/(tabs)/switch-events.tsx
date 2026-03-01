@@ -17,6 +17,8 @@ export interface Event {
   image: string;
   username: string;
   userAvatar: string;
+  calendarId: string;
+  calendarName: string;
 }
 
 //Borrar cuando se conecte con backend
@@ -31,6 +33,8 @@ const mockEvents: Event[] = [
     image: "https://picsum.photos/600/400?random=1",
     username: "LaCabra123",
     userAvatar: "https://i.pravatar.cc/100?img=3",
+    calendarId: "c1",
+    calendarName: "Personal",
   },
   {
     id: "2",
@@ -42,6 +46,8 @@ const mockEvents: Event[] = [
     image: "https://picsum.photos/600/400?random=2",
     username: "ElectroMax",
     userAvatar: "https://i.pravatar.cc/100?img=5",
+    calendarId: "c2",
+    calendarName: "Work",
   },
   {
     id: "3",
@@ -53,6 +59,8 @@ const mockEvents: Event[] = [
     image: "https://picsum.photos/600/400?random=3",
     username: "FounderLife",
     userAvatar: "https://i.pravatar.cc/100?img=8",
+    calendarId: "c2",
+    calendarName: "Work",
   },
   {
     id: "4",
@@ -64,6 +72,8 @@ const mockEvents: Event[] = [
     image: "https://picsum.photos/600/400?random=4",
     username: "RockSoul",
     userAvatar: "https://i.pravatar.cc/100?img=12",
+    calendarId: "c3",
+    calendarName: "Family",
   },
 ];
 

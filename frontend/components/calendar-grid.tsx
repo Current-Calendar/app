@@ -4,6 +4,7 @@ import {
     Text,
     StyleSheet,
     LayoutChangeEvent,
+    TouchableOpacity,
 } from 'react-native';
 import { CalendarEvent } from '@/types/calendar';
 import { EventPill } from '@/components/event-pill';
@@ -41,9 +42,12 @@ interface CalendarGridProps {
     month: number;
     events: CalendarEvent[];
     onEventPress?: (event: CalendarEvent) => void;
+    /** ISO date string (YYYY-MM-DD) of the currently selected day. */
+    selectedDay?: string | null;
+    onDayPress?: (dateKey: string) => void;
 }
 
-export function CalendarGrid({ year, month, events, onEventPress }: CalendarGridProps) {
+export function CalendarGrid({ year, month, events, onEventPress, selectedDay, onDayPress }: CalendarGridProps) {
     const [containerWidth, setContainerWidth] = useState(0);
 
     const handleLayout = (e: LayoutChangeEvent) => {
@@ -94,26 +98,35 @@ export function CalendarGrid({ year, month, events, onEventPress }: CalendarGrid
 
                                     const key = toKey(date);
                                     const isToday = key === todayKey;
+                                    const isSelected = key === selectedDay;
                                     const dayEvents = eventsByDate[key] ?? [];
                                     const isWeekend = ci >= 5;
 
                                     return (
-                                        <View
+                                        <TouchableOpacity
                                             key={key}
+                                            activeOpacity={0.75}
+                                            onPress={() => onDayPress?.(key)}
                                             style={[
                                                 styles.cell,
                                                 { width: cellWidth },
                                                 isToday && styles.cellToday,
                                                 isWeekend && !isToday && styles.cellWeekend,
+                                                isSelected && styles.cellSelected,
                                             ]}
                                         >
                                             <View style={styles.dayHeader}>
-                                                <View style={[styles.dayBadge, isToday && styles.dayBadgeToday]}>
+                                                <View style={[
+                                                    styles.dayBadge,
+                                                    isToday && styles.dayBadgeToday,
+                                                    isSelected && styles.dayBadgeSelected,
+                                                ]}>
                                                     <Text
                                                         style={[
                                                             styles.dayNumber,
                                                             isToday && styles.dayNumberToday,
-                                                            isWeekend && !isToday && styles.dayNumberWeekend,
+                                                            isSelected && styles.dayNumberSelected,
+                                                            isWeekend && !isToday && !isSelected && styles.dayNumberWeekend,
                                                         ]}
                                                     >
                                                         {date.getDate()}
@@ -129,7 +142,7 @@ export function CalendarGrid({ year, month, events, onEventPress }: CalendarGrid
                                                     <Text style={styles.overflow}>+{dayEvents.length - 3} more</Text>
                                                 )}
                                             </View>
-                                        </View>
+                                        </TouchableOpacity>
                                     );
                                 })}
                             </View>
@@ -202,6 +215,11 @@ const styles = StyleSheet.create({
     cellWeekend: {
         backgroundColor: '#FAFAF6',
     },
+    cellSelected: {
+        backgroundColor: '#10464d18',
+        borderColor: '#10464d',
+        borderWidth: 1.5,
+    },
     dayHeader: {
         flexDirection: 'row',
         marginBottom: 1,
@@ -216,12 +234,22 @@ const styles = StyleSheet.create({
     dayBadgeToday: {
         backgroundColor: '#10464d',
     },
+    dayBadgeSelected: {
+        backgroundColor: '#10464d',
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+    },
     dayNumber: {
         fontSize: 12,
         fontWeight: '600',
         color: '#2D2D2D',
     },
     dayNumberToday: {
+        color: '#fff',
+        fontWeight: '700',
+    },
+    dayNumberSelected: {
         color: '#fff',
         fontWeight: '700',
     },
