@@ -8,6 +8,7 @@ import {
     Text,
     Animated,
     useWindowDimensions,
+    Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -60,6 +61,7 @@ export default function CalendarScreen() {
 
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
+    const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
     // Animation for the bottom sheet
     const sheetY = useRef(new Animated.Value(120)).current;
@@ -177,7 +179,7 @@ export default function CalendarScreen() {
             >
                 <View style={styles.toolbar}>
                     <CalendarSelector
-                        calendars={MOCK_CALENDARS}
+                        calendars={calendars}
                         selectedId={selectedCalendarId}
                         onChange={setSelectedCalendarId}
                         onInfoPress={setInfoCalendar}
@@ -202,7 +204,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push('/modal')}
+                        onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -223,7 +225,12 @@ export default function CalendarScreen() {
                 />
 
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
-                <CalendarInfoModal calendar={infoCalendar} onClose={() => setInfoCalendar(null)} />
+                <CalendarInfoModal
+                    calendar={infoCalendar}
+                    onClose={() => setInfoCalendar(null)}
+                    onDelete={handleDeleteCalendarPress}
+                    isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
+                />
             </ScrollView>
 
             {/* DESKTOP: scrim + animated bottom sheet */}
@@ -257,7 +264,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push('/modal')}
+                            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
