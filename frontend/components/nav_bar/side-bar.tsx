@@ -62,7 +62,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
         <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
         <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
         <SidebarItem icon="people" label="Our Team" expanded={expanded} />
-        <SidebarItem icon="compass" label="Map" expanded={expanded} />
+        <SidebarItem icon="compass" label="Map" expanded={expanded} href="/radar"/>
         <SidebarItem icon="settings" label="Settings" expanded={expanded} />
         <SidebarItem icon="person" label="Profile" expanded={expanded} />
       </View>

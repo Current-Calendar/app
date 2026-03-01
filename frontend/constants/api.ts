@@ -18,6 +18,7 @@ export const API_CONFIG = {
   endpoints: {
     mock: buildEndpoint('mock'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    nearbyEvents: (lat: number, lon: number, radio: number) => buildEndpoint(`radar?lat=${lat}&lon=${lon}&radio=${radio}`),
   },
 };
 

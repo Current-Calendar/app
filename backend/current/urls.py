@@ -51,7 +51,7 @@ urlpatterns = [
     path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
     path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
     path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
-    path('api/radar/', radar_events, name='radar_eventos'),
+    path('api/v1/radar/', radar_events, name='radar_eventos'),
     path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
 ]
 

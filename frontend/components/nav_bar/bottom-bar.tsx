@@ -13,7 +13,7 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" />
       <NavButton icon="chatbubble-ellipses" />
-      <NavButton icon="compass" />
+      <NavButton icon="compass" href="/radar" />
     </View>
   );
 }
