@@ -1602,11 +1602,11 @@ class RadarEventosTest(APITestCase):
         self.evento_pasado.calendarios.add(self.calendar)
 
     def test_error_sin_lat_lon(self):
-        response = self.client.get("/api/radar/")
+        response = self.client.get("/api/v1/radar/")
         self.assertEqual(response.status_code, 400)
 
     def test_error_lat_lon_invalidos(self):
-        response = self.client.get("/api/radar/?lat=abc&lon=xyz")
+        response = self.client.get("/api/v1/radar/?lat=abc&lon=xyz")
         self.assertEqual(response.status_code, 400)
 
     def test_devuelve_evento_dentro_del_radio(self):
@@ -1619,21 +1619,21 @@ class RadarEventosTest(APITestCase):
 
     def test_no_devuelve_evento_fuera_del_radio(self):
         response = self.client.get(
-            "/api/radar/?lat=40.4168&lon=-3.7038&radio=1"
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1"
         )
         titulos = [e["titulo"] for e in response.data]
         self.assertNotIn("Evento Lejano", titulos)
 
     def test_no_devuelve_eventos_pasados(self):
         response = self.client.get(
-            "/api/radar/?lat=40.4168&lon=-3.7038&radio=10"
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=10"
         )
         titulos = [e["titulo"] for e in response.data]
         self.assertNotIn("Evento Pasado", titulos)
 
     def test_ordenado_por_distancia(self):
         response = self.client.get(
-            "/api/radar/?lat=40.4168&lon=-3.7038&radio=1000"
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1000"
         )
         self.assertEqual(response.status_code, 200)
         self.assertGreater(len(response.data), 1)
@@ -1672,7 +1672,7 @@ class RadarMultipleEventsTest(APITestCase):
 
     def test_radar_returns_multiple_events(self):
         response = self.client.get(
-            "/api/radar/?lat=40.4168&lon=-3.7038&radio=1000"
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1000"
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 3)
