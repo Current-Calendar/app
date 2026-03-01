@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -20,9 +21,6 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
-// Web: http://localhost:8000
-// Android emulator: http://10.0.2.2:8000
-// iPhone físico: http://TU_IP_LOCAL:8000
 const API_BASE =
   Platform.OS === "android"
     ? "http://10.0.2.2:8000"
@@ -34,6 +32,9 @@ const Cloud = require("../../assets/images/nube_login.png");
 export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+
+  // ✅ sacar setUser del contexto
+  const { setUser } = useAuth();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -49,7 +50,8 @@ export default function LoginScreen() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!username.trim() || !password) {
+    const u = username.trim();
+    if (!u || !password) {
       setErrorMsg("Rellena username y password.");
       return;
     }
@@ -67,18 +69,18 @@ export default function LoginScreen() {
 
     const payload = JSON.stringify({
       query,
-      variables: { username: username.trim(), password },
+      variables: { username: u, password },
     });
 
     try {
-        const res = await fetch(`${API_BASE}/graphql/`, {
+      const res = await fetch(`${API_BASE}/graphql/`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json",
+          "Content-Type": "application/json",
         },
-        credentials: "include", // 👈 MUY IMPORTANTE
+        credentials: "include",
         body: payload,
-        });
+      });
 
       const raw = await res.text();
 
@@ -115,8 +117,10 @@ export default function LoginScreen() {
         return;
       }
 
+      setUser({ username: u });
+
       setSuccessMsg(result.message ?? "Login exitoso.");
-      setTimeout(() => router.push("/"), 400);
+      setTimeout(() => router.push("/"), 250);
     } catch (e) {
       setErrorMsg("No se puede conectar con la API. Revisa API_BASE y que el backend esté levantado.");
     } finally {
@@ -126,7 +130,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-
       <View style={styles.content}>
         <View style={styles.hero}>
           <Image source={Otter} style={styles.otter} resizeMode="contain" />
