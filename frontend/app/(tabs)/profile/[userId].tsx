@@ -25,21 +25,27 @@ const ProfileScreen = () => {
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
 
   useEffect(() => {
-    // TODO: Replace with real API call
-    const fetchUser = async () => {
-      const mockUser: User = {
-        _id: userId || 'abc123',
-        _username: isMe ? currentUser?._username : 'Other User',
-        _firstName: isMe ? currentUser?._firstName : undefined,
-        _lastName: isMe ? currentUser?._lastName : undefined,
-        _bio: isMe ? currentUser?._bio : 'This is a sample bio for an unknown user.',
-        _pronouns: isMe ? currentUser?._pronouns : 'they/them',
-        _email: 'example@example.com'
-      };
-
-      setShownUser(mockUser);
-
-      // mock calendars, TODO: fetch calendars from API based on userId
+    if (isMe) {
+      // if viewing own profile, use currentUser from context
+      setShownUser(currentUser);
+    } else {
+      // if viewing someone else’s profile, fetch their data from API based on userId, TODO: replace with real API call
+      const fetchUser = async () => {
+        const fetchedUser: User = {
+          _id: userId || 'abc123',
+          _username: isMe ? currentUser?._username : 'Other User',
+          _firstName: isMe ? currentUser?._firstName : undefined,
+          _lastName: isMe ? currentUser?._lastName : undefined,
+          _bio: isMe ? currentUser?._bio : 'This is a sample bio for an unknown user.',
+          _pronouns: isMe ? currentUser?._pronouns : 'they/them',
+          _email: 'example@example.com'
+        };
+        setShownUser(fetchedUser);
+      }
+        fetchUser();
+    };
+      //TODO: fetch my calendars from API based on userId (shownUser._id)
+      //TODO: fetch following calendars from API based on userId (currentUser._id)
       setMyCalendars([
         {
           id: '1',
@@ -62,8 +68,8 @@ const ProfileScreen = () => {
           color: '#FF8C42',
         },
       ]);
-
-      setFollowingCalendars([
+      if (isMe) {
+        setFollowingCalendars([
         {
           id: '3',
           nombre: 'Fitness Plan',
@@ -74,10 +80,8 @@ const ProfileScreen = () => {
           creador: 'otherUser',
           color: '#42A5F5',
         },
-      ]);
-    };
-
-    fetchUser();
+        ]);
+      }
   }, [userId]);
 
   const handleEditProfile = () => {
