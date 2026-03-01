@@ -187,25 +187,27 @@ export default function CalendarScreen() {
                         onInfoPress={setInfoCalendar}
                     />
 
-                    <View style={styles.toolbarButtons}>
-                        <TouchableOpacity
-                            style={styles.primaryBtn}
-                            activeOpacity={0.7}
-                            onPress={() => router.push(`/events/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
-                        >
-                            <Ionicons name="add" size={18} color="#fff" />
-                            <Text style={styles.primaryBtnText}>New Event</Text>
-                        </TouchableOpacity>
+                    {isDesktop && (
+                        <View style={styles.toolbarButtons}>
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => router.push(`/events/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
+                            >
+                                <Ionicons name="add" size={18} color="#fff" />
+                                <Text style={styles.primaryBtnText}>New Event</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={styles.secondaryBtn}
-                            activeOpacity={0.7}
-                            onPress={() => router.push('/modal')}
-                        >
-                            <Ionicons name="calendar-outline" size={18} color="#10464d" />
-                            <Text style={styles.secondaryBtnText}>New Calendar</Text>
-                        </TouchableOpacity>
-                    </View>
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => router.push('/modal')}
+                            >
+                                <Ionicons name="calendar-outline" size={18} color="#10464d" />
+                                <Text style={styles.secondaryBtnText}>New Calendar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.headerBlock}>
@@ -251,6 +253,10 @@ export default function CalendarScreen() {
                     calendar={infoCalendar}
                     onClose={() => setInfoCalendar(null)}
                     onDelete={handleDeleteCalendarPress}
+                    onEdit={(calendar) => {
+                        setInfoCalendar(null);
+                        router.push(`/modal`); 
+                    }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
             </ScrollView>

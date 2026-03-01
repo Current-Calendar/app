@@ -18,9 +18,9 @@ export default function CustomTabLayout() {
   const isDesktop = width >= 768;
   const [expanded, setExpanded] = useState(false);
 
-  const NavButton = ({ icon, href }: { icon: any; href?: Href }) => {
+  const NavButton = ({ icon, href, onPress }: { icon: any; href?: Href; onPress?: () => void }) => {
     const button = (
-      <Pressable style={styles.navButton}>
+      <Pressable style={styles.navButton} onPress={onPress}>
         <Ionicons name={icon} size={24} color="#ffffff" />
       </Pressable>
     );
