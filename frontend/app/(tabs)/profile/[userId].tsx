@@ -14,85 +14,60 @@ import { Calendar } from '../../../types/calendar';
 import { useAuth } from '../../../context/authContext'; 
 import CalendarCard from '../../../components/calendar-card';
 
+// Importamos tu componente público
+import PublicProfile from './PublicProfile'; // Ajusta la ruta si es necesario
+
 const ProfileScreen = () => {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { user: currentUser } = useAuth();
-  const isMe = userId === currentUser?._id;
+  
+  // Determinamos si es "Mi Perfil"
+  const isMe = !userId || userId === currentUser?._id;
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
 
   useEffect(() => {
+    // ESTE ARCHIVO AHORA SOLO GESTIONA "MI PERFIL"
     if (isMe) {
-      // if viewing own profile, use currentUser from context
       setShownUser(currentUser);
-    } else {
-      // if viewing someone else’s profile, fetch their data from API based on userId, TODO: replace with real API call
-      const fetchUser = async () => {
-        const fetchedUser: User = {
-          _id: userId || 'abc123',
-          _username: isMe ? currentUser?._username : 'Other User',
-          _firstName: isMe ? currentUser?._firstName : undefined,
-          _lastName: isMe ? currentUser?._lastName : undefined,
-          _bio: isMe ? currentUser?._bio : 'This is a sample bio for an unknown user.',
-          _pronouns: isMe ? currentUser?._pronouns : 'they/them',
-          _email: 'example@example.com'
-        };
-        setShownUser(fetchedUser);
-      }
-        fetchUser();
-    };
-      //TODO: fetch my calendars from API based on userId (shownUser._id)
-      //TODO: fetch following calendars from API based on userId (currentUser._id)
+      
       setMyCalendars([
         {
-          id: '1',
-          nombre: 'Travel 2026',
-          descripcion: 'Trips planned for 2026',
-          portada: 'https://via.placeholder.com/150',
-          estado: 'PUBLICO',
-          origen: 'CURRENT',
-          creador: userId || 'abc123',
-          color: '#A0D842',
+          id: '1', nombre: 'Travel 2026', descripcion: 'Trips planned for 2026',
+          portada: 'https://via.placeholder.com/150', estado: 'PUBLICO', origen: 'CURRENT',
+          creador: currentUser?._id || 'abc123', color: '#A0D842',
         },
         {
-          id: '2',
-          nombre: 'Food Diary',
-          descripcion: 'Best restaurants in Seville',
-          portada: 'https://via.placeholder.com/150',
-          estado: 'AMIGOS',
-          origen: 'CURRENT',
-          creador: userId || 'abc123',
-          color: '#FF8C42',
+          id: '2', nombre: 'Food Diary', descripcion: 'Best restaurants in Seville',
+          portada: 'https://via.placeholder.com/150', estado: 'AMIGOS', origen: 'CURRENT',
+          creador: currentUser?._id || 'abc123', color: '#FF8C42',
         },
       ]);
-      if (isMe) {
-        setFollowingCalendars([
+      setFollowingCalendars([
         {
-          id: '3',
-          nombre: 'Fitness Plan',
-          descripcion: 'Workout routines',
-          portada: 'https://via.placeholder.com/150',
-          estado: 'PUBLICO',
-          origen: 'CURRENT',
-          creador: 'otherUser',
-          color: '#42A5F5',
+          id: '3', nombre: 'Fitness Plan', descripcion: 'Workout routines',
+          portada: 'https://via.placeholder.com/150', estado: 'PUBLICO', origen: 'CURRENT',
+          creador: 'otherUser', color: '#42A5F5',
         },
-        ]);
-      }
-  }, [userId]);
+      ]);
+    }
+  }, [userId, isMe, currentUser]);
 
   const handleEditProfile = () => {
     if (!currentUser) return;
     router.push('/profileEdit');
   };
 
-  const handleFollow = () => {
-    //TODO: Implement follow/unfollow logic
-  };
 
+  // Si no es mi perfil, delegamos a PublicProfile pasándole el userId que recibimos por parámetro
+  if (!isMe && userId) {
+    return <PublicProfile targetUserId={userId} />;
+  }
+
+  // Si SOY YO, seguimos hacia abajo y pintamos "Mi Perfil"
   if (!shownUser) return null;
 
   return (
@@ -112,10 +87,6 @@ const ProfileScreen = () => {
               <Text style={styles.name}>{shownUser._username}</Text>
               <Text style={styles.fullname}>{shownUser._firstName} {shownUser._lastName}</Text>
               <Text style={styles.pronouns}>{shownUser._pronouns}</Text>
-              {/* <Text style={styles.statNumber}>
-                {user._followersCount}
-              </Text>
-              <Text style={styles.statLabel}>Followers</Text> */}
             </View>
           </View>
 
@@ -123,50 +94,31 @@ const ProfileScreen = () => {
             <Text style={styles.bio}>{shownUser._bio}</Text>
           </View>
 
-          {isMe ? (
-            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-              <Text style={styles.editButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.followButton} onPress={handleFollow}>
-              <Text style={styles.followButtonText}>Follow</Text>
-            </TouchableOpacity>
-          )}
+          {/* Como siempre soy yo, solo pintamos el botón de Editar */}
+          <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
+            <Text style={styles.editButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.postsGrid}>
-          {isMe ? (
-            <>
-              <Text style={styles.gridHeaderText}>My Calendars</Text>
-              {myCalendars.map((cal) => (
-                <CalendarCard
-                  key={cal.id}
-                  calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page
-                />
-              ))}
+          {/* Como siempre soy yo, pintamos mis calendarios y a los que sigo */}
+          <Text style={styles.gridHeaderText}>My Calendars</Text>
+          {myCalendars.map((cal) => (
+            <CalendarCard
+              key={cal.id}
+              calendario={cal}
+              //onPress={() => router.push(`/calendar/${cal.id}`)}
+            />
+          ))}
 
-              <Text style={styles.gridHeaderText}>Following</Text>
-              {followingCalendars.map((cal) => (
-                <CalendarCard
-                  key={cal.id}
-                  calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page 
-                />
-              ))}
-            </>
-          ) : (
-            <>
-              <Text style={styles.gridHeaderText}>{shownUser?._username}&apos;s Calendars</Text>
-              {myCalendars.map((cal) => (
-                <CalendarCard
-                  key={cal.id}
-                  calendario={cal}
-                  //onPress={() => router.push(`/calendar/${cal.id}`)} TODO: add calendar details page
-                />
-              ))}
-            </>
-          )}
+          <Text style={styles.gridHeaderText}>Following</Text>
+          {followingCalendars.map((cal) => (
+            <CalendarCard
+              key={cal.id}
+              calendario={cal}
+              //onPress={() => router.push(`/calendar/${cal.id}`)}
+            />
+          ))}
         </View>
 
       </ScrollView>
@@ -262,27 +214,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     alignItems: 'center',
-    
   },
   gridHeaderText: {
     padding: 16,
     fontSize: 16,
     fontWeight: '600',
     color: '#262626',
-  },
-    followButton: {
-      backgroundColor: '#4CAF50',
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-      alignItems: 'center',
-      marginBottom: 16,
-      maxWidth: 500,
-  },
-  followButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
   }
 });
 

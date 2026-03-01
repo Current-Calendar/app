@@ -14,13 +14,21 @@ export type CalendarItem = {
 export const useUserProfile = (userId?: string) => {
     const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
-    
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);
 
-    // 🚨 IMPORTANTE: Reemplaza esto por la forma en la que obtengas tu token real
-    // (por ejemplo, desde AsyncStorage, un Contexto o Zustand)
     const token = "AQUI_VA_EL_TOKEN_DE_TU_SESION"; 
+
+    // ----- MOCK follow toggle -----
+    const mockFollowToggle = () => {
+        return new Promise<{ followed: boolean }>((resolve) => {
+            setIsFollowing(prev => {
+                const next = !prev;
+                resolve({ followed: next });
+                return next;
+            });
+        });
+    };
 
     useEffect(() => {
         if (!userId) {
@@ -35,10 +43,8 @@ export const useUserProfile = (userId?: string) => {
             setIsLoading(true);
 
             if (USE_MOCK) {
-                console.log("Usando datos MOCK…");
                 await new Promise(r => setTimeout(r, 700));
-
-                setUserBeingViewed({
+                const mockUser = {
                     id: userId,
                     username: "john_doe",
                     pronombres: "he/him",
@@ -56,25 +62,22 @@ export const useUserProfile = (userId?: string) => {
                             portada: "https://images.unsplash.com/photo-1508780709619-79562169bc64"
                         }
                     ]
-                });
-
-                setIsFollowing(false);
+                };
+                setUserBeingViewed(mockUser);
+                setIsFollowing(mockUser.is_following);
                 setIsLoading(false);
                 return;
             }
 
-            // -------- API REAL --------
             try {
-                const response = await fetch(`api/v1/users/${userId}/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`/api/v1/users/${userId}/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    setUserBeingViewed(data); 
-                    setIsFollowing(data.is_following || false);
+                    setUserBeingViewed(data);
+                    setIsFollowing(Boolean(data.is_following));
                 } else {
                     setUserNotFound(true);
                 }
@@ -87,37 +90,38 @@ export const useUserProfile = (userId?: string) => {
         }
 
         fetchData();
-    }, [userId]); // (Si sacas el token de un estado reactivo, deberías añadirlo a este array de dependencias)
+    }, [userId]);
 
+    // ----- Follow toggle -----
     const handleFollowToggle = async () => {
         if (!userId) return;
-        
-        setIsFollowing(prev => !prev); 
-        
+
+        if (USE_MOCK) {
+            await mockFollowToggle();
+            return;
+        }
+
         try {
-            const response = await fetch(`api/v1/users/${userId}/follow/`, {
+            const response = await fetch(`/api/v1/users/${userId}/follow/`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                setIsFollowing(data.followed); 
-            } else {
-                setIsFollowing(prev => !prev); 
-            }
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+            setIsFollowing(Boolean(data.followed));
         } catch (error) {
-            setIsFollowing(prev => !prev); 
-            console.error('Error:', error);
+            console.error('Error follow:', error);
         }
     };
 
     return {
         userBeingViewed,
-        calendars: (userBeingViewed?.public_calendars || []) as CalendarItem[], 
+        calendars: (userBeingViewed?.public_calendars || []) as CalendarItem[],
         isFollowing,
         isLoading,
         userNotFound,
