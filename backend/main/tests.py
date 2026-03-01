@@ -1611,7 +1611,7 @@ class RadarEventosTest(APITestCase):
 
     def test_devuelve_evento_dentro_del_radio(self):
         response = self.client.get(
-            "/api/radar/?lat=40.4168&lon=-3.7038&radio=10"
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=10"
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
