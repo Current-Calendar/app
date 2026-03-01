@@ -104,7 +104,14 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
-
+    def retrieve(self, request, pk) -> Response:
+        user = self.get_object()
+        user_data = UsuarioSerializer(user).data
+        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
+                "id", "nombre", "descripcion", "portada", "fecha_creacion"
+            ))
+        user_data["public_calendars"] = public_calendars
+        return Response(user_data)
 
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
