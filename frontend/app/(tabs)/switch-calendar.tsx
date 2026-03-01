@@ -1,16 +1,44 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
+import { useState } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
+import CalendarCard from "@/components/event-calendar/calendar-card";
+import { Calendar } from "@/types/calendar";
+import { MOCK_CALENDARS } from "@/constants/mock-data";
 
-export default function CalendarScreen() {
+export default function CalendarsScreen() {
+
+  /**
+   * 🔹 Will be replaced by useQuery / fetch when backend connects
+   */
+  const [calendars] = useState<Calendar[]>(MOCK_CALENDARS);
+
+  const handleOpenCalendar = (id: string) => {
+    // Connect with calendar detail screen
+    // router.push(`/calendars/${id}`);
+  };
+
+  const handleSubscribe = (id: string) => {
+    console.log("Subscribe to calendar:", id);
+  };
+
   return (
     <View style={styles.container}>
-      <EventsSwitch />
+      <View style={styles.inner}>
+        <EventsSwitch />
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Calendar</Text>
-        <Text style={styles.subtitle}>
-          Calendar screen coming soon...
-        </Text>
+        <FlatList
+          data={calendars}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <CalendarCard
+              calendar={item}
+              onPress={handleOpenCalendar}
+              onSubscribe={handleSubscribe}
+            />
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
     </View>
   );
@@ -20,18 +48,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E8E5D8",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
   },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 8,
+  inner: {
+    width: "100%",
+    maxWidth: 800,
+    flex: 1,
   },
-  subtitle: {
-    color: "#666",
+  list: {
+    paddingHorizontal: 16,
+    paddingBottom: 120,
   },
 });
