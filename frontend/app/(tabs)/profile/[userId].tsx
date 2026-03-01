@@ -7,22 +7,26 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { User } from '../../../types/user';
 import { Calendar } from '../../../types/calendar';
 import { useAuth } from '../../../context/authContext'; 
 import CalendarCard from '../../../components/calendar-card';
+import { API_CONFIG } from '../../../constants/api';
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, setUser } = useAuth();
   const isMe = userId === currentUser?._id;
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
 
   useEffect(() => {
     if (isMe) {
@@ -82,7 +86,7 @@ const ProfileScreen = () => {
         },
         ]);
       }
-  }, [userId]);
+  }, [currentUser, isMe, userId]);
 
   const handleEditProfile = () => {
     if (!currentUser) return;
@@ -91,6 +95,59 @@ const ProfileScreen = () => {
 
   const handleFollow = () => {
     //TODO: Implement follow/unfollow logic
+  };
+
+  const deleteOwnProfile = async () => {
+    if (!currentUser) {
+      Alert.alert('Session required', 'You must be logged in to delete your profile.');
+      return;
+    }
+
+    setIsDeletingProfile(true);
+    try {
+      const response = await fetch(API_CONFIG.endpoints.deleteOwnProfile, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      setUser(null);
+      Alert.alert('Profile deleted', 'Your profile was deleted successfully.', [
+        {
+          text: 'OK',
+          onPress: () => router.replace('/calendars'),
+        },
+      ]);
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      Alert.alert('Delete failed', 'Could not delete your profile. Please try again.');
+    } finally {
+      setIsDeletingProfile(false);
+    }
+  };
+
+  const handleDeleteProfile = () => {
+    if (isDeletingProfile) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete profile',
+      'Are you sure you want to delete your profile? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteOwnProfile();
+          },
+        },
+      ]
+    );
   };
 
   if (!shownUser) return null;
@@ -124,9 +181,23 @@ const ProfileScreen = () => {
           </View>
 
           {isMe ? (
-            <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-              <Text style={styles.editButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity style={styles.editButton} onPress={handleEditProfile} disabled={isDeletingProfile}>
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteProfileButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
+                onPress={handleDeleteProfile}
+                disabled={isDeletingProfile}
+                activeOpacity={0.8}
+              >
+                {isDeletingProfile ? (
+                  <ActivityIndicator size="small" color="#B33F37" />
+                ) : (
+                  <Text style={styles.deleteProfileButtonText}>Delete Profile</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity style={styles.followButton} onPress={handleFollow}>
               <Text style={styles.followButtonText}>Follow</Text>
@@ -243,19 +314,42 @@ const styles = StyleSheet.create({
     color: '#262626',
     lineHeight: 20,
   },
+  actionsContainer: {
+    marginBottom: 16,
+    gap: 10,
+  },
   editButton: {
     backgroundColor: '#eb8c85',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 16,
     maxWidth: 500,
   },
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  deleteProfileButton: {
+    borderWidth: 1.5,
+    borderColor: '#eb8c85',
+    backgroundColor: '#eb8c8514',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 38,
+    maxWidth: 500,
+  },
+  deleteProfileButtonDisabled: {
+    opacity: 0.7,
+  },
+  deleteProfileButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B33F37',
   },
   postsGrid: {
     marginTop: 8,
