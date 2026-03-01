@@ -8,51 +8,94 @@ import {
   ScrollView,
   SafeAreaView,
   TextInput,
+  Alert,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { User } from '../../types/user';
+import { useAuth } from '@/context/authContext';
+import * as ImagePicker from 'expo-image-picker';
 
-interface User {
-  name: string;
-  bio: string;
-  pronouns: string;
-  photo: string;
-  followers: number;
-}
 
 const EditProfileScreen = () => {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    name: string;
-    bio: string;
-    pronouns: string;
-    photo: string;
-    followers: string;
-  }>();
+  const { user: currentUser, setUser: updateUserContext } = useAuth();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL; // e.g., "https://api.example.com"
+
 
   // State for form fields - initialize with params from navigation
-  const [name, setName] = useState<string>(params.name || '');
-  const [pronouns, setPronouns] = useState<string>(params.pronouns || '');
-  const [bio, setBio] = useState<string>(params.bio || '');
-  const [photo, setPhoto] = useState<string>(params.photo || '');
+  const [firstName, setFirstName] = useState<string>(currentUser?._firstName || '');
+  const [lastName, setLastName] = useState<string>(currentUser?._lastName || '');
+  const [pronouns, setPronouns] = useState<string>(currentUser?._pronouns || '');
+  const [bio, setBio] = useState<string>(currentUser?._bio || '');
+  const [photo, setPhoto] = useState<string>(currentUser?._photo || '');
 
-  const handleChangePhoto = () => {
-    // placeholder for image picker functionality, we'll use expo-image-picker (i guess?)
-    // e.g.: import * as ImagePicker from 'expo-image-picker';
-    // TODO: implement image picker 
-  };
+  const handleChangePhoto = async () => {
+  try {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to access media library is required!');
+      return;
+    }
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!pickerResult.canceled) {
+      // TODO: Upload the selected image to your server and get the URL, then setPhoto(uploadedUrl);
+      setPhoto(pickerResult.assets[0].uri);
+    }
+  } catch (error) {
+    console.error('Error picking image:', error);
+    Alert.alert('Error', 'Could not pick image. Please try again.');
+  }
+};
 
-  const handleSave = () => {
-    // placeholder for save functionality
-    // TODO: implement API call to save updated user data
-    const updatedUser: User = {
-      name,
-      pronouns,
-      bio,
-      photo,
-      followers: Number(params.followers) || 0,
-    };
-    console.log('Saving user data:', updatedUser);
-    router.back();
+ const handleSave = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert('Error', 'No user is currently logged in.');
+        return;
+      }
+      const updatedUser: User = {
+        ...currentUser, // keep all unchanged fields
+        _firstName: firstName,
+        _lastName: lastName,
+        _pronouns: pronouns,
+        _bio: bio,
+        _photo: photo,
+      };
+
+      const response = await fetch(`${apiUrl}/users/me/${currentUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          // optionally: 'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          _firstName: firstName,
+          _lastName: lastName,
+          _pronouns: pronouns,
+          _bio: bio,
+          _photo: photo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const data: User = await response.json();
+
+      updateUserContext(data);
+
+      Alert.alert('Success', 'Profile updated successfully!');
+      router.back();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Could not save profile. Please try again.');
+    }
   };
 
 
@@ -70,7 +113,7 @@ const EditProfileScreen = () => {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.photoSection}>
-          <Image source={require('../../assets/images/icon.png')} style={styles.profilePicture} // TODO: change manually imported pic 
+          <Image source={photo ? { uri: photo } : require('../../assets/images/default-user.jpg')} style={styles.profilePicture} // TODO: change manually imported pic 
           /> 
           <TouchableOpacity style={styles.changePhotoButton} onPress={handleChangePhoto}>
             <Text style={styles.changePhotoText}>Change Profile Photo</Text>
@@ -78,15 +121,27 @@ const EditProfileScreen = () => {
         </View>
 
         <View style={styles.formSection}>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter your name"
-              placeholderTextColor="#999"
-            />
+          <View style={{...styles.fieldContainer, flexDirection: 'row'}}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.label}>First Name</Text>
+              <TextInput
+                style={styles.input}
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Enter your first name"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.label}>Last Name</Text>
+              <TextInput
+                style={styles.input}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Enter your last name"
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Pronouns</Text>

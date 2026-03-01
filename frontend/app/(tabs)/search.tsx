@@ -6,6 +6,7 @@ import {
     StyleSheet,
     Image,
     Pressable,
+    TouchableOpacity,
 } from "react-native";
 import { useState, useMemo } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
 import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+import { router } from "expo-router";
 
 interface User {
     id: string;
@@ -97,7 +99,7 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data as User;
                         return (
-                            <View style={styles.userCard}>
+                            <TouchableOpacity style={styles.userCard} onPress={() => router.push(`/profile/${user.id}`)}>
                                 <View style={styles.userInfo}>
                                     <Image
                                         source={{ uri: 'https://i.pravatar.cc/100' }}
@@ -120,7 +122,7 @@ export default function SearchScreen() {
                                         {user.followed ? 'Following' : 'Follow'}
                                     </Text>
                                 </Pressable>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }
 
