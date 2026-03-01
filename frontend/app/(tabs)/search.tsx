@@ -13,11 +13,12 @@ import API_CONFIG from '@/constants/api';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
-import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+import { MOCK_EVENTS } from '@/constants/mock-data';
 
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const [users, setUsers] = useState<any[]>([]);
+    const [calendars, setCalendars] = useState<Calendar[]>([]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -39,11 +40,33 @@ export default function SearchScreen() {
         return () => clearTimeout(timeoutId);
     }, [query]);
 
+    useEffect(() => {
+        const fetchCalendar = async () => {
+            if (!query.trim()) {
+                setCalendars([]);
+                return;
+            }
+
+            try {
+                const response = await fetch(API_CONFIG.endpoints.searchCalendars(query));
+                const data = await response.json();
+                setCalendars(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error buscando calendarios:", error);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchCalendar, 400); 
+        return () => clearTimeout(timeoutId);
+    }, [query]);
+
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
-        MOCK_CALENDARS.forEach((c) => (m[c.id] = c.nombre));
+        calendars.forEach((c) => {
+            m[c.id.toString()] = c.nombre;
+        });
         return m;
-    }, []);
+    }, [calendars]);
 
     type SearchResult =
         | { type: 'user'; data: any }
@@ -56,16 +79,14 @@ export default function SearchScreen() {
 
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
 
-        const calRes: SearchResult[] = MOCK_CALENDARS
-            .filter((c) => c.nombre.toLowerCase().includes(q))
-            .map((c) => ({ type: 'calendar', data: c }));
+        const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
 
         const eventRes: SearchResult[] = MOCK_EVENTS
             .filter((e) => e.titulo.toLowerCase().includes(q))
             .map((e) => ({ type: 'event', data: e }));
 
         return [...usersRes, ...calRes, ...eventRes];
-    }, [query, users]);
+    }, [query, users, calendars]);
 
     const toggleFollow = (id: string) => {
         setUsers((prev) =>
