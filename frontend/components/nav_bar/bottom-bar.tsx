@@ -9,10 +9,10 @@ interface Props {
 export default function BottomBar({ NavButton }: Props) {
   return (
     <View style={styles.bottomBar}>
-      <NavButton icon="home" href="/switch-events" />
+      <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" />
-      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="calendar" href="/switch-events" />
       <NavButton icon="compass" />
     </View>
   );
