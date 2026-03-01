@@ -12,12 +12,15 @@ export type CalendarItem = {
 };
 
 export const useUserProfile = (userId?: string) => {
-    // 1. Solo guardamos el usuario y si lo seguimos o no
     const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
     
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);
+
+    // 🚨 IMPORTANTE: Reemplaza esto por la forma en la que obtengas tu token real
+    // (por ejemplo, desde AsyncStorage, un Contexto o Zustand)
+    const token = "AQUI_VA_EL_TOKEN_DE_TU_SESION"; 
 
     useEffect(() => {
         if (!userId) {
@@ -27,6 +30,7 @@ export const useUserProfile = (userId?: string) => {
             setIsLoading(false);
             return;
         }
+
         async function fetchData() {
             setIsLoading(true);
 
@@ -40,7 +44,6 @@ export const useUserProfile = (userId?: string) => {
                     pronombres: "he/him",
                     biografia: "I'm a mock user for testing 😄",
                     foto: "https://i.pravatar.cc/300",
-                    // En el mock, también metemos los calendarios dentro del usuario
                     public_calendars: [
                         {
                             id: 1,
@@ -59,15 +62,16 @@ export const useUserProfile = (userId?: string) => {
 
             // -------- API REAL --------
             try {
-                const response = await fetch(`http://10.0.2.2:3000/api/v1/users/${userId}/`);
+                // 👇 AÑADIDO: Pasamos el token en el GET para que el backend sepa quién lee el perfil
+                const response = await fetch(`http://10.0.2.2:3000/api/v1/users/${userId}/`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // 2. data ya trae todo (incluyendo data.public_calendars)
                     setUserBeingViewed(data); 
-                    
-                    // Separamos isFollowing solo para poder alternarlo (toggle) fácilmente
                     setIsFollowing(data.is_following || false);
                 } else {
                     setUserNotFound(true);
@@ -81,17 +85,28 @@ export const useUserProfile = (userId?: string) => {
         }
 
         fetchData();
-    }, [userId]);
+    }, [userId]); // (Si sacas el token de un estado reactivo, deberías añadirlo a este array de dependencias)
 
     const handleFollowToggle = async () => {
         if (!userId) return;
+        
         setIsFollowing(prev => !prev); 
+        
         try {
             const response = await fetch(`http://10.0.2.2:3000/api/v1/users/${userId}/follow/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // 👇 Usamos el mismo token
+                },
             });
-            if (!response.ok) setIsFollowing(prev => !prev); 
+            
+            if (response.ok) {
+                const data = await response.json();
+                setIsFollowing(data.followed); 
+            } else {
+                setIsFollowing(prev => !prev); 
+            }
         } catch (error) {
             setIsFollowing(prev => !prev); 
             console.error('Error:', error);
@@ -100,7 +115,6 @@ export const useUserProfile = (userId?: string) => {
 
     return {
         userBeingViewed,
-        // 3. ESTADO DERIVADO: Extraemos los calendarios del objeto principal
         calendars: (userBeingViewed?.public_calendars || []) as CalendarItem[], 
         isFollowing,
         isLoading,
