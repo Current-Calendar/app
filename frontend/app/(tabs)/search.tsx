@@ -7,35 +7,37 @@ import {
     Image,
     Pressable,
 } from "react-native";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import API_CONFIG from '@/constants/api';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
 import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
 
-interface User {
-    id: string;
-    name: string;
-    bio: string;
-    followed: boolean;
-}
-
-const mockUsers: User[] = [
-    { id: "1", name: "User1", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "2", name: "User2", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "3", name: "User3", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "4", name: "User4", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "5", name: "User5", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "6", name: "User6", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "7", name: "User7", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "8", name: "User8", bio: "Lorem ipsum dolor sit amet", followed: false },
-    { id: "9", name: "User9", bio: "Lorem ipsum dolor sit amet", followed: false },
-];
-
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
-    const [users, setUsers] = useState(mockUsers);
+    const [users, setUsers] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            if (!query.trim()) {
+                setUsers([]);
+                return;
+            }
+
+            try {
+                const response = await fetch(API_CONFIG.endpoints.searchUsers(query));
+                const data = await response.json();
+                setUsers(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error buscando usuarios:", error);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchUsers, 400); 
+        return () => clearTimeout(timeoutId);
+    }, [query]);
 
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
@@ -44,7 +46,7 @@ export default function SearchScreen() {
     }, []);
 
     type SearchResult =
-        | { type: 'user'; data: User }
+        | { type: 'user'; data: any }
         | { type: 'calendar'; data: Calendar }
         | { type: 'event'; data: CalendarEvent };
 
@@ -52,9 +54,7 @@ export default function SearchScreen() {
         if (!query.trim()) return [];
         const q = query.toLowerCase();
 
-        const usersRes: SearchResult[] = users
-            .filter((u) => u.name.toLowerCase().includes(q))
-            .map((u) => ({ type: 'user', data: u }));
+        const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
 
         const calRes: SearchResult[] = MOCK_CALENDARS
             .filter((c) => c.nombre.toLowerCase().includes(q))
@@ -95,17 +95,17 @@ export default function SearchScreen() {
                 keyExtractor={(item: any) => `${item.type}-${item.data.id}`}
                 renderItem={({ item }) => {
                     if (item.type === 'user') {
-                        const user = item.data as User;
+                        const user = item.data;
                         return (
                             <View style={styles.userCard}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: 'https://i.pravatar.cc/100' }}
+                                        source={{ uri: user.foto || 'https://i.pravatar.cc/100' }}
                                         style={styles.avatar}
                                     />
                                     <View>
-                                        <Text style={styles.name}>{user.name}</Text>
-                                        <Text style={styles.bio}>{user.bio}</Text>
+                                        <Text style={styles.name}>{user.username}</Text>
+                                        <Text style={styles.bio}>{user.biografia}</Text>
                                     </View>
                                 </View>
 
