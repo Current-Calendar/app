@@ -28,7 +28,7 @@ type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 export default function UserProfileScreen() {
     const route = useRoute<UserProfileRouteProp>();
     const searchParams = useLocalSearchParams<{ userId?: string }>();
-    const userId = searchParams.userId ?? route.params?.userId ?? '1';
+    const userId = searchParams.userId ?? route.params?.userId ?? '1'; //arreglar fallback
 
     const [activeTab, setActiveTab] = useState<'events' | 'calendars'>('events');
 
@@ -65,10 +65,6 @@ export default function UserProfileScreen() {
     // ---------------- UI PRINCIPAL ----------------
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header superior */}
-            <View style={styles.topHeader}>
-                <Ionicons name="water" size={30} color="white" />
-            </View>
 
             <ScrollView 
                 contentContainerStyle={styles.scrollContent} 
