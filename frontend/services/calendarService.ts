@@ -127,32 +127,41 @@ export async function importICS(userId: number) {
       type: 'text/calendar',
       copyToCacheDirectory: true,
     });
+    console.log('DocumentPicker result:', result);
 
-    const isCanceled = Platform.OS === 'web'
-      ? !('uri' in result) || !result.uri
-      : !result.assets || result.assets.length === 0;
+    if (result.canceled) {
+      console.log('Usuario canceló la selección de archivo');
+      return;
+    }
 
-    if (isCanceled) return;
-
-    let fileUri: string;
     let fileName: string;
+    let fileUri: string | undefined;
+    let fileBlob: Blob | undefined;
 
     if (Platform.OS === 'web') {
-      fileUri = (result as any).uri;
-      fileName = (result as any).name;
+      const asset = result.assets![0];
+      fileName = asset.name || 'calendar.ics';
+      fileBlob = asset.file;
+      if (!fileBlob) throw new Error("No se pudo obtener el archivo ICS en web");
     } else {
       const asset = result.assets![0];
       fileUri = asset.uri;
       fileName = asset.name;
+      if (!fileUri || !fileName) throw new Error("Archivo ICS requerido en móvil");
     }
 
-    if (!fileUri || !fileName) throw new Error("Archivo ICS requerido");
+    console.log('Archivo seleccionado:', { fileUri, fileName, fileBlob });
+
 
     const formData = new FormData();
-    formData.append('file', { uri: fileUri, name: fileName, type: 'text/calendar' } as any);
+    if (Platform.OS === 'web' && fileBlob) {
+      formData.append('file', fileBlob, fileName);
+    } else {
+      formData.append('file', { uri: fileUri, name: fileName, type: 'text/calendar' } as any);
+    }
     formData.append('user', String(userId));
     formData.append('estado', 'PRIVADO');
-
+    console.log('Enviando ICS a backend:', { fileUri, fileName, url: `${ROOT_BACKEND_URL}api/calendars/import-ics` });
     const response = await fetch(`${ROOT_BACKEND_URL}api/calendars/import-ics`, {
       method: 'POST',
       body: formData,
