@@ -18,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 
-const BG = "#FBF7EA";
+const BG = '#E8E5D8';
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -37,10 +37,12 @@ const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
+
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
   name: String(raw?.nombre ?? raw?.name ?? raw?.titulo ?? "Calendar"),
 });
+
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_V1}${path}`, {
@@ -287,10 +289,14 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const goBackOrCalendars = () => {
+  if (navigation.canGoBack()) navigation.goBack();
+  else navigation.navigate("calendars");
+};
 
   const goToRoot = () => {
     // vuelve a la primera pantalla del stack (la “base” al entrar)
-    navigation.popToTop();
+    navigation.navigate("calendars");
   };
 
   const { width } = useWindowDimensions();
@@ -460,15 +466,13 @@ export default function CreateEventsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
-          <Ionicons name="chevron-back" size={26} color={WHITE} />
-        </Pressable>
-
-        <Pressable style={styles.iconBtn} hitSlop={10} onPress={loadCalendars}>
-          <Ionicons name="refresh" size={22} color={WHITE} />
-        </Pressable>
-      </View>
+          {/* BACK BUTTON */}
+          <Pressable
+            style={styles.backBtn}
+            hitSlop={12}
+            onPress={() => goBackOrCalendars()}>
+            <Ionicons name="chevron-back" size={22} color={WHITE} />
+          </Pressable>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.header}>New Event</Text>
@@ -733,17 +737,9 @@ const VISIBLE_ITEMS = 3;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  topBar: {
-    height: 54,
-    backgroundColor: TEAL,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
   iconBtn: { padding: 6 },
 
-  scrollContent: { paddingTop: 6, paddingBottom: 18 },
+  scrollContent: { paddingTop: 64, paddingBottom: 18 },
 
   header: {
     textAlign: "center",
@@ -988,5 +984,24 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.55)",
     borderWidth: 1.5,
     borderColor: "rgba(16,70,77,0.25)",
+  },
+    backBtn: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    zIndex: 50,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: TEAL, // verde que usáis
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#0B3D3D",
+    shadowColor: TEAL_DARK,
+    shadowOpacity: 0.25,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 });
