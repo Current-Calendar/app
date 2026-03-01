@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
+    backgroundColor: "#FFFDED",
   },
   navButton: {
     padding: 10,
