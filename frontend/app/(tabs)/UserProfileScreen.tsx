@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { 
+import {
     View, 
     Text, 
     Image, 
@@ -14,8 +13,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 // Importaciones de archivos locales
 import { styles } from '../UserProfile/UserProfileStyles';
-import { useUserProfile } from '../../hooks/useUserProfile';
-import EventCard from '../UserProfile/EventCard';
+import { useUserProfile, CalendarItem } from '../../hooks/useUserProfile';
 import CalendarCard from '../UserProfile/CalendarCard';
 
 // ---------- Tipos ----------
@@ -28,20 +26,26 @@ type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 export default function UserProfileScreen() {
     const route = useRoute<UserProfileRouteProp>();
     const searchParams = useLocalSearchParams<{ userId?: string }>();
-    const userId = searchParams.userId ?? route.params?.userId ?? '1'; //arreglar fallback
-
-    const [activeTab, setActiveTab] = useState<'events' | 'calendars'>('events');
+    const userId = searchParams.userId ?? route.params?.userId;
 
     // Tipos del hook (puedes ajustarlos según tus datos reales)
     const {
         userBeingViewed,
-        events,
         calendars,
         isFollowing,
         isLoading,
         userNotFound,
         handleFollowToggle,
     } = useUserProfile(userId);
+
+    if (!userId) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}> 
+                <Ionicons name="person-circle-outline" size={60} color="#ccc" />
+                <Text style={styles.errorText}>Selecciona un usuario para ver su perfil.</Text>
+            </SafeAreaView>
+        );
+    }
 
     // ---------------- LOADING ----------------
     if (isLoading) {
@@ -108,39 +112,14 @@ export default function UserProfileScreen() {
 
                 {/* --- PUBLICATIONS --- */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Publications</Text>
-                    
-                    <View style={styles.miniTabRow}>
-                        <TouchableOpacity onPress={() => setActiveTab('events')}>
-                            <Text style={[styles.miniTabText, activeTab === 'events' && styles.miniTabActive]}>
-                                Events
-                            </Text>
-                        </TouchableOpacity>
-
-                        <Text style={styles.miniTabSeparator}>|</Text>
-
-                        <TouchableOpacity onPress={() => setActiveTab('calendars')}>
-                            <Text style={[styles.miniTabText, activeTab === 'calendars' && styles.miniTabActive]}>
-                                Calendars
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                    <Text style={styles.sectionTitle}>Calendarios Públicos</Text>
                 </View>
 
-                {/* Render dinámico */}
                 <View style={styles.feedContainer}>
-                    {activeTab === 'events' ? (
-                        events.length > 0 ? (
-                            events.map(ev => <EventCard key={`ev-${ev.id}`} event={ev} />)
-                        ) : (
-                            <Text style={styles.emptyText}>No hay eventos publicados.</Text>
-                        )
+                    {calendars.length > 0 ? (
+                        calendars.map((cal: CalendarItem) => <CalendarCard key={`cal-${cal.id}`} calendario={cal} />)
                     ) : (
-                        calendars.length > 0 ? (
-                            calendars.map(cal => <CalendarCard key={`cal-${cal.id}`} calendario={cal} />)
-                        ) : (
-                            <Text style={styles.emptyText}>No hay calendarios publicados.</Text>
-                        )
+                        <Text style={styles.emptyText}>No hay calendarios públicos creados.</Text>
                     )}
                 </View>
             </ScrollView>

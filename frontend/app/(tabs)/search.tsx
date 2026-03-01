@@ -79,7 +79,10 @@ export default function SearchScreen() {
     };
 
     const handleUserSelect = (id: string) => {
-        router.push(`/UserProfileScreen?userId=${encodeURIComponent(id)}`);
+        router.push({
+            pathname: '/UserProfileScreen',
+            params: { userId: id },
+        });
     };
 
     const handleFollowPress = (id: string) => (event: GestureResponderEvent) => {
@@ -109,7 +112,10 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data as User;
                         return (
-                            <View style={styles.userCard}>
+                            <Pressable
+                                style={styles.userCard}
+                                onPress={() => handleUserSelect(user.id)}
+                            >
                                 <View style={styles.userInfo}>
                                     <Image
                                         source={{ uri: 'https://i.pravatar.cc/100' }}
@@ -126,13 +132,16 @@ export default function SearchScreen() {
                                         styles.followButton,
                                         user.followed && styles.followingButton,
                                     ]}
-                                    onPress={() => toggleFollow(user.id)}
+                                    onPress={(event) => {
+                                        event.stopPropagation();
+                                        toggleFollow(user.id);
+                                    }}
                                 >
                                     <Text style={styles.followText}>
                                         {user.followed ? 'Following' : 'Follow'}
                                     </Text>
                                 </Pressable>
-                            </View>
+                            </Pressable>
                         );
                     }
 
