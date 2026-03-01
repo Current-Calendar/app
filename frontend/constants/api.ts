@@ -19,7 +19,8 @@ export const API_CONFIG = {
     mock: buildEndpoint('mock'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
     searchUsers: (query: string) => buildEndpoint(`usuarios?search=${encodeURIComponent(query)}`),
-    searchCalendars: (query: string) => buildEndpoint(`calendarios/list?q=${encodeURIComponent(query)}`)
+    searchCalendars: (query: string) => buildEndpoint(`calendarios/list?q=${encodeURIComponent(query)}`),
+    searchEvents: (query: string) => buildEndpoint(`eventos/list?q=${encodeURIComponent(query)}`)
   },
 };
 

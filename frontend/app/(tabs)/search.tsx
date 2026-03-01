@@ -19,6 +19,7 @@ export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const [users, setUsers] = useState<any[]>([]);
     const [calendars, setCalendars] = useState<Calendar[]>([]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -36,7 +37,7 @@ export default function SearchScreen() {
             }
         };
 
-        const timeoutId = setTimeout(fetchUsers, 400); 
+        const timeoutId = setTimeout(fetchUsers, 400);
         return () => clearTimeout(timeoutId);
     }, [query]);
 
@@ -56,7 +57,27 @@ export default function SearchScreen() {
             }
         };
 
-        const timeoutId = setTimeout(fetchCalendar, 400); 
+        const timeoutId = setTimeout(fetchCalendar, 400);
+        return () => clearTimeout(timeoutId);
+    }, [query]);
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            if (!query.trim()) {
+                setEvents([]);
+                return;
+            }
+
+            try {
+                const response = await fetch(API_CONFIG.endpoints.searchEvents(query));
+                const data = await response.json();
+                setEvents(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error buscando eventos:", error);
+            }
+        };
+
+        const timeoutId = setTimeout(fetchEvents, 400);
         return () => clearTimeout(timeoutId);
     }, [query]);
 
@@ -81,12 +102,10 @@ export default function SearchScreen() {
 
         const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
 
-        const eventRes: SearchResult[] = MOCK_EVENTS
-            .filter((e) => e.titulo.toLowerCase().includes(q))
-            .map((e) => ({ type: 'event', data: e }));
+        const eventRes: SearchResult[] = events.map((e) => ({ type: 'event', data: e }));
 
         return [...usersRes, ...calRes, ...eventRes];
-    }, [query, users, calendars]);
+    }, [query, users, calendars, events]);
 
     const toggleFollow = (id: string) => {
         setUsers((prev) =>
