@@ -1,9 +1,16 @@
+import json
+
+from django.contrib.auth.hashers import identify_hasher, check_password
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
-
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
+import datetime
 from main.models import Usuario, Calendario, Evento
-# Create your tests here.
+from django.urls import reverse
+from main.models import Usuario, Calendario, Evento
+
 ENDPOINT_EVENTOS = "/api/v1/eventos"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendarios/{}/publicar"
 
@@ -30,6 +37,7 @@ class CrearEventoTests(TestCase):
             "fecha": "2026-03-01",
             "hora": "18:00:00",
             "calendarios": [self.calendario.id],
+            "creador_id": self.usuario.id
         }
 
         response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
@@ -75,6 +83,7 @@ class CrearEventoTests(TestCase):
             "fecha": "2026-03-01",
             "hora": "18:00:00",
             "calendarios": [9999],
+            "creador_id": self.usuario.id
         }
 
         response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
@@ -83,17 +92,7 @@ class CrearEventoTests(TestCase):
     def test_get_no_permitido(self):
         response = self.client.get(ENDPOINT_EVENTOS)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-import json
 
-from django.contrib.auth.hashers import identify_hasher, check_password
-from django.test import TestCase
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
-import datetime
-from main.models import Usuario, Calendario, Evento
-from django.urls import reverse
 Usuario = get_user_model()
 class BorrarUsuarioTestCase(TestCase):
     def setUp(self):
@@ -172,6 +171,7 @@ class EditEventTests(TestCase):
             nombre_lugar="Lugar original",
             fecha="2026-03-01",
             hora="18:00:00",
+            creador=self.user,
         )
         self.event.calendarios.set([self.calendar1])
 
@@ -999,7 +999,8 @@ class AsignarEventoCalendarioTests(TestCase):
         self.evento = Evento.objects.create(
             titulo='Evento Test',
             fecha=datetime.date(2026, 6, 1),
-            hora=datetime.time(10, 0)
+            hora=datetime.time(10, 0),
+            creador=self.usuario
         )
 
     def test_asignar_evento_exitoso(self):
@@ -1077,7 +1078,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.evento = Evento.objects.create(
             titulo='Evento Test 2',
             fecha=datetime.date(2026, 6, 1),
-            hora=datetime.time(10, 0)
+            hora=datetime.time(10, 0),
+            creador=self.usuario
         )
         self.evento.calendarios.add(self.calendario)
 
