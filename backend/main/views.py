@@ -1,51 +1,40 @@
 import datetime
-from asyncio import events
-from icalendar import Calendar
-
 import os
 import ipaddress
 import socket
+import requests
+from asyncio import events
+from icalendar import Calendar
 from urllib.parse import urlparse
+
 from django.conf import settings
 from django.contrib.gis.geos import Point
-from main.models import MockElement
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
-from django.shortcuts import get_object_or_404
-from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
-from django.contrib.gis.geos import Point
 
+from main.models import MockElement, Usuario, Calendario, Evento
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
-import requests
-from rest_framework.views import APIView
-from utils.security import get_safe_ip
+from backend.utils.security import get_safe_ip
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
-
-from main.models import MockElement, Calendario, Evento, Usuario
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 REQUEST_TIMEOUT_SECONDS = 5
 
-#if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -105,9 +94,7 @@ class UserViewSet(viewsets.GenericViewSet):
         )
 
 
-
-
-@api_view(['GET'])
+@api_view(["GET"])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
@@ -140,9 +127,6 @@ def hola_mundo(request):
         "source": "PostgreSQL (Base de Datos)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
- 
-
-
 
 def google_authorization(request):
     """Autorización de Google para obtener acceso a la API de Google Calendar."""
@@ -239,7 +223,7 @@ def import_google_calendar(request):
 def iOS_calendar_import(request):
     """Endpoint para importar eventos desde iOS Calendar."""
 
-    webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
+    webcal_url = request.data.get('webcal_url')
     user_id = request.data.get('user')
     estado_solicitado = request.data.get('estado', 'PRIVADO') 
     usuario_creador = Usuario.objects.filter(id=user_id).first()
@@ -405,39 +389,6 @@ def export_to_ics(request, calendario_id):
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
-
-@api_view(['GET'])
-def buscar_usuarios(request):
-    query = request.GET.get("search")
-
-    if not query:
-        return Response(
-            {"errors": ["El parámetro 'search' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    usuarios = Usuario.objects.filter(
-        Q(username__icontains=query) |
-        Q(email__icontains=query) |
-        Q(pronombres__icontains=query)
-    ).distinct()
-
-    resultados = [
-        {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "pronombres": user.pronombres,
-            "biografia": user.biografia,
-            "foto": user.foto.url if user.foto else None,
-            "total_seguidores": user.total_seguidores,
-            "total_seguidos": user.total_seguidos,
-            "total_calendarios_seguidos": user.total_calendarios_seguidos,
-        }
-        for user in usuarios
-    ]
-
-    return Response(resultados, status=status.HTTP_200_OK)
     
 
 @api_view(['POST'])
@@ -551,53 +502,6 @@ def crear_calendario(request):
         },
         status=status.HTTP_201_CREATED,
     )
-
-@api_view(['GET'])
-def list_calendars(request):
-    """
-    List and search calendars.
-
-    GET /api/v1/calendarios/list
-
-    Query parameters:
-        q       (str)  -- case-insensitive substring match on calendar name
-        estado  (str)  -- filter by privacy status (PRIVADO | AMIGOS | PUBLICO)
-    """
-    queryset = Calendario.objects.select_related('creador').all()
-
-    q = request.GET.get('q', '').strip()
-    if q:
-        queryset = queryset.filter(nombre__icontains=q)
-
-    estado = request.GET.get('estado', '').strip().upper()
-    valid_estados = {choice[0] for choice in Calendario.ESTADOS_PRIVACIDAD}
-    if estado:
-        if estado not in valid_estados:
-            return Response(
-                {"errors": [f"Invalid 'estado' value. Allowed values: {', '.join(sorted(valid_estados))}."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        queryset = queryset.filter(estado=estado)
-
-    queryset = queryset.order_by('-fecha_creacion')
-
-    results = [
-        {
-            "id": cal.id,
-            "nombre": cal.nombre,
-            "descripcion": cal.descripcion,
-            "estado": cal.estado,
-            "origen": cal.origen,
-            "creador_id": cal.creador_id,
-            "creador_username": cal.creador.username,
-            "fecha_creacion": cal.fecha_creacion,
-        }
-        for cal in queryset
-    ]
-
-    return Response(results, status=status.HTTP_200_OK)
-
-
 @api_view(['POST'])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
@@ -663,294 +567,4 @@ def desasignar_evento_de_calendario(request):
     return Response(
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
-    )
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
-def eliminar_calendario(request, calendario_id):
-    calendario = get_object_or_404(Calendario, id=calendario_id)
-    
-    # Only the creator can delete the calendar
-    if calendario.creador != request.user:
-        return Response({'error': 'You do not have permission to delete this calendar.'}, status=status.HTTP_403_FORBIDDEN)
-    
-    calendario.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
-def editar_calendario(request, calendario_id):
-    calendario = get_object_or_404(Calendario, id=calendario_id)
-
-    if calendario.creador != request.user:
-        return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
-
-    ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'descripcion', 'estado']
-
-
-    for campo in campos_editables:
-        if campo in request.data:
-            valor = request.data[campo]
-            if isinstance(valor, str) and valor.strip() == '':
-                return Response(
-                    {'error': f"El campo '{campo}' no puede ser una cadena vacía."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            if campo == 'estado' and valor not in ESTADOS_VALIDOS:
-                return Response(
-                    {'error': f"El estado '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            setattr(calendario, campo, valor)
-
-    calendario.save()
-    return Response({
-        'id': calendario.id,
-        'nombre': calendario.nombre,
-        'descripcion': calendario.descripcion,
-        'estado': calendario.estado,
-    }, status=status.HTTP_200_OK)
-
-class UsuarioPropioView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def put(self, request):
-        serializer = UserSerializer(
-            request.user,
-            data=request.data,
-            partial=True
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
-    def delete(self, request):
-        request.user.delete()
-        return Response(
-            {"message": "Usuario eliminado satisfactoriamente"},
-            status=202
-        )
-  
-@api_view(['PUT'])
-def edit_event(request, evento_id):
-    event = get_object_or_404(Evento, id=evento_id)
-    data = request.data
-
-    # Validate required fields are not empty if provided
-    if "titulo" in data and not data["titulo"]:
-        return Response(
-            {"errors": ["El campo 'titulo' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if "fecha" in data and not data["fecha"]:
-        return Response(
-            {"errors": ["El campo 'fecha' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if "hora" in data and not data["hora"]:
-        return Response(
-            {"errors": ["El campo 'hora' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # Update scalar fields if present
-    editable_fields = [
-        "titulo", "descripcion", "nombre_lugar",
-        "fecha", "hora", "recurrencia", "id_externo",
-    ]
-    for field in editable_fields:
-        if field in data:
-            setattr(event, field, data[field])
-
-    # Location via lat/lon
-    if "latitud" in data or "longitud" in data:
-        lat = data.get("latitud")
-        lon = data.get("longitud")
-        try:
-            event.ubicacion = Point(float(lon), float(lat))
-        except Exception:
-            return Response(
-                {"errors": ["Latitud o longitud inválidas."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-    # Calendars M2M
-    calendars = None
-    if "calendarios" in data:
-        calendar_ids = data["calendarios"]
-        if not calendar_ids or not isinstance(calendar_ids, list):
-            return Response(
-                {"errors": ["Debe indicar al menos un calendario válido."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        calendars = Calendario.objects.filter(id__in=calendar_ids)
-        if calendars.count() != len(calendar_ids):
-            return Response(
-                {"errors": ["Algún calendario no existe."]},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-    try:
-        event.full_clean()
-        with transaction.atomic():
-            event.save()
-            if calendars is not None:
-                event.calendarios.set(calendars)
-
-    except ValidationError as exc:
-        raw_messages = []
-        if hasattr(exc, "message_dict"):
-            for field_errors in exc.message_dict.values():
-                raw_messages.extend(field_errors)
-        if not raw_messages and getattr(exc, "messages", None):
-            raw_messages.extend(exc.messages)
-
-        return Response(
-            {"errors": raw_messages or ["Datos inválidos."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    return Response(
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-        },
-        status=status.HTTP_200_OK,
-    )
-@api_view(['POST'])
-def crear_evento(request):
-    data = request.data
-
-    titulo = data.get("titulo")
-    fecha = data.get("fecha")
-    hora = data.get("hora")
-    calendarios_ids = data.get("calendarios")
-
-    if not titulo:
-        return Response(
-            {"errors": ["El campo 'titulo' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not fecha:
-        return Response(
-            {"errors": ["El campo 'fecha' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not hora:
-        return Response(
-            {"errors": ["El campo 'hora' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if not calendarios_ids or not isinstance(calendarios_ids, list):
-        return Response(
-            {"errors": ["Debe indicar al menos un calendario válido."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    calendarios = Calendario.objects.filter(id__in=calendarios_ids)
-
-    if calendarios.count() != len(calendarios_ids):
-        return Response(
-            {"errors": ["Algún calendario no existe."]},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    ubicacion = None
-    lat = data.get("latitud")
-    lon = data.get("longitud")
-
-    if lat and lon:
-        try:
-            ubicacion = Point(float(lon), float(lat))
-        except Exception:
-            return Response(
-                {"errors": ["Latitud o longitud inválidas."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-    evento = Evento(
-        titulo=titulo,
-        descripcion=data.get("descripcion", ""),
-        nombre_lugar=data.get("nombre_lugar", ""),
-        fecha=fecha,
-        hora=hora,
-        recurrencia=data.get("recurrencia"),
-        id_externo=data.get("id_externo"),
-        ubicacion=ubicacion,
-    )
-
-    try:
-        evento.full_clean()
-        with transaction.atomic():
-            evento.save()
-            evento.calendarios.set(calendarios)
-
-    except ValidationError as exc:
-        raw_messages = []
-        if hasattr(exc, "message_dict"):
-            for field_errors in exc.message_dict.values():
-                raw_messages.extend(field_errors)
-        if not raw_messages and getattr(exc, "messages", None):
-            raw_messages.extend(exc.messages)
-
-        return Response(
-            {"errors": raw_messages or ["Datos inválidos."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    return Response(
-        {
-            "id": evento.id,
-            "titulo": evento.titulo,
-            "descripcion": evento.descripcion,
-            "nombre_lugar": evento.nombre_lugar,
-            "fecha": evento.fecha,
-            "hora": evento.hora,
-            "recurrencia": evento.recurrencia,
-            "id_externo": evento.id_externo,
-            "calendarios": calendarios_ids,
-            "fecha_creacion": evento.fecha_creacion,
-        },
-        status=status.HTTP_201_CREATED,
-    )
-@api_view(['PUT'])
-def publish_calendar(request, calendario_id):
-    calendar = get_object_or_404(Calendario, id=calendario_id)
-
-    if calendar.estado == 'PUBLICO':
-        return Response(
-            {"errors": ["El calendario ya es público."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    calendar.estado = 'PUBLICO'
-    calendar.save()
-
-    return Response(
-        {
-            "id": calendar.id,
-            "nombre": calendar.nombre,
-            "descripcion": calendar.descripcion,
-            "estado": calendar.estado,
-            "origen": calendar.origen,
-            "creador": calendar.creador.id,
-            "fecha_creacion": calendar.fecha_creacion,
-        },
-        status=status.HTTP_200_OK,
     )
