@@ -23,7 +23,7 @@ from googleapiclient.discovery import build
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, mixins
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
@@ -40,6 +40,7 @@ from utils.security import get_safe_ip
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
+from .permissions import IsCreator
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -112,9 +113,13 @@ class UserViewSet(viewsets.GenericViewSet):
         user_data["public_calendars"] = public_calendars
         return Response(user_data)
 
+class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    queryset = Evento.objects.all()
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated & IsCreator]
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
