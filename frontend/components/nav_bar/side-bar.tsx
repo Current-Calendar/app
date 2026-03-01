@@ -58,12 +58,11 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
 
       {/* CENTER */}
       <View style={styles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" expanded={expanded} href="/switch-events" />
+        <SidebarItem icon="home" label="Home" expanded={expanded} href="/calendars" />
         <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
-        <SidebarItem icon="calendar" label="Publish" expanded={expanded} />
-        <SidebarItem icon="people" label="Our Team" expanded={expanded} />
-        <SidebarItem icon="compass" label="Map" expanded={expanded} />
-        <SidebarItem icon="settings" label="Settings" expanded={expanded} />
+        <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/switch-calendar" />
+        {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
+        {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
         <SidebarItem icon="person" label="Profile" expanded={expanded} />
       </View>
 

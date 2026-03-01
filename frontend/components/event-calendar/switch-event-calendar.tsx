@@ -11,20 +11,19 @@ export default function EventsCalendarSwitch() {
   return (
     <View style={styles.container}>
       <Pressable
-        style={[styles.button, isEvents && styles.activeButton]}
-        onPress={() => router.push("/switch-events")}
-      >
-        <Text style={[styles.text, isEvents && styles.activeText]}>
-          Events
-        </Text>
-      </Pressable>
-
-      <Pressable
         style={[styles.button, isCalendar && styles.activeButton]}
         onPress={() => router.push("/switch-calendar")}
       >
         <Text style={[styles.text, isCalendar && styles.activeText]}>
           Calendar
+        </Text>
+      </Pressable>
+      <Pressable
+        style={[styles.button, isEvents && styles.activeButton]}
+        onPress={() => router.push("/switch-events")}
+      >
+        <Text style={[styles.text, isEvents && styles.activeText]}>
+          Events
         </Text>
       </Pressable>
     </View>
