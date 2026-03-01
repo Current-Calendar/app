@@ -28,8 +28,8 @@ const API_BASE =
     ? "http://10.0.2.2:8000"
     : "http://localhost:8000";
 
-const Otter = require("../../assets/images/icon.png");
-const Cloud = require("../../assets/images/icon.png");
+const Otter = require("../../assets/images/Mascota.png");
+const Cloud = require("../../assets/images/nube_login.png");
 
 export default function LoginScreen() {
   const router = useRouter();
