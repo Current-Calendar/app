@@ -297,7 +297,9 @@ export default function CalendarScreen() {
                         </View>
                     </TouchableOpacity>
                 )}
-
+                <View style={styles.container}
+                    id="calendar-web"
+                    ref={calendarRef}>
                 <CalendarGrid
                     year={year}
                     month={month}
@@ -306,7 +308,7 @@ export default function CalendarScreen() {
                     selectedDay={selectedDay}
                     onDayPress={handleDayPress}
                 />
-
+                </View>
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
                 <CalendarInfoModal
                     calendar={infoCalendar}
