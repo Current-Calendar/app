@@ -131,9 +131,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.topRow}>
-        <Text style={styles.topSmall}>login</Text>
-      </View>
 
       <View style={styles.content}>
         <View style={styles.hero}>
@@ -199,6 +196,7 @@ export default function LoginScreen() {
 
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Don’t have an account?</Text>
+          {/* Si tu carpeta es app/(auth)/register.tsx, la ruta correcta es /register */}
           <Link href="/register" asChild>
             <Pressable>
               <Text style={styles.bottomLink}>Sign Up</Text>
@@ -216,19 +214,6 @@ const W = Dimensions.get("window").width;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-
-  topRow: {
-    paddingTop: 14,
-    paddingHorizontal: 18,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  topSmall: {
-    color: TEXT,
-    opacity: 0.65,
-    fontSize: 14,
-    textTransform: "lowercase",
-  },
 
   content: {
     flex: 1,
