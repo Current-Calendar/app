@@ -9,19 +9,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
+import { useRouter } from 'expo-router';
+
 
 interface EventDetailModalProps {
     event: CalendarEvent | null;
     onClose: () => void;
 }
 
-/**
- * Bottom-sheet-style modal showing all event info from the Evento model.
- *
- * TODO BACKEND - Wire up "Edit" / "Delete" actions once API is ready.
- */
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+    const router = useRouter();
+
     if (!event) return null;
+
 
     const accent = event.color ?? '#10464d';
 
@@ -73,24 +73,30 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                     </View>
 
                     <View style={styles.actions}>
-                        {/* TODO BACKEND - Hook up edit action */}
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#10464d14', borderColor: '#10464d' }]}
                             activeOpacity={0.7}
+                            onPress={() => {
+                                onClose();
+                                router.push({ pathname: "/events/edit_events", params: { id: event.id } });
+                            }}
                         >
                             <Ionicons name="pencil-outline" size={16} color="#10464d" />
                             <Text style={[styles.actionLabel, { color: '#10464d' }]}>Edit</Text>
                         </TouchableOpacity>
-
-                        {/* TODO BACKEND - Hook up delete action */}
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#eb8c8514', borderColor: '#eb8c85' }]}
                             activeOpacity={0.7}
+                            onPress={() => {
+                                console.log("Deleting event:", event.id);
+                                onClose();
+                            }}
                         >
                             <Ionicons name="trash-outline" size={16} color="#eb8c85" />
                             <Text style={[styles.actionLabel, { color: '#eb8c85' }]}>Delete</Text>
                         </TouchableOpacity>
                     </View>
+
                 </Pressable>
             </Pressable>
         </Modal>

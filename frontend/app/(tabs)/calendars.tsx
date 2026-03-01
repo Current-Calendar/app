@@ -9,7 +9,9 @@ import {
     Animated,
     useWindowDimensions,
     Alert,
+    Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,7 +50,7 @@ export default function CalendarScreen() {
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
 
-    const BOTTOM_BAR_HEIGHT = 60 + 20; 
+    const BOTTOM_BAR_HEIGHT = 60 + 20;
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
@@ -184,6 +186,26 @@ export default function CalendarScreen() {
                         onChange={setSelectedCalendarId}
                         onInfoPress={setInfoCalendar}
                     />
+
+                    <View style={styles.toolbarButtons}>
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            activeOpacity={0.7}
+                            onPress={() => router.push(`/events/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
+                        >
+                            <Ionicons name="add" size={18} color="#fff" />
+                            <Text style={styles.primaryBtnText}>New Event</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.secondaryBtn}
+                            activeOpacity={0.7}
+                            onPress={() => router.push('/modal')}
+                        >
+                            <Ionicons name="calendar-outline" size={18} color="#10464d" />
+                            <Text style={styles.secondaryBtnText}>New Calendar</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.headerBlock}>
@@ -295,6 +317,53 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 16,
         marginBottom: 8,
+        gap: 12,
+        flexWrap: 'wrap',
+    },
+    toolbarButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    primaryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#10464d',
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+    },
+    primaryBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    secondaryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 1,
+    },
+    secondaryBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#10464d',
     },
     headerBlock: {
         marginBottom: 12,
