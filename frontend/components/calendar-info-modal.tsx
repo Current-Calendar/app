@@ -252,6 +252,7 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         shadowOffset: { width: 0, height: 2 },
         elevation: 2,
+        marginTop: 8,
     },
     editButtonLabel: {
         fontSize: 14,
@@ -269,6 +270,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#eb8c8514',
         borderRadius: 14,
         paddingVertical: 11,
+        marginTop: 8,
     },
     deleteButtonDisabled: {
         opacity: 0.7,
