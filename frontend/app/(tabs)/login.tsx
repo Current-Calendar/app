@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import { API_CONFIG } from "@/constants/api";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -21,11 +22,6 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_BASE ??
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:8000"
-    : "http://localhost:8000");
 
 
 
@@ -76,7 +72,7 @@ export default function LoginScreen() {
     });
 
     try {
-      const res = await fetch(`${API_BASE}/graphql/`, {
+      const res = await fetch(API_CONFIG.endpoints.graphql, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

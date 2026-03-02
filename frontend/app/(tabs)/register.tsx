@@ -10,22 +10,13 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { API_CONFIG } from "@/constants/api";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
-
-// Cambia esto según dónde esté tu API
-// - Web: normalmente http://localhost:8000
-// - Android emulator: http://10.0.2.2:8000
-// - iPhone físico: http://TU_IP_LOCAL:8000
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:8000/api/v1/"
-    : "http://localhost:8000/api/v1/");
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -57,7 +48,7 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}auth/registro/`, {
+      const res = await fetch(API_CONFIG.endpoints.register, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +167,7 @@ export default function SignUpScreen() {
           </Link>
         </View>
 
-        <Text style={styles.apiHint}>API: {API_BASE}</Text>
+        <Text style={styles.apiHint}>API: {API_CONFIG.BaseURL}</Text>
       </View>
     </View>
   );
