@@ -25,7 +25,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
     icon: any;
     label: string;
     expanded: boolean;
-    href?: Href;
+    href?: string;
   }) => {
     const content = (
       <Pressable style={styles.sidebarItem}>
@@ -36,7 +36,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
 
     if (href) {
       return (
-        <Link href={href} asChild>
+        <Link href={href as Href} asChild>
           {content}
         </Link>
       );
@@ -66,10 +66,11 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
 
       {/* CENTER */}
       <View style={styles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" expanded={expanded} href="/calendars" />
-        <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
+        <SidebarItem icon="home" label="Home" expanded={expanded} href="/(tabs)/calendars" />
+        <SidebarItem icon="search" label="Search" expanded={expanded} href="/(tabs)/search" />
+        <SidebarItem icon="calendar-clear" label="My Calendar" expanded={expanded} href="/(tabs)/calendar-view" />
         <SidebarItem icon="add-circle" label="Create" expanded={expanded} href={`/events/create_events?date=${getTodayFormatted()}`} />
-        <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/switch-calendar" />
+        <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/(tabs)/switch-calendar" />
         {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
         {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
         <SidebarItem icon="person" label="Profile" expanded={expanded} />
