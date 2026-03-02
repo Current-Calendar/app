@@ -1,7 +1,7 @@
 name: Mejora
 description: Proponer una mejora o nueva funcionalidad
 type: "Improvement"
-projects: []
+projects: [Current-Calendar/1]
 assignees: []
 body:
   - type: textarea

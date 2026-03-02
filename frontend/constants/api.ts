@@ -18,6 +18,8 @@ export const API_CONFIG = {
   endpoints: {
     mock: buildEndpoint('mock'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    createCalendar: buildEndpoint('calendarios'),
+    editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
   },
 };
 

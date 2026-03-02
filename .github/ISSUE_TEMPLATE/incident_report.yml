@@ -1,7 +1,7 @@
 name: Incidencia
 description: Reportar un error o incidencia
 type: "Bug"
-projects: []
+projects: [Current-Calendar/1]
 assignees: []
 body:
   - type: input
