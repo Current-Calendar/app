@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -33,13 +33,26 @@ const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000
 );
 const API_V1 = `${API_BASE_URL}/api/v1`;
 
+// ========= NOMINATIM (OpenStreetMap) =========
+// Docs: https://nominatim.org/release-docs/latest/api/Search/
+const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+const NOMINATIM_LIMIT = 6;
+const PLACE_DEBOUNCE_MS = 350;
+
 type CalendarItem = { id: string; name: string; image?: any };
+
+type PlaceSuggestion = {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+};
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-// 👇 DRF TimeField suele aceptar mejor HH:MM:SS
+// DRF suele aceptar mejor HH:MM:SS
 const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
@@ -153,8 +166,8 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
   const gridPadTop = 6;
 
   const rows = Math.max(1, Math.ceil(days.length / 7));
-  const extraH = rows === 6 ? 16 : 0; // 👈 add a bit more height when month needs 6 rows
-  const cellGapY = 2; // must match dayCell.marginBottom
+  const extraH = rows === 6 ? 16 : 0;
+  const cellGapY = 2;
 
   const gridAvailableH = size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
 
@@ -275,7 +288,7 @@ const miniStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
-    marginBottom: 2, // 👈 must match cellGapY
+    marginBottom: 2,
   },
   dayEmpty: { backgroundColor: "transparent" },
   dayText: { color: TEXT, fontWeight: "900", fontSize: 11 },
@@ -351,6 +364,19 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
+  // Coordenadas
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
+
+  // Autocomplete (Nominatim)
+  const [placeLoading, setPlaceLoading] = useState(false);
+  const [placeError, setPlaceError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [placeFocused, setPlaceFocused] = useState(false);
+
+  // Para no relanzar búsqueda cuando el usuario selecciona una sugerencia
+  const suppressNextSearchRef = useRef(false);
+
   const [date, setDate] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -414,6 +440,99 @@ export default function CreateEventsScreen() {
     if (!result.canceled) setCoverUri(result.assets[0].uri);
   };
 
+  // ========= Nominatim search (debounced) =========
+  useEffect(() => {
+    if (suppressNextSearchRef.current) {
+      suppressNextSearchRef.current = false;
+      return;
+    }
+
+    // si el usuario escribe manualmente, invalidamos coords (hasta que elija sugerencia)
+    setLat(null);
+    setLon(null);
+
+    const q = place.trim();
+    setPlaceError(null);
+
+    if (!q || q.length < 3) {
+      setSuggestions([]);
+      setPlaceLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        setPlaceLoading(true);
+
+        const url =
+          `${NOMINATIM_SEARCH_URL}` +
+          `?q=${encodeURIComponent(q)}` +
+          `&format=json` +
+          `&addressdetails=1` +
+          `&limit=${NOMINATIM_LIMIT}`;
+
+        // Nominatim recomienda identificarse con un User-Agent;
+        // en web no se puede setear, pero en móvil sí.
+        const headers: Record<string, string> = {
+          Accept: "application/json",
+        };
+        if (Platform.OS !== "web") {
+          headers["User-Agent"] = "CurrentApp/1.0 (ISPP project)";
+        }
+
+        const res = await fetch(url, { headers });
+        const data = (await res.json()) as any[];
+
+        if (cancelled) return;
+
+        const mapped: PlaceSuggestion[] = (Array.isArray(data) ? data : [])
+          .map((x) => ({
+            place_id: Number(x?.place_id ?? 0),
+            display_name: String(x?.display_name ?? ""),
+            lat: String(x?.lat ?? ""),
+            lon: String(x?.lon ?? ""),
+          }))
+          .filter((x) => x.place_id && x.display_name && x.lat && x.lon);
+
+        setSuggestions(mapped);
+      } catch (e: any) {
+        if (cancelled) return;
+        setSuggestions([]);
+        setPlaceError(e?.message ?? "Error buscando ubicaciones");
+      } finally {
+        if (!cancelled) setPlaceLoading(false);
+      }
+    }, PLACE_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [place]);
+
+  const selectSuggestion = (s: PlaceSuggestion) => {
+    suppressNextSearchRef.current = true;
+    setPlace(s.display_name);
+
+    const latNum = Number(s.lat);
+    const lonNum = Number(s.lon);
+    setLat(Number.isFinite(latNum) ? latNum : null);
+    setLon(Number.isFinite(lonNum) ? lonNum : null);
+
+    setSuggestions([]);
+    setPlaceError(null);
+  };
+
+  const clearPlace = () => {
+    suppressNextSearchRef.current = true;
+    setPlace("");
+    setLat(null);
+    setLon(null);
+    setSuggestions([]);
+    setPlaceError(null);
+  };
+
   // ====== Submit + Modal éxito ======
   const [publishing, setPublishing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -437,15 +556,21 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       titulo,
       descripcion: description?.trim() ?? "",
       nombre_lugar: place?.trim() ?? "",
       fecha: toISODate(date),
-      hora: toHMS(time), // 👈 HH:MM:SS
+      hora: toHMS(time),
       calendarios: [Number(selectedCalendar.id)],
-      creador_id: 2, // 👈 MOCK por ahora
+      creador_id: 2, // MOCK por ahora
     };
+
+    // 👇 Enviar coords si existen (backend espera latitud/longitud)
+    if (lat != null && lon != null) {
+      payload.latitud = lat;
+      payload.longitud = lon;
+    }
 
     try {
       setPublishing(true);
@@ -463,7 +588,9 @@ export default function CreateEventsScreen() {
     }
   };
 
-  const miniSize = Math.min(280, formWidth); // 👈 a bit bigger by default
+  const miniSize = Math.min(280, formWidth);
+
+  const showSuggestions = placeFocused && suggestions.length > 0;
 
   return (
     <View style={styles.container}>
@@ -545,7 +672,61 @@ export default function CreateEventsScreen() {
             />
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
-            <TextInput value={place} onChangeText={setPlace} style={styles.input} />
+
+            {/* Place input + clear + loading */}
+            <View style={styles.placeRow}>
+              <TextInput
+                value={place}
+                onChangeText={setPlace}
+                style={[styles.input, { flex: 1, paddingRight: 38 }]}
+                onFocus={() => setPlaceFocused(true)}
+                onBlur={() => {
+                  // pequeño delay para que el click en sugerencia entre antes del blur
+                  setTimeout(() => setPlaceFocused(false), 120);
+                }}
+                placeholder="Empieza a escribir una dirección..."
+                placeholderTextColor="rgba(16,70,77,0.45)"
+              />
+
+              {!!place && (
+                <Pressable style={styles.clearBtn} onPress={clearPlace} hitSlop={10}>
+                  <Ionicons name="close" size={18} color={TEXT} />
+                </Pressable>
+              )}
+
+              {placeLoading && (
+                <View style={styles.placeSpinner}>
+                  <ActivityIndicator size="small" />
+                </View>
+              )}
+            </View>
+
+            {!!placeError && <Text style={styles.errorText}>{placeError}</Text>}
+
+            {/* Suggestions dropdown */}
+            {showSuggestions && (
+              <View style={styles.suggestBox}>
+                {suggestions.map((s) => (
+                  <Pressable
+                    key={String(s.place_id)}
+                    style={styles.suggestItem}
+                    onPress={() => selectSuggestion(s)}
+                  >
+                    <Ionicons name="location-outline" size={16} color={TEXT} />
+                    <Text style={styles.suggestText} numberOfLines={2}>
+                      {s.display_name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Show coords if selected */}
+            {lat != null && lon != null && (
+              <Text style={styles.coordsText}>
+                Coordenadas: {lat.toFixed(6)}, {lon.toFixed(6)}
+              </Text>
+            )}
 
             {/* Date */}
             <View style={styles.timeRow}>
@@ -576,7 +757,6 @@ export default function CreateEventsScreen() {
               {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
             </Pressable>
 
-            {/* extra bottom space so it never clashes with bottom bar */}
             <View style={{ height: 40 }} />
           </View>
         </View>
@@ -740,7 +920,7 @@ const styles = StyleSheet.create({
 
   iconBtn: { padding: 6 },
 
-  scrollContent: { paddingTop: 64, paddingBottom: 120 }, // enough for bottom bar
+  scrollContent: { paddingTop: 64, paddingBottom: 120 },
 
   header: {
     textAlign: "center",
@@ -877,6 +1057,49 @@ const styles = StyleSheet.create({
 
   errorText: { color: RED, fontWeight: "800", marginBottom: 8 },
 
+  // Place autocomplete
+  placeRow: { flexDirection: "row", alignItems: "center" },
+  clearBtn: {
+    position: "absolute",
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.55)",
+    borderWidth: 1.5,
+    borderColor: "rgba(16,70,77,0.18)",
+  },
+  placeSpinner: { position: "absolute", right: 40 },
+
+  suggestBox: {
+    marginTop: 6,
+    borderWidth: 2,
+    borderColor: "rgba(242,163,166,0.85)",
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.65)",
+    overflow: "hidden",
+  },
+  suggestItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(16,70,77,0.10)",
+  },
+  suggestText: { flex: 1, color: TEXT, fontWeight: "800", fontSize: 12 },
+
+  coordsText: {
+    marginTop: 6,
+    fontSize: 11,
+    color: TEXT,
+    opacity: 0.75,
+    fontWeight: "800",
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.25)",
@@ -927,26 +1150,12 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginVertical: 2,
   },
-  webListItemSelected: {
-    backgroundColor: "rgba(242,163,166,0.18)",
-    borderWidth: 1.5,
-    borderColor: PINK,
-  },
+  webListItemSelected: { backgroundColor: "rgba(242,163,166,0.18)", borderWidth: 1.5, borderColor: PINK },
   webListItemText: { color: TEXT, fontWeight: "800" },
   webListItemTextSelected: { color: TEXT, fontWeight: "900" },
 
-  webTimeActions: {
-    marginTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  webCancelBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "rgba(16,70,77,0.08)",
-  },
+  webTimeActions: { marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  webCancelBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(16,70,77,0.08)" },
   webCancelText: { color: TEXT, fontWeight: "900" },
 
   // SUCCESS MODAL
@@ -984,21 +1193,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   successTitle: { color: TEXT, fontWeight: "900", fontSize: 18, marginBottom: 4 },
-  successBody: {
-    color: TEXT,
-    fontWeight: "800",
-    opacity: 0.75,
-    textAlign: "center",
-    marginBottom: 14,
-  },
-  successBtn: {
-    width: 150,
-    paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: TEAL,
-    borderWidth: 2,
-    borderColor: "#0B3D3D",
-  },
+  successBody: { color: TEXT, fontWeight: "800", opacity: 0.75, textAlign: "center", marginBottom: 14 },
+  successBtn: { width: 150, paddingVertical: 10, borderRadius: 16, backgroundColor: TEAL, borderWidth: 2, borderColor: "#0B3D3D" },
   successBtnText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900" },
   successClose: {
     position: "absolute",
