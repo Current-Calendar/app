@@ -27,14 +27,20 @@ const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
 // ========= API CONFIG =========
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000").replace(/\/$/, "");
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000").replace(
+  /\/$/,
+  ""
+);
 const API_V1 = `${API_BASE_URL}/api/v1`;
 
 type CalendarItem = { id: string; name: string; image?: any };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const toISODate = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+// 👇 DRF TimeField suele aceptar mejor HH:MM:SS
+const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
@@ -55,9 +61,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const errMsg =
-      data?.errors?.join("\n") ||
-      data?.detail ||
-      `Error ${res.status}: ${res.statusText}`;
+      data?.errors?.join("\n") || data?.detail || `Error ${res.status}: ${res.statusText}`;
     throw new Error(errMsg);
   }
   return data as T;
@@ -80,11 +84,7 @@ const MONTH_NAMES = [
 ];
 
 function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 function startOfDay(d: Date) {
@@ -156,8 +156,7 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
   const extraH = rows === 6 ? 16 : 0; // 👈 add a bit more height when month needs 6 rows
   const cellGapY = 2; // must match dayCell.marginBottom
 
-  const gridAvailableH =
-    size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
+  const gridAvailableH = size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
 
   const cellH = Math.floor((gridAvailableH - cellGapY * rows) / rows);
   const cellW = Math.floor((size - innerPad * 2) / 7);
@@ -305,9 +304,7 @@ export default function CreateEventsScreen() {
 
   const { width } = useWindowDimensions();
   const formWidth =
-    Platform.OS === "web"
-      ? Math.min(width * 0.58, 820)
-      : Math.min(width * 0.92, 420);
+    Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
   // ====== Calendars from API ======
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
@@ -445,8 +442,9 @@ export default function CreateEventsScreen() {
       descripcion: description?.trim() ?? "",
       nombre_lugar: place?.trim() ?? "",
       fecha: toISODate(date),
-      hora: toHM(time),
+      hora: toHMS(time), // 👈 HH:MM:SS
       calendarios: [Number(selectedCalendar.id)],
+      creador_id: 2, // 👈 MOCK por ahora
     };
 
     try {
@@ -523,7 +521,9 @@ export default function CreateEventsScreen() {
                 )}
               </Pressable>
 
-              <Text style={styles.helperText}>(No se envía aún: el endpoint /eventos no recibe imagen)</Text>
+              <Text style={styles.helperText}>
+                (No se envía aún: el endpoint /eventos no recibe imagen)
+              </Text>
             </View>
           </View>
 
@@ -573,11 +573,7 @@ export default function CreateEventsScreen() {
               onPress={publish}
               disabled={publishing}
             >
-              {publishing ? (
-                <ActivityIndicator color="#EAF7F6" />
-              ) : (
-                <Text style={styles.publishText}>Publish</Text>
-              )}
+              {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
             </Pressable>
 
             {/* extra bottom space so it never clashes with bottom bar */}
@@ -931,12 +927,26 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginVertical: 2,
   },
-  webListItemSelected: { backgroundColor: "rgba(242,163,166,0.18)", borderWidth: 1.5, borderColor: PINK },
+  webListItemSelected: {
+    backgroundColor: "rgba(242,163,166,0.18)",
+    borderWidth: 1.5,
+    borderColor: PINK,
+  },
   webListItemText: { color: TEXT, fontWeight: "800" },
   webListItemTextSelected: { color: TEXT, fontWeight: "900" },
 
-  webTimeActions: { marginTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  webCancelBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(16,70,77,0.08)" },
+  webTimeActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  webCancelBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "rgba(16,70,77,0.08)",
+  },
   webCancelText: { color: TEXT, fontWeight: "900" },
 
   // SUCCESS MODAL
@@ -974,8 +984,21 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   successTitle: { color: TEXT, fontWeight: "900", fontSize: 18, marginBottom: 4 },
-  successBody: { color: TEXT, fontWeight: "800", opacity: 0.75, textAlign: "center", marginBottom: 14 },
-  successBtn: { width: 150, paddingVertical: 10, borderRadius: 16, backgroundColor: TEAL, borderWidth: 2, borderColor: "#0B3D3D" },
+  successBody: {
+    color: TEXT,
+    fontWeight: "800",
+    opacity: 0.75,
+    textAlign: "center",
+    marginBottom: 14,
+  },
+  successBtn: {
+    width: 150,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: TEAL,
+    borderWidth: 2,
+    borderColor: "#0B3D3D",
+  },
   successBtnText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900" },
   successClose: {
     position: "absolute",

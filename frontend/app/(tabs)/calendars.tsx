@@ -290,7 +290,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -352,7 +352,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
