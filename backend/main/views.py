@@ -1,7 +1,6 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
-
 import os
 import ipaddress
 import socket
@@ -32,12 +31,15 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import (
+    UsuarioRegistroSerializer,
+    UsuarioSerializer,
+    UserSerializer,
+    PublicUserSerializer,
+)
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
-
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
 from .permissions import IsCreator
@@ -106,7 +108,7 @@ class UserViewSet(viewsets.GenericViewSet):
         )
     def retrieve(self, request, pk) -> Response:
         user = self.get_object()
-        user_data = UsuarioSerializer(user).data
+        user_data = PublicUserSerializer(user, context={'request': request}).data
         public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
                 "id", "nombre", "descripcion", "portada", "fecha_creacion"
             ))
