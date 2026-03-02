@@ -18,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 
-const BG = '#E8E5D8';
+const BG = "#E8E5D8";
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -27,22 +27,19 @@ const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
 // ========= API CONFIG =========
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000").replace(/\/$/, "");
 const API_V1 = `${API_BASE_URL}/api/v1`;
 
 type CalendarItem = { id: string; name: string; image?: any };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
-const toISODate = (d: Date) =>
-  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const toISODate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
   name: String(raw?.nombre ?? raw?.name ?? raw?.titulo ?? "Calendar"),
 });
-
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_V1}${path}`, {
@@ -97,12 +94,12 @@ function startOfDay(d: Date) {
 }
 
 type MiniMonthCalendarProps = {
-  value: Date; 
-  onChange: (d: Date) => void; 
-  size?: number; 
+  value: Date;
+  onChange: (d: Date) => void;
+  size?: number;
 };
 
-function MiniMonthCalendar({ value, onChange, size = 240 }: MiniMonthCalendarProps) {
+function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarProps) {
   const selected = startOfDay(value);
   const [viewYear, setViewYear] = useState(selected.getFullYear());
   const [viewMonth, setViewMonth] = useState(selected.getMonth());
@@ -149,17 +146,24 @@ function MiniMonthCalendar({ value, onChange, size = 240 }: MiniMonthCalendarPro
     onChange(today);
   };
 
+  // ===== sizing (fix months with 6 rows) =====
   const innerPad = 10;
   const headerH = 34;
   const weekdaysH = 18;
   const gridPadTop = 6;
-  const gridAvailableH = size - innerPad * 2 - headerH - weekdaysH - gridPadTop;
+
   const rows = Math.max(1, Math.ceil(days.length / 7));
-  const cellH = Math.floor(gridAvailableH / rows);
+  const extraH = rows === 6 ? 16 : 0; // 👈 add a bit more height when month needs 6 rows
+  const cellGapY = 2; // must match dayCell.marginBottom
+
+  const gridAvailableH =
+    size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
+
+  const cellH = Math.floor((gridAvailableH - cellGapY * rows) / rows);
   const cellW = Math.floor((size - innerPad * 2) / 7);
 
   return (
-    <View style={[miniStyles.card, { width: size, height: size }]}>
+    <View style={[miniStyles.card, { width: size, height: size + extraH }]}>
       <View style={miniStyles.headerRow}>
         <Pressable onPress={goPrevMonth} style={miniStyles.navBtn} hitSlop={8}>
           <Ionicons name="chevron-back" size={16} color={TEXT} />
@@ -272,7 +276,7 @@ const miniStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
-    marginBottom: 2,
+    marginBottom: 2, // 👈 must match cellGapY
   },
   dayEmpty: { backgroundColor: "transparent" },
   dayText: { color: TEXT, fontWeight: "900", fontSize: 11 },
@@ -289,13 +293,13 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+
   const goBackOrCalendars = () => {
-  if (navigation.canGoBack()) navigation.goBack();
-  else navigation.navigate("calendars");
-};
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate("calendars");
+  };
 
   const goToRoot = () => {
-    // vuelve a la primera pantalla del stack (la “base” al entrar)
     navigation.navigate("calendars");
   };
 
@@ -397,7 +401,6 @@ export default function CreateEventsScreen() {
     setShowWebTimePicker(false);
   };
 
-
   const pickCoverImage = async () => {
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -441,7 +444,7 @@ export default function CreateEventsScreen() {
       titulo,
       descripcion: description?.trim() ?? "",
       nombre_lugar: place?.trim() ?? "",
-      fecha: toISODate(date), 
+      fecha: toISODate(date),
       hora: toHM(time),
       calendarios: [Number(selectedCalendar.id)],
     };
@@ -462,17 +465,14 @@ export default function CreateEventsScreen() {
     }
   };
 
-  const miniSize = Math.min(240, formWidth);
+  const miniSize = Math.min(280, formWidth); // 👈 a bit bigger by default
 
   return (
     <View style={styles.container}>
-          {/* BACK BUTTON */}
-          <Pressable
-            style={styles.backBtn}
-            hitSlop={12}
-            onPress={() => goBackOrCalendars()}>
-            <Ionicons name="chevron-back" size={22} color={WHITE} />
-          </Pressable>
+      {/* BACK BUTTON */}
+      <Pressable style={styles.backBtn} hitSlop={12} onPress={goBackOrCalendars}>
+        <Ionicons name="chevron-back" size={22} color={WHITE} />
+      </Pressable>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.header}>New Event</Text>
@@ -549,10 +549,10 @@ export default function CreateEventsScreen() {
 
             {/* Date */}
             <View style={styles.timeRow}>
-            <Text style={styles.fieldLabel}>Date:</Text>
-            <View style={styles.timePill}>
-              <Text style={styles.timeText}>{dateLabel}</Text>
-            </View>
+              <Text style={styles.fieldLabel}>Date:</Text>
+              <View style={styles.timePill}>
+                <Text style={styles.timeText}>{dateLabel}</Text>
+              </View>
             </View>
 
             {/* Time */}
@@ -563,7 +563,7 @@ export default function CreateEventsScreen() {
               </Pressable>
             </View>
 
-            {/* ✅ CALENDARIO REAL (mini) */}
+            {/* Mini calendar */}
             <View style={styles.calendarCenterWrap}>
               <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
             </View>
@@ -573,10 +573,15 @@ export default function CreateEventsScreen() {
               onPress={publish}
               disabled={publishing}
             >
-              {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
+              {publishing ? (
+                <ActivityIndicator color="#EAF7F6" />
+              ) : (
+                <Text style={styles.publishText}>Publish</Text>
+              )}
             </Pressable>
 
-            <View style={{ height: 14 }} />
+            {/* extra bottom space so it never clashes with bottom bar */}
+            <View style={{ height: 40 }} />
           </View>
         </View>
       </ScrollView>
@@ -614,7 +619,7 @@ export default function CreateEventsScreen() {
         </Pressable>
       </Modal>
 
-      {/* ✅ Modal éxito custom */}
+      {/* Success modal */}
       <Modal visible={successModalOpen} transparent animationType="fade">
         <Pressable style={styles.successOverlay} onPress={closeSuccessAndGoRoot}>
           <View style={styles.successCard}>
@@ -675,13 +680,13 @@ export default function CreateEventsScreen() {
                     contentContainerStyle={styles.webListContent}
                     showsVerticalScrollIndicator
                     renderItem={({ item }) => {
-                      const selected = item === webHour;
+                      const selectedH = item === webHour;
                       return (
                         <Pressable
                           onPress={() => setWebHour(item)}
-                          style={[styles.webListItem, selected && styles.webListItemSelected]}
+                          style={[styles.webListItem, selectedH && styles.webListItemSelected]}
                         >
-                          <Text style={[styles.webListItemText, selected && styles.webListItemTextSelected]}>
+                          <Text style={[styles.webListItemText, selectedH && styles.webListItemTextSelected]}>
                             {pad2(item)}
                           </Text>
                         </Pressable>
@@ -698,13 +703,13 @@ export default function CreateEventsScreen() {
                     contentContainerStyle={styles.webListContent}
                     showsVerticalScrollIndicator
                     renderItem={({ item }) => {
-                      const selected = item === webMinute;
+                      const selectedM = item === webMinute;
                       return (
                         <Pressable
                           onPress={() => setWebMinute(item)}
-                          style={[styles.webListItem, selected && styles.webListItemSelected]}
+                          style={[styles.webListItem, selectedM && styles.webListItemSelected]}
                         >
-                          <Text style={[styles.webListItemText, selected && styles.webListItemTextSelected]}>
+                          <Text style={[styles.webListItemText, selectedM && styles.webListItemTextSelected]}>
                             {pad2(item)}
                           </Text>
                         </Pressable>
@@ -739,7 +744,7 @@ const styles = StyleSheet.create({
 
   iconBtn: { padding: 6 },
 
-  scrollContent: { paddingTop: 64, paddingBottom: 18 },
+  scrollContent: { paddingTop: 64, paddingBottom: 120 }, // enough for bottom bar
 
   header: {
     textAlign: "center",
@@ -985,7 +990,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(16,70,77,0.25)",
   },
-    backBtn: {
+
+  backBtn: {
     position: "absolute",
     top: 14,
     left: 14,
@@ -993,7 +999,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: TEAL, // verde que usáis
+    backgroundColor: TEAL,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
