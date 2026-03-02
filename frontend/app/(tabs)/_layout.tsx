@@ -1,14 +1,14 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Href, Link, Slot } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
   Image,
+  Pressable,
+  StyleSheet,
+  Text,
   useWindowDimensions,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Link, Slot, Href } from "expo-router";
 import Sidebar from "../../components/nav_bar/side-bar"
 import BottomBar from "../../components/nav_bar/bottom-bar"
 import TopBar from "../../components/nav_bar/top-bar"
