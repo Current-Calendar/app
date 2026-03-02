@@ -13,7 +13,6 @@ import API_CONFIG from '@/constants/api';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
-import { MOCK_EVENTS } from '@/constants/mock-data';
 
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
