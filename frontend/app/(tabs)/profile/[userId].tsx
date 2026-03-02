@@ -27,6 +27,8 @@ const ProfileScreen = () => {
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
   const [followingCalendarsMe, setFollowingCalendarsMe] = useState<Calendar[]>([]);
+  const [followersCountMe, setFollowersCountMe] = useState<number>(0);
+  const [followingCountMe, setFollowingCountMe] = useState<number>(0);
 
   // ----- Hook para perfil público -----
   const {
@@ -43,6 +45,7 @@ const ProfileScreen = () => {
   const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
   const [followingLoading, setFollowingLoading] = useState(false);
 
+  // ----- Inicialización de mi perfil -----
   useEffect(() => {
     if (isMe && currentUser) {
       setShownUser(currentUser);
@@ -82,6 +85,10 @@ const ProfileScreen = () => {
           color: '#42A5F5',
         },
       ]);
+
+      // Mock followers/following para mi perfil
+      setFollowersCountMe(123);
+      setFollowingCountMe(456);
     }
   }, [isMe, currentUser]);
 
@@ -127,7 +134,7 @@ const ProfileScreen = () => {
     router.push('/profileEdit');
   };
 
-  // ----- Render perfil público -----
+  // ------------------ RENDER PERFIL PÚBLICO ------------------
   if (!isMe && userId) {
     if (isLoading) {
       return (
@@ -161,6 +168,18 @@ const ProfileScreen = () => {
               <View style={profileStyles.statsContainer}>
                 <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
                 <Text style={profileStyles.pronouns}>{userBeingViewed.pronombres || 'they/them'}</Text>
+
+                {/* Stats de seguidores y seguidos */}
+                <View style={profileStyles.statsRow}>
+                  <View style={profileStyles.statItem}>
+                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidores || 0}</Text>
+                    <Text style={profileStyles.statLabel}>Followers</Text>
+                  </View>
+                  <View style={profileStyles.statItem}>
+                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidos || 0}</Text>
+                    <Text style={profileStyles.statLabel}>Following</Text>
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -217,7 +236,7 @@ const ProfileScreen = () => {
     );
   }
 
-  // ----- Render mi perfil -----
+  // ------------------ RENDER MI PERFIL ------------------
   if (!shownUser) return null;
 
   return (
@@ -236,6 +255,18 @@ const ProfileScreen = () => {
               <Text style={profileStyles.name}>{shownUser._username}</Text>
               <Text style={profileStyles.fullname}>{shownUser._firstName} {shownUser._lastName}</Text>
               <Text style={profileStyles.pronouns}>{shownUser._pronouns}</Text>
+
+              {/* Stats de seguidores y seguidos */}
+              <View style={profileStyles.statsRow}>
+                <View style={profileStyles.statItem}>
+                  <Text style={profileStyles.statNumber}>{followersCountMe}</Text>
+                  <Text style={profileStyles.statLabel}>Followers</Text>
+                </View>
+                <View style={profileStyles.statItem}>
+                  <Text style={profileStyles.statNumber}>{followingCountMe}</Text>
+                  <Text style={profileStyles.statLabel}>Following</Text>
+                </View>
+              </View>
             </View>
           </View>
 
