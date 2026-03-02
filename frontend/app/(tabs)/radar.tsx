@@ -42,7 +42,7 @@ export default function RadarScreen() {
  if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#eb8c85" />
         <Text>Buscando eventos cercanos...</Text>
       </View>
     );
