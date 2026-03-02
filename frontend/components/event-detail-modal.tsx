@@ -6,9 +6,12 @@ import {
     Pressable,
     TouchableOpacity,
     StyleSheet,
+    Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { CalendarEvent } from '@/types/calendar';
+import { useRouter } from 'expo-router';
+import { CalendarEvent, RecurrenceConfig } from '@/types/calendar';
+import { deleteEvent } from '@/services/eventService';
 
 interface EventDetailModalProps {
     event: CalendarEvent | null;
@@ -17,13 +20,44 @@ interface EventDetailModalProps {
 
 /**
  * Bottom-sheet-style modal showing all event info from the Evento model.
- *
- * TODO BACKEND - Wire up "Edit" / "Delete" actions once API is ready.
  */
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+    const router = useRouter();
+
     if (!event) return null;
 
     const accent = event.color ?? '#10464d';
+
+    const handleEdit = () => {
+        onClose();
+        if (event.recurrencia) {
+            router.push({ pathname: '/events/edit_recurring_events', params: { eventId: event.id } });
+        } else {
+            router.push({ pathname: '/events/edit_events', params: { eventId: event.id } });
+        }
+    };
+
+    const handleDeletePress = () => {
+        Alert.alert(
+            'Delete Event',
+            'Are you sure you want to delete this event?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteEvent(Number(event.id));
+                            onClose();
+                        } catch (error: any) {
+                            Alert.alert('Error', error.message ?? 'Failed to delete event');
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     return (
         <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
@@ -68,24 +102,24 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
                         {/* Recurrence */}
                         {event.recurrencia && (
-                            <DetailRow icon="repeat-outline" label={event.recurrencia} />
+                            <DetailRow icon="repeat-outline" label={formatRecurrence(event.recurrencia)} />
                         )}
                     </View>
 
                     <View style={styles.actions}>
-                        {/* TODO BACKEND - Hook up edit action */}
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#10464d14', borderColor: '#10464d' }]}
                             activeOpacity={0.7}
+                            onPress={handleEdit}
                         >
                             <Ionicons name="pencil-outline" size={16} color="#10464d" />
                             <Text style={[styles.actionLabel, { color: '#10464d' }]}>Edit</Text>
                         </TouchableOpacity>
 
-                        {/* TODO BACKEND - Hook up delete action */}
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#eb8c8514', borderColor: '#eb8c85' }]}
                             activeOpacity={0.7}
+                            onPress={handleDeletePress}
                         >
                             <Ionicons name="trash-outline" size={16} color="#eb8c85" />
                             <Text style={[styles.actionLabel, { color: '#eb8c85' }]}>Delete</Text>
@@ -110,6 +144,17 @@ function DetailRow({
             <Text style={styles.detailLabel}>{label}</Text>
         </View>
     );
+}
+
+function formatRecurrence(rec: RecurrenceConfig): string {
+    const freq = rec.frequency.charAt(0).toUpperCase() + rec.frequency.slice(1);
+    let label = rec.interval > 1 ? `Every ${rec.interval} ${freq}` : freq;
+    if (rec.endType === 'count' && rec.endCount) {
+        label += ` (${rec.endCount} times)`;
+    } else if (rec.endType === 'date' && rec.endDate) {
+        label += ` until ${rec.endDate}`;
+    }
+    return label;
 }
 
 function formatDate(iso: string): string {

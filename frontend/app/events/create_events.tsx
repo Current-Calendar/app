@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -12,10 +12,12 @@ import {
   FlatList,
   useWindowDimensions,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { MOCK_CALENDARS } from "@/constants/mock-data";
+import { createEvent, fetchCalendars } from "@/services/eventService";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -25,13 +27,7 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: string; name: string; portada?: string };
-
-const mockCalendars: CalendarItem[] = MOCK_CALENDARS.map((c) => ({
-  id: c.id,
-  name: c.nombre,
-  portada: c.portada,
-}));
+type CalendarItem = { id: number; name: string; portada?: string };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -47,23 +43,34 @@ function parseDateParam(param: string | undefined): Date {
 
 export default function CreateEventsScreen() {
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const { date: dateParam, calendarId: calendarIdParam } = useLocalSearchParams<{ date?: string; calendarId?: string }>();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(() => {
-    if (calendarIdParam) {
-      const found = mockCalendars.find((c) => c.id === calendarIdParam);
-      if (found) return found;
-    }
-    return mockCalendars[0];
-  });
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
+
+  useEffect(() => {
+    fetchCalendars()
+      .then((cals) => {
+        const items: CalendarItem[] = cals.map((c) => ({ id: c.id, name: c.nombre }));
+        setCalendars(items);
+        if (calendarIdParam) {
+          const found = items.find((c) => String(c.id) === calendarIdParam);
+          if (found) { setSelectedCalendar(found); return; }
+        }
+        if (items.length > 0) setSelectedCalendar(items[0]);
+      })
+      .catch(() => Alert.alert("Error", "Failed to load calendars"));
+  }, []);
 
   const [coverUri, setCoverUri] = useState<string | null>(null);
 
@@ -131,6 +138,38 @@ export default function CreateEventsScreen() {
     d.setSeconds(0, 0);
     setTime(d);
     setShowWebTimePicker(false);
+  };
+
+  const handlePublish = async () => {
+    if (!title.trim()) {
+      Alert.alert("Validation", "Please enter a title");
+      return;
+    }
+    if (!selectedCalendar) {
+      Alert.alert("Validation", "Please select a calendar");
+      return;
+    }
+    setSaving(true);
+    try {
+      const fecha = `${startDate.getFullYear()}-${pad2(startDate.getMonth() + 1)}-${pad2(startDate.getDate())}`;
+      const hora = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
+      await createEvent({
+        titulo: title.trim(),
+        descripcion: description,
+        nombre_lugar: place,
+        fecha,
+        hora,
+        calendarios: [selectedCalendar.id],
+        creador_id: 2,
+        recurrencia: null,
+      });
+      Alert.alert("Success", "Event created successfully");
+      if (router.canGoBack()) router.back();
+    } catch (error: any) {
+      Alert.alert("Error", error.message ?? "Failed to create event");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const pickCoverImage = async () => {
@@ -247,8 +286,16 @@ export default function CreateEventsScreen() {
               </View>
             </View>
 
-            <Pressable style={styles.publishBtn}>
-              <Text style={styles.publishText}>Publish</Text>
+            <Pressable
+              style={[styles.publishBtn, saving && { opacity: 0.6 }]}
+              onPress={handlePublish}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#EAF7F6" />
+              ) : (
+                <Text style={styles.publishText}>Publish</Text>
+              )}
             </Pressable>
 
             <View style={{ height: 14 }} />
@@ -262,8 +309,8 @@ export default function CreateEventsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select calendar</Text>
             <FlatList
-              data={mockCalendars}
-              keyExtractor={(i) => i.id}
+              data={calendars}
+              keyExtractor={(i) => String(i.id)}
               ItemSeparatorComponent={() => <View style={styles.modalSep} />}
               renderItem={({ item }) => (
                 <Pressable

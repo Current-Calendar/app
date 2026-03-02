@@ -20,6 +20,11 @@ export const API_CONFIG = {
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
     createCalendar: buildEndpoint('calendarios'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
+    listCalendars: buildEndpoint('calendarios/list'),
+    createEvent: buildEndpoint('eventos'),
+    getEvent: (eventId: number) => buildEndpoint(`eventos/${eventId}`),
+    editEvent: (eventId: number) => buildEndpoint(`eventos/${eventId}`),
+    deleteEvent: (eventId: number) => buildEndpoint(`events/${eventId}/`),
   },
 };
 

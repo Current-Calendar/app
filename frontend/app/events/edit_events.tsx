@@ -17,67 +17,51 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useRoute } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { getEvent, updateEvent, deleteEvent, fetchCalendars } from "@/services/eventService";
 
 const BG = "#FBF7EA";
-const TEXT = "#10464D";
+const TEXT_COLOR = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: string; name: string; image?: any };
-
-const mockCalendars: CalendarItem[] = [
-  { id: "1", name: "Concerts", image: require("../../assets/images/icon.png") },
-  { id: "2", name: "Gym", image: require("../../assets/images/icon.png") },
-  { id: "3", name: "Study", image: require("../../assets/images/icon.png") },
-];
+type CalendarItem = { id: number; name: string };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-type EventData = {
-  id: string;
-  title: string;
-  description: string;
-  place: string;
-  time: Date;
-  calendar: CalendarItem;
-  coverUri?: string;
-};
-
-const mockEventData: EventData = {
-  id: "1",
-  title: "Concert Night",
-  description: "Amazing concert with live performance",
-  place: "Central Stadium",
-  time: (() => {
-    const d = new Date();
-    d.setHours(20, 30, 0, 0);
-    return d;
-  })(),
-  calendar: mockCalendars[0],
-  coverUri: undefined,
-};
-
 export default function EditEventsScreen() {
-  const route = useRoute();
+  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem>(mockCalendars[0]);
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
   const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [time, setTime] = useState<Date>(new Date());
+
+  // Date picker state
+  const [showWebDatePicker, setShowWebDatePicker] = useState(false);
+  const [webDay, setWebDay] = useState(startDate.getDate());
+  const [webMonth, setWebMonth] = useState(startDate.getMonth());
+  const [webYear, setWebYear] = useState(startDate.getFullYear());
+
+  const THIS_YEAR = new Date().getFullYear();
+  const YEAR_LIST = Array.from({ length: 12 }, (_, i) => THIS_YEAR - 1 + i);
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   // Native picker (iOS/Android)
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
@@ -95,22 +79,60 @@ export default function EditEventsScreen() {
   const loadEventData = async () => {
     setLoading(true);
     try {
-      // Simular carga de datos (en producción sería una llamada a API)
-      setTimeout(() => {
-        setTitle(mockEventData.title);
-        setDescription(mockEventData.description);
-        setPlace(mockEventData.place);
-        setTime(mockEventData.time);
-        setSelectedCalendar(mockEventData.calendar);
-        if (mockEventData.coverUri) {
-          setCoverUri(mockEventData.coverUri);
-        }
-        setLoading(false);
-      }, 500);
+      const [event, cals] = await Promise.all([
+        getEvent(Number(eventId)),
+        fetchCalendars(),
+      ]);
+      const calItems: CalendarItem[] = cals.map((c) => ({ id: c.id, name: c.nombre }));
+      setCalendars(calItems);
+
+      setTitle(event.titulo);
+      setDescription(event.descripcion);
+      setPlace(event.nombre_lugar);
+
+      // Parse date
+      const [y, mo, da] = (event.fecha as string).split("-").map(Number);
+      setStartDate(new Date(y, mo - 1, da));
+
+      // Parse time
+      const [hh, mm] = (event.hora as string).split(":").map(Number);
+      const t = new Date();
+      t.setHours(hh, mm, 0, 0);
+      setTime(t);
+
+      // Select calendar
+      if (event.calendarios.length > 0) {
+        const found = calItems.find((c) => event.calendarios.includes(c.id));
+        if (found) setSelectedCalendar(found);
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load event data");
+    } finally {
       setLoading(false);
     }
+  };
+
+  const dateLabel = useMemo(() => {
+    return startDate.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }, [startDate]);
+
+  const openDatePicker = () => {
+    setWebDay(startDate.getDate());
+    setWebMonth(startDate.getMonth());
+    setWebYear(startDate.getFullYear());
+    setShowWebDatePicker(true);
+  };
+
+  const applyWebDate = () => {
+    const maxDay = new Date(webYear, webMonth + 1, 0).getDate();
+    const safeDay = Math.min(webDay, maxDay);
+    setStartDate(new Date(webYear, webMonth, safeDay));
+    setShowWebDatePicker(false);
   };
 
   const timeLabel = useMemo(() => {
@@ -167,16 +189,46 @@ export default function EditEventsScreen() {
 
     setSaving(true);
     try {
-      // Simular guardado de datos (en producción sería una llamada a API)
-      setTimeout(() => {
-        Alert.alert("Success", "Event updated successfully");
-        setSaving(false);
-        // Navegar de vuelta
-      }, 800);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update event");
+      const fecha = `${startDate.getFullYear()}-${pad2(startDate.getMonth() + 1)}-${pad2(startDate.getDate())}`;
+      const hora = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
+      await updateEvent(Number(eventId), {
+        titulo: title.trim(),
+        descripcion: description,
+        nombre_lugar: place,
+        fecha,
+        hora,
+        calendarios: selectedCalendar ? [selectedCalendar.id] : undefined,
+      });
+      Alert.alert("Success", "Event updated successfully");
+      if (router.canGoBack()) router.back();
+    } catch (error: any) {
+      Alert.alert("Error", error.message ?? "Failed to update event");
+    } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Event",
+      "Are you sure you want to delete this event?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteEvent(Number(eventId));
+              Alert.alert("Deleted", "Event deleted successfully");
+              if (router.canGoBack()) router.back();
+            } catch (error: any) {
+              Alert.alert("Error", error.message ?? "Failed to delete event");
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -186,7 +238,7 @@ export default function EditEventsScreen() {
           <Pressable style={styles.iconBtn} hitSlop={10}>
             <Ionicons name="chevron-back" size={26} color={WHITE} />
           </Pressable>
-          <Pressable style={styles.iconBtn} hitSlop={10}>
+          <Pressable style={styles.iconBtn} hitSlop={10} onPress={handleDelete}>
             <Ionicons name="trash" size={22} color={RED} />
           </Pressable>
         </View>
@@ -200,10 +252,10 @@ export default function EditEventsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
+        <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.canGoBack() && router.back()}>
           <Ionicons name="chevron-back" size={26} color={WHITE} />
         </Pressable>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
+        <Pressable style={styles.iconBtn} hitSlop={10} onPress={handleDelete}>
           <Ionicons name="trash" size={22} color={RED} />
         </Pressable>
       </View>
@@ -218,17 +270,13 @@ export default function EditEventsScreen() {
               <View style={styles.calendarLabelRow}>
                 <Text style={styles.smallLabelInline}>Calendar:</Text>
                 <Pressable style={styles.dropdownInline} onPress={() => setCalendarModalOpen(true)}>
-                  <Ionicons name="chevron-down" size={18} color={TEXT} />
+                  <Ionicons name="chevron-down" size={18} color={TEXT_COLOR} />
                 </Pressable>
               </View>
 
               <View style={styles.calendarPreview}>
                 <View style={styles.calendarImgWrap}>
-                  {selectedCalendar?.image ? (
-                    <Image source={selectedCalendar.image} style={styles.calendarImg} />
-                  ) : (
-                    <View style={styles.calendarImgPlaceholder} />
-                  )}
+                  <View style={styles.calendarImgPlaceholder} />
                 </View>
                 <Text style={styles.calendarName}>{selectedCalendar?.name ?? ""}</Text>
               </View>
@@ -241,7 +289,7 @@ export default function EditEventsScreen() {
                 {coverUri ? (
                   <Image source={{ uri: coverUri }} style={styles.photoPreview} />
                 ) : (
-                  <Ionicons name="camera" size={28} color={TEXT} />
+                  <Ionicons name="camera" size={28} color={TEXT_COLOR} />
                 )}
               </Pressable>
             </View>
@@ -264,6 +312,14 @@ export default function EditEventsScreen() {
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
             <TextInput value={place} onChangeText={setPlace} style={styles.input} />
+
+            {/* Date */}
+            <View style={styles.timeRow}>
+              <Text style={styles.fieldLabel}>Date:</Text>
+              <Pressable style={styles.timePill} onPress={openDatePicker}>
+                <Text style={styles.timeText}>{dateLabel}</Text>
+              </Pressable>
+            </View>
 
             {/* Time */}
             <View style={styles.timeRow}>
@@ -303,8 +359,8 @@ export default function EditEventsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select calendar</Text>
             <FlatList
-              data={mockCalendars}
-              keyExtractor={(i) => i.id}
+              data={calendars}
+              keyExtractor={(i) => String(i.id)}
               ItemSeparatorComponent={() => <View style={styles.modalSep} />}
               renderItem={({ item }) => (
                 <Pressable
@@ -321,6 +377,85 @@ export default function EditEventsScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* Date picker (all platforms) */}
+      {showWebDatePicker && (
+        <Modal transparent animationType="fade">
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerCard}>
+              <Text style={styles.pickerTitle}>Select date</Text>
+
+              <View style={styles.webTimeRow}>
+                {/* Day */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={Array.from({ length: 31 }, (_, i) => i + 1)}
+                    keyExtractor={(i) => `d-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webDay;
+                      return (
+                        <Pressable onPress={() => setWebDay(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{pad2(item)}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Month */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={MONTH_SHORT}
+                    keyExtractor={(_, i) => `mo-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item, index }) => {
+                      const sel = index === webMonth;
+                      return (
+                        <Pressable onPress={() => setWebMonth(index)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Year */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={YEAR_LIST}
+                    keyExtractor={(y) => `y-${y}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webYear;
+                      return (
+                        <Pressable onPress={() => setWebYear(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.webTimeActions}>
+                <Pressable style={styles.webCancelBtn} onPress={() => setShowWebDatePicker(false)}>
+                  <Text style={styles.webCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.pickerDone} onPress={applyWebDate}>
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {/* Native time picker (iOS/Android) */}
       {showNativeTimePicker && (
@@ -441,7 +576,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "800",
-    color: TEXT,
+    color: TEXT_COLOR,
     marginTop: 6,
     marginBottom: 6,
   },
@@ -463,12 +598,12 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  smallLabelInline: { color: TEXT, fontSize: 13, fontWeight: "800" },
+  smallLabelInline: { color: TEXT_COLOR, fontSize: 13, fontWeight: "800" },
   dropdownInline: {
     width: 42,
     height: 30,
     borderWidth: 1.5,
-    borderColor: TEXT,
+    borderColor: TEXT_COLOR,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -476,7 +611,7 @@ const styles = StyleSheet.create({
   },
 
   smallLabelCentered: {
-    color: TEXT,
+    color: TEXT_COLOR,
     fontSize: 13,
     fontWeight: "800",
     marginBottom: 10,
@@ -493,7 +628,7 @@ const styles = StyleSheet.create({
   },
   calendarImg: { width: "100%", height: "100%" },
   calendarImgPlaceholder: { width: "100%", height: "100%" },
-  calendarName: { marginTop: 6, color: TEXT, fontSize: 12, fontWeight: "800" },
+  calendarName: { marginTop: 6, color: TEXT_COLOR, fontSize: 12, fontWeight: "800" },
 
   photoBox: {
     width: 90,
@@ -501,7 +636,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: TEXT,
+    borderColor: TEXT_COLOR,
     backgroundColor: "rgba(255,255,255,0.35)",
     alignItems: "center",
     justifyContent: "center",
@@ -509,7 +644,7 @@ const styles = StyleSheet.create({
 
   form: { paddingHorizontal: 6, paddingTop: 4 },
 
-  fieldLabel: { color: TEXT, fontSize: 14, fontWeight: "800", marginBottom: 6 },
+  fieldLabel: { color: TEXT_COLOR, fontSize: 14, fontWeight: "800", marginBottom: 6 },
 
   input: {
     height: 34,
@@ -545,7 +680,7 @@ const styles = StyleSheet.create({
     borderColor: PINK,
     backgroundColor: "rgba(255,255,255,0.6)",
   },
-  timeText: { color: TEXT, fontWeight: "900" },
+  timeText: { color: TEXT_COLOR, fontWeight: "900" },
 
   calendarCenterWrap: {
     marginTop: 12,
@@ -563,7 +698,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  calendarSquareText: { color: TEXT, opacity: 0.65, fontWeight: "900" },
+  calendarSquareText: { color: TEXT_COLOR, opacity: 0.65, fontWeight: "900" },
 
   updateBtn: {
     marginTop: 14,
@@ -594,10 +729,10 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   modalCard: { width: "92%", maxWidth: 420, backgroundColor: WHITE, borderRadius: 16, padding: 14 },
-  modalTitle: { color: TEXT, fontWeight: "900", fontSize: 16, marginBottom: 10 },
+  modalTitle: { color: TEXT_COLOR, fontWeight: "900", fontSize: 16, marginBottom: 10 },
   modalSep: { height: 1, backgroundColor: "rgba(16,70,77,0.12)" },
   modalItem: { paddingVertical: 12, paddingHorizontal: 10 },
-  modalItemText: { color: TEXT, fontWeight: "800" },
+  modalItemText: { color: TEXT_COLOR, fontWeight: "800" },
 
   // Time picker modal
   pickerOverlay: {
@@ -614,14 +749,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
   },
-  pickerTitle: { color: TEXT, fontWeight: "900", fontSize: 16, marginBottom: 10 },
+  pickerTitle: { color: TEXT_COLOR, fontWeight: "900", fontSize: 16, marginBottom: 10 },
   pickerDone: {
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
     backgroundColor: "rgba(31,106,106,0.12)",
   },
-  pickerDoneText: { color: TEXT, fontWeight: "900" },
+  pickerDoneText: { color: TEXT_COLOR, fontWeight: "900" },
 
   // WEB time picker
   webTimeRow: {
@@ -653,11 +788,11 @@ const styles = StyleSheet.create({
     borderColor: PINK,
   },
   webListItemText: {
-    color: TEXT,
+    color: TEXT_COLOR,
     fontWeight: "800",
   },
   webListItemTextSelected: {
-    color: TEXT,
+    color: TEXT_COLOR,
     fontWeight: "900",
   },
 
@@ -673,5 +808,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "rgba(16,70,77,0.08)",
   },
-  webCancelText: { color: TEXT, fontWeight: "900" },
+  webCancelText: { color: TEXT_COLOR, fontWeight: "900" },
 });

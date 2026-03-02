@@ -46,8 +46,7 @@ GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 REQUEST_TIMEOUT_SECONDS = 5
 
-#if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
-if "localhost" in GOOGLE_REDIRECT_URIS:
+if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
@@ -746,9 +745,66 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['PUT'])
+VALID_FREQUENCIES = {"daily", "weekly", "monthly", "yearly"}
+VALID_END_TYPES = {"never", "date", "count"}
+
+def validate_recurrence(data):
+    """Validate the recurrence JSON structure. Returns (cleaned, error_msg)."""
+    if data is None:
+        return None, None
+    if not isinstance(data, dict):
+        return None, "recurrencia debe ser un objeto JSON o null."
+    freq = data.get("frequency")
+    if freq not in VALID_FREQUENCIES:
+        return None, f"frequency inválida. Valores permitidos: {', '.join(sorted(VALID_FREQUENCIES))}."
+    interval = data.get("interval", 1)
+    if not isinstance(interval, int) or interval < 1:
+        return None, "interval debe ser un entero >= 1."
+    end_type = data.get("endType", "never")
+    if end_type not in VALID_END_TYPES:
+        return None, f"endType inválido. Valores permitidos: {', '.join(sorted(VALID_END_TYPES))}."
+    cleaned = {
+        "frequency": freq,
+        "interval": interval,
+        "endType": end_type,
+    }
+    if "daysOfWeek" in data:
+        days = data["daysOfWeek"]
+        if not isinstance(days, list) or not all(isinstance(d, int) and 0 <= d <= 6 for d in days):
+            return None, "daysOfWeek debe ser una lista de enteros entre 0 y 6."
+        cleaned["daysOfWeek"] = days
+    if end_type == "date" and "endDate" in data:
+        cleaned["endDate"] = data["endDate"]
+    if end_type == "count" and "endCount" in data:
+        ec = data["endCount"]
+        if not isinstance(ec, int) or ec < 1:
+            return None, "endCount debe ser un entero >= 1."
+        cleaned["endCount"] = ec
+    return cleaned, None
+
+
+@api_view(['GET', 'PUT'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
+
+    if request.method == 'GET':
+        return Response(
+            {
+                "id": event.id,
+                "titulo": event.titulo,
+                "descripcion": event.descripcion,
+                "nombre_lugar": event.nombre_lugar,
+                "fecha": event.fecha,
+                "hora": event.hora,
+                "recurrencia": event.recurrencia,
+                "id_externo": event.id_externo,
+                "calendarios": list(event.calendarios.values_list("id", flat=True)),
+                "creador_id": event.creador_id,
+                "fecha_creacion": event.fecha_creacion,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     data = request.data
 
     # Validate required fields are not empty if provided
@@ -769,6 +825,20 @@ def edit_event(request, evento_id):
             {"errors": ["El campo 'hora' no puede estar vacío."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    # Validate recurrence JSON if provided
+    if "recurrencia" in data:
+        rec_data = data["recurrencia"]
+        if rec_data is not None:
+            cleaned_rec, rec_error = validate_recurrence(rec_data)
+            if rec_error:
+                return Response(
+                    {"errors": [rec_error]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            data = {**data, "recurrencia": cleaned_rec}
+        else:
+            data = {**data, "recurrencia": None}
 
     # Update scalar fields if present
     editable_fields = [
@@ -901,6 +971,17 @@ def crear_evento(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
+    # Validate recurrence JSON if provided
+    recurrencia_raw = data.get("recurrencia")
+    recurrencia_clean = None
+    if recurrencia_raw is not None:
+        recurrencia_clean, rec_error = validate_recurrence(recurrencia_raw)
+        if rec_error:
+            return Response(
+                {"errors": [rec_error]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     ubicacion = None
     lat = data.get("latitud")
     lon = data.get("longitud")
@@ -913,14 +994,14 @@ def crear_evento(request):
                 {"errors": ["Latitud o longitud inválidas."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-    
+
     evento = Evento(
         titulo=titulo,
         descripcion=data.get("descripcion", ""),
         nombre_lugar=data.get("nombre_lugar", ""),
         fecha=fecha,
         hora=hora,
-        recurrencia=data.get("recurrencia"),
+        recurrencia=recurrencia_clean,
         id_externo=data.get("id_externo"),
         ubicacion=ubicacion,
         creador=creador

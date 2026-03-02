@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { createEvent, fetchCalendars } from "@/services/eventService";
+import { RecurrenceConfig } from "@/types/calendar";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -26,15 +29,9 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: string; name: string; image?: any };
+type CalendarItem = { id: number; name: string };
 type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly";
 type EndType = "never" | "date" | "count";
-
-const mockCalendars: CalendarItem[] = [
-  { id: "1", name: "Concerts", image: require("../../assets/images/icon.png") },
-  { id: "2", name: "Gym", image: require("../../assets/images/icon.png") },
-  { id: "3", name: "Study", image: require("../../assets/images/icon.png") },
-];
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -43,6 +40,7 @@ const RECURRENCE_OPTIONS: RecurrenceType[] = ["daily", "weekly", "monthly", "yea
 
 export default function CreateRecurringEventsScreen() {
   const { width } = useWindowDimensions();
+  const router = useRouter();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
@@ -51,17 +49,40 @@ export default function CreateRecurringEventsScreen() {
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [recurrenceModalOpen, setRecurrenceModalOpen] = useState(false);
 
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(mockCalendars[2]);
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
   const [coverUri, setCoverUri] = useState<string | null>(null);
+
+  const [startDate, setStartDate] = useState<Date>(new Date());
 
   const [time, setTime] = useState<Date>(() => {
     const d = new Date();
     d.setHours(14, 0, 0, 0);
     return d;
   });
+
+  // Date picker state
+  const [showWebDatePicker, setShowWebDatePicker] = useState(false);
+  const [webDay, setWebDay] = useState(startDate.getDate());
+  const [webMonth, setWebMonth] = useState(startDate.getMonth());
+  const [webYear, setWebYear] = useState(startDate.getFullYear());
+
+  const THIS_YEAR = new Date().getFullYear();
+  const YEAR_LIST = Array.from({ length: 12 }, (_, i) => THIS_YEAR - 1 + i);
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  useEffect(() => {
+    fetchCalendars()
+      .then((cals) => {
+        const items: CalendarItem[] = cals.map((c) => ({ id: c.id, name: c.nombre }));
+        setCalendars(items);
+        if (items.length > 0) setSelectedCalendar(items[0]);
+      })
+      .catch(() => Alert.alert("Error", "Failed to load calendars"));
+  }, []);
 
   // Recurrence fields
   const [recurrence, setRecurrence] = useState<RecurrenceType>("weekly");
@@ -143,6 +164,29 @@ export default function CreateRecurringEventsScreen() {
     );
   };
 
+  const dateLabel = useMemo(() => {
+    return startDate.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }, [startDate]);
+
+  const openDatePicker = () => {
+    setWebDay(startDate.getDate());
+    setWebMonth(startDate.getMonth());
+    setWebYear(startDate.getFullYear());
+    setShowWebDatePicker(true);
+  };
+
+  const applyWebDate = () => {
+    const maxDay = new Date(webYear, webMonth + 1, 0).getDate();
+    const safeDay = Math.min(webDay, maxDay);
+    setStartDate(new Date(webYear, webMonth, safeDay));
+    setShowWebDatePicker(false);
+  };
+
   const handleCreate = async () => {
     if (!title.trim()) {
       Alert.alert("Validation", "Please enter a title");
@@ -161,14 +205,38 @@ export default function CreateRecurringEventsScreen() {
 
     setSaving(true);
     try {
-      // Simular creación de evento (en producción sería una llamada a API)
-      setTimeout(() => {
-        Alert.alert("Success", "Recurring event created successfully");
-        setSaving(false);
-        // Navegar de vuelta
-      }, 800);
-    } catch (error) {
-      Alert.alert("Error", "Failed to create event");
+      const fecha = `${startDate.getFullYear()}-${pad2(startDate.getMonth() + 1)}-${pad2(startDate.getDate())}`;
+      const hora = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
+      const recurrenceConfig: RecurrenceConfig = {
+        frequency: recurrence,
+        interval: Math.max(1, parseInt(interval, 10) || 1),
+        endType,
+      };
+      if (recurrence === "weekly") {
+        recurrenceConfig.daysOfWeek = daysOfWeek;
+      }
+      if (endType === "date") {
+        recurrenceConfig.endDate = `${endDate.getFullYear()}-${pad2(endDate.getMonth() + 1)}-${pad2(endDate.getDate())}`;
+      }
+      if (endType === "count") {
+        recurrenceConfig.endCount = Math.max(1, parseInt(endCount, 10) || 1);
+      }
+
+      await createEvent({
+        titulo: title.trim(),
+        descripcion: description,
+        nombre_lugar: place,
+        fecha,
+        hora,
+        calendarios: [selectedCalendar.id],
+        creador_id: 2,
+        recurrencia: recurrenceConfig,
+      });
+      Alert.alert("Success", "Recurring event created successfully");
+      if (router.canGoBack()) router.back();
+    } catch (error: any) {
+      Alert.alert("Error", error.message ?? "Failed to create event");
+    } finally {
       setSaving(false);
     }
   };
@@ -200,11 +268,7 @@ export default function CreateRecurringEventsScreen() {
 
               <View style={styles.calendarPreview}>
                 <View style={styles.calendarImgWrap}>
-                  {selectedCalendar?.image ? (
-                    <Image source={selectedCalendar.image} style={styles.calendarImg} />
-                  ) : (
-                    <View style={styles.calendarImgPlaceholder} />
-                  )}
+                  <View style={styles.calendarImgPlaceholder} />
                 </View>
                 <Text style={styles.calendarName}>{selectedCalendar?.name ?? ""}</Text>
               </View>
@@ -240,6 +304,14 @@ export default function CreateRecurringEventsScreen() {
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
             <TextInput value={place} onChangeText={setPlace} style={styles.input} />
+
+            {/* Date */}
+            <View style={styles.timeRow}>
+              <Text style={styles.fieldLabel}>Date:</Text>
+              <Pressable style={styles.timePill} onPress={openDatePicker}>
+                <Text style={styles.timeText}>{dateLabel}</Text>
+              </Pressable>
+            </View>
 
             {/* Time */}
             <View style={styles.timeRow}>
@@ -364,8 +436,8 @@ export default function CreateRecurringEventsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select calendar</Text>
             <FlatList
-              data={mockCalendars}
-              keyExtractor={(i) => i.id}
+              data={calendars}
+              keyExtractor={(i) => String(i.id)}
               ItemSeparatorComponent={() => <View style={styles.modalSep} />}
               renderItem={({ item }) => (
                 <Pressable
@@ -522,6 +594,85 @@ export default function CreateRecurringEventsScreen() {
                 </Pressable>
 
                 <Pressable style={styles.pickerDone} onPress={applyWebTime}>
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Start Date picker (all platforms) */}
+      {showWebDatePicker && (
+        <Modal transparent animationType="fade">
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerCard}>
+              <Text style={styles.pickerTitle}>Select date</Text>
+
+              <View style={styles.webTimeRow}>
+                {/* Day */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={Array.from({ length: 31 }, (_, i) => i + 1)}
+                    keyExtractor={(i) => `d-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webDay;
+                      return (
+                        <Pressable onPress={() => setWebDay(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{pad2(item)}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Month */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={MONTH_SHORT}
+                    keyExtractor={(_, i) => `mo-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item, index }) => {
+                      const sel = index === webMonth;
+                      return (
+                        <Pressable onPress={() => setWebMonth(index)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Year */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={YEAR_LIST}
+                    keyExtractor={(y) => `y-${y}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webYear;
+                      return (
+                        <Pressable onPress={() => setWebYear(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.webTimeActions}>
+                <Pressable style={styles.webCancelBtn} onPress={() => setShowWebDatePicker(false)}>
+                  <Text style={styles.webCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.pickerDone} onPress={applyWebDate}>
                   <Text style={styles.pickerDoneText}>Done</Text>
                 </Pressable>
               </View>

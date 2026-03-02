@@ -6,6 +6,15 @@ export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
 export type EventType = 'meeting' | 'task' | 'reminder' | 'holiday' | 'birthday' | 'other';
 
+export interface RecurrenceConfig {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+    daysOfWeek?: number[];      // 0-6 (Sun-Sat)
+    endType: 'never' | 'date' | 'count';
+    endDate?: string;           // YYYY-MM-DD
+    endCount?: number;
+}
+
 export interface Calendar {
     id: string;
     nombre: string;
@@ -27,7 +36,7 @@ export interface CalendarEvent {
     fecha: string;          // YYYY-MM-DD
     hora: string;           // HH:mm
     foto?: string;          // URL to event image
-    recurrencia?: string | null;
+    recurrencia?: RecurrenceConfig | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
 }

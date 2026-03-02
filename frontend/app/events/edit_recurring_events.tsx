@@ -13,11 +13,13 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Switch,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { getEvent, updateEvent, deleteEvent, fetchCalendars } from "@/services/eventService";
+import { RecurrenceConfig } from "@/types/calendar";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -27,73 +29,35 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: string; name: string; image?: any };
+type CalendarItem = { id: number; name: string };
 type RecurrenceType = "daily" | "weekly" | "monthly" | "yearly";
 type EndType = "never" | "date" | "count";
 
-const mockCalendars: CalendarItem[] = [
-  { id: "1", name: "Concerts", image: require("../../assets/images/icon.png") },
-  { id: "2", name: "Gym", image: require("../../assets/images/icon.png") },
-  { id: "3", name: "Study", image: require("../../assets/images/icon.png") },
-];
-
 const pad2 = (n: number) => String(n).padStart(2, "0");
-
-type RecurringEventData = {
-  id: string;
-  title: string;
-  description: string;
-  place: string;
-  time: Date;
-  calendar: CalendarItem;
-  coverUri?: string;
-  recurrence: RecurrenceType;
-  interval: number;
-  daysOfWeek: number[]; // 0-6 (Sun-Sat)
-  endType: EndType;
-  endDate?: Date;
-  endCount?: number;
-};
-
-const mockEventData: RecurringEventData = {
-  id: "1",
-  title: "Weekly Gym Session",
-  description: "Regular workout routine",
-  place: "Central Gym",
-  time: (() => {
-    const d = new Date();
-    d.setHours(18, 0, 0, 0);
-    return d;
-  })(),
-  calendar: mockCalendars[1],
-  coverUri: undefined,
-  recurrence: "weekly",
-  interval: 1,
-  daysOfWeek: [1, 3, 5], // Mon, Wed, Fri
-  endType: "never",
-  endDate: undefined,
-  endCount: undefined,
-};
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const RECURRENCE_OPTIONS: RecurrenceType[] = ["daily", "weekly", "monthly", "yearly"];
 
 export default function EditRecurringEventsScreen() {
+  const { eventId } = useLocalSearchParams<{ eventId: string }>();
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [recurrenceModalOpen, setRecurrenceModalOpen] = useState(false);
 
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem>(mockCalendars[1]);
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
   const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [time, setTime] = useState<Date>(new Date());
 
   // Recurrence fields
@@ -111,6 +75,16 @@ export default function EditRecurringEventsScreen() {
   const [webMinute, setWebMinute] = useState(time.getMinutes());
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
+  // Date picker state
+  const [showWebDatePicker, setShowWebDatePicker] = useState(false);
+  const [webDay, setWebDay] = useState(startDate.getDate());
+  const [webMonth2, setWebMonth2] = useState(startDate.getMonth());
+  const [webYear2, setWebYear2] = useState(startDate.getFullYear());
+
+  const THIS_YEAR = new Date().getFullYear();
+  const YEAR_LIST = Array.from({ length: 12 }, (_, i) => THIS_YEAR - 1 + i);
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
   useEffect(() => {
     loadEventData();
   }, []);
@@ -118,23 +92,49 @@ export default function EditRecurringEventsScreen() {
   const loadEventData = async () => {
     setLoading(true);
     try {
-      setTimeout(() => {
-        setTitle(mockEventData.title);
-        setDescription(mockEventData.description);
-        setPlace(mockEventData.place);
-        setTime(mockEventData.time);
-        setSelectedCalendar(mockEventData.calendar);
-        setRecurrence(mockEventData.recurrence);
-        setInterval(String(mockEventData.interval));
-        setDaysOfWeek(mockEventData.daysOfWeek);
-        setEndType(mockEventData.endType);
-        if (mockEventData.endDate) setEndDate(mockEventData.endDate);
-        if (mockEventData.endCount) setEndCount(String(mockEventData.endCount));
-        if (mockEventData.coverUri) setCoverUri(mockEventData.coverUri);
-        setLoading(false);
-      }, 500);
+      const [event, cals] = await Promise.all([
+        getEvent(Number(eventId)),
+        fetchCalendars(),
+      ]);
+      const calItems: CalendarItem[] = cals.map((c) => ({ id: c.id, name: c.nombre }));
+      setCalendars(calItems);
+
+      setTitle(event.titulo);
+      setDescription(event.descripcion);
+      setPlace(event.nombre_lugar);
+
+      // Parse date
+      const [y, mo, da] = (event.fecha as string).split("-").map(Number);
+      setStartDate(new Date(y, mo - 1, da));
+
+      // Parse time
+      const [hh, mm] = (event.hora as string).split(":").map(Number);
+      const t = new Date();
+      t.setHours(hh, mm, 0, 0);
+      setTime(t);
+
+      // Select calendar
+      if (event.calendarios.length > 0) {
+        const found = calItems.find((c) => event.calendarios.includes(c.id));
+        if (found) setSelectedCalendar(found);
+      }
+
+      // Populate recurrence fields from JSON
+      if (event.recurrencia) {
+        const rec = event.recurrencia as RecurrenceConfig;
+        setRecurrence(rec.frequency as RecurrenceType);
+        setInterval(String(rec.interval ?? 1));
+        if (rec.daysOfWeek) setDaysOfWeek(rec.daysOfWeek);
+        setEndType((rec.endType as EndType) ?? "never");
+        if (rec.endDate) {
+          const [ey, em, ed] = rec.endDate.split("-").map(Number);
+          setEndDate(new Date(ey, em - 1, ed));
+        }
+        if (rec.endCount) setEndCount(String(rec.endCount));
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to load event data");
+    } finally {
       setLoading(false);
     }
   };
@@ -200,6 +200,29 @@ export default function EditRecurringEventsScreen() {
     );
   };
 
+  const dateLabel = useMemo(() => {
+    return startDate.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }, [startDate]);
+
+  const openDatePicker = () => {
+    setWebDay(startDate.getDate());
+    setWebMonth2(startDate.getMonth());
+    setWebYear2(startDate.getFullYear());
+    setShowWebDatePicker(true);
+  };
+
+  const applyWebDate = () => {
+    const maxDay = new Date(webYear2, webMonth2 + 1, 0).getDate();
+    const safeDay = Math.min(webDay, maxDay);
+    setStartDate(new Date(webYear2, webMonth2, safeDay));
+    setShowWebDatePicker(false);
+  };
+
   const handleUpdate = async () => {
     if (!title.trim()) {
       Alert.alert("Validation", "Please enter a title");
@@ -213,14 +236,62 @@ export default function EditRecurringEventsScreen() {
 
     setSaving(true);
     try {
-      setTimeout(() => {
-        Alert.alert("Success", "Recurring event updated successfully");
-        setSaving(false);
-      }, 800);
-    } catch (error) {
-      Alert.alert("Error", "Failed to update event");
+      const fecha = `${startDate.getFullYear()}-${pad2(startDate.getMonth() + 1)}-${pad2(startDate.getDate())}`;
+      const hora = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
+      const recurrenceConfig: RecurrenceConfig = {
+        frequency: recurrence,
+        interval: Math.max(1, parseInt(interval, 10) || 1),
+        endType,
+      };
+      if (recurrence === "weekly") {
+        recurrenceConfig.daysOfWeek = daysOfWeek;
+      }
+      if (endType === "date") {
+        recurrenceConfig.endDate = `${endDate.getFullYear()}-${pad2(endDate.getMonth() + 1)}-${pad2(endDate.getDate())}`;
+      }
+      if (endType === "count") {
+        recurrenceConfig.endCount = Math.max(1, parseInt(endCount, 10) || 1);
+      }
+
+      await updateEvent(Number(eventId), {
+        titulo: title.trim(),
+        descripcion: description,
+        nombre_lugar: place,
+        fecha,
+        hora,
+        calendarios: selectedCalendar ? [selectedCalendar.id] : undefined,
+        recurrencia: recurrenceConfig,
+      });
+      Alert.alert("Success", "Recurring event updated successfully");
+      if (router.canGoBack()) router.back();
+    } catch (error: any) {
+      Alert.alert("Error", error.message ?? "Failed to update event");
+    } finally {
       setSaving(false);
     }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Event",
+      "Are you sure you want to delete this event?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteEvent(Number(eventId));
+              Alert.alert("Deleted", "Event deleted successfully");
+              if (router.canGoBack()) router.back();
+            } catch (error: any) {
+              Alert.alert("Error", error.message ?? "Failed to delete event");
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -230,7 +301,7 @@ export default function EditRecurringEventsScreen() {
           <Pressable style={styles.iconBtn} hitSlop={10}>
             <Ionicons name="chevron-back" size={26} color={WHITE} />
           </Pressable>
-          <Pressable style={styles.iconBtn} hitSlop={10}>
+          <Pressable style={styles.iconBtn} hitSlop={10} onPress={handleDelete}>
             <Ionicons name="trash" size={22} color={RED} />
           </Pressable>
         </View>
@@ -244,10 +315,10 @@ export default function EditRecurringEventsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
+        <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.canGoBack() && router.back()}>
           <Ionicons name="chevron-back" size={26} color={WHITE} />
         </Pressable>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
+        <Pressable style={styles.iconBtn} hitSlop={10} onPress={handleDelete}>
           <Ionicons name="trash" size={22} color={RED} />
         </Pressable>
       </View>
@@ -268,11 +339,7 @@ export default function EditRecurringEventsScreen() {
 
               <View style={styles.calendarPreview}>
                 <View style={styles.calendarImgWrap}>
-                  {selectedCalendar?.image ? (
-                    <Image source={selectedCalendar.image} style={styles.calendarImg} />
-                  ) : (
-                    <View style={styles.calendarImgPlaceholder} />
-                  )}
+                  <View style={styles.calendarImgPlaceholder} />
                 </View>
                 <Text style={styles.calendarName}>{selectedCalendar?.name ?? ""}</Text>
               </View>
@@ -308,6 +375,14 @@ export default function EditRecurringEventsScreen() {
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
             <TextInput value={place} onChangeText={setPlace} style={styles.input} />
+
+            {/* Date */}
+            <View style={styles.timeRow}>
+              <Text style={styles.fieldLabel}>Date:</Text>
+              <Pressable style={styles.timePill} onPress={openDatePicker}>
+                <Text style={styles.timeText}>{dateLabel}</Text>
+              </Pressable>
+            </View>
 
             {/* Time */}
             <View style={styles.timeRow}>
@@ -432,8 +507,8 @@ export default function EditRecurringEventsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select calendar</Text>
             <FlatList
-              data={mockCalendars}
-              keyExtractor={(i) => i.id}
+              data={calendars}
+              keyExtractor={(i) => String(i.id)}
               ItemSeparatorComponent={() => <View style={styles.modalSep} />}
               renderItem={({ item }) => (
                 <Pressable
@@ -590,6 +665,85 @@ export default function EditRecurringEventsScreen() {
                 </Pressable>
 
                 <Pressable style={styles.pickerDone} onPress={applyWebTime}>
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Start Date picker (all platforms) */}
+      {showWebDatePicker && (
+        <Modal transparent animationType="fade">
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerCard}>
+              <Text style={styles.pickerTitle}>Select date</Text>
+
+              <View style={styles.webTimeRow}>
+                {/* Day */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={Array.from({ length: 31 }, (_, i) => i + 1)}
+                    keyExtractor={(i) => `d-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webDay;
+                      return (
+                        <Pressable onPress={() => setWebDay(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{pad2(item)}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Month */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={MONTH_SHORT}
+                    keyExtractor={(_, i) => `mo-${i}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item, index }) => {
+                      const sel = index === webMonth2;
+                      return (
+                        <Pressable onPress={() => setWebMonth2(index)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+
+                {/* Year */}
+                <View style={styles.webListBox}>
+                  <FlatList
+                    data={YEAR_LIST}
+                    keyExtractor={(y) => `y-${y}`}
+                    style={styles.webList}
+                    contentContainerStyle={styles.webListContent}
+                    showsVerticalScrollIndicator
+                    renderItem={({ item }) => {
+                      const sel = item === webYear2;
+                      return (
+                        <Pressable onPress={() => setWebYear2(item)} style={[styles.webListItem, sel && styles.webListItemSelected]}>
+                          <Text style={[styles.webListItemText, sel && styles.webListItemTextSelected]}>{item}</Text>
+                        </Pressable>
+                      );
+                    }}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.webTimeActions}>
+                <Pressable style={styles.webCancelBtn} onPress={() => setShowWebDatePicker(false)}>
+                  <Text style={styles.webCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.pickerDone} onPress={applyWebDate}>
                   <Text style={styles.pickerDoneText}>Done</Text>
                 </Pressable>
               </View>

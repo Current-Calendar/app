@@ -77,7 +77,7 @@ class Evento(models.Model):
     fecha = models.DateField()
     hora = models.TimeField()
     foto = models.ImageField(upload_to='fotos_eventos/', null=True, blank=True)
-    recurrencia = models.IntegerField(null=True, blank=True)
+    recurrencia = models.JSONField(null=True, blank=True)
     id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     calendarios = models.ManyToManyField(Calendario, related_name='eventos')
     creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='eventos_creados')

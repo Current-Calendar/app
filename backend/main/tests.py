@@ -240,14 +240,21 @@ class EditEventTests(TestCase):
         self.assertAlmostEqual(self.event.ubicacion.x, -5.9926, places=4)
 
     def test_edit_recurrence_and_external_id(self):
+        recurrence_data = {
+            "frequency": "weekly",
+            "interval": 1,
+            "daysOfWeek": [1, 3, 5],
+            "endType": "never",
+        }
         response = self.client.put(
             self.endpoint(),
-            {"recurrencia": 7, "id_externo": "ext-123"},
+            {"recurrencia": recurrence_data, "id_externo": "ext-123"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.event.refresh_from_db()
-        self.assertEqual(self.event.recurrencia, 7)
+        self.assertEqual(self.event.recurrencia["frequency"], "weekly")
+        self.assertEqual(self.event.recurrencia["daysOfWeek"], [1, 3, 5])
         self.assertEqual(self.event.id_externo, "ext-123")
 
     def test_unsent_fields_remain_unchanged(self):
@@ -343,9 +350,17 @@ class EditEventTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_get_not_allowed(self):
+    def test_get_event_by_id(self):
         response = self.client.get(self.endpoint())
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.event.id)
+        self.assertEqual(response.data["titulo"], self.event.titulo)
+        self.assertIn("creador_id", response.data)
+        self.assertEqual(response.data["creador_id"], self.user.id)
+
+    def test_get_event_not_found(self):
+        response = self.client.get(self.endpoint(event_id=9999))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_post_not_allowed(self):
         response = self.client.post(
@@ -355,7 +370,97 @@ class EditEventTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        
+
+class RecurrenceJsonTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = Usuario.objects.create_user(
+            username="recuser",
+            email="rec@example.com",
+            password="testpass123",
+        )
+        self.calendar = Calendario.objects.create(
+            creador=self.user,
+            nombre="Rec Cal",
+            estado="PUBLICO",
+        )
+
+    def test_create_event_with_json_recurrence(self):
+        payload = {
+            "titulo": "Weekly Gym",
+            "fecha": "2026-03-10",
+            "hora": "18:00:00",
+            "calendarios": [self.calendar.id],
+            "creador_id": self.user.id,
+            "recurrencia": {
+                "frequency": "weekly",
+                "interval": 1,
+                "daysOfWeek": [1, 3, 5],
+                "endType": "never",
+            },
+        }
+        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = Evento.objects.get(id=response.data["id"])
+        self.assertEqual(event.recurrencia["frequency"], "weekly")
+        self.assertEqual(event.recurrencia["daysOfWeek"], [1, 3, 5])
+
+    def test_create_event_with_null_recurrence(self):
+        payload = {
+            "titulo": "One-off event",
+            "fecha": "2026-03-10",
+            "hora": "12:00:00",
+            "calendarios": [self.calendar.id],
+            "creador_id": self.user.id,
+            "recurrencia": None,
+        }
+        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = Evento.objects.get(id=response.data["id"])
+        self.assertIsNone(event.recurrencia)
+
+    def test_create_event_with_invalid_frequency(self):
+        payload = {
+            "titulo": "Bad event",
+            "fecha": "2026-03-10",
+            "hora": "12:00:00",
+            "calendarios": [self.calendar.id],
+            "creador_id": self.user.id,
+            "recurrencia": {
+                "frequency": "biweekly",
+                "interval": 1,
+                "endType": "never",
+            },
+        }
+        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_edit_event_recurrence(self):
+        event = Evento.objects.create(
+            titulo="Old event",
+            fecha="2026-03-10",
+            hora="10:00:00",
+            creador=self.user,
+        )
+        event.calendarios.add(self.calendar)
+        new_rec = {
+            "frequency": "monthly",
+            "interval": 2,
+            "endType": "count",
+            "endCount": 5,
+        }
+        response = self.client.put(
+            EDIT_EVENT_ENDPOINT.format(event.id),
+            {"recurrencia": new_rec},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event.refresh_from_db()
+        self.assertEqual(event.recurrencia["frequency"], "monthly")
+        self.assertEqual(event.recurrencia["interval"], 2)
+        self.assertEqual(event.recurrencia["endCount"], 5)
+
+
 class BuscarUsuariosTests(TestCase):
     def setUp(self):
         self.client = APIClient()
