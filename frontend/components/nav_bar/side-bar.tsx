@@ -8,6 +8,14 @@ interface Props {
 }
 
 export default function Sidebar({ expanded, setExpanded }: Props) {
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const SidebarItem = ({
     icon,
     label,
@@ -60,6 +68,7 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
       <View style={styles.sidebarCenter}>
         <SidebarItem icon="home" label="Home" expanded={expanded} href="/calendars" />
         <SidebarItem icon="search" label="Search" expanded={expanded} href="/search" />
+        <SidebarItem icon="add-circle" label="Create" expanded={expanded} href={`/events/create_events?date=${getTodayFormatted()}`} />
         <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/switch-calendar" />
         {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
         {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
