@@ -30,14 +30,14 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer, UserSerializer, CalendarioSerializer
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer, UserSerializer, CalendarioSerializer, EventoSerializer
 from main.models import MockElement, Calendario, Evento, Usuario
 from .permissions import IsCreator
 from main.rs.calendars import recommend_calendars
+from main.rs.events import recommend_events
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -988,7 +988,7 @@ def recommended_calendars(request, user_id):
     try:
         user = Usuario.objects.get(id=user_id)
     except Usuario.DoesNotExist:
-        return Response({'error': 'Usuario no encontrado'}, status=404)
+        return Response({'error': 'User not found'}, status=404)
 
     cache_key = f"recommended_calendars_{user_id}"
     cached_data = cache.get(cache_key)
@@ -997,6 +997,25 @@ def recommended_calendars(request, user_id):
 
     calendars = recommend_calendars(user, limit=30)
     serializer = CalendarioSerializer(calendars, many=True)
+
+    cache.set(cache_key, serializer.data, 60 * 5)
+
+    return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
+
+@api_view(["GET"])
+def recommended_events(request, user_id):
+    try:
+        user = Usuario.objects.get(id=user_id)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    cache_key = f"recommended_events_{user_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
+
+    events = recommend_events(user, limit=30)
+    serializer = EventoSerializer(events, many=True)
 
     cache.set(cache_key, serializer.data, 60 * 5)
 

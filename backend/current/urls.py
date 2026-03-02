@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars, recommended_calendars
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars, recommended_calendars, recommended_events
 from rest_framework import routers
 
 api_router = routers.DefaultRouter()
@@ -54,6 +54,7 @@ urlpatterns = [
     path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
     path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
     path('api/v1/recommendations/calendars/<int:user_id>/', recommended_calendars),
+    path('api/v1/recommendations/events/<int:user_id>/', recommended_events),
 
 ]
 

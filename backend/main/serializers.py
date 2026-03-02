@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import Calendario
+from .models import Calendario, Evento
 
 Usuario = get_user_model()
 
@@ -132,3 +132,8 @@ class CalendarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Calendario
         fields = ['id', 'nombre', 'descripcion', 'portada', 'estado', 'creador', 'fecha_creacion']
+
+class EventoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Evento
+        fields = ['id', 'titulo', 'descripcion', 'nombre_lugar', 'ubicacion', 'fecha', 'hora', 'foto', 'calendarios', 'creador']
