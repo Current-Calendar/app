@@ -243,7 +243,7 @@ const miniStyles = StyleSheet.create({
     borderColor: "rgba(16,70,77,0.18)",
     backgroundColor: "rgba(255,255,255,0.45)",
     overflow: "hidden",
-    padding: 10,
+    padding: 8,
   },
   headerRow: {
     height: 34,
