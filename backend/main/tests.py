@@ -1555,3 +1555,77 @@ class PublishCalendarTests(TestCase):
     def test_post_not_allowed(self):
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+class GetCalendarDetailsTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        # Create user and calendar
+        self.user = Usuario.objects.create_user(username='detailuser', email='detailuser@example.com', password='testpass123')
+        self.calendar = Calendario.objects.create(
+            nombre='Calendar Detail',
+            descripcion='Calendar for detail view testing',
+            estado='PUBLICO',
+            origen='CURRENT',
+            creador=self.user
+        )
+
+    def test_get_calendar_details_success(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f'/api/v1/calendars/{self.calendar.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.calendar.id)
+        self.assertEqual(response.data['nombre'], self.calendar.nombre)
+        self.assertEqual(response.data['descripcion'], self.calendar.descripcion)
+        self.assertEqual(response.data['estado'], self.calendar.estado)
+        self.assertEqual(response.data['origen'], self.calendar.origen)
+        self.assertEqual(response.data['creador'], self.user.id)
+        self.assertIn('eventos', response.data)
+        self.assertIsInstance(response.data['eventos'], list)
+    
+    def test_get_calendar_details_not_found(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/v1/calendars/9999')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class GetEventDetailsTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+        # Create user and event
+        self.user = Usuario.objects.create_user(username='eventdetailuser', email= 'detailuser@example.com', password='testpass123')
+        self.calendar = Calendario.objects.create(
+            nombre='Calendar for Event Detail',
+            descripcion='Calendar to hold event for detail view testing',
+            estado='PUBLICO',
+            origen='CURRENT',
+            creador=self.user
+        )
+        self.event = Evento.objects.create(
+            titulo='Event Detail',
+            descripcion='Event for detail view testing',
+            fecha=datetime.date(2026, 6, 1),
+            hora=datetime.time(10, 0),
+            creador=self.user,
+        )
+        self.event.calendarios.add(self.calendar)
+    def test_get_event_details_success(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f'/api/v1/events/{self.event.id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.event.id)
+        self.assertEqual(response.data['titulo'], self.event.titulo)
+        self.assertEqual(response.data['descripcion'], self.event.descripcion)
+        # API currently returns date/time as native objects
+        self.assertEqual(response.data['fecha'], self.event.fecha)
+        self.assertEqual(response.data['hora'], self.event.hora)
+        # Endpoint currently returns basic event fields without creator/calendarios
+        self.assertNotIn('creador', response.data)
+        self.assertNotIn('calendarios', response.data)
+    
+    def test_get_event_details_not_found(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/v1/events/9999')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    

@@ -985,3 +985,40 @@ def publish_calendar(request, calendario_id):
         },
         status=status.HTTP_200_OK,
     )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_event(request, event_id):
+    event = get_object_or_404(Evento, id=event_id)
+
+    return Response(
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+
+        },
+        status=status.HTTP_200_OK,
+    )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendario, id=calendar_id)
+
+    return Response(
+        {
+            "id": calendar.id,
+            "nombre": calendar.nombre,
+            "descripcion": calendar.descripcion,
+            "estado": calendar.estado,
+            "origen": calendar.origen,
+            "creador": calendar.creador.id,
+            "fecha_creacion": calendar.fecha_creacion,
+            "eventos": list(calendar.eventos.values_list("id", flat=True)),
+        },
+        status=status.HTTP_200_OK,
+    )
