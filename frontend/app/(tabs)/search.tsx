@@ -184,13 +184,21 @@ export default function SearchScreen() {
                     const ev = item.data as CalendarEvent;
                     return (
                         <View style={styles.eventCard}>
-                            <View style={styles.eventInfo}>
-                                <Text style={styles.eventTitle}>{ev.titulo}</Text>
-                                <Text style={styles.eventMeta}>
-                                    {ev.fecha} {ev.hora}
-                                    {ev.calendarId &&
-                                        ` • ${calendarMap[ev.calendarId] || ''}`}
-                                </Text>
+                            <View style={styles.eventRow}> 
+                                {ev.foto && (
+                                    <Image 
+                                        source={{ uri: ev.foto }} 
+                                        style={styles.eventImage} 
+                                    />
+                                )}
+                                <View style={styles.eventInfo}>
+                                    <Text style={styles.eventTitle}>{ev.titulo}</Text>
+                                    <Text style={styles.eventMeta}>
+                                        {ev.fecha} {ev.hora}
+                                        {ev.calendarId &&
+                                            ` • ${calendarMap[ev.calendarId] || ''}`}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
                     );
@@ -309,5 +317,15 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: "#666",
         marginTop: 2,
+    },
+    eventRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    eventImage: {
+        width: 60,
+        height: 60,
+        borderRadius: 8,
+        marginRight: 12,
     },
 });
