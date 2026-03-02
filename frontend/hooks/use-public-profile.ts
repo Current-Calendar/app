@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-const USE_MOCK = true; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:8000/api/v1/"
+    : "http://localhost:8000/api/v1/");
 
 export type CalendarItem = {
     id: number;
@@ -16,8 +24,9 @@ export const useUserProfile = (userId?: string) => {
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);
+    const [followError, setFollowError] = useState<string | null>(null);
 
-    const token = "AQUI_VA_EL_TOKEN_DE_TU_SESION"; 
+    const token = "AQUI_VA_EL_TOKEN_DE_TU_SESION";
 
     // ----- MOCK follow toggle -----
     const mockFollowToggle = () => {
@@ -70,7 +79,7 @@ export const useUserProfile = (userId?: string) => {
             }
 
             try {
-                const response = await fetch(`/api/v1/users/${userId}/`, {
+                const response = await fetch(`${API_BASE}users/${userId}/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -101,8 +110,12 @@ export const useUserProfile = (userId?: string) => {
             return;
         }
 
+        const previousState = isFollowing;
+        setFollowError(null);
+        setIsFollowing(!previousState);
+
         try {
-            const response = await fetch(`/api/v1/users/${userId}/follow/`, {
+            const response = await fetch(`${API_BASE}users/${userId}/follow/`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -110,12 +123,22 @@ export const useUserProfile = (userId?: string) => {
                 },
             });
 
-            if (!response.ok) return;
+            if (!response.ok) {
+                let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
+                if (response.status === 401 || response.status === 403) {
+                    message = 'Necesitas iniciar sesión para seguir a este usuario.';
+                }
+                setFollowError(message);
+                setIsFollowing(previousState);
+                return;
+            }
 
             const data = await response.json();
             setIsFollowing(Boolean(data.followed));
         } catch (error) {
             console.error('Error follow:', error);
+            setFollowError('Hubo un problema de red. Revisa tu conexión e inténtalo de nuevo.');
+            setIsFollowing(previousState);
         }
     };
 
@@ -125,6 +148,7 @@ export const useUserProfile = (userId?: string) => {
         isFollowing,
         isLoading,
         userNotFound,
+        followError,
         handleFollowToggle
     };
 };
