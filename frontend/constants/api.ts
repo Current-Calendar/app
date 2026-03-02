@@ -21,6 +21,8 @@ export const API_CONFIG = {
     searchUsers: (query: string) => buildEndpoint(`usuarios?search=${encodeURIComponent(query)}`),
     searchCalendars: (query: string) => buildEndpoint(`calendarios/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`eventos/list?q=${encodeURIComponent(query)}`)
+    createCalendar: buildEndpoint('calendarios'),
+    editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
   },
 };
 

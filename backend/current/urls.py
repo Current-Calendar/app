@@ -26,6 +26,7 @@ from rest_framework import routers
 
 api_router = routers.DefaultRouter()
 api_router.register("users", views.UserViewSet, basename="users")
+api_router.register("events", views.EventViewSet, basename="events")
 
 urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
