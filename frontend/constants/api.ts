@@ -18,6 +18,7 @@ export const API_CONFIG = {
   endpoints: {
     mock: buildEndpoint('mock'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    ownProfile: buildEndpoint('users/me'),
     createCalendar: buildEndpoint('calendarios'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
   },

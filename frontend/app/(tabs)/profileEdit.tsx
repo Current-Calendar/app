@@ -9,17 +9,20 @@ import {
   SafeAreaView,
   TextInput,
   Alert,
+  Modal,
+  Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User } from '../../types/user';
 import { useAuth } from '@/context/authContext';
 import * as ImagePicker from 'expo-image-picker';
+import { API_CONFIG } from '@/constants/api';
 
 
 const EditProfileScreen = () => {
   const router = useRouter();
   const { user: currentUser, setUser: updateUserContext } = useAuth();
-  const apiUrl = process.env.EXPO_PUBLIC_API_URL; // e.g., "https://api.example.com"
 
 
   // State for form fields - initialize with params from navigation
@@ -28,6 +31,9 @@ const EditProfileScreen = () => {
   const [pronouns, setPronouns] = useState<string>(currentUser?._pronouns || '');
   const [bio, setBio] = useState<string>(currentUser?._bio || '');
   const [photo, setPhoto] = useState<string>(currentUser?._photo || '');
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleChangePhoto = async () => {
   try {
@@ -58,27 +64,15 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const updatedUser: User = {
-        ...currentUser, // keep all unchanged fields
-        _firstName: firstName,
-        _lastName: lastName,
-        _pronouns: pronouns,
-        _bio: bio,
-        _photo: photo,
-      };
-
-      const response = await fetch(`${apiUrl}/users/me/${currentUser._id}`, {
+      const response = await fetch(API_CONFIG.endpoints.ownProfile, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          // optionally: 'Authorization': `Bearer ${token}`
         },
+        credentials: 'include',
         body: JSON.stringify({
-          _firstName: firstName,
-          _lastName: lastName,
-          _pronouns: pronouns,
-          _bio: bio,
-          _photo: photo,
+          pronombres: pronouns,
+          biografia: bio,
         }),
       });
 
@@ -88,13 +82,58 @@ const EditProfileScreen = () => {
 
       const data: User = await response.json();
 
-      updateUserContext(data);
+      updateUserContext({
+        ...currentUser,
+        _firstName: firstName,
+        _lastName: lastName,
+        _pronouns: data._pronouns ?? pronouns,
+        _bio: data._bio ?? bio,
+        _photo: photo,
+      });
 
       Alert.alert('Success', 'Profile updated successfully!');
       router.back();
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Error', 'Could not save profile. Please try again.');
+    }
+  };
+
+  const deleteOwnProfile = async () => {
+    if (!currentUser) {
+      setDeleteError('You must be logged in to delete your profile.');
+      return;
+    }
+
+    setIsDeletingProfile(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(API_CONFIG.endpoints.ownProfile, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let errorMessage = `Delete failed (HTTP ${response.status}).`;
+        try {
+          const data = await response.json();
+          if (typeof data?.message === 'string' && data.message.trim()) {
+            errorMessage = data.message;
+          }
+        } catch {
+          // fallback error message when response body is not JSON
+        }
+        throw new Error(errorMessage);
+      }
+
+      setShowDeleteConfirm(false);
+      updateUserContext(null);
+      router.replace('/calendars');
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete your profile. Please try again.');
+    } finally {
+      setIsDeletingProfile(false);
     }
   };
 
@@ -106,7 +145,7 @@ const EditProfileScreen = () => {
           <Text style={styles.headerButton}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave}>
+        <TouchableOpacity onPress={handleSave} disabled={isDeletingProfile}>
           <Text style={[styles.headerButton, styles.saveButton]}>Save</Text>
         </TouchableOpacity>
       </View>
@@ -169,7 +208,79 @@ const EditProfileScreen = () => {
           </View>
         </View>
 
+        <View style={styles.dangerSection}>
+          <Text style={styles.dangerTitle}>Danger zone</Text>
+          <Text style={styles.dangerText}>
+            Deleting your profile permanently removes your account.
+          </Text>
+          <TouchableOpacity
+            style={[styles.deleteProfileButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
+            onPress={() => {
+              setDeleteError(null);
+              setShowDeleteConfirm(true);
+            }}
+            disabled={isDeletingProfile}
+            activeOpacity={0.8}
+          >
+            {isDeletingProfile ? (
+              <ActivityIndicator size="small" color="#B33F37" />
+            ) : (
+              <Text style={styles.deleteProfileButtonText}>Delete Profile</Text>
+            )}
+          </TouchableOpacity>
+          {deleteError ? <Text style={styles.deleteErrorText}>{deleteError}</Text> : null}
+        </View>
+
       </ScrollView>
+
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isDeletingProfile) {
+            setShowDeleteConfirm(false);
+          }
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            if (!isDeletingProfile) {
+              setShowDeleteConfirm(false);
+            }
+          }}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Delete profile</Text>
+            <Text style={styles.modalText}>
+              Are you sure you want to delete your profile? This action cannot be undone.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowDeleteConfirm(false)}
+                disabled={isDeletingProfile}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
+                onPress={() => {
+                  void deleteOwnProfile();
+                }}
+                disabled={isDeletingProfile}
+              >
+                {isDeletingProfile ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalDeleteButtonText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -231,6 +342,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
   },
+  dangerSection: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 24,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f1d7d4',
+    backgroundColor: '#fff6f5',
+  },
+  dangerTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#842f2a',
+    marginBottom: 6,
+  },
+  dangerText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#7a4f4a',
+    marginBottom: 12,
+  },
   fieldContainer: {
     marginBottom: 24,
   },
@@ -276,6 +409,90 @@ const styles = StyleSheet.create({
     color: '#737373',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  deleteProfileButton: {
+    borderWidth: 1.5,
+    borderColor: '#eb8c85',
+    backgroundColor: '#eb8c8514',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  deleteProfileButtonDisabled: {
+    opacity: 0.7,
+  },
+  deleteProfileButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B33F37',
+  },
+  deleteErrorText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#B33F37',
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000050',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    backgroundColor: '#FFFDED',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#eadfc0',
+    padding: 18,
+    width: '80%',
+    alignSelf: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#262626',
+    marginBottom: 10,
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#4d4d4d',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#dbdbdb',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  modalCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3a3a3a',
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B33F37',
+  },
+  modalDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });
 
