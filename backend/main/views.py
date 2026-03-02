@@ -1,7 +1,6 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
-import PublicUserSerializer
 import os
 import ipaddress
 import socket
@@ -32,12 +31,15 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import (
+    UsuarioRegistroSerializer,
+    UsuarioSerializer,
+    UserSerializer,
+    PublicUserSerializer,
+)
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
-
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
 from .permissions import IsCreator
