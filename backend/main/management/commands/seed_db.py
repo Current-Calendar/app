@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 from datetime import date, time
 from django.db import connection
-from main.models import Usuario, Calendario, Evento, MockElement
+from main.models import Usuario, Calendario, Evento, MockElement, EtiquetaCalendario
 
 class Command(BaseCommand):
     help = 'Genera datos de prueba iniciales para la aplicación Current (PostgreSQL)'
@@ -12,6 +12,7 @@ class Command(BaseCommand):
         
         Evento.objects.all().delete()
         Calendario.objects.all().delete()
+        EtiquetaCalendario.objects.all().delete()
         MockElement.objects.all().delete()
         Usuario.objects.exclude(is_superuser=True).delete()
 
@@ -21,6 +22,7 @@ class Command(BaseCommand):
                 cursor.execute(f'ALTER SEQUENCE {Evento._meta.db_table}_id_seq RESTART WITH 1;')
                 cursor.execute(f'ALTER SEQUENCE {Calendario._meta.db_table}_id_seq RESTART WITH 1;')
                 cursor.execute(f'ALTER SEQUENCE {MockElement._meta.db_table}_id_seq RESTART WITH 1;')
+                cursor.execute(f'ALTER SEQUENCE {EtiquetaCalendario._meta.db_table}_id_seq RESTART WITH 1;')
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f'Aviso: No se pudieron resetear las secuencias SQL ({e})'))
 
@@ -78,6 +80,15 @@ class Command(BaseCommand):
         )
 
         user2.calendarios_seguidos.add(cal_gym, cal_ana_pub)
+
+        self.stdout.write('Creando etiquetas...')
+        etiqueta_tech = EtiquetaCalendario.objects.create(nombre="Tecnología")
+        etiqueta_fitness = EtiquetaCalendario.objects.create(nombre="Fitness")
+        etiqueta_social = EtiquetaCalendario.objects.create(nombre="Social")
+
+        cal_ana_pub.etiquetas.add(etiqueta_tech)
+        cal_carlos_amigos.etiquetas.add(etiqueta_social)
+        cal_gym.etiquetas.add(etiqueta_fitness)
 
         self.stdout.write('Creando eventos geolocalizados...')
         evento_tech = Evento.objects.create(

@@ -30,6 +30,12 @@ class Usuario(AbstractUser):
 
     def __str__(self):
         return self.username
+    
+class EtiquetaCalendario(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
+    
+    def __str__(self):
+        return self.nombre
 
 class Calendario(models.Model):
     ESTADOS_PRIVACIDAD = [
@@ -52,6 +58,7 @@ class Calendario(models.Model):
     estado = models.CharField(max_length=10, choices=ESTADOS_PRIVACIDAD, default='PRIVADO')
     creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='calendarios_creados')
     fecha_creacion = models.DateTimeField(default=timezone.now)
+    etiquetas = models.ManyToManyField(EtiquetaCalendario, blank=True, related_name='calendarios')
 
     class Meta:
         constraints = [
