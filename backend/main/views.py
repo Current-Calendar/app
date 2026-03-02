@@ -1025,6 +1025,8 @@ def radar_events(request):
             "distancia_km": round(evento.distancia.km, 2),
             "latitud": evento.ubicacion.y if evento.ubicacion else None,
             "longitud": evento.ubicacion.x if evento.ubicacion else None,
+            "foto": evento.foto.url if evento.foto else None,
+            "creador_username": evento.creador.username,
         }
         for evento in eventos
     ]
