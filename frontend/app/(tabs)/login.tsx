@@ -22,9 +22,12 @@ const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
 const API_BASE =
-  Platform.OS === "android"
+  process.env.EXPO_PUBLIC_API_BASE ??
+  (Platform.OS === "android"
     ? "http://10.0.2.2:8000"
-    : "http://localhost:8000";
+    : "http://localhost:8000");
+
+
 
 const Otter = require("../../assets/images/Mascota.png");
 const Cloud = require("../../assets/images/nube_login.png");

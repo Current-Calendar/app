@@ -22,9 +22,10 @@ const TEXT = "#10464D";
 // - Android emulator: http://10.0.2.2:8000
 // - iPhone físico: http://TU_IP_LOCAL:8000
 const API_BASE =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:8000"
-    : "http://localhost:8000";
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:8000/api/v1/"
+    : "http://localhost:8000/api/v1/");
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/auth/registro/`, {
+      const res = await fetch(`${API_BASE}auth/registro/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
