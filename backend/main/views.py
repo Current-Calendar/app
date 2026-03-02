@@ -717,6 +717,11 @@ def editar_calendario(request, calendario_id):
 class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        """Obtener datos del usuario autenticado"""
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=200)
+
     def put(self, request):
         serializer = UserSerializer(
             request.user,

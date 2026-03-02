@@ -23,11 +23,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars
 from rest_framework import routers
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 api_router = routers.DefaultRouter()
 api_router.register("users", views.UserViewSet, basename="users")
 
 urlpatterns = [
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
