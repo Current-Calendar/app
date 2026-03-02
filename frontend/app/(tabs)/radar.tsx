@@ -3,6 +3,7 @@ import {
     Text,
     StyleSheet,
     ActivityIndicator,
+    Platform,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import * as Location from "expo-location";
@@ -17,12 +18,21 @@ export default function RadarScreen() {
     useEffect(() => {
       (async () => {
         try {
+          if (Platform.OS === "web") {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+              setLocation({ latitude: lat, longitude: lon });
+              const response = await fetch(API_CONFIG.endpoints.nearbyEvents(lat, lon, 5));
+              const data = await response.json();
+              setEvents(data || []);
+            });
+        } else {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== "granted") {
             console.log("We need location permissions to show nearby events.");
             return;
           }
-
           const currentLocation = await Location.getCurrentPositionAsync({});
           const lat = currentLocation.coords.latitude;
           const lon = currentLocation.coords.longitude;
@@ -31,6 +41,7 @@ export default function RadarScreen() {
           const response = await fetch(API_CONFIG.endpoints.nearbyEvents(lat, lon, 5));
           const data = await response.json();
           setEvents(data || []);
+        }
         } catch (error) {
           console.error("Error getting location or events:", error);
         } finally {
