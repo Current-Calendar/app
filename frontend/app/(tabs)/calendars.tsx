@@ -22,6 +22,8 @@ import { captureRef } from "react-native-view-shot";
 
 import { API_CONFIG } from '@/constants/api';
 import { downloadCalendar } from '@/services/calendarService';
+import { useAuth } from '@/hooks/use-auth';
+import apiClient from '@/services/api-client';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -41,6 +43,7 @@ function formatSelectedDay(dateKey: string): string {
 }
 
 export default function CalendarScreen() {
+    const { isAuthenticated } = useAuth();
     const today = new Date();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -189,6 +192,11 @@ export default function CalendarScreen() {
         // Fallback for mock/local calendars that do not map to backend integer IDs.
         if (!Number.isInteger(calendarId) || calendarId <= 0) {
             removeCalendarFromState(calendar.id);
+            return;
+        }
+
+        if (!isAuthenticated) {
+            Alert.alert('Unauthorized', 'You must be logged in to delete a calendar.');
             return;
         }
 
