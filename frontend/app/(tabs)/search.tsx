@@ -24,6 +24,7 @@ interface User {
     followed: boolean;
 }
 
+// Mock users
 const mockUsers: User[] = [
     { id: "1", name: "User1", bio: "Lorem ipsum dolor sit amet", followed: false },
     { id: "2", name: "User2", bio: "Lorem ipsum dolor sit amet", followed: false },
@@ -36,10 +37,14 @@ const mockUsers: User[] = [
     { id: "9", name: "User9", bio: "Lorem ipsum dolor sit amet", followed: false },
 ];
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const [users, setUsers] = useState(mockUsers);
     const router = useRouter();
+    const [loadingId, setLoadingId] = useState<string | null>(null);
 
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
@@ -71,25 +76,46 @@ export default function SearchScreen() {
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users]);
 
-    const toggleFollow = (id: string) => {
-        setUsers((prev) =>
-            prev.map((user) =>
-                user.id === id ? { ...user, followed: !user.followed } : user
-            )
-        );
+    const followUser = async (id: string) => {
+        setLoadingId(id);
+
+        if (USE_MOCK) {
+            setUsers(prev =>
+                prev.map(u => u.id === id ? { ...u, followed: !u.followed } : u)
+            );
+            setLoadingId(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}users/${id}/follow/`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) throw new Error("Follow failed");
+
+            const data = await response.json();
+
+            setUsers(prev =>
+                prev.map(u =>
+                    u.id === id ? { ...u, followed: data.followed } : u
+                )
+            );
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingId(null);
+        }
     };
 
     const handleUserSelect = (id: string) => {
         router.push(`/profile/${id}`);
     };
 
-    const handleFollowPress = (id: string) => (event: GestureResponderEvent) => {
-        event.stopPropagation();
-    };
-
     return (
         <View style={styles.container}>
-
             {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
@@ -128,11 +154,11 @@ export default function SearchScreen() {
                                     ]}
                                     onPress={(event) => {
                                         event.stopPropagation();
-                                        toggleFollow(user.id);
+                                        followUser(user.id);
                                     }}
                                 >
                                     <Text style={styles.followText}>
-                                        {user.followed ? 'Following' : 'Follow'}
+                                        {loadingId === user.id ? "..." : user.followed ? "Following" : "Follow"}
                                     </Text>
                                 </Pressable>
                             </TouchableOpacity>
@@ -144,10 +170,7 @@ export default function SearchScreen() {
                         return (
                             <View style={styles.calendarCard}>
                                 {cal.portada && (
-                                    <Image
-                                        source={{ uri: cal.portada }}
-                                        style={styles.calendarCover}
-                                    />
+                                    <Image source={{ uri: cal.portada }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
                                     <Text style={styles.calendarName}>{cal.nombre}</Text>
@@ -164,8 +187,7 @@ export default function SearchScreen() {
                                 <Text style={styles.eventTitle}>{ev.titulo}</Text>
                                 <Text style={styles.eventMeta}>
                                     {ev.fecha} {ev.hora}
-                                    {ev.calendarId &&
-                                        ` • ${calendarMap[ev.calendarId] || ''}`}
+                                    {ev.calendarId && ` • ${calendarMap[ev.calendarId] || ''}`}
                                 </Text>
                             </View>
                         </View>
@@ -206,10 +228,6 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-    },
-
-    userCardPressed: {
-        opacity: 0.8,
     },
 
     userInfo: {
