@@ -177,6 +177,12 @@ export default function CalendarScreen() {
         setInfoCalendar(null);
     };
 
+    const getCsrfToken = (): string => {
+        if (typeof document === 'undefined') return '';
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
     const handleDeleteCalendar = async (calendar: Calendar) => {
         const calendarId = Number(calendar.id);
 
@@ -189,7 +195,10 @@ export default function CalendarScreen() {
         setDeletingCalendarId(calendar.id);
         try {
             const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
-                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                },
             });
 
             if (!response.ok) {
@@ -356,7 +365,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push('/modal')}
+                                onPress={() => router.push('/create')}
                             >
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
