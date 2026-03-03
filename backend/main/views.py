@@ -36,6 +36,7 @@ from main.serializers import (
     UsuarioSerializer,
     UserSerializer,
     PublicUserSerializer,
+    OwnProfileSerializer,
 )
 import requests
 from rest_framework.views import APIView
@@ -846,6 +847,10 @@ def editar_calendario(request, calendario_id):
 
 class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = OwnProfileSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
 
     def put(self, request):
         serializer = UserSerializer(

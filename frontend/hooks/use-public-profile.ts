@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+import { useAuth } from '../context/authContext';
+import { User } from '../types/user';
+
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
 
 const deriveDebuggerHost = () => {
@@ -46,13 +49,15 @@ export type CalendarItem = {
 };
 
 export const useUserProfile = (userId?: string) => {
+    const { user: currentUser } = useAuth();
     const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);
     const [followError, setFollowError] = useState<string | null>(null);
 
-    const token = "AQUI_VA_EL_TOKEN_DE_TU_SESION";
+    type AuthenticatedUser = User & { token?: string };
+    const authToken = (currentUser as AuthenticatedUser | null)?.token;
 
     // ----- MOCK follow toggle -----
     const mockFollowToggle = () => {
@@ -105,8 +110,14 @@ export const useUserProfile = (userId?: string) => {
             }
 
             try {
+                const headers: Record<string, string> = { Accept: 'application/json' };
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
                 const response = await fetch(`${API_BASE}users/${userId}/`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers,
+                    credentials: 'include',
                 });
 
                 if (response.ok) {
@@ -141,12 +152,18 @@ export const useUserProfile = (userId?: string) => {
         setIsFollowing(!previousState);
 
         try {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            };
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
             const response = await fetch(`${API_BASE}users/${userId}/follow/`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+                headers,
+                credentials: 'include',
             });
 
             if (!response.ok) {

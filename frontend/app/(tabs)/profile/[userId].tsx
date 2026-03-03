@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { User } from '../../../types/user';
@@ -14,6 +15,62 @@ import { useAuth } from '../../../context/authContext';
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile'; 
+import API_CONFIG from '../../../constants/api';
+
+const ACCENT_COLORS = ['#A0D842', '#FF8C42', '#42A5F5', '#6C5DD3', '#E96F92'];
+
+type OwnProfileCalendarResponse = {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  portada?: string | null;
+  estado: Calendar['estado'];
+  origen: Calendar['origen'];
+  creador: string;
+  fecha_creacion: string;
+};
+
+type OwnProfileResponse = {
+  id: number;
+  username: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
+  pronombres?: string | null;
+  biografia?: string | null;
+  link?: string | null;
+  foto?: string | null;
+  total_seguidores: number;
+  total_seguidos: number;
+  calendars: OwnProfileCalendarResponse[];
+  following_calendars: OwnProfileCalendarResponse[];
+};
+
+const mapUserFromApi = (payload: OwnProfileResponse): User => ({
+  _id: String(payload.id),
+  _username: payload.username,
+  _email: payload.email,
+  _firstName: payload.first_name ?? undefined,
+  _lastName: payload.last_name ?? undefined,
+  _bio: payload.biografia ?? undefined,
+  _pronouns: payload.pronombres ?? undefined,
+  _photo: payload.foto ?? undefined,
+});
+
+const mapCalendarsFromApi = (
+  items: OwnProfileCalendarResponse[],
+  offset = 0,
+): Calendar[] =>
+  items.map((item, index) => ({
+    id: String(item.id),
+    nombre: item.nombre,
+    descripcion: item.descripcion ?? '',
+    portada: item.portada ?? undefined,
+    estado: item.estado,
+    origen: item.origen,
+    creador: item.creador,
+    color: ACCENT_COLORS[(offset + index) % ACCENT_COLORS.length],
+  }));
 
 const ProfileScreen = () => {
   const router = useRouter();
@@ -26,33 +83,87 @@ const ProfileScreen = () => {
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    // ESTE ARCHIVO AHORA SOLO GESTIONA "MI PERFIL"
-    if (isMe) { //TODO: Aquí iría la lógica real para cargar mi perfil y mis calendarios desde la API. Hacer backend!!!
-      setShownUser(currentUser);
-      
-      setMyCalendars([
-        {
-          id: '1', nombre: 'Travel 2026', descripcion: 'Trips planned for 2026',
-          portada: 'https://via.placeholder.com/150', estado: 'PUBLICO', origen: 'CURRENT',
-          creador: currentUser?._id || 'abc123', color: '#A0D842',
-        },
-        {
-          id: '2', nombre: 'Food Diary', descripcion: 'Best restaurants in Seville',
-          portada: 'https://via.placeholder.com/150', estado: 'AMIGOS', origen: 'CURRENT',
-          creador: currentUser?._id || 'abc123', color: '#FF8C42',
-        },
-      ]);
-      setFollowingCalendars([
-        {
-          id: '3', nombre: 'Fitness Plan', descripcion: 'Workout routines',
-          portada: 'https://via.placeholder.com/150', estado: 'PUBLICO', origen: 'CURRENT',
-          creador: 'otherUser', color: '#42A5F5',
-        },
-      ]);
+    if (!isMe) {
+      setShownUser(null);
+      setMyCalendars([]);
+      setFollowingCalendars([]);
+      setProfileError(null);
+      return;
     }
-  }, [userId, isMe, currentUser]);
+
+    if (!currentUser) {
+      setShownUser(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    let isMounted = true;
+
+    const fetchOwnProfile = async () => {
+      setIsLoadingProfile(true);
+      setProfileError(null);
+
+      try {
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        type AuthenticatedUser = User & { token?: string };
+        const authToken = (currentUser as AuthenticatedUser)?.token;
+        if (authToken) {
+          headers.Authorization = `Bearer ${authToken}`;
+        }
+
+        const response = await fetch(API_CONFIG.endpoints.ownProfile, {
+          headers,
+          credentials: 'include',
+          signal: controller.signal,
+        });
+
+        const data: OwnProfileResponse = await response.json();
+
+        if (!response.ok) {
+          const message = (data as { detail?: string })?.detail ?? 'No se pudo cargar tu perfil.';
+          throw new Error(message);
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setShownUser(mapUserFromApi(data));
+        const ownedCalendars = mapCalendarsFromApi(data.calendars);
+        setMyCalendars(ownedCalendars);
+        setFollowingCalendars(
+          mapCalendarsFromApi(data.following_calendars, ownedCalendars.length),
+        );
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        console.error('Error cargando perfil propio:', error);
+        if (isMounted) {
+          setProfileError('No hemos podido cargar tu perfil. Intenta de nuevo.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingProfile(false);
+        }
+      }
+    };
+
+    fetchOwnProfile();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [isMe, currentUser?._id, reloadKey]);
+
+  const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
 
   const handleEditProfile = () => {
     if (!currentUser) return;
@@ -62,6 +173,25 @@ const ProfileScreen = () => {
   // Si no es mi perfil, delegamos a PublicProfile pasándole el userId
   if (!isMe && userId) {
     return <PublicProfile targetUserId={userId} />;
+  }
+
+  if (isMe && isLoadingProfile) {
+    return (
+      <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
+        <ActivityIndicator size="large" color="#164E52" />
+      </SafeAreaView>
+    );
+  }
+
+  if (isMe && profileError) {
+    return (
+      <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
+        <Text style={profileStyles.errorText}>{profileError}</Text>
+        <TouchableOpacity style={profileStyles.actionButton} onPress={handleRetryProfile}>
+          <Text style={profileStyles.actionButtonText}>Reintentar</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
   }
 
   // Si SOY YO, seguimos hacia abajo y renderizamos "Mi Perfil"
@@ -82,13 +212,15 @@ const ProfileScreen = () => {
 
             <View style={profileStyles.statsContainer}>
               <Text style={profileStyles.name}>{shownUser._username}</Text>
-              <Text style={profileStyles.fullname}>{shownUser._firstName} {shownUser._lastName}</Text>
-              <Text style={profileStyles.pronouns}>{shownUser._pronouns}</Text>
+              <Text style={profileStyles.fullname}>
+                {[shownUser._firstName, shownUser._lastName].filter(Boolean).join(' ') || ' '}
+              </Text>
+              <Text style={profileStyles.pronouns}>{shownUser._pronouns || ''}</Text>
             </View>
           </View>
 
           <View style={profileStyles.bioSection}>
-            <Text style={profileStyles.bio}>{shownUser._bio}</Text>
+            <Text style={profileStyles.bio}>{shownUser._bio || 'Añade una biografía para que otros te conozcan.'}</Text>
           </View>
 
           <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>

@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from .models import Calendario
+
 Usuario = get_user_model()
 
 
@@ -160,3 +162,53 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=Usuario
         fields=['foto','email','username','password','pronombres','link','biografia']
+
+
+class CalendarioSummarySerializer(serializers.ModelSerializer):
+    creador = serializers.CharField(source="creador.username")
+
+    class Meta:
+        model = Calendario
+        fields = (
+            "id",
+            "nombre",
+            "descripcion",
+            "portada",
+            "estado",
+            "origen",
+            "creador",
+            "fecha_creacion",
+        )
+        read_only_fields = ("id", "fecha_creacion")
+
+
+class OwnProfileSerializer(serializers.ModelSerializer):
+    calendars = CalendarioSummarySerializer(source="calendarios_creados", many=True)
+    following_calendars = CalendarioSummarySerializer(source="calendarios_seguidos", many=True)
+
+    class Meta:
+        model = Usuario
+        fields = (
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "pronombres",
+            "biografia",
+            "link",
+            "foto",
+            "total_seguidores",
+            "total_seguidos",
+            "calendars",
+            "following_calendars",
+        )
+        read_only_fields = (
+            "id",
+            "username",
+            "email",
+            "total_seguidores",
+            "total_seguidos",
+            "calendars",
+            "following_calendars",
+        )

@@ -15,9 +15,12 @@ import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile'
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import { useAuth } from '../../../context/authContext';
+import { User } from '../../../types/user';
 
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
     const { user: currentUser } = useAuth();
+    type AuthenticatedUser = User & { token?: string };
+    const authToken = (currentUser as AuthenticatedUser | null)?.token;
     
     //Hook personalizado para manejar toda la lógica de perfil público (datos del usuario, seguimiento, calendarios públicos, etc.)
     const {
@@ -47,12 +50,16 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
 
             try {
                 setFollowingLoading(true);
-                //token!!
-                const token = 'AQUI_VA_EL_TOKEN_DE_TU_SESION';
+                const headers: Record<string, string> = {};
+                if (authToken) {
+                    headers.Authorization = `Bearer ${authToken}`;
+                }
+
                 const response = await fetch(
                     `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1/'}users/${userBeingViewed.id}/followed_calendars/`,
                     {
-                        headers: { Authorization: `Bearer ${token}` },
+                        headers,
+                        credentials: 'include',
                     }
                 );
                 if (response.ok) {
