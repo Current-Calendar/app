@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import { API_CONFIG } from "@/constants/api";
-import { Calendar } from "@/types/calendar";
 
 /**
  * 🔹 Tipo compartido con backend
@@ -50,7 +49,7 @@ export default function EventsScreen() {
           calendarMap[c.id] = c;
         });
 
-        const mappedEvents: Event[] = evData.map((e: any) => {
+        const mappedEvents: any[] = evData.map((e: any) => {
           const cal = calendarMap[e.calendarios[0]];
           return {
             id: String(e.id),
@@ -58,7 +57,7 @@ export default function EventsScreen() {
             description: e.descripcion || "",
             location: e.nombre_lugar || "",
             date: e.fecha,
-            image: "https://picsum.photos/600/400?random=" + e.id, // Placeholder for now
+            image: e.foto, // Placeholder for now
             username: cal?.creador_username || "unknown",
             userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
             calendarId: String(e.calendarios[0] || ""),
