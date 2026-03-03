@@ -17,7 +17,8 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useRoute } from "@react-navigation/native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import API_CONFIG from "@/constants/api";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -27,56 +28,31 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: string; name: string; image?: any };
-
-const mockCalendars: CalendarItem[] = [
-  { id: "1", name: "Concerts", image: require("../../assets/images/icon.png") },
-  { id: "2", name: "Gym", image: require("../../assets/images/icon.png") },
-  { id: "3", name: "Study", image: require("../../assets/images/icon.png") },
-];
+type CalendarItem = { id: number | string; nombre: string; imagen_portada?: string };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-type EventData = {
-  id: string;
-  title: string;
-  description: string;
-  place: string;
-  time: Date;
-  calendar: CalendarItem;
-  coverUri?: string;
-};
-
-const mockEventData: EventData = {
-  id: "1",
-  title: "Concert Night",
-  description: "Amazing concert with live performance",
-  place: "Central Stadium",
-  time: (() => {
-    const d = new Date();
-    d.setHours(20, 30, 0, 0);
-    return d;
-  })(),
-  calendar: mockCalendars[0],
-  coverUri: undefined,
-};
-
 export default function EditEventsScreen() {
-  const route = useRoute();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ id: string }>();
+  const eventId = params.id;
+  
   const { width } = useWindowDimensions();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem>(mockCalendars[0]);
+  const [calendars, setCalendars] = useState<CalendarItem[]>([]);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<number | string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
   const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [eventDate, setEventDate] = useState<Date>(new Date());
   const [time, setTime] = useState<Date>(new Date());
 
   // Native picker (iOS/Android)
@@ -87,29 +63,118 @@ export default function EditEventsScreen() {
   const [webHour, setWebHour] = useState(time.getHours());
   const [webMinute, setWebMinute] = useState(time.getMinutes());
 
-  // Load event data on mount
+  // Load calendars and event data on mount
   useEffect(() => {
-    loadEventData();
-  }, []);
+    const initData = async () => {
+      console.log("📱 Edit Events Screen Loaded");
+      console.log("📥 Event ID from params:", eventId);
+      console.log("🔗 API Base URL:", API_CONFIG.BaseURL);
+      
+      if (!eventId) {
+        console.error("❌ No event ID provided!");
+        Alert.alert("Error", "No event ID found");
+        setLoading(false);
+        return;
+      }
+      
+      // Load calendars first
+      const loadedCalendars = await loadCalendars();
+      
+      // Then load event data
+      await loadEventData(loadedCalendars);
+    };
+    initData();
+  }, [eventId]);
 
-  const loadEventData = async () => {
+  const loadCalendars = async () => {
+    try {
+      console.log("📋 Loading calendars...");
+      const url = API_CONFIG.endpoints.getCalendars;
+      console.log("📡 Calling:", url);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to load calendars: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const loadedCalendars = data.calendarios || [];
+      console.log("✅ Calendars loaded:", loadedCalendars.length);
+      setCalendars(loadedCalendars);
+      return loadedCalendars;
+    } catch (error) {
+      console.error("❌ Error loading calendars:", error);
+      Alert.alert("Error", "Failed to load calendars");
+      setLoading(false);
+      return [];
+    }
+  };
+
+  const loadEventData = async (availableCalendars: CalendarItem[]) => {
+    if (!eventId) {
+      Alert.alert("Error", "Event ID is missing");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simular carga de datos (en producción sería una llamada a API)
-      setTimeout(() => {
-        setTitle(mockEventData.title);
-        setDescription(mockEventData.description);
-        setPlace(mockEventData.place);
-        setTime(mockEventData.time);
-        setSelectedCalendar(mockEventData.calendar);
-        if (mockEventData.coverUri) {
-          setCoverUri(mockEventData.coverUri);
+      const url = API_CONFIG.endpoints.getEvent(eventId);
+      console.log("🔍 Fetching event from:", url);
+      
+      const response = await fetch(url);
+      console.log("📊 Response status:", response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Error response:", errorText);
+        throw new Error(`Failed to load event: ${response.status}`);
+      }
+      
+      const event = await response.json();
+      console.log("✅ Event loaded:", JSON.stringify(event, null, 2));
+      
+      // Set basic fields
+      setTitle(event.titulo || "");
+      setDescription(event.descripcion || "");
+      setPlace(event.nombre_lugar || "");
+      
+      console.log("📝 Title:", event.titulo);
+      console.log("📝 Description:", event.descripcion);
+      console.log("📝 Place:", event.nombre_lugar);
+      
+      // Parse date
+      if (event.fecha) {
+        const [year, month, day] = event.fecha.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
+        setEventDate(dateObj);
+        console.log("📅 Date:", dateObj);
+        
+        // Parse time
+        if (event.hora) {
+          const [hours, minutes] = event.hora.split(':').map(Number);
+          const timeObj = new Date(dateObj);
+          timeObj.setHours(hours, minutes, 0, 0);
+          setTime(timeObj);
+          setWebHour(hours);
+          setWebMinute(minutes);
+          console.log("⏰ Time:", timeObj);
         }
-        setLoading(false);
-      }, 500);
+      }
+      
+      // Set calendar
+      if (event.calendarios && event.calendarios.length > 0) {
+        const calendarId = event.calendarios[0];
+        console.log("🗓️ Calendar ID:", calendarId);
+        setSelectedCalendarId(calendarId);
+      }
+      
     } catch (error) {
-      Alert.alert("Error", "Failed to load event data");
+      console.error("❌ Error loading event:", error);
+      Alert.alert("Error", "Failed to load event data: " + (error as Error).message);
+    } finally {
       setLoading(false);
+      console.log("✔️ Loading complete");
     }
   };
 
@@ -119,8 +184,6 @@ export default function EditEventsScreen() {
 
   const openTimePicker = () => {
     if (Platform.OS === "web") {
-      setWebHour(time.getHours());
-      setWebMinute(time.getMinutes());
       setShowWebTimePicker(true);
     } else {
       setShowNativeTimePicker(true);
@@ -165,16 +228,53 @@ export default function EditEventsScreen() {
       return;
     }
 
+    if (!selectedCalendarId) {
+      Alert.alert("Validation", "Please select a calendar");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Simular guardado de datos (en producción sería una llamada a API)
-      setTimeout(() => {
-        Alert.alert("Success", "Event updated successfully");
-        setSaving(false);
-        // Navegar de vuelta
-      }, 800);
+      const dateStr = `${eventDate.getFullYear()}-${pad2(eventDate.getMonth() + 1)}-${pad2(eventDate.getDate())}`;
+      const timeStr = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
+      
+      const updateData = {
+        titulo: title,
+        descripcion: description,
+        nombre_lugar: place,
+        fecha: dateStr,
+        hora: timeStr,
+        calendarios: [selectedCalendarId],
+      };
+
+      console.log("💾 Saving event:", JSON.stringify(updateData, null, 2));
+
+      const url = API_CONFIG.endpoints.editEvent(eventId!);
+      console.log("📡 Calling:", url);
+
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      });
+
+      console.log("📊 Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Error response:", errorText);
+        throw new Error(`Failed to update event: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Event updated:", result);
+
+      Alert.alert("Success", "Event updated successfully");
+      router.back();
     } catch (error) {
-      Alert.alert("Error", "Failed to update event");
+      console.error("❌ Error saving event:", error);
+      Alert.alert("Error", "Failed to save event: " + (error as Error).message);
+    } finally {
       setSaving(false);
     }
   };
@@ -183,11 +283,8 @@ export default function EditEventsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.topBar}>
-          <Pressable style={styles.iconBtn} hitSlop={10}>
+          <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={26} color={WHITE} />
-          </Pressable>
-          <Pressable style={styles.iconBtn} hitSlop={10}>
-            <Ionicons name="trash" size={22} color={RED} />
           </Pressable>
         </View>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -197,19 +294,18 @@ export default function EditEventsScreen() {
     );
   }
 
+  const selectedCalendar = calendars.find(cal => cal.id === selectedCalendarId);
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
+        <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={26} color={WHITE} />
-        </Pressable>
-        <Pressable style={styles.iconBtn} hitSlop={10}>
-          <Ionicons name="trash" size={22} color={RED} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.header}>Edit Event</Text>
+        <Text style={styles.header}>{title || "Edit Event"}</Text>
 
         <View style={[styles.body, { width: formWidth }]}>
           {/* Header row: Calendar + Photos */}
@@ -224,13 +320,13 @@ export default function EditEventsScreen() {
 
               <View style={styles.calendarPreview}>
                 <View style={styles.calendarImgWrap}>
-                  {selectedCalendar?.image ? (
-                    <Image source={selectedCalendar.image} style={styles.calendarImg} />
+                  {selectedCalendar?.imagen_portada ? (
+                    <Image source={{ uri: selectedCalendar.imagen_portada }} style={styles.calendarImg} />
                   ) : (
-                    <View style={styles.calendarImgPlaceholder} />
+                    <View style={[styles.calendarImgPlaceholder, { backgroundColor: TEAL }]} />
                   )}
                 </View>
-                <Text style={styles.calendarName}>{selectedCalendar?.name ?? ""}</Text>
+                <Text style={styles.calendarName}>{selectedCalendar?.nombre ?? "Select calendar"}</Text>
               </View>
             </View>
 
@@ -303,18 +399,18 @@ export default function EditEventsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Select calendar</Text>
             <FlatList
-              data={mockCalendars}
-              keyExtractor={(i) => i.id}
+              data={calendars}
+              keyExtractor={(i) => String(i.id)}
               ItemSeparatorComponent={() => <View style={styles.modalSep} />}
               renderItem={({ item }) => (
                 <Pressable
                   style={styles.modalItem}
                   onPress={() => {
-                    setSelectedCalendar(item);
+                    setSelectedCalendarId(item.id);
                     setCalendarModalOpen(false);
                   }}
                 >
-                  <Text style={styles.modalItemText}>{item.name}</Text>
+                  <Text style={styles.modalItemText}>{item.nombre}</Text>
                 </Pressable>
               )}
             />
