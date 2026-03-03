@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View, 
     Text, 
@@ -10,15 +10,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-// Tu hook y componentes
+// Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
-
+import { useAuth } from '../../../context/authContext';
 
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
+    const { user: currentUser } = useAuth();
     
-    // Le pasamos el ID que recibimos directamente a tu hook
+    // 1. TU HOOK ORIGINAL
     const {
         userBeingViewed,
         calendars,
@@ -29,6 +30,49 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         handleFollowToggle,
     } = useUserProfile(targetUserId);
 
+    // 2. LO NUEVO DEL TERCER COMPI: Estado para los calendarios que sigo de este usuario
+    const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
+    const [followingLoading, setFollowingLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchFollowingCalendars = async () => {
+            if (!userBeingViewed || !currentUser) return;
+
+            if (process.env.NODE_ENV === 'development') {
+                // Mock para desarrollo
+                const mockFollowed = calendars.filter((cal, idx) => idx % 2 === 0);
+                setFollowingCalendars(mockFollowed);
+                return;
+            }
+
+            try {
+                setFollowingLoading(true);
+                // ⚠️ Recuerda que aquí va la lógica real de tu token
+                const token = 'AQUI_VA_EL_TOKEN_DE_TU_SESION';
+                const response = await fetch(
+                    `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1/'}users/${userBeingViewed.id}/followed_calendars/`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+                if (response.ok) {
+                    const data: CalendarItem[] = await response.json();
+                    setFollowingCalendars(data);
+                } else {
+                    setFollowingCalendars([]);
+                }
+            } catch (error) {
+                console.error('Error fetching followed calendars:', error);
+                setFollowingCalendars([]);
+            } finally {
+                setFollowingLoading(false);
+            }
+        };
+
+        fetchFollowingCalendars();
+    }, [userBeingViewed, currentUser, calendars]);
+
+    // --- MANEJO DE ERRORES Y CARGA ---
     if (!targetUserId) {
         return (
             <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}> 
@@ -55,7 +99,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         );
     }
 
-    // UI CLONADA DE TU AMIGO
+    // --- RENDERIZADO PRINCIPAL ---
     return (
         <SafeAreaView style={profileStyles.container}>
             <ScrollView style={profileStyles.scrollView}>
@@ -73,7 +117,6 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
                             <Text style={profileStyles.pronouns}>{userBeingViewed.pronombres || 'they/them'}</Text>
                             
-                            {/* Stats de seguidores */}
                             <View style={profileStyles.statsRow}>
                                 <View style={profileStyles.statItem}>
                                     <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidores || 0}</Text>
@@ -91,23 +134,39 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                         <Text style={profileStyles.bio}>{userBeingViewed.biografia}</Text>
                     </View>
 
-                                    <TouchableOpacity 
-                                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]} 
-                                        onPress={handleFollowToggle}
-                                    >
-                                        <Text style={[profileStyles.actionButtonText, isFollowing && profileStyles.actionButtonTextAlt]}>
-                                            {isFollowing ? 'Following' : 'Follow'}
-                                        </Text>
-                                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]} 
+                        onPress={handleFollowToggle}
+                    >
+                        <Text style={[profileStyles.actionButtonText, isFollowing && profileStyles.actionButtonTextAlt]}>
+                            {isFollowing ? 'Following' : 'Follow'}
+                        </Text>
+                    </TouchableOpacity>
 
-                                    {followError ? (
-                                        <Text style={profileStyles.errorText}>{followError}</Text>
-                                    ) : null}
+                    {followError ? (
+                        <Text style={profileStyles.errorText}>{followError}</Text>
+                    ) : null}
                 </View>
 
-                {/* Grid de calendarios */}
+                {/* LO NUEVO DEL 3ER COMPI: Calendarios que sigo de este usuario */}
+                {followingLoading ? (
+                    <ActivityIndicator size="small" color="#262626" />
+                ) : followingCalendars.length > 0 && (
+                    <View style={profileStyles.postsGrid}>
+                        <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>
+                        {followingCalendars.map((cal) => (
+                            <CalendarCard
+                                key={cal.id}
+                                calendario={cal}
+                                // onPress={() => console.log('Abrir calendario', cal.id)}
+                            />
+                        ))}
+                    </View>
+                )}
+
+                {/* TU GRID ORIGINAL: Calendarios públicos */}
                 <View style={profileStyles.postsGrid}>
-                    <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Calendars`}</Text>
+                    <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Public Calendars`}</Text>
                     
                     {calendars.length > 0 ? (
                         calendars.map((cal: CalendarItem) => (
