@@ -177,6 +177,12 @@ export default function CalendarScreen() {
         setInfoCalendar(null);
     };
 
+    const getCsrfToken = (): string => {
+        if (typeof document === 'undefined') return '';
+        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    };
+
     const handleDeleteCalendar = async (calendar: Calendar) => {
         const calendarId = Number(calendar.id);
 
@@ -191,6 +197,9 @@ export default function CalendarScreen() {
             const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
                 method: 'DELETE',
                 credentials: 'include',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                },
             });
 
             if (!response.ok) {

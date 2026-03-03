@@ -53,12 +53,6 @@ export default function CreateScreen() {
     },
   ];
 
-  const originOptions: { label: string; value: CalendarOrigin }[] = [
-    { label: "Current", value: "CURRENT" },
-    { label: "Google", value: "GOOGLE" },
-    { label: "Apple", value: "APPLE" },
-  ];
-
   const handlePublish = async () => {
     if (!calendarData.nombre.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -86,7 +80,7 @@ export default function CreateScreen() {
           nombre: calendarData.nombre,
           descripcion: calendarData.descripcion,
           estado: selectedPrivacy,
-          origen: selectedOrigin,
+          origen: "CURRENT",
         }),
       });
 
@@ -152,35 +146,6 @@ export default function CreateScreen() {
               multiline
               numberOfLines={3}
             />
-          </View>
-
-          {/* DIVIDER */}
-          <View style={styles.divider} />
-
-          {/* CALENDAR SOURCE */}
-          <View style={styles.sourceSection}>
-            <Text style={styles.sectionTitle}>Calendar Source:</Text>
-            <View style={styles.originButtons}>
-              {originOptions.map((option) => (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.originBtn,
-                    selectedOrigin === option.value && styles.originBtnActive,
-                  ]}
-                  onPress={() => setSelectedOrigin(option.value)}
-                >
-                  <Text
-                    style={[
-                      styles.originBtnText,
-                      selectedOrigin === option.value && styles.originBtnTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
           </View>
 
           {/* DIVIDER */}
