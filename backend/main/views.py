@@ -1,6 +1,7 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
+
 import os
 import ipaddress
 import socket
@@ -22,29 +23,24 @@ from googleapiclient.discovery import build
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status, viewsets, mixins
+from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
-from django.contrib.gis.geos import Point
 
-from main.serializers import (
-    UsuarioRegistroSerializer,
-    UsuarioSerializer,
-    UserSerializer,
-    PublicUserSerializer,
-)
+
+
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
+
 from main.models import MockElement, Calendario, Evento, Usuario
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.measure import D
-from .permissions import IsCreator
+
+from rest_framework.decorators import api_view, permission_classes
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -53,8 +49,6 @@ REQUEST_TIMEOUT_SECONDS = 5
 #if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-
-
 
 
 def _is_safe_calendar_url(raw_url: str):
@@ -110,22 +104,11 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
-    def retrieve(self, request, pk) -> Response:
-        user = self.get_object()
-        user_data = PublicUserSerializer(user, context={'request': request}).data
-        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
-                "id", "nombre", "descripcion", "portada", "fecha_creacion"
-            ))
-        user_data["public_calendars"] = public_calendars
-        return Response(user_data)
-
-class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    queryset = Evento.objects.all()
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated & IsCreator]
 
 
-@api_view(["GET"])
+
+
+@api_view(['GET'])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
@@ -447,7 +430,7 @@ def buscar_usuarios(request):
             "email": user.email,
             "pronombres": user.pronombres,
             "biografia": user.biografia,
-            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
+            "foto": user.foto.url if user.foto else None,
             "total_seguidores": user.total_seguidores,
             "total_seguidos": user.total_seguidos,
             "total_calendarios_seguidos": user.total_calendarios_seguidos,
@@ -489,31 +472,18 @@ def registro_usuario(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def crear_calendario(request):
     data = request.data
 
-    creador_id = data.get('creador_id')
     nombre = data.get('nombre')
-
-    if not creador_id:
-        return Response(
-            {"errors": ["El campo 'creador_id' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     if not nombre:
         return Response(
             {"errors": ["El campo 'nombre' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
+            status = status.HTTP_400_BAD_REQUEST
         )
-
-    try:
-        creador = Usuario.objects.get(pk=creador_id)
-    except Usuario.DoesNotExist:
-        return Response(
-            {"errors": ["El usuario creador no existe."]},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+    creador = request.user
 
     calendario = Calendario(
         creador=creador,
@@ -524,6 +494,7 @@ def crear_calendario(request):
         id_externo=data.get('id_externo'),
     )
 
+  
     CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
 
     try:
@@ -609,122 +580,10 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
-            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
         }
         for cal in queryset
     ]
 
-    return Response(results, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-def list_events_from_calendar(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        calendarId (int) -- filter by calendar ID
-    """
-    queryset = Evento.objects.all()
-    calendar_id = request.GET.get('calendarId')
-
-    if calendar_id:
-        queryset = queryset.filter(calendarios__id=calendar_id)
-
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-        }
-        for event in queryset
-    ]
-    return Response(results, status=status.HTTP_200_OK)
-
-
-@api_view(['GET'])
-def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        q (str)         -- case-insensitive substring match on title or description
-        calendarId (int)-- optional filter by calendar ID
-    """
-    queryset = Evento.objects.all()
-
-    q = request.GET.get('q', '').strip()
-    if q:
-        queryset = queryset.filter(
-            Q(titulo__icontains=q) | Q(descripcion__icontains=q)
-        )
-
-    calendar_id = request.GET.get('calendarId')
-    if calendar_id:
-        queryset = queryset.filter(calendarios__id=calendar_id)
-
-    queryset = queryset.order_by('-fecha_creacion')
-
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
-        }
-        for event in queryset
-    ]
-
-    return Response(results, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        calendarId (int) -- filter by calendar ID
-    """
-    queryset = Evento.objects.all()
-    calendar_id = request.GET.get('calendarId')
-
-    if calendar_id:
-        queryset = queryset.filter(calendarios__id=calendar_id)
-
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-        }
-        for event in queryset
-    ]
     return Response(results, status=status.HTTP_200_OK)
 
 
@@ -749,6 +608,16 @@ def asignar_evento_a_calendario(request):
     except Calendario.DoesNotExist:
         return Response({"error": "Calendario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
+    if calendario.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para modificar este calendario."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
+    if evento.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para usar este evento."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
     if evento.calendarios.filter(pk=calendario.pk).exists():
         return Response(
             {"error": "El evento ya está asignado a este calendario"},
@@ -763,6 +632,7 @@ def asignar_evento_a_calendario(request):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def desasignar_evento_de_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -782,6 +652,17 @@ def desasignar_evento_de_calendario(request):
         calendario = Calendario.objects.get(pk=calendario_id)
     except Calendario.DoesNotExist:
         return Response({"error": "Calendario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if calendario.creador != request.user:
+        return Response(
+            {"error": "No tienes permiso para modificar este calendario"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    if evento.creador != request.user:
+        return Response(
+            {"error": "No tienes permiso sobre este evento"},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
     if not evento.calendarios.filter(pk=calendario.pk).exists():
         return Response(
@@ -847,6 +728,11 @@ def editar_calendario(request, calendario_id):
 class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        """Obtener datos del usuario autenticado"""
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=200)
+
     def put(self, request):
         serializer = UserSerializer(
             request.user,
@@ -864,9 +750,17 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
+
+    if event.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para editar este evento."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
+
     data = request.data
 
     # Validate required fields are not empty if provided
@@ -969,7 +863,7 @@ def crear_evento(request):
     fecha = data.get("fecha")
     hora = data.get("hora")
     calendarios_ids = data.get("calendarios")
-    creador_id = data.get("creador_id")
+    creador = request.user
     
 
     if not titulo:
@@ -995,21 +889,6 @@ def crear_evento(request):
             {"errors": ["Debe indicar al menos un calendario válido."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    if not creador_id:
-        return Response(
-            {"errors": ["El campo 'creador_id' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    creador = Usuario.objects.filter(id=creador_id).first()
-    if not creador:
-        return Response(
-            {"errors": ["Usuario no encontrado."]},
-            status=status.HTTP_404_NOT_FOUND,
-    )
-
-    # TODO: Validar que el calendario pertenece al usuario si es privado, que es de algún amigo si es de amigos, o que es público
 
     calendarios = Calendario.objects.filter(id__in=calendarios_ids)
 
@@ -1018,6 +897,11 @@ def crear_evento(request):
             {"errors": ["Algún calendario no existe."]},
             status=status.HTTP_404_NOT_FOUND,
         )
+    for calendario in calendarios:
+        if calendario.creador != creador:
+            return Response({"errors": [f"No tienes permiso para añadir eventos al calendario {calendario.id}."]},
+            status=status.HTTP_403_FORBIDDEN
+            )
 
     ubicacion = None
     lat = data.get("latitud")
@@ -1067,6 +951,7 @@ def crear_evento(request):
         {
             "id": evento.id,
             "titulo": evento.titulo,
+            "creador": evento.creador.id,
             "descripcion": evento.descripcion,
             "nombre_lugar": evento.nombre_lugar,
             "fecha": evento.fecha,
@@ -1079,8 +964,15 @@ def crear_evento(request):
         status=status.HTTP_201_CREATED,
     )
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def publish_calendar(request, calendario_id):
     calendar = get_object_or_404(Calendario, id=calendario_id)
+
+    if calendar.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para publicar este calendario."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
 
     if calendar.estado == 'PUBLICO':
         return Response(
@@ -1103,58 +995,3 @@ def publish_calendar(request, calendario_id):
         },
         status=status.HTTP_200_OK,
     )
-
-@api_view(['GET'])
-def radar_events(request):
-    #/api/radar?lat=..&lon=..&radio=5
-    lat = request.GET.get("lat")
-    lon = request.GET.get("lon")
-    radio = request.GET.get("radio", 5)
-
-    if not lat or not lon:
-        return Response(
-            {"error": "Debes enviar lat y lon"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        lat = float(lat)
-        lon = float(lon)
-        radio = float(radio)
-    except ValueError:
-        return Response(
-            {"error": "lat, lon y radio deben ser numéricos"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    user_location = Point(lon, lat, srid=4326)
-
-    eventos = (
-        Evento.objects
-        .filter(
-            ubicacion__isnull=False,
-            fecha__gte=timezone.now().date()
-        )
-        .annotate(distancia=Distance("ubicacion", user_location))
-        .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
-        .order_by("distancia")
-    )
-
-    resultados = [
-        {
-            "id": evento.id,
-            "titulo": evento.titulo,
-            "descripcion": evento.descripcion,
-            "nombre_lugar": evento.nombre_lugar,
-            "fecha": evento.fecha,
-            "hora": evento.hora,
-            "distancia_km": round(evento.distancia.km, 2),
-            "latitud": evento.ubicacion.y if evento.ubicacion else None,
-            "longitud": evento.ubicacion.x if evento.ubicacion else None,
-            "foto": evento.foto.url if evento.foto else None,
-            "creador_username": evento.creador.username,
-        }
-        for evento in eventos
-    ]
-
-    return Response(resultados, status=status.HTTP_200_OK)
