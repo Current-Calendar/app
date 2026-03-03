@@ -19,7 +19,7 @@ export default function BottomBar({ NavButton }: Props) {
     <View style={styles.bottomBar}>
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
-      <NavButton icon="add-circle" href={`/events/create_events?date=${getTodayFormatted()}`} />
+      <NavButton icon="add-circle" href={`/create_events?date=${getTodayFormatted()}`} />
       <NavButton icon="calendar-clear" href="/calendar-view" />
       <NavButton icon="calendar" href="/switch-calendar" />
       <NavButton icon="chatbubble-ellipses" />
