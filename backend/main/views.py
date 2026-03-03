@@ -744,9 +744,30 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
-
-
+    
 @api_view(['DELETE'])
+def delete_event(request, evento_id):
+    # TODO: Validar que el usuario tenga permisos para borrar el evento (ej. sea el creador del evento o del calendario)
+
+    if not evento_id :
+        return Response(
+            {"error": "Se requieren evento_id"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        evento = Evento.objects.get(pk=evento_id)
+    except Evento.DoesNotExist:
+        return Response({"error": "Evento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    evento.delete()
+    return Response(
+        {"mensaje": f"Evento '{evento.titulo}' borrado'"},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def eliminar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)

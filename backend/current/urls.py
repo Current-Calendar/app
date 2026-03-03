@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/v1/eventos/list/<int:calendario_id>', views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
+    path('api/v1/eventos/<int:evento_id>/delete/', views.delete_event, name='delete_event'),
     path('api/v1/google-auth', views.google_authorization),
     path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
     path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),
