@@ -6,6 +6,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.gis.geos import Point
 from main.models import MockElement
 from rest_framework.views import APIView
@@ -477,6 +478,8 @@ def registro_usuario(request):
     
     if serializer.is_valid():
         usuario = serializer.save()
+        usuario.backend = 'django.contrib.auth.backends.ModelBackend'
+        login(request, usuario)
         
         # Devolver datos del usuario creado
         usuario_serializer = UsuarioSerializer(usuario)
