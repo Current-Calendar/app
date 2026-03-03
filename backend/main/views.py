@@ -447,7 +447,7 @@ def buscar_usuarios(request):
             "email": user.email,
             "pronombres": user.pronombres,
             "biografia": user.biografia,
-            "foto": user.foto.url if user.foto else None,
+            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
             "total_seguidores": user.total_seguidores,
             "total_seguidos": user.total_seguidos,
             "total_calendarios_seguidos": user.total_calendarios_seguidos,
@@ -609,10 +609,122 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
+            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
         }
         for cal in queryset
     ]
 
+    return Response(results, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def list_events_from_calendar(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        calendarId (int) -- filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+    calendar_id = request.GET.get('calendarId')
+
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+        }
+        for event in queryset
+    ]
+    return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def list_events(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        q (str)         -- case-insensitive substring match on title or description
+        calendarId (int)-- optional filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        queryset = queryset.filter(
+            Q(titulo__icontains=q) | Q(descripcion__icontains=q)
+        )
+
+    calendar_id = request.GET.get('calendarId')
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    queryset = queryset.order_by('-fecha_creacion')
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
+        }
+        for event in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def list_events(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        calendarId (int) -- filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+    calendar_id = request.GET.get('calendarId')
+
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+        }
+        for event in queryset
+    ]
     return Response(results, status=status.HTTP_200_OK)
 
 

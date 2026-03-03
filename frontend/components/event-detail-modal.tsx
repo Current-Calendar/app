@@ -9,19 +9,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
+import { useRouter } from 'expo-router';
+
 
 interface EventDetailModalProps {
     event: CalendarEvent | null;
     onClose: () => void;
 }
 
-/**
- * Bottom-sheet-style modal showing all event info from the Evento model.
- *
- * TODO BACKEND - Wire up "Edit" / "Delete" actions once API is ready.
- */
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+    const router = useRouter();
+
     if (!event) return null;
+
 
     const accent = event.color ?? '#10464d';
 
@@ -73,24 +73,30 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                     </View>
 
                     <View style={styles.actions}>
-                        {/* TODO BACKEND - Hook up edit action */}
                         <TouchableOpacity
-                            style={[styles.actionBtn, { backgroundColor: '#10464d14', borderColor: '#10464d' }]}
+                            style={styles.editButton}
                             activeOpacity={0.7}
+                            onPress={() => {
+                                onClose();
+                                router.push({ pathname: "/events/edit_events", params: { id: event.id } });
+                            }}
                         >
-                            <Ionicons name="pencil-outline" size={16} color="#10464d" />
-                            <Text style={[styles.actionLabel, { color: '#10464d' }]}>Edit</Text>
+                            <Ionicons name="pencil" size={16} color="#fff" />
+                            <Text style={styles.editButtonLabel}>Edit</Text>
                         </TouchableOpacity>
-
-                        {/* TODO BACKEND - Hook up delete action */}
                         <TouchableOpacity
-                            style={[styles.actionBtn, { backgroundColor: '#eb8c8514', borderColor: '#eb8c85' }]}
+                            style={styles.deleteButton}
                             activeOpacity={0.7}
+                            onPress={() => {
+                                console.log("Deleting event:", event.id);
+                                onClose();
+                            }}
                         >
                             <Ionicons name="trash-outline" size={16} color="#eb8c85" />
-                            <Text style={[styles.actionLabel, { color: '#eb8c85' }]}>Delete</Text>
+                            <Text style={styles.deleteButtonLabel}>Delete</Text>
                         </TouchableOpacity>
                     </View>
+
                 </Pressable>
             </Pressable>
         </Modal>
@@ -207,5 +213,45 @@ const styles = StyleSheet.create({
     actionLabel: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    editButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#10464d',
+        borderRadius: 14,
+        paddingVertical: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+    },
+    editButtonLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    deleteButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderWidth: 1.5,
+        borderColor: '#EB8C85',
+        backgroundColor: '#eb8c8514',
+        borderRadius: 14,
+        paddingVertical: 11,
+    },
+    deleteButtonDisabled: {
+        opacity: 0.7,
+    },
+    deleteButtonLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#B33F37',
     },
 });
