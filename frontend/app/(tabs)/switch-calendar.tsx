@@ -1,11 +1,13 @@
 import { View, FlatList, StyleSheet } from "react-native";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
 import { MOCK_CALENDARS } from "@/constants/mock-data";
 
 export default function CalendarsScreen() {
+  const router = useRouter();
 
   /**
    * 🔹 Will be replaced by useQuery / fetch when backend connects
@@ -13,8 +15,7 @@ export default function CalendarsScreen() {
   const [calendars] = useState<Calendar[]>(MOCK_CALENDARS);
 
   const handleOpenCalendar = (id: string) => {
-    // Connect with calendar detail screen
-    // router.push(`/calendars/${id}`);
+    router.push(`/calendar-view?calendarId=${id}`);
   };
 
   const handleSubscribe = (id: string) => {

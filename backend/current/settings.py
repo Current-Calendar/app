@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com']
+ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
 
 ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
 

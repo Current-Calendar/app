@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarGrid } from '@/components/calendar-grid';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
 import { EventFilterBar } from '@/components/event-filter-bar';
@@ -52,6 +54,7 @@ export default function CalendarScreen() {
     const [month, setMonth] = useState(today.getMonth());
     const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
     const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+    const navigation = useNavigation<any>();
     const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
@@ -287,7 +290,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -349,7 +352,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
@@ -564,5 +567,35 @@ const styles = StyleSheet.create({
     optionText: {
         fontSize: 16,
         color: "#10464d",
+    },
+    createRow: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    alignItems: 'flex-end',
+    },
+
+    createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(16,70,77,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    },
+
+    createBtnText: {
+    color: '#10464D',
+    fontWeight: '900',
+    fontSize: 12,
+    },
+    filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 20,
     },
 });

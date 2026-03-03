@@ -7,12 +7,23 @@ interface Props {
 }
 
 export default function BottomBar({ NavButton }: Props) {
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   return (
     <View style={styles.bottomBar}>
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
-      <NavButton icon="add-circle" />
+      <NavButton icon="add-circle" href={`/events/create_events?date=${getTodayFormatted()}`} />
+      <NavButton icon="calendar-clear" href="/calendar-view" />
       <NavButton icon="calendar" href="/switch-calendar" />
+      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="compass" href="/radar" />
       {/*<NavButton icon="compass" />*/}
     </View>
   );

@@ -111,6 +111,40 @@ class Command(BaseCommand):
         )
         evento_gym.calendarios.add(cal_gym, cal_carlos_amigos)
 
+        evento_triana = Evento.objects.create(
+            titulo="Ruta de tapas por Triana",
+            nombre_lugar="Mercado de Triana (Plaza del Altozano)",
+             descripcion="Descubre los mejores bares de tapas en el corazón de Triana. ¡Una experiencia gastronómica que no te puedes perder!",
+            ubicacion=Point(-6.0062, 37.3866, srid=4326),  # lon, lat
+            fecha=date(2026, 3, 12),
+            hora=time(20, 30),
+            creador=user3
+        )
+
+        evento_centro = Evento.objects.create(
+            titulo="Atardecer y fotos en Las Setas",
+            nombre_lugar="Metropol Parasol (Plaza de la Encarnación)",
+            ubicacion=Point(-5.9930, 37.3929, srid=4326),  # lon, lat
+            fecha=date(2026, 3, 18),
+            hora=time(19, 15),
+            creador=user3
+        )
+
+        evento_heliopolis = Evento.objects.create(
+            titulo="Picnic y paseo por el Parque del Alamillo",
+            nombre_lugar="Parque del Alamillo (zona principal)",
+            ubicacion=Point(-6.0038, 37.4236, srid=4326),  # lon, lat
+            fecha=date(2026, 3, 23),
+            hora=time(12, 0),
+            creador=user3
+        )
+        evento_triana.foto.name = "eventos/evento.jpg"
+        evento_triana.save()
+        evento_heliopolis.foto.name = "eventos/evento.jpg"
+        evento_heliopolis.save()
+        evento_centro.foto.name = "eventos/evento.jpg"
+        evento_centro.save()
+
         self.stdout.write('Creando MockElements...')
         MockElement.objects.create(
             nombre="Punto de prueba Madrid",
