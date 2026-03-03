@@ -12,11 +12,14 @@ from django.urls import reverse
 from main.models import Usuario, Calendario, Evento
 from django.utils import timezone
 from django.contrib.gis.geos import Point
-from datetime import timedelta
+from datetime import timedelta, date, time
 
 ENDPOINT_EVENTOS = "/api/v1/eventos"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendarios/{}/publicar"
-'''
+
+from .models import Evento, Calendario
+
+
 class CrearEventoTests(TestCase):
 
     def setUp(self):
@@ -1559,19 +1562,7 @@ class PublishCalendarTests(TestCase):
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-'''
-from django.urls import reverse
-from django.utils import timezone
-from django.contrib.gis.geos import Point
-from rest_framework.test import APITestCase
-from rest_framework import status
-from django.contrib.auth import get_user_model
-from datetime import date, time
-
-from .models import Evento, Calendario
-
 User = get_user_model()
-
 
 class RadarEventsTest(APITestCase):
 
