@@ -7,6 +7,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.gis.geos import Point
 from main.models import MockElement
 from rest_framework.views import APIView
@@ -28,10 +29,18 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 
 
+from main.serializers import (
+    UsuarioRegistroSerializer,
+    UsuarioSerializer,
+    UserSerializer,
+    PublicUserSerializer,
+    EventoSerializer
+)
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
@@ -228,6 +237,7 @@ def import_google_calendar(request):
                 fecha=start[:10],
                 hora=start[11:19] if 'T' in start else '00:00:00',
                 id_externo=event['id'],
+                creador=usuario_creador,
             )
             evento.calendarios.add(calendar)
     
@@ -309,6 +319,7 @@ def iOS_calendar_import(request):
                 descripcion=descripcion,
                 fecha=fecha_str,
                 hora=hora_str,
+                creador= usuario_creador,
                 id_externo=uid,
             )
             evento.calendarios.add(calendario)
@@ -379,6 +390,7 @@ def ics_import(request):
             descripcion=descripcion,
             fecha=fecha_str,
             hora=hora_str,
+            creador = usuario_creador,
             id_externo=uid,
         )
         evento.calendarios.add(calendario)
@@ -459,6 +471,8 @@ def registro_usuario(request):
     
     if serializer.is_valid():
         usuario = serializer.save()
+        usuario.backend = 'django.contrib.auth.backends.ModelBackend'
+        login(request, usuario)
         
         # Devolver datos del usuario creado
         usuario_serializer = UsuarioSerializer(usuario)
@@ -586,6 +600,59 @@ def list_calendars(request):
 
     return Response(results, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+def list_events_from_calendar(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        calendarId (int) -- filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+    calendar_id = request.GET.get('calendarId')
+
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+        }
+        for event in queryset
+    ]
+    return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def list_events(request):
+    queryset = Evento.objects.all()
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        queryset = queryset.filter(
+            Q(titulo__icontains=q) | Q(descripcion__icontains=q)
+        )
+
+    calendar_id = request.GET.get('calendarId')
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    queryset = queryset.order_by('-fecha_creacion')
+
+    serializer = EventoSerializer(queryset, many=True, context={'request': request})
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 def asignar_evento_a_calendario(request):
@@ -994,4 +1061,51 @@ def publish_calendar(request, calendario_id):
             "fecha_creacion": calendar.fecha_creacion,
         },
         status=status.HTTP_200_OK,
+
     )
+
+
+@api_view(['GET'])
+def radar_events(request):
+    #/api/radar?lat=..&lon=..&radio=5
+    lat = request.GET.get("lat")
+    lon = request.GET.get("lon")
+    radio = request.GET.get("radio", 5)
+
+    if not lat or not lon:
+        return Response(
+            {"error": "Debes enviar lat y lon"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        lat = float(lat)
+        lon = float(lon)
+        radio = float(radio)
+    except ValueError:
+        return Response(
+            {"error": "lat, lon y radio deben ser numéricos"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user_location = Point(lon, lat, srid=4326)
+
+    eventos = (
+        Evento.objects
+        .filter(
+            ubicacion__isnull=False,
+            fecha__gte=timezone.now().date()
+        )
+        .annotate(distancia=Distance("ubicacion", user_location))
+        .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
+        .order_by("distancia")
+    )
+
+    serializer = EventoSerializer(
+        eventos, 
+        many=True, 
+        context={'request': request}
+    )
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+

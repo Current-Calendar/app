@@ -17,7 +17,6 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   event: any | null;
-  apiBaseUrl: string; // puede venir con /api/v1; extraemos origin para media
 };
 
 function formatDate(dateLike: any) {
@@ -31,34 +30,6 @@ function formatTime(timeLike: any) {
   return s.length >= 5 ? s.slice(0, 5) : s;
 }
 
-function getOriginFromApiBase(apiBaseUrl: string) {
-  try {
-    const u = new URL(apiBaseUrl);
-    return `${u.protocol}//${u.host}`;
-  } catch {
-    return String(apiBaseUrl).replace(/\/$/, "").replace(/\/api\/v1\/?$/, "");
-  }
-}
-
-function buildImageUrl(apiBaseUrl: string, foto: any) {
-  const raw = foto?.url ?? foto;
-  if (!raw) return null;
-
-  const s = String(raw);
-
-  // absoluta
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-
-  const origin = getOriginFromApiBase(apiBaseUrl);
-
-  // ya viene con /media/...
-  if (s.startsWith("/media/")) return `${origin}${s}`;
-
-  // relativa tipo eventos/evento.jpg
-  const path = s.startsWith("/") ? s.slice(1) : s;
-  return `${origin}/media/${path}`;
-}
-
 function formatDistanceKm(dist: any) {
   const n = Number(dist);
   if (!Number.isFinite(n)) return null;
@@ -68,7 +39,11 @@ function formatDistanceKm(dist: any) {
   return `${shown} km`;
 }
 
-export default function EventDetailsModal({ visible, onClose, event, apiBaseUrl }: Props) {
+export default function EventDetailsModal({ visible, onClose, event }: Props) {
+  if (!event) {
+    return null;
+  }
+
   const title = String(event?.titulo ?? "");
   const place = String(event?.nombre_lugar ?? "");
   const username = String(event?.creador_username ?? event?.creador?.username ?? "").trim();
@@ -78,18 +53,10 @@ export default function EventDetailsModal({ visible, onClose, event, apiBaseUrl 
   const timeStr = formatTime(event?.hora);
   const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
 
-  const imgUrl = useMemo(
-    () => buildImageUrl(apiBaseUrl, event?.foto),
-    [apiBaseUrl, event?.foto]
-  );
-
   const distanceKm = formatDistanceKm(event?.distancia_km);
 
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.log("EVENT FOTO:", event?.foto);
-    // eslint-disable-next-line no-console
-    console.log("IMG URL:", imgUrl);
   }
 
   return (
@@ -102,14 +69,14 @@ export default function EventDetailsModal({ visible, onClose, event, apiBaseUrl 
           </Pressable>
 
           {/* Image */}
-          {imgUrl ? (
+          {event.foto ? (
             <View style={styles.coverWrap}>
               <Image
-                source={{ uri: imgUrl }}
+                source={{ uri: event.foto }}
                 style={styles.cover}
                 resizeMode="cover"
-                onError={(e) => console.log("IMG ERROR:", imgUrl, e?.nativeEvent)}
-                onLoad={() => console.log("IMG OK:", imgUrl)}
+                onError={(e) => console.log("IMG ERROR:", event.foto, e?.nativeEvent)}
+                onLoad={() => console.log("IMG OK:", event.foto)}
               />
             </View>
           ) : null}
