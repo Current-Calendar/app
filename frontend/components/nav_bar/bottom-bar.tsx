@@ -59,7 +59,7 @@ export default function BottomBar({ NavButton }: Props) {
 
               <Pressable
                 style={styles.menuItem}
-                onPress={() => navigateTo("/modal")}
+                onPress={() => navigateTo("/create")}
               >
                 <View style={[styles.iconBg, { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#10464d" }]}>
                   <Ionicons name="calendar-outline" size={22} color="#10464d" />
