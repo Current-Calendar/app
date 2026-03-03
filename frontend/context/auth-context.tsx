@@ -13,6 +13,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Cargar sesión guardada al iniciar
   useEffect(() => {
@@ -20,7 +21,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       try {
         await apiClient.loadTokens();
 
-        setUser(apiClient.user);
+        if (apiClient.user) {
+          setUser(apiClient.user);
+          setIsAuthenticated(true);
+        }
       } catch (error) {
         console.error('Error bootstrapping session:', error);
       } finally {
@@ -38,6 +42,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         apiClient.login(username, password);
 
         setUser(apiClient.user);
+        setIsAuthenticated(true);
       } catch (error) {
         console.error('Login error:', error);
         throw error;
@@ -53,6 +58,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     try {
       setUser(null);
+      setIsAuthenticated(false);
       apiClient.clearTokens();
     } catch (error) {
       console.error('Logout error:', error);
@@ -64,7 +70,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const value: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated,
     login,
     logout,
     setUser,

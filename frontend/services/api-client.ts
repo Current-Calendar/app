@@ -28,7 +28,7 @@ class ApiClient {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
 
-    this.storage.setMany({
+    await this.storage.setMany({
       "accessToken": this.accessToken,
       "refreshToken": this.refreshToken,
     });
@@ -44,7 +44,7 @@ class ApiClient {
   async login(username: string, password: string) {
     const response = await this.post<TokenResponse>("/token/", { username, password });
 
-    this.setTokens(response.access, response.refresh);
+    await this.setTokens(response.access, response.refresh);
 
     const user = await apiClient.get<User>('/users/me');
     this.user = user;
