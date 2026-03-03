@@ -4,8 +4,7 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-// TODO: replace mock with real API call once backend CSRF fix is deployed
-// import API_CONFIG from "@/constants/api";
+import API_CONFIG from "@/constants/api";
 
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 
@@ -64,33 +63,23 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      // TODO: replace with real API call once backend CSRF fix is deployed
-      // const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   body: JSON.stringify({
-      //     nombre: calendarData.nombre,
-      //     descripcion: calendarData.descripcion,
-      //     estado: selectedPrivacy,
-      //   }),
-      // });
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
-      // }
+      const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          nombre: calendarData.nombre,
+          descripcion: calendarData.descripcion,
+          estado: selectedPrivacy,
+        }),
+      });
 
-      // MOCK: simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
+      }
 
-      Alert.alert("Success", "Calendar updated successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.replace('/(tabs)/calendars');
-          },
-        },
-      ]);
+      router.replace('/(tabs)/calendars');
     } catch (error) {
       Alert.alert("Error", "Failed to update calendar. Please try again.");
       console.error("Edit error:", error);
