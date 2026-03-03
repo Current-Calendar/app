@@ -13,7 +13,7 @@ const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
 const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
 
 export const downloadCalendar = async (id: string, token?: string) => {
-  const url = `${BACKEND_URL}calendars/${id}/export`;
+  const url = `${ROOT_BACKEND_URL}api/calendars/${id}/export`;
 
   try {
     if (Platform.OS === "web") {
