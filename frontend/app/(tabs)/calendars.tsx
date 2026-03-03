@@ -1,24 +1,6 @@
-<<<<<<< feature/list-search-calendar
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-    View,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    Text,
-    Animated,
-    useWindowDimensions,
-    Alert,
-    Platform,
-    ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-=======
-import React, { useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
 
->>>>>>> main
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,10 +13,6 @@ import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
 import { EventFilterBar } from '@/components/event-filter-bar';
 
-<<<<<<< feature/list-search-calendar
-import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
-=======
-import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -42,7 +20,6 @@ import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
->>>>>>> main
 import { API_CONFIG } from '@/constants/api';
 import { downloadCalendar } from '@/services/calendarService';
 
@@ -74,16 +51,11 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
-<<<<<<< feature/list-search-calendar
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
-=======
-    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
-    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
     const navigation = useNavigation<any>();
     const isWeb = Platform.OS === "web";
->>>>>>> main
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -93,7 +65,6 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
-<<<<<<< feature/list-search-calendar
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -151,13 +122,15 @@ export default function CalendarScreen() {
         void fetchData();
     }, []);
 
-=======
     const [open, setOpen] = useState(false);
     const rotation = useRef(new Animated.Value(0)).current;
     const calendarRef = useRef<View>(null);
->>>>>>> main
     // Animation for the bottom sheet
     const sheetY = useRef(new Animated.Value(120)).current;
+    const optionAnimations = useRef([
+        new Animated.Value(0),
+        new Animated.Value(0),
+    ]).current;
 
     const showSheet = (dateKey: string) => {
         setSelectedDay(dateKey);
@@ -271,11 +244,6 @@ export default function CalendarScreen() {
         );
     }
 
-    const optionAnimations = useRef([
-        new Animated.Value(0),
-        new Animated.Value(0),
-    ]).current;
-
     const toggleMenu = () => {
         const isOpening = !open;
 
@@ -372,7 +340,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.primaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push(`/events/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
+                                onPress={() => router.push(`/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
                             >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>

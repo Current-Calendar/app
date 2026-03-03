@@ -87,7 +87,7 @@ export default function CalendarViewScreen() {
           <TouchableOpacity
             style={styles.mobileBanner}
             activeOpacity={0.85}
-            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${calendar.id}`)}
+            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${calendar.id}`)}
           >
             <Text style={styles.mobileBannerDate}>{formatSelectedDay(selectedDay)}</Text>
             <View style={styles.mobileBannerBtn}>

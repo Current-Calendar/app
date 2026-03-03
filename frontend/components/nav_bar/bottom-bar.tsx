@@ -17,6 +17,8 @@ export default function BottomBar({ NavButton }: Props) {
   const navigateTo = (path: string) => {
     closeMenu();
     router.push(path as any);
+  };
+  
   const getTodayFormatted = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -48,7 +50,7 @@ export default function BottomBar({ NavButton }: Props) {
 
               <Pressable
                 style={styles.menuItem}
-                onPress={() => navigateTo("/events/create_events")}
+                onPress={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
               >
                 <View style={[styles.iconBg, { backgroundColor: "#10464d" }]}>
                   <Ionicons name="add" size={24} color="#fff" />
