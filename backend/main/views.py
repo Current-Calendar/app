@@ -671,6 +671,7 @@ def list_events(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -958,7 +959,9 @@ def edit_event(request, evento_id):
         },
         status=status.HTTP_200_OK,
     )
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def crear_evento(request):
 
     data = request.data

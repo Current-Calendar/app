@@ -20,11 +20,9 @@ PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendarios/{}/publicar"
 from .models import Evento, Calendario
 
 
-class CrearEventoTests(TestCase):
+class CrearEventoTests(APITestCase):
 
     def setUp(self):
-        self.client = APIClient()
-
         self.usuario = Usuario.objects.create_user(
             username="eventuser",
             email="event@example.com",
@@ -38,6 +36,8 @@ class CrearEventoTests(TestCase):
         )
 
     def test_crear_evento_exitoso(self):
+        self.client.force_authenticate(self.usuario)
+
         payload = {
             "titulo": "Evento Test",
             "fecha": "2026-03-01",
@@ -54,6 +54,8 @@ class CrearEventoTests(TestCase):
         )
 
     def test_error_sin_titulo(self):
+        self.client.force_authenticate(self.usuario)
+
         payload = {
             "fecha": "2026-03-01",
             "hora": "18:00:00",
@@ -64,6 +66,8 @@ class CrearEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_sin_fecha(self):
+        self.client.force_authenticate(self.usuario)
+
         payload = {
             "titulo": "Evento",
             "hora": "18:00:00",
@@ -74,6 +78,8 @@ class CrearEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_sin_calendario(self):
+        self.client.force_authenticate(self.usuario)
+
         payload = {
             "titulo": "Evento",
             "fecha": "2026-03-01",
@@ -84,6 +90,8 @@ class CrearEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_calendario_no_existe(self):
+        self.client.force_authenticate(self.usuario)
+
         payload = {
             "titulo": "Evento",
             "fecha": "2026-03-01",
@@ -96,6 +104,8 @@ class CrearEventoTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_no_permitido(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.get(ENDPOINT_EVENTOS)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -119,7 +129,7 @@ class BorrarUsuarioTestCase(TestCase):
         response = self.client.delete(
             self.url,
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 class BorrarUsuarioTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -139,7 +149,7 @@ class BorrarUsuarioTestCase(TestCase):
         response = self.client.delete(
             self.url,
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 from rest_framework import status
 from main.models import Usuario, Calendario, Evento
 from django.urls import reverse
@@ -150,9 +160,8 @@ EDIT_EVENT_ENDPOINT = "/api/v1/eventos/{}"
 ENDPOINT_BUSCAR_USUARIOS = "/api/v1/usuarios"
 
 
-class EditEventTests(TestCase):
+class EditEventTests(APITestCase):
     def setUp(self):
-        self.client = APIClient()
         self.user = Usuario.objects.create_user(
             username="eventuser",
             email="event@example.com",
@@ -187,6 +196,8 @@ class EditEventTests(TestCase):
     # ── Success cases ──
 
     def test_edit_title(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"titulo": "Titulo Nuevo"},
@@ -197,6 +208,8 @@ class EditEventTests(TestCase):
         self.assertEqual(self.event.titulo, "Titulo Nuevo")
 
     def test_edit_multiple_fields(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {
@@ -213,6 +226,8 @@ class EditEventTests(TestCase):
         self.assertEqual(self.event.nombre_lugar, "Nuevo lugar")
 
     def test_edit_date_and_time(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"fecha": "2026-06-15", "hora": "20:30:00"},
@@ -224,6 +239,8 @@ class EditEventTests(TestCase):
         self.assertEqual(str(self.event.hora), "20:30:00")
 
     def test_change_calendars(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"calendarios": [self.calendar2.id]},
@@ -234,6 +251,8 @@ class EditEventTests(TestCase):
         self.assertEqual(cals, [self.calendar2.id])
 
     def test_edit_location(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"latitud": 37.3861, "longitud": -5.9926},
@@ -246,6 +265,8 @@ class EditEventTests(TestCase):
         self.assertAlmostEqual(self.event.ubicacion.x, -5.9926, places=4)
 
     def test_edit_recurrence_and_external_id(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"recurrencia": 7, "id_externo": "ext-123"},
@@ -257,6 +278,8 @@ class EditEventTests(TestCase):
         self.assertEqual(self.event.id_externo, "ext-123")
 
     def test_unsent_fields_remain_unchanged(self):
+        self.client.force_authenticate(self.user)
+
         original_title = self.event.titulo
         original_description = self.event.descripcion
 
@@ -272,6 +295,8 @@ class EditEventTests(TestCase):
         self.assertEqual(self.event.nombre_lugar, "Solo cambio lugar")
 
     def test_response_contains_expected_keys(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"titulo": "Check keys"},
@@ -288,6 +313,8 @@ class EditEventTests(TestCase):
     # ── Error cases ──
 
     def test_event_not_found(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(event_id=9999),
             {"titulo": "No existe"},
@@ -296,6 +323,8 @@ class EditEventTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_empty_title(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"titulo": ""},
@@ -305,6 +334,8 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_empty_date(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"fecha": ""},
@@ -314,6 +345,8 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_empty_time(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"hora": ""},
@@ -323,6 +356,8 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_nonexistent_calendar(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"calendarios": [9999]},
@@ -332,6 +367,8 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_empty_calendar_list(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"calendarios": []},
@@ -341,6 +378,8 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_invalid_lat_lon(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(),
             {"latitud": "abc", "longitud": "xyz"},
@@ -350,10 +389,14 @@ class EditEventTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_get_not_allowed(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.get(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_post_not_allowed(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.post(
             self.endpoint(),
             {"titulo": "No permitido"},
@@ -747,11 +790,10 @@ class LoginMutationTests(TestCase):
 ENDPOINT = "/api/v1/calendarios"
 
 
-class CrearCalendarioTests(TestCase):
+class CrearCalendarioTests(APITestCase):
     """Tests para POST /api/v1/calendarios"""
 
     def setUp(self):
-        self.client = APIClient()
         self.usuario = Usuario.objects.create_user(
             username="testuser",
             email="test@example.com",
@@ -764,8 +806,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_crear_calendario_privado_exitoso(self):
         """Crea un calendario PRIVADO (valor por defecto) correctamente."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Calendario Privado",
         }
         response = self.client.post(ENDPOINT, payload, format="json")
@@ -783,8 +826,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_crear_calendario_publico_exitoso(self):
         """Crea un calendario con estado PUBLICO correctamente."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Calendario Público",
             "estado": "PUBLICO",
             "descripcion": "Un calendario para todos",
@@ -798,8 +842,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_crear_calendario_amigos_exitoso(self):
         """Crea un calendario con estado AMIGOS correctamente."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Calendario Amigos",
             "estado": "AMIGOS",
         }
@@ -810,8 +855,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_crear_calendario_con_origen_google(self):
         """Crea un calendario importado de Google Calendar."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Google Cal",
             "origen": "GOOGLE",
             "id_externo": "abc123@google.com",
@@ -825,8 +871,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_crear_calendario_con_todos_los_campos_opcionales(self):
         """Crea un calendario especificando todos los campos."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Calendario Completo",
             "descripcion": "Descripción de prueba",
             "estado": "PUBLICO",
@@ -843,8 +890,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_calendario_se_persiste_en_base_de_datos(self):
         """Verifica que el calendario queda guardado en BD tras la creación."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Persistencia Check",
         }
         response = self.client.post(ENDPOINT, payload, format="json")
@@ -858,43 +906,15 @@ class CrearCalendarioTests(TestCase):
     # Casos de error — campos obligatorios
     # ------------------------------------------------------------------
 
-    def test_error_sin_creador_id(self):
-        """Devuelve 400 si falta el campo creador_id."""
-        payload = {"nombre": "Sin Creador"}
-        response = self.client.post(ENDPOINT, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El campo 'creador_id' es obligatorio.", response.json()["errors"])
-
     def test_error_sin_nombre(self):
         """Devuelve 400 si falta el campo nombre."""
-        payload = {"creador_id": self.usuario.id}
+        self.client.force_authenticate(self.usuario)
+
+        payload = {}
         response = self.client.post(ENDPOINT, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("El campo 'nombre' es obligatorio.", response.json()["errors"])
-
-    def test_error_payload_vacio(self):
-        """Devuelve 400 si el payload está completamente vacío."""
-        response = self.client.post(ENDPOINT, {}, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("errors", response.json())
-
-    # ------------------------------------------------------------------
-    # Casos de error — usuario no existe
-    # ------------------------------------------------------------------
-
-    def test_error_creador_no_existe(self):
-        """Devuelve 404 si el creador_id no corresponde a ningún usuario."""
-        payload = {
-            "creador_id": 99999,
-            "nombre": "Calendario Fantasma",
-        }
-        response = self.client.post(ENDPOINT, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("El usuario creador no existe.", response.json()["errors"])
 
     # ------------------------------------------------------------------
     # Casos de error — restricción de unicidad PRIVADO
@@ -902,6 +922,8 @@ class CrearCalendarioTests(TestCase):
 
     def test_error_segundo_calendario_privado_mismo_usuario(self):
         """Devuelve 400 si el usuario intenta crear un segundo calendario PRIVADO."""
+        self.client.force_authenticate(self.usuario)
+
         # Primer calendario privado (OK)
         Calendario.objects.create(
             creador=self.usuario,
@@ -911,7 +933,6 @@ class CrearCalendarioTests(TestCase):
 
         # Intento de segundo calendario privado
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Segundo Privado",
             "estado": "PRIVADO",
         }
@@ -929,8 +950,9 @@ class CrearCalendarioTests(TestCase):
         )
 
         for usuario in [self.usuario, otro_usuario]:
+            self.client.force_authenticate(usuario)
+
             payload = {
-                "creador_id": usuario.id,
                 "nombre": "Mi Privado",
                 "estado": "PRIVADO",
             }
@@ -943,8 +965,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_error_estado_invalido(self):
         """Devuelve 400 si el estado no es un valor válido."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Cal Inválido",
             "estado": "SECRETO",
         }
@@ -955,8 +978,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_error_origen_invalido(self):
         """Devuelve 400 si el origen no es un valor válido."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "Cal Origen Malo",
             "origen": "OUTLOOK",
         }
@@ -967,8 +991,9 @@ class CrearCalendarioTests(TestCase):
 
     def test_error_nombre_demasiado_largo(self):
         """Devuelve 400 si el nombre supera los 100 caracteres permitidos."""
+        self.client.force_authenticate(self.usuario)
+
         payload = {
-            "creador_id": self.usuario.id,
             "nombre": "A" * 101,
         }
         response = self.client.post(ENDPOINT, payload, format="json")
@@ -982,14 +1007,15 @@ class CrearCalendarioTests(TestCase):
 
     def test_get_no_permitido(self):
         """Devuelve 405 Method Not Allowed al hacer GET al endpoint."""
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.get(ENDPOINT)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class AsignarEventoCalendarioTests(TestCase):
+class AsignarEventoCalendarioTests(APITestCase):
 
     def setUp(self):
-        self.client = APIClient()
         self.url = '/api/eventos/asignar/'
 
         self.usuario = Usuario.objects.create_user(
@@ -1010,6 +1036,8 @@ class AsignarEventoCalendarioTests(TestCase):
         )
 
     def test_asignar_evento_exitoso(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'evento_id': self.evento.pk,
             'calendario_id': self.calendario.pk
@@ -1020,6 +1048,8 @@ class AsignarEventoCalendarioTests(TestCase):
         self.assertTrue(self.evento.calendarios.filter(pk=self.calendario.pk).exists())
 
     def test_asignar_sin_evento_id(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'calendario_id': self.calendario.pk
         }, format='json')
@@ -1028,6 +1058,8 @@ class AsignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_asignar_sin_calendario_id(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'evento_id': self.evento.pk
         }, format='json')
@@ -1036,6 +1068,8 @@ class AsignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_asignar_evento_inexistente(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'evento_id': 99999,
             'calendario_id': self.calendario.pk
@@ -1045,6 +1079,8 @@ class AsignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_asignar_calendario_inexistente(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'evento_id': self.evento.pk,
             'calendario_id': 99999
@@ -1056,6 +1092,8 @@ class AsignarEventoCalendarioTests(TestCase):
     def test_asignar_evento_ya_asignado(self):
         self.evento.calendarios.add(self.calendario)
 
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.post(self.url, {
             'evento_id': self.evento.pk,
             'calendario_id': self.calendario.pk
@@ -1065,10 +1103,9 @@ class AsignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
 
-class DesasignarEventoCalendarioTests(TestCase):
+class DesasignarEventoCalendarioTests(APITestCase):
 
     def setUp(self):
-        self.client = APIClient()
         self.url = '/api/eventos/desasignar/'
 
         self.usuario = Usuario.objects.create_user(
@@ -1090,6 +1127,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.evento.calendarios.add(self.calendario)
 
     def test_desasignar_evento_exitoso(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.delete(self.url, {
             'evento_id': self.evento.pk,
             'calendario_id': self.calendario.pk
@@ -1100,6 +1139,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertFalse(self.evento.calendarios.filter(pk=self.calendario.pk).exists())
 
     def test_desasignar_sin_evento_id(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.delete(self.url, {
             'calendario_id': self.calendario.pk
         }, format='json')
@@ -1108,6 +1149,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_desasignar_sin_calendario_id(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.delete(self.url, {
             'evento_id': self.evento.pk
         }, format='json')
@@ -1116,6 +1159,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_desasignar_evento_inexistente(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.delete(self.url, {
             'evento_id': 99999,
             'calendario_id': self.calendario.pk
@@ -1125,6 +1170,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_desasignar_calendario_inexistente(self):
+        self.client.force_authenticate(self.usuario)
+
         response = self.client.delete(self.url, {
             'evento_id': self.evento.pk,
             'calendario_id': 99999
@@ -1134,6 +1181,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
     def test_desasignar_evento_no_asignado(self):
+        self.client.force_authenticate(self.usuario)
+
         otro_calendario = Calendario.objects.create(
             nombre='Otro Calendario',
             creador=self.usuario,
@@ -1149,10 +1198,8 @@ class DesasignarEventoCalendarioTests(TestCase):
         self.assertIn('error', response.data)
 
 
-class EliminarCalendarioTestCase(TestCase):
+class EliminarCalendarioTestCase(APITestCase):
     def setUp(self):
-        self.client = APIClient()
-
         # Create users
         self.creador = Usuario.objects.create_user(username='creador', email='creador@test.com', password='pass1234')
         self.otro_usuario = Usuario.objects.create_user(username='otro', email='otro@test.com', password='pass1234')
@@ -1175,7 +1222,7 @@ class EliminarCalendarioTestCase(TestCase):
     def test_eliminar_calendario_sin_autenticar(self):
         """An unauthenticated user cannot delete a calendar"""
         response = self.client.delete(f'/api/v1/calendarios/{self.calendario.id}/eliminar/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_eliminar_calendario_sin_permiso(self):
         """A user who is not the creator cannot delete the calendar"""
@@ -1233,7 +1280,7 @@ class EditarCalendarioTestCase(TestCase):
         response = self.client.put(f'/api/v1/calendarios/{self.calendario.id}/editar/', {
             'nombre': 'Intento sin auth'
         })
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""
@@ -1275,7 +1322,7 @@ class EditarUsuarioTestCase(TestCase):
             {"email": self.user.email, "username": "hackeado"},
             format="json"
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.user.refresh_from_db()
         self.assertNotEqual(self.user.username, "hackeado")
 
@@ -1478,11 +1525,9 @@ class ListCalendariosTests(TestCase):
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"estado": "PRIVADO"})
         self.assertEqual(response.json()[0]["creador_username"], self.owner.username)
 
-class PublishCalendarTests(TestCase):
+class PublishCalendarTests(APITestCase):
 
     def setUp(self):
-        self.client = APIClient()
-
         self.user = Usuario.objects.create_user(
             username="caluser",
             email="cal@example.com",
@@ -1515,12 +1560,16 @@ class PublishCalendarTests(TestCase):
     # ── Success cases ──
 
     def test_publish_private_calendar(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.private_calendar.refresh_from_db()
         self.assertEqual(self.private_calendar.estado, "PUBLICO")
 
     def test_publish_friends_calendar(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(self.friends_calendar.id)
         )
@@ -1529,6 +1578,8 @@ class PublishCalendarTests(TestCase):
         self.assertEqual(self.friends_calendar.estado, "PUBLICO")
 
     def test_response_contains_expected_keys(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_keys = {
@@ -1538,16 +1589,22 @@ class PublishCalendarTests(TestCase):
         self.assertEqual(set(response.data.keys()), expected_keys)
 
     def test_response_estado_is_publico(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(self.endpoint())
         self.assertEqual(response.data["estado"], "PUBLICO")
 
     # ── Error cases ──
 
     def test_calendar_not_found(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(self.endpoint(calendario_id=9999))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_already_public(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.put(
             self.endpoint(self.public_calendar.id)
         )
@@ -1555,10 +1612,14 @@ class PublishCalendarTests(TestCase):
         self.assertIn("errors", response.data)
 
     def test_get_not_allowed(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.get(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_post_not_allowed(self):
+        self.client.force_authenticate(self.user)
+
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
