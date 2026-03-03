@@ -4,11 +4,37 @@ import Constants from 'expo-constants';
 
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
 
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:8000/api/v1/"
-    : "http://localhost:8000/api/v1/");
+const deriveDebuggerHost = () => {
+    const hostUri =
+        Constants.expoConfig?.hostUri ??
+        Constants.expoGoConfig?.hostUri ??
+        Constants.manifest2?.extra?.expoGo?.debuggerHost ??
+        Constants.manifest?.debuggerHost;
+
+    if (!hostUri) {
+        return null;
+    }
+
+    return hostUri.split(':')[0];
+};
+
+const buildDevBaseUrl = () => {
+    const debuggerHost = deriveDebuggerHost();
+
+    if (debuggerHost) {
+        return `http://${debuggerHost}:8000/api/v1/`;
+    }
+
+    return Platform.OS === 'android'
+        ? 'http://10.0.2.2:8000/api/v1/'
+        : 'http://localhost:8000/api/v1/';
+};
+
+const ensureTrailingSlash = (value: string) => (value.endsWith('/') ? value : `${value}/`);
+
+const API_BASE = ensureTrailingSlash(
+    process.env.EXPO_PUBLIC_API_URL ?? buildDevBaseUrl()
+);
 
 export type CalendarItem = {
     id: number;

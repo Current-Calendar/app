@@ -19,7 +19,7 @@ import { useAuth } from '../../../context/authContext';
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
     const { user: currentUser } = useAuth();
     
-    // 1. TU HOOK ORIGINAL
+    //Hook personalizado para manejar toda la lógica de perfil público (datos del usuario, seguimiento, calendarios públicos, etc.)
     const {
         userBeingViewed,
         calendars,
@@ -30,7 +30,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         handleFollowToggle,
     } = useUserProfile(targetUserId);
 
-    // 2. LO NUEVO DEL TERCER COMPI: Estado para los calendarios que sigo de este usuario
+    //  Estado para los calendarios que sigo de este usuario
     const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
     const [followingLoading, setFollowingLoading] = useState(false);
 
@@ -47,7 +47,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
 
             try {
                 setFollowingLoading(true);
-                // ⚠️ Recuerda que aquí va la lógica real de tu token
+                //token!!
                 const token = 'AQUI_VA_EL_TOKEN_DE_TU_SESION';
                 const response = await fetch(
                     `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1/'}users/${userBeingViewed.id}/followed_calendars/`,
@@ -148,7 +148,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     ) : null}
                 </View>
 
-                {/* LO NUEVO DEL 3ER COMPI: Calendarios que sigo de este usuario */}
+                {/* Calendarios que sigo de este usuario */}
                 {followingLoading ? (
                     <ActivityIndicator size="small" color="#262626" />
                 ) : followingCalendars.length > 0 && (
@@ -164,7 +164,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     </View>
                 )}
 
-                {/* TU GRID ORIGINAL: Calendarios públicos */}
+                {/*Renderizado de calendarios públicos */}
                 <View style={profileStyles.postsGrid}>
                     <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Public Calendars`}</Text>
                     

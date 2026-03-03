@@ -13,8 +13,6 @@ import { Calendar } from '../../../types/calendar';
 import { useAuth } from '../../../context/authContext'; 
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
-
-// Importamos tu componente público (asegúrate de que está en la misma carpeta)
 import PublicProfile from './PublicProfile'; 
 
 const ProfileScreen = () => {
@@ -27,12 +25,11 @@ const ProfileScreen = () => {
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
-  // Limpiamos el nombre que le pusieron (followingCalendarsMe -> followingCalendars)
   const [followingCalendars, setFollowingCalendars] = useState<Calendar[]>([]);
 
   useEffect(() => {
     // ESTE ARCHIVO AHORA SOLO GESTIONA "MI PERFIL"
-    if (isMe) {
+    if (isMe) { //TODO: Aquí iría la lógica real para cargar mi perfil y mis calendarios desde la API. Hacer backend!!!
       setShownUser(currentUser);
       
       setMyCalendars([
@@ -62,13 +59,12 @@ const ProfileScreen = () => {
     router.push('/profileEdit');
   };
 
-  // 🔴 AQUÍ ESTÁ LA MAGIA DE TU ARQUITECTURA 🔴
   // Si no es mi perfil, delegamos a PublicProfile pasándole el userId
   if (!isMe && userId) {
     return <PublicProfile targetUserId={userId} />;
   }
 
-  // Si SOY YO, seguimos hacia abajo y pintamos "Mi Perfil"
+  // Si SOY YO, seguimos hacia abajo y renderizamos "Mi Perfil"
   if (!shownUser) return null;
 
   return (
