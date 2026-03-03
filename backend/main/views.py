@@ -245,6 +245,7 @@ def import_google_calendar(request):
                 fecha=start[:10],
                 hora=start[11:19] if 'T' in start else '00:00:00',
                 id_externo=event['id'],
+                creador=usuario_creador,
             )
             evento.calendarios.add(calendar)
     
@@ -326,6 +327,7 @@ def iOS_calendar_import(request):
                 descripcion=descripcion,
                 fecha=fecha_str,
                 hora=hora_str,
+                creador= usuario_creador,
                 id_externo=uid,
             )
             evento.calendarios.add(calendario)
@@ -396,6 +398,7 @@ def ics_import(request):
             descripcion=descripcion,
             fecha=fecha_str,
             hora=hora_str,
+            creador = usuario_creador,
             id_externo=uid,
         )
         evento.calendarios.add(calendario)
