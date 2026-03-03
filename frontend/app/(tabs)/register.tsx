@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 import { API_CONFIG } from "@/constants/api";
 
 const BG = "#E8E5D8";
@@ -20,6 +21,7 @@ const TEXT = "#10464D";
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const { width } = useWindowDimensions();
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -50,6 +52,7 @@ export default function SignUpScreen() {
     try {
       const res = await fetch(API_CONFIG.endpoints.register, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -79,8 +82,9 @@ export default function SignUpScreen() {
         return;
       }
 
+      setUser({ username: username.trim() });
       setSuccessMsg("Usuario registrado exitosamente");
-      setTimeout(() => router.push("/login"), 400); // Redirige al login para que el usuario inicie sesión después de registrarse
+      setTimeout(() => router.push("/"), 400);
     } catch (e: any) {
       setErrorMsg("No connection to API. Check API_BASE / backend running.");
     } finally {
@@ -167,7 +171,6 @@ export default function SignUpScreen() {
           </Link>
         </View>
 
-        <Text style={styles.apiHint}>API: {API_CONFIG.BaseURL}</Text>
       </View>
     </View>
   );

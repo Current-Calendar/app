@@ -93,10 +93,12 @@ class Command(BaseCommand):
         evento_tech.calendarios.add(cal_ana_pub)
 
         evento_cena = Evento.objects.create(
-            titulo="Cena cumpleaños", 
+            titulo="Cena cumpleaños",
+            nombre_lugar="Restaurante El Buen Sabor",
             descripcion="Nos vemos en el restaurante de siempre.",
             fecha=date(2026, 3, 20), 
             hora=time(21, 00),
+            foto='eventos/evento.jpg',
             creador=user2
         )
         evento_cena.calendarios.add(cal_carlos_amigos, cal_ana_priv)
@@ -107,6 +109,7 @@ class Command(BaseCommand):
             ubicacion=Point(-3.6900, 40.4200, srid=4326),
             fecha=date(2026, 2, 25), 
             hora=time(10, 00),
+            foto='eventos/evento.jpg',
             creador=user3
         )
         evento_gym.calendarios.add(cal_gym, cal_carlos_amigos)
@@ -141,6 +144,10 @@ class Command(BaseCommand):
             creador=user3,
             foto='eventos/evento.jpg',
         )
+
+        evento_triana.calendarios.add(cal_gym)
+        evento_centro.calendarios.add(cal_gym)
+        evento_heliopolis.calendarios.add(cal_gym)
 
         self.stdout.write('Creando MockElements...')
         MockElement.objects.create(
