@@ -6,6 +6,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.gis.geos import Point
 from main.models import MockElement
 from rest_framework.views import APIView
@@ -37,6 +38,7 @@ from main.serializers import (
     UsuarioSerializer,
     UserSerializer,
     PublicUserSerializer,
+    EventoSerializer
 )
 import requests
 from rest_framework.views import APIView
@@ -246,6 +248,7 @@ def import_google_calendar(request):
                 fecha=start[:10],
                 hora=start[11:19] if 'T' in start else '00:00:00',
                 id_externo=event['id'],
+                creador=usuario_creador,
             )
             evento.calendarios.add(calendar)
     
@@ -327,6 +330,7 @@ def iOS_calendar_import(request):
                 descripcion=descripcion,
                 fecha=fecha_str,
                 hora=hora_str,
+                creador= usuario_creador,
                 id_externo=uid,
             )
             evento.calendarios.add(calendario)
@@ -397,6 +401,7 @@ def ics_import(request):
             descripcion=descripcion,
             fecha=fecha_str,
             hora=hora_str,
+            creador = usuario_creador,
             id_externo=uid,
         )
         evento.calendarios.add(calendario)
@@ -477,6 +482,8 @@ def registro_usuario(request):
     
     if serializer.is_valid():
         usuario = serializer.save()
+        usuario.backend = 'django.contrib.auth.backends.ModelBackend'
+        login(request, usuario)
         
         # Devolver datos del usuario creado
         usuario_serializer = UsuarioSerializer(usuario)
@@ -653,15 +660,6 @@ def list_events_from_calendar(request):
 
 @api_view(['GET'])
 def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        q (str)         -- case-insensitive substring match on title or description
-        calendarId (int)-- optional filter by calendar ID
-    """
     queryset = Evento.objects.all()
 
     q = request.GET.get('q', '').strip()
@@ -676,57 +674,9 @@ def list_events(request):
 
     queryset = queryset.order_by('-fecha_creacion')
 
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
-        }
-        for event in queryset
-    ]
+    serializer = EventoSerializer(queryset, many=True, context={'request': request})
 
-    return Response(results, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        calendarId (int) -- filter by calendar ID
-    """
-    queryset = Evento.objects.all()
-    calendar_id = request.GET.get('calendarId')
-
-    if calendar_id:
-        queryset = queryset.filter(calendarios__id=calendar_id)
-
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-        }
-        for event in queryset
-    ]
-    return Response(results, status=status.HTTP_200_OK)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -1141,21 +1091,10 @@ def radar_events(request):
         .order_by("distancia")
     )
 
-    resultados = [
-        {
-            "id": evento.id,
-            "titulo": evento.titulo,
-            "descripcion": evento.descripcion,
-            "nombre_lugar": evento.nombre_lugar,
-            "fecha": evento.fecha,
-            "hora": evento.hora,
-            "distancia_km": round(evento.distancia.km, 2),
-            "latitud": evento.ubicacion.y if evento.ubicacion else None,
-            "longitud": evento.ubicacion.x if evento.ubicacion else None,
-            "foto": evento.foto.url if evento.foto else None,
-            "creador_username": evento.creador.username,
-        }
-        for evento in eventos
-    ]
+    serializer = EventoSerializer(
+        eventos, 
+        many=True, 
+        context={'request': request}
+    )
 
-    return Response(resultados, status=status.HTTP_200_OK)
+    return Response(serializer.data, status=status.HTTP_200_OK)
