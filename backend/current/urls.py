@@ -21,7 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars, radar_events
 from rest_framework import routers
 
 api_router = routers.DefaultRouter()
@@ -44,6 +44,8 @@ urlpatterns = [
     path('api/v1/auth/registro/', views.registro_usuario, name='registro'),
     path('api/v1/calendarios', views.crear_calendario),
     path('api/v1/calendarios/list', list_calendars, name='list_calendarios'),
+    path('api/v1/eventos/list', views.list_events, name='list_eventos'),
+    path('api/v1/eventos/list/<int:calendario_id>', views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
     path('api/v1/google-auth', views.google_authorization),
@@ -52,7 +54,7 @@ urlpatterns = [
     path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
     path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
     path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
-
+    path('api/v1/radar/', radar_events, name='radar_eventos'),
     path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
 ]
 

@@ -2,7 +2,7 @@ import json
 
 from django.contrib.auth.hashers import identify_hasher, check_password
 from django.test import TestCase
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
@@ -10,6 +10,9 @@ import datetime
 from main.models import Usuario, Calendario, Evento
 from django.urls import reverse
 from main.models import Usuario, Calendario, Evento
+from django.utils import timezone
+from django.contrib.gis.geos import Point
+from datetime import timedelta
 
 ENDPOINT_EVENTOS = "/api/v1/eventos"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendarios/{}/publicar"
@@ -1555,3 +1558,121 @@ class PublishCalendarTests(TestCase):
     def test_post_not_allowed(self):
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class RadarEventosTest(APITestCase):
+
+    def setUp(self):
+        self.user = Usuario.objects.create_user(
+            username="testuser",
+            email="test@test.com",
+            password="password123"
+        )
+
+        self.calendar = Calendario.objects.create(
+            nombre="Calendario Público",
+            estado="PUBLICO",
+            creador=self.user
+        )
+
+        self.hoy = timezone.now().date()
+        self.evento_cercano = Evento.objects.create(
+            titulo="Evento Cercano",
+            fecha=self.hoy + timedelta(days=1),
+            hora="12:00:00",
+            ubicacion=Point(-3.7038, 40.4168),
+            creador=self.user
+        )
+        self.evento_cercano.calendarios.add(self.calendar)
+        self.evento_lejano = Evento.objects.create(
+            titulo="Evento Lejano",
+            fecha=self.hoy + timedelta(days=1),
+            hora="12:00:00",
+            ubicacion=Point(2.1734, 41.3851),
+            creador=self.user
+        )
+        self.evento_lejano.calendarios.add(self.calendar)
+        self.evento_pasado = Evento.objects.create(
+            titulo="Evento Pasado",
+            fecha=self.hoy - timedelta(days=1),
+            hora="12:00:00",
+            ubicacion=Point(-3.7038, 40.4168),
+            creador=self.user
+        )
+        self.evento_pasado.calendarios.add(self.calendar)
+
+    def test_error_sin_lat_lon(self):
+        response = self.client.get("/api/v1/radar/")
+        self.assertEqual(response.status_code, 400)
+
+    def test_error_lat_lon_invalidos(self):
+        response = self.client.get("/api/v1/radar/?lat=abc&lon=xyz")
+        self.assertEqual(response.status_code, 400)
+
+    def test_devuelve_evento_dentro_del_radio(self):
+        response = self.client.get(
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=10"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["titulo"], "Evento Cercano")
+
+    def test_no_devuelve_evento_fuera_del_radio(self):
+        response = self.client.get(
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1"
+        )
+        titulos = [e["titulo"] for e in response.data]
+        self.assertNotIn("Evento Lejano", titulos)
+
+    def test_no_devuelve_eventos_pasados(self):
+        response = self.client.get(
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=10"
+        )
+        titulos = [e["titulo"] for e in response.data]
+        self.assertNotIn("Evento Pasado", titulos)
+
+    def test_ordenado_por_distancia(self):
+        response = self.client.get(
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1000"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(len(response.data), 1)
+
+        distancias = [e["distancia_km"] for e in response.data]
+        self.assertEqual(distancias, sorted(distancias))
+
+class RadarMultipleEventsTest(APITestCase):
+
+    def setUp(self):
+        self.user = Usuario.objects.create_user(
+            username="multiuser",
+            email="multi@test.com",
+            password="password123"
+        )
+
+        self.calendar = Calendario.objects.create(
+            nombre="Calendario Público",
+            estado="PUBLICO",
+            creador=self.user
+        )
+
+        self.lat = 40.4168
+        self.lon = -3.7038
+        self.hoy = timezone.now().date()
+
+        for i in range(3):
+            evento = Evento.objects.create(
+                titulo=f"Evento {i+1}",
+                fecha=self.hoy + timedelta(days=1),
+                hora="12:00:00",
+                ubicacion=Point(self.lon + (i * 0.001), self.lat + (i * 0.001)),
+                creador=self.user
+            )
+            evento.calendarios.add(self.calendar)
+
+    def test_radar_returns_multiple_events(self):
+        response = self.client.get(
+            "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1000"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 3)
