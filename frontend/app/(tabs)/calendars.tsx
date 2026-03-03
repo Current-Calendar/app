@@ -190,6 +190,7 @@ export default function CalendarScreen() {
         try {
             const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
                 method: 'DELETE',
+                credentials: 'include',
             });
 
             if (!response.ok) {
@@ -405,7 +406,15 @@ export default function CalendarScreen() {
                     onDelete={handleDeleteCalendarPress}
                     onEdit={(calendar) => {
                         setInfoCalendar(null);
-                        router.push(`/modal`); 
+                        router.push({
+                            pathname: '/(tabs)/edit',
+                            params: {
+                                id: calendar.id,
+                                nombre: calendar.nombre,
+                                descripcion: calendar.descripcion ?? '',
+                                estado: calendar.estado,
+                            },
+                        });
                     }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
