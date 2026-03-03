@@ -48,6 +48,7 @@ from main.models import MockElement, Calendario, Evento, Usuario
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 from .permissions import IsCreator
+from django.db.models import Q
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -1078,7 +1079,7 @@ def publish_calendar(request, calendario_id):
 
 @api_view(['GET'])
 def radar_events(request):
-    #/api/radar?lat=..&lon=..&radio=5
+    # /api/radar?lat=..&lon=..&radio=5
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
     radio = request.GET.get("radio", 5)
@@ -1101,17 +1102,44 @@ def radar_events(request):
 
     user_location = Point(lon, lat, srid=4326)
 
+    user = request.user
+
+    if user.is_authenticated:
+        amigos = user.seguidos.all()
+
+        filtro_privacidad = Q(calendarios__estado='PUBLICO') | \
+                            Q(calendarios__estado='AMIGOS', calendarios__creador__in=amigos) | \
+                            Q(creador=user)
+    else:
+        filtro_privacidad = Q(calendarios__estado='PUBLICO')
+
     eventos = (
         Evento.objects
         .filter(
+            filtro_privacidad,
             ubicacion__isnull=False,
             fecha__gte=timezone.now().date()
         )
         .annotate(distancia=Distance("ubicacion", user_location))
         .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
         .order_by("distancia")
+        .distinct()
     )
 
+    resultados = [
+        {
+            "id": evento.id,
+            "titulo": evento.titulo,
+            "descripcion": evento.descripcion,
+            "nombre_lugar": evento.nombre_lugar,
+            "fecha": evento.fecha,
+            "hora": evento.hora,
+            "distancia_km": round(evento.distancia.km, 2),
+            "latitud": evento.ubicacion.y if evento.ubicacion else None,
+            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+        }
+        for evento in eventos
+    ]
     serializer = EventoSerializer(
         eventos, 
         many=True, 
