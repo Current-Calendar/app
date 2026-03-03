@@ -4,7 +4,8 @@ from django.utils.deprecation import MiddlewareMixin
 class CorsMiddleware(MiddlewareMixin):
     allowed_origins = {
         "http://localhost:8081",
-        "http://127.0.0.1:8081",
+        "https://current-web-pre.onrender.com",
+        "https://staging.currentcalendar.es"
     }
 
     def process_request(self, request):
@@ -26,7 +27,8 @@ class CorsMiddleware(MiddlewareMixin):
         else:
             response["Access-Control-Allow-Origin"] = "*"
 
-        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
         response["Access-Control-Max-Age"] = "86400"
+        
         return response
