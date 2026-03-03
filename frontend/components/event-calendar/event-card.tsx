@@ -57,6 +57,11 @@ export default function EventCard({
         <View style={styles.content}>
           <Text style={styles.title}>{event.title}</Text>
 
+          <View style={styles.calendarBadge}>
+            <Ionicons name="calendar" size={14} color="#fff" />
+            <Text style={styles.calendarBadgeText}>{event.calendarName}</Text>
+          </View>
+
           <Text
             style={styles.description}
             numberOfLines={1}
@@ -169,6 +174,22 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
+  },
+  calendarBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10464d",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginBottom: 6,
+  },
+  calendarBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: "600",
   },
   actionButton: {
     flexDirection: "row",

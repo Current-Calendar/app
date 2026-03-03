@@ -1,7 +1,6 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
-
 import os
 import ipaddress
 import socket
@@ -23,7 +22,7 @@ from googleapiclient.discovery import build
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, mixins
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
@@ -32,16 +31,20 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import (
+    UsuarioRegistroSerializer,
+    UsuarioSerializer,
+    UserSerializer,
+    PublicUserSerializer,
+)
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
-
 from main.models import MockElement, Calendario, Evento, Usuario
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
+from .permissions import IsCreator
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -107,11 +110,22 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
+    def retrieve(self, request, pk) -> Response:
+        user = self.get_object()
+        user_data = PublicUserSerializer(user, context={'request': request}).data
+        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
+                "id", "nombre", "descripcion", "portada", "fecha_creacion"
+            ))
+        user_data["public_calendars"] = public_calendars
+        return Response(user_data)
+
+class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    queryset = Evento.objects.all()
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated & IsCreator]
 
 
-
-
-@api_view(['GET'])
+@api_view(["GET"])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    

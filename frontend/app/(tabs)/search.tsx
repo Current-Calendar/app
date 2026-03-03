@@ -10,6 +10,10 @@ import {
 import { useState, useMemo } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
+// domain types for calendars/events
+import { Calendar, CalendarEvent } from '@/types/calendar';
+import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+
 interface User {
     id: string;
     name: string;
@@ -33,12 +37,34 @@ export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const [users, setUsers] = useState(mockUsers);
 
-    const filtered = useMemo(() => {
-        if (!query.trim()) return [];
+    const calendarMap = useMemo(() => {
+        const m: Record<string, string> = {};
+        MOCK_CALENDARS.forEach((c) => (m[c.id] = c.nombre));
+        return m;
+    }, []);
 
-        return users.filter((user) =>
-            user.name.toLowerCase().includes(query.toLowerCase())
-        );
+    type SearchResult =
+        | { type: 'user'; data: User }
+        | { type: 'calendar'; data: Calendar }
+        | { type: 'event'; data: CalendarEvent };
+
+    const filtered: SearchResult[] = useMemo(() => {
+        if (!query.trim()) return [];
+        const q = query.toLowerCase();
+
+        const usersRes: SearchResult[] = users
+            .filter((u) => u.name.toLowerCase().includes(q))
+            .map((u) => ({ type: 'user', data: u }));
+
+        const calRes: SearchResult[] = MOCK_CALENDARS
+            .filter((c) => c.nombre.toLowerCase().includes(q))
+            .map((c) => ({ type: 'calendar', data: c }));
+
+        const eventRes: SearchResult[] = MOCK_EVENTS
+            .filter((e) => e.titulo.toLowerCase().includes(q))
+            .map((e) => ({ type: 'event', data: e }));
+
+        return [...usersRes, ...calRes, ...eventRes];
     }, [query, users]);
 
     const toggleFollow = (id: string) => {
@@ -51,12 +77,12 @@ export default function SearchScreen() {
 
     return (
         <View style={styles.container}>
+
             {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
-                    placeholder="Search users, calendars..."
-                    placeholder="Search users..."
+                    placeholder='Search users, calendars, events...'
                     value={query}
                     onChangeText={setQuery}
                     style={styles.input}
@@ -64,35 +90,72 @@ export default function SearchScreen() {
             </View>
 
             {/* RESULTS */}
-            <FlatList
+            <FlatList<SearchResult>
                 data={filtered}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                    <View style={styles.userCard}>
-                        <View style={styles.userInfo}>
-                            <Image
-                                source={{ uri: "https://i.pravatar.cc/100" }}
-                                style={styles.avatar}
-                            />
-                            <View>
-                                <Text style={styles.name}>{item.name}</Text>
-                                <Text style={styles.bio}>{item.bio}</Text>
+                keyExtractor={(item: any) => `${item.type}-${item.data.id}`}
+                renderItem={({ item }) => {
+                    if (item.type === 'user') {
+                        const user = item.data as User;
+                        return (
+                            <View style={styles.userCard}>
+                                <View style={styles.userInfo}>
+                                    <Image
+                                        source={{ uri: 'https://i.pravatar.cc/100' }}
+                                        style={styles.avatar}
+                                    />
+                                    <View>
+                                        <Text style={styles.name}>{user.name}</Text>
+                                        <Text style={styles.bio}>{user.bio}</Text>
+                                    </View>
+                                </View>
+
+                                <Pressable
+                                    style={[
+                                        styles.followButton,
+                                        user.followed && styles.followingButton,
+                                    ]}
+                                    onPress={() => toggleFollow(user.id)}
+                                >
+                                    <Text style={styles.followText}>
+                                        {user.followed ? 'Following' : 'Follow'}
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        );
+                    }
+
+                    if (item.type === 'calendar') {
+                        const cal = item.data as Calendar;
+                        return (
+                            <View style={styles.calendarCard}>
+                                {cal.portada && (
+                                    <Image
+                                        source={{ uri: cal.portada }}
+                                        style={styles.calendarCover}
+                                    />
+                                )}
+                                <View style={styles.calendarInfo}>
+                                    <Text style={styles.calendarName}>{cal.nombre}</Text>
+                                    <Text style={styles.calendarDesc}>{cal.descripcion}</Text>
+                                </View>
+                            </View>
+                        );
+                    }
+
+                    const ev = item.data as CalendarEvent;
+                    return (
+                        <View style={styles.eventCard}>
+                            <View style={styles.eventInfo}>
+                                <Text style={styles.eventTitle}>{ev.titulo}</Text>
+                                <Text style={styles.eventMeta}>
+                                    {ev.fecha} {ev.hora}
+                                    {ev.calendarId &&
+                                        ` • ${calendarMap[ev.calendarId] || ''}`}
+                                </Text>
                             </View>
                         </View>
-
-                        <Pressable
-                            style={[
-                                styles.followButton,
-                                item.followed && styles.followingButton,
-                            ]}
-                            onPress={() => toggleFollow(item.id)}
-                        >
-                            <Text style={styles.followText}>
-                                {item.followed ? "Following" : "Follow"}
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
+                    );
+                }}
             />
         </View>
     );
@@ -165,5 +228,47 @@ const styles = StyleSheet.create({
     followText: {
         color: "#fff",
         fontWeight: "600",
+    },
+
+    calendarCard: {
+        backgroundColor: "#F2F2F2",
+        borderRadius: 12,
+        marginBottom: 12,
+        overflow: "hidden",
+    },
+    calendarCover: {
+        width: "100%",
+        height: 120,
+    },
+    calendarInfo: {
+        padding: 12,
+    },
+    calendarName: {
+        fontWeight: "bold",
+        fontSize: 16,
+    },
+    calendarDesc: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+    },
+
+    eventCard: {
+        backgroundColor: "#F2F2F2",
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
+    },
+    eventInfo: {
+        flexDirection: "column",
+    },
+    eventTitle: {
+        fontWeight: "bold",
+        fontSize: 15,
+    },
+    eventMeta: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 2,
     },
 });
