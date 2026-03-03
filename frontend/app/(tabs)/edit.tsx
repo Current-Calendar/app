@@ -5,13 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import API_CONFIG from "@/constants/api";
-import { useAuth } from "../context/AuthContext";
 
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 
 export default function EditScreen() {
   const router = useRouter();
-  const { user } = useAuth();
   const params = useLocalSearchParams<{
     id: string;
     nombre: string;
@@ -63,17 +61,11 @@ export default function EditScreen() {
       return;
     }
 
-    if (!user?.username) {
-      Alert.alert("Error", "You must be logged in to edit a calendar.");
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           nombre: calendarData.nombre,
           descripcion: calendarData.descripcion,
