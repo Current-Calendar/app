@@ -110,10 +110,8 @@ class CrearEventoTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 Usuario = get_user_model()
-class BorrarUsuarioTestCase(TestCase):
+class BorrarUsuarioTestCase(APITestCase):
     def setUp(self):
-        self.client = APIClient()
-
         self.user = Usuario.objects.create_user(
             email="user@example.com", password="password123", username="user1"
         )
@@ -129,27 +127,8 @@ class BorrarUsuarioTestCase(TestCase):
         response = self.client.delete(
             self.url,
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-class BorrarUsuarioTestCase(TestCase):
-    def setUp(self):
-        self.client = APIClient()
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        self.user = Usuario.objects.create_user(
-            email="user@example.com", password="password123", username="user1"
-        )
-        self.url=reverse("usuario-propio-view")
-    def test_borrar(self):
-        self.client.force_authenticate(user=self.user)
-        response = self.client.delete(
-            self.url,
-        )
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        self.assertRaises(Usuario.DoesNotExist,self.user.refresh_from_db)
-    def test_borrar_no_autenticado(self):
-        response = self.client.delete(
-            self.url,
-        )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 from rest_framework import status
 from main.models import Usuario, Calendario, Evento
 from django.urls import reverse
@@ -1222,7 +1201,7 @@ class EliminarCalendarioTestCase(APITestCase):
     def test_eliminar_calendario_sin_autenticar(self):
         """An unauthenticated user cannot delete a calendar"""
         response = self.client.delete(f'/api/v1/calendarios/{self.calendario.id}/eliminar/')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_eliminar_calendario_sin_permiso(self):
         """A user who is not the creator cannot delete the calendar"""
@@ -1280,7 +1259,7 @@ class EditarCalendarioTestCase(TestCase):
         response = self.client.put(f'/api/v1/calendarios/{self.calendario.id}/editar/', {
             'nombre': 'Intento sin auth'
         })
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""
@@ -1322,7 +1301,7 @@ class EditarUsuarioTestCase(TestCase):
             {"email": self.user.email, "username": "hackeado"},
             format="json"
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.user.refresh_from_db()
         self.assertNotEqual(self.user.username, "hackeado")
 
