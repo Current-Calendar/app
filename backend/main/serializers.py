@@ -160,7 +160,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=Usuario
-        fields=['foto','email','username','password','pronombres','link','biografia']
+        fields=['foto','email','username','pronombres','link','biografia']
 
 
 class EventoSerializer(serializers.ModelSerializer):

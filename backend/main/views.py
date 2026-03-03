@@ -93,7 +93,6 @@ def _is_safe_calendar_url(raw_url: str):
 
 class UserViewSet(viewsets.GenericViewSet):
     queryset = Usuario.objects.all()
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["post"])
@@ -127,7 +126,6 @@ class UserViewSet(viewsets.GenericViewSet):
 
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated & IsCreator]
 
 
@@ -485,8 +483,6 @@ def registro_usuario(request):
     
     if serializer.is_valid():
         usuario = serializer.save()
-        usuario.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, usuario)
         
         # Devolver datos del usuario creado
         usuario_serializer = UsuarioSerializer(usuario)

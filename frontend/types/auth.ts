@@ -12,11 +12,6 @@ export interface TokenResponse {
   refresh: string;
 }
 
-export interface LoginCredentials {
-  username: string;
-  password: string;
-}
-
 export interface RegisterData {
   username: string;
   email: string;
@@ -26,13 +21,9 @@ export interface RegisterData {
 
 export interface AuthContextType {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
-  refreshAccessToken: () => Promise<void>;
   setUser: (user: User | null) => void;
 }

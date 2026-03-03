@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Pressable, StyleSheet, Image } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import { useAuth } from "@/app/context/AuthContext"; // ajusta si tu import es distinto
+import { useAuth } from "@/hooks/use-auth";
 
 export default function TopBar() {
   const router = useRouter();

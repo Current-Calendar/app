@@ -1,42 +1,67 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_CONFIG } from "@/constants/api";
+import { RegisterData, TokenResponse, User } from "@/types/auth";
+import { createAsyncStorage } from "@react-native-async-storage/async-storage";
 
 class ApiClient {
-  private baseURL: string;
+  user: User | null = null;
+
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
 
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
-    this.loadTokens();
-  }
+  private storage = createAsyncStorage("auth");
 
-  private async loadTokens() {
+  async loadTokens() {
     try {
-      this.accessToken = await AsyncStorage.getItem('accessToken');
-      this.refreshToken = await AsyncStorage.getItem('refreshToken');
+      this.accessToken = await this.storage.getItem('accessToken');
+      this.refreshToken = await this.storage.getItem('refreshToken');
+
+      const user = await this.storage.getItem('user');
+      if (user) {
+        this.user = JSON.parse(user);
+      }
     } catch (error) {
       console.error('Error loading tokens:', error);
     }
   }
 
-  setTokens(accessToken: string, refreshToken: string) {
+  async setTokens(accessToken: string, refreshToken: string) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
+
+    this.storage.setMany({
+      "accessToken": this.accessToken,
+      "refreshToken": this.refreshToken,
+    });
   }
 
-  clearTokens() {
+  async clearTokens() {
     this.accessToken = null;
     this.refreshToken = null;
+
+    await this.storage.clear();
   }
 
-  private async refreshAccessTokenInternal(): Promise<boolean> {
+  async login(username: string, password: string) {
+    const response = await this.post<TokenResponse>("/token/", { username, password });
+
+    this.setTokens(response.access, response.refresh);
+
+    const user = await apiClient.get<User>('/users/me');
+    this.user = user;
+    await this.storage.setItem('user', JSON.stringify(user));
+  }
+
+  async register(data: RegisterData): Promise<any> {
+    return await this.post<any>("/auth/registro/", data);
+  }
+
+  private async refreshAccessToken(): Promise<boolean> {
     if (!this.refreshToken) {
       return false;
     }
 
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/token/refresh/`, {
+      const response = await fetch(`${API_CONFIG.BaseURL}/token/refresh/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +78,7 @@ class ApiClient {
       const data = await response.json();
       this.accessToken = data.access;
 
-      await AsyncStorage.setItem('accessToken', data.access);
+      await this.storage.setItem('accessToken', data.access);
       return true;
     } catch (error) {
       console.error('Error refreshing token:', error);
@@ -65,7 +90,7 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${API_CONFIG.BaseURL}${endpoint}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -82,7 +107,7 @@ class ApiClient {
 
     // Si 401, intentar refrescar token
     if (response.status === 401 && this.refreshToken) {
-      const refreshed = await this.refreshAccessTokenInternal();
+      const refreshed = await this.refreshAccessToken();
 
       if (refreshed && this.accessToken) {
         headers['Authorization'] = `Bearer ${this.accessToken}`;
@@ -127,6 +152,6 @@ class ApiClient {
 
 }
 
-const apiClient = new ApiClient(API_CONFIG.baseURL || 'http://localhost:8000');
+const apiClient = new ApiClient();
 
 export default apiClient;

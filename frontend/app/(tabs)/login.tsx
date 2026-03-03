@@ -13,8 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { useAuth } from "../context/AuthContext";
-import { API_CONFIG } from "@/constants/api";
+import { useAuth } from "@/hooks/use-auth";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -32,8 +31,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  // ✅ sacar setUser del contexto
-  const { setUser } = useAuth();
+  const { login } = useAuth();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -57,71 +55,13 @@ export default function LoginScreen() {
 
     setLoading(true);
 
-    const query = `
-      mutation Login($username: String!, $password: String!) {
-        login(username: $username, password: $password) {
-          success
-          message
-        }
-      }
-    `;
-
-    const payload = JSON.stringify({
-      query,
-      variables: { username: u, password },
-    });
-
     try {
-      const res = await fetch(API_CONFIG.endpoints.graphql, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: payload,
-      });
+      login(username, password);
 
-      const raw = await res.text();
-
-      if (!res.ok) {
-        try {
-          const j = JSON.parse(raw);
-          const msg =
-            j?.errors?.[0]?.message ||
-            j?.message ||
-            "Error conectando con la API (GraphQL).";
-          setErrorMsg(String(msg));
-        } catch {
-          setErrorMsg("Error conectando con la API (GraphQL).");
-        }
-        return;
-      }
-
-      let data: any = null;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        setErrorMsg("Respuesta inválida del servidor.");
-        return;
-      }
-
-      if (data.errors?.length) {
-        setErrorMsg(data.errors[0]?.message ?? "Login error.");
-        return;
-      }
-
-      const result = data.data?.login;
-      if (!result?.success) {
-        setErrorMsg(result?.message ?? "Credenciales inválidas.");
-        return;
-      }
-
-      setUser({ username: u });
-
-      setSuccessMsg(result.message ?? "Login exitoso.");
+      setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
-    } catch (e) {
-      setErrorMsg("No se puede conectar con la API. Revisa API_BASE y que el backend esté levantado.");
+    } catch {
+      setErrorMsg("Error iniciando sesión.");
     } finally {
       setLoading(false);
     }
