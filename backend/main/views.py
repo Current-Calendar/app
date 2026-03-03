@@ -864,9 +864,29 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['PUT'])
+@api_view(['GET', 'PUT'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
+    
+    # Handle GET: Return event data
+    if request.method == 'GET':
+        return Response(
+            {
+                "id": event.id,
+                "titulo": event.titulo,
+                "descripcion": event.descripcion,
+                "nombre_lugar": event.nombre_lugar,
+                "fecha": event.fecha,
+                "hora": event.hora,
+                "recurrencia": event.recurrencia,
+                "id_externo": event.id_externo,
+                "calendarios": list(event.calendarios.values_list("id", flat=True)),
+                "fecha_creacion": event.fecha_creacion,
+            },
+            status=status.HTTP_200_OK,
+        )
+    
+    # Handle PUT: Update event
     data = request.data
 
     # Validate required fields are not empty if provided
