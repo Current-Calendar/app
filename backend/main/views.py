@@ -767,7 +767,7 @@ def delete_event(request, evento_id):
     )
 
 
-@api_view(['DELETE'])
+@api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def eliminar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
