@@ -195,6 +195,7 @@ export default function CalendarScreen() {
         setDeletingCalendarId(calendar.id);
         try {
             const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
+                method: 'DELETE',
                 credentials: 'include',
                 headers: {
                     'X-CSRFToken': getCsrfToken(),
@@ -358,7 +359,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push('/create')}
+                                onPress={() => router.push('/(tabs)/create')}
                             >
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
@@ -414,7 +415,15 @@ export default function CalendarScreen() {
                     onDelete={handleDeleteCalendarPress}
                     onEdit={(calendar) => {
                         setInfoCalendar(null);
-                        router.push(`/modal`); 
+                        router.push({
+                            pathname: '/(tabs)/edit',
+                            params: {
+                                id: calendar.id,
+                                nombre: calendar.nombre,
+                                descripcion: calendar.descripcion ?? '',
+                                estado: calendar.estado,
+                            },
+                        });
                     }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
