@@ -31,6 +31,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
+from django.http import HttpResponse
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -424,7 +425,7 @@ def export_to_ics(request, calendario_id):
         cal.add_component(event)
 
     ics_content = cal.to_ical()
-    response = Response(ics_content, content_type='text/calendar')
+    response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
