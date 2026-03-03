@@ -71,6 +71,9 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
         <SidebarItem icon="calendar-clear" label="My Calendar" expanded={expanded} href="/(tabs)/calendar-view" />
         <SidebarItem icon="add-circle" label="Create" expanded={expanded} href={`/create_events?date=${getTodayFormatted()}`} />
         <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/(tabs)/switch-calendar" />
+        <SidebarItem icon="people" label="Our Team" expanded={expanded} />
+        <SidebarItem icon="compass" label="Map" expanded={expanded} href="/radar"/>
+        <SidebarItem icon="settings" label="Settings" expanded={expanded} />
         {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
         {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
         <SidebarItem icon="person" label="Profile" expanded={expanded} />

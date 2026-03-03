@@ -42,6 +42,8 @@ from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
 from main.models import MockElement, Calendario, Evento, Usuario
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 from .permissions import IsCreator
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -51,6 +53,8 @@ REQUEST_TIMEOUT_SECONDS = 5
 #if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+
 
 
 def _is_safe_calendar_url(raw_url: str):
@@ -987,3 +991,58 @@ def publish_calendar(request, calendario_id):
         },
         status=status.HTTP_200_OK,
     )
+
+@api_view(['GET'])
+def radar_events(request):
+    #/api/radar?lat=..&lon=..&radio=5
+    lat = request.GET.get("lat")
+    lon = request.GET.get("lon")
+    radio = request.GET.get("radio", 5)
+
+    if not lat or not lon:
+        return Response(
+            {"error": "Debes enviar lat y lon"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        lat = float(lat)
+        lon = float(lon)
+        radio = float(radio)
+    except ValueError:
+        return Response(
+            {"error": "lat, lon y radio deben ser numéricos"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user_location = Point(lon, lat, srid=4326)
+
+    eventos = (
+        Evento.objects
+        .filter(
+            ubicacion__isnull=False,
+            fecha__gte=timezone.now().date()
+        )
+        .annotate(distancia=Distance("ubicacion", user_location))
+        .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
+        .order_by("distancia")
+    )
+
+    resultados = [
+        {
+            "id": evento.id,
+            "titulo": evento.titulo,
+            "descripcion": evento.descripcion,
+            "nombre_lugar": evento.nombre_lugar,
+            "fecha": evento.fecha,
+            "hora": evento.hora,
+            "distancia_km": round(evento.distancia.km, 2),
+            "latitud": evento.ubicacion.y if evento.ubicacion else None,
+            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+            "foto": evento.foto.url if evento.foto else None,
+            "creador_username": evento.creador.username,
+        }
+        for evento in eventos
+    ]
+
+    return Response(resultados, status=status.HTTP_200_OK)
