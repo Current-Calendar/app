@@ -17,6 +17,12 @@ export default function BottomBar({ NavButton }: Props) {
   const navigateTo = (path: string) => {
     closeMenu();
     router.push(path as any);
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (
@@ -24,7 +30,10 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" onPress={handleAddPress} />
+      <NavButton icon="calendar-clear" href="/calendar-view" />
       <NavButton icon="calendar" href="/switch-calendar" />
+      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="compass" href="/radar" />
 
       <Modal
         visible={menuVisible}

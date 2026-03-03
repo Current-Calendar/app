@@ -19,7 +19,13 @@ export const API_CONFIG = {
     mock: buildEndpoint('mock'),
     getCalendars: buildEndpoint('calendarios/list'),
     getEvents: buildEndpoint('eventos/list'),
-    deleteCalendar: (calendarId: number) => buildEndpoint(`api/v1/calendarios/${calendarId}/eliminar/`),
+    deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    searchUsers: (query: string) => buildEndpoint(`usuarios?search=${encodeURIComponent(query)}`),
+    searchCalendars: (query: string) => buildEndpoint(`calendarios/list?q=${encodeURIComponent(query)}`),
+    searchEvents: (query: string) => buildEndpoint(`eventos/list?q=${encodeURIComponent(query)}`),
+    nearbyEvents: (lat: number, lon: number, radio: number) => buildEndpoint(`radar?lat=${lat}&lon=${lon}&radio=${radio}`),
+    createCalendar: buildEndpoint('calendarios'),
+    editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
   },
 };
 

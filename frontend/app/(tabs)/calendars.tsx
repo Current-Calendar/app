@@ -1,3 +1,4 @@
+<<<<<<< feature/list-search-calendar
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
@@ -13,18 +14,37 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+=======
+import React, { useMemo, useRef, useState } from 'react';
+import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+
+>>>>>>> main
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CalendarHeader } from '@/components/calendar-header';
-import { CalendarSelector } from '@/components/calendar-selector';
-import { EventFilterBar } from '@/components/event-filter-bar';
 import { CalendarGrid } from '@/components/calendar-grid';
-import { EventDetailModal } from '@/components/event-detail-modal';
+import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { CalendarSelector } from '@/components/calendar-selector';
+import { EventDetailModal } from '@/components/event-detail-modal';
+import { EventFilterBar } from '@/components/event-filter-bar';
 
+<<<<<<< feature/list-search-calendar
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
+=======
+import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
+
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Sharing from "expo-sharing";
+import { toPng } from "html-to-image";
+import { captureRef } from "react-native-view-shot";
+
+>>>>>>> main
 import { API_CONFIG } from '@/constants/api';
+import { downloadCalendar } from '@/services/calendarService';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -54,9 +74,16 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+<<<<<<< feature/list-search-calendar
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
+=======
+    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
+    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+    const navigation = useNavigation<any>();
+    const isWeb = Platform.OS === "web";
+>>>>>>> main
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -66,6 +93,7 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
+<<<<<<< feature/list-search-calendar
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -123,6 +151,11 @@ export default function CalendarScreen() {
         void fetchData();
     }, []);
 
+=======
+    const [open, setOpen] = useState(false);
+    const rotation = useRef(new Animated.Value(0)).current;
+    const calendarRef = useRef<View>(null);
+>>>>>>> main
     // Animation for the bottom sheet
     const sheetY = useRef(new Animated.Value(120)).current;
 
@@ -238,6 +271,87 @@ export default function CalendarScreen() {
         );
     }
 
+    const optionAnimations = useRef([
+        new Animated.Value(0),
+        new Animated.Value(0),
+    ]).current;
+
+    const toggleMenu = () => {
+        const isOpening = !open;
+
+        Animated.timing(rotation, {
+            toValue: open ? 0 : 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+
+        const animations = optionAnimations.map((anim, i) =>
+            Animated.timing(anim, {
+                toValue: open ? 0 : 1,
+                duration: 200,
+                delay: i * 50,
+                useNativeDriver: true,
+            })
+        );
+        Animated.stagger(50, isOpening ? animations : animations.reverse()).start(() => {
+            if (!isOpening) setOpen(false);
+        });
+        if (isOpening) setOpen(true);
+    };
+
+    const rotateInterpolate = rotation.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["0deg", "180deg"],
+    });
+
+    // TODO BACKEND - Descomentar una vez se tengan calendarios reales
+    const exportarCalendar = async () => {
+        try {
+            const fileUri = await downloadCalendar(selectedCalendarId!);
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri!);
+            } else {
+                alert("Archivo guardado en: " + fileUri);
+            }
+        } catch (error) {
+            alert("No se pudo descargar correctamente el calendario. ")
+            console.log(error)
+        }
+    }
+
+    const exportarPng = async () => {
+        try {
+            if (Platform.OS === "web") {
+                const node = document.getElementById("calendar-web");
+                if (!node) return;
+
+                const dataUrl = await toPng(node);
+                const link = document.createElement("a");
+                link.href = dataUrl;
+                link.download = "calendar.png";
+                link.click();
+
+            } else {
+                if (!calendarRef.current) return;
+
+                const uri = await captureRef(calendarRef.current, {
+                    format: "png",
+                    quality: 1,
+                });
+
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(uri);
+                } else {
+                    alert("Imagen guardada en: " + uri);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert("No se pudo exportar el calendario como PNG");
+        }
+    }
+
     return (
         <View style={styles.screenWrapper}>
             <ScrollView
@@ -294,7 +408,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -304,7 +418,9 @@ export default function CalendarScreen() {
                         </View>
                     </TouchableOpacity>
                 )}
-
+                <View style={styles.container}
+                    id="calendar-web"
+                    ref={calendarRef}>
                 <CalendarGrid
                     year={year}
                     month={month}
@@ -313,7 +429,7 @@ export default function CalendarScreen() {
                     selectedDay={selectedDay}
                     onDayPress={handleDayPress}
                 />
-
+                </View>
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
                 <CalendarInfoModal
                     calendar={infoCalendar}
@@ -358,7 +474,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
@@ -366,6 +482,37 @@ export default function CalendarScreen() {
                     </View>
                 </Animated.View>
             )}
+                        {optionAnimations.map((anim, index) => {
+                const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+                const opacity = anim;
+                const fabBottom = Platform.OS === "web" ? 30 : 90;
+                const isCalendar = index === 1;
+                const text = isCalendar ? "Exportar calendario" : "Descargar como PNG";
+                const onPress = isCalendar ? exportarCalendar : exportarPng;
+
+                return (
+                    <Animated.View
+                        key={index}
+                        style={{
+                            position: "absolute",
+                            bottom: fabBottom + 60 + index * 45,
+                            right: 20,
+                            opacity,
+                            transform: [{ translateY }],
+                        }}
+                        pointerEvents={open ? "auto" : "none"}
+                    >
+                        <Pressable style={styles.option} onPress={onPress}>
+                            <Text style={styles.optionText}>{text}</Text>
+                        </Pressable>
+                    </Animated.View>
+                );
+            })}
+            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
+                <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                    <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+                </Animated.View>
+            </Pressable>
         </View>
     );
 }
@@ -551,5 +698,73 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
         letterSpacing: 0.2,
+    },
+    fab: {
+        position: 'absolute',
+        right: 20,
+        bottom: 30,
+        width: 55,
+        height: 55,
+        borderRadius: 30,
+        backgroundColor: "#10464d",
+        justifyContent: "center",
+        alignItems: "center",
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    menu: {
+        position: "absolute",
+        bottom: 100,
+        right: 20,
+        alignItems: "flex-end",
+    },
+    option: {
+        backgroundColor: "#fffded",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        marginBottom: 10,
+        minWidth: 180,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    optionText: {
+        fontSize: 16,
+        color: "#10464d",
+    },
+    createRow: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    alignItems: 'flex-end',
+    },
+
+    createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(16,70,77,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    },
+
+    createBtnText: {
+    color: '#10464D',
+    fontWeight: '900',
+    fontSize: 12,
+    },
+    filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 20,
     },
 });

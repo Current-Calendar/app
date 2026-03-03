@@ -1,7 +1,6 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
-
 import os
 import ipaddress
 import socket
@@ -23,7 +22,7 @@ from googleapiclient.discovery import build
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, mixins
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
@@ -32,14 +31,20 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer
+from main.serializers import (
+    UsuarioRegistroSerializer,
+    UsuarioSerializer,
+    UserSerializer,
+    PublicUserSerializer,
+)
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
-
 from main.models import MockElement, Calendario, Evento, Usuario
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
+from .permissions import IsCreator
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -48,6 +53,8 @@ REQUEST_TIMEOUT_SECONDS = 5
 #if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
+
 
 
 def _is_safe_calendar_url(raw_url: str):
@@ -103,11 +110,22 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
+    def retrieve(self, request, pk) -> Response:
+        user = self.get_object()
+        user_data = PublicUserSerializer(user, context={'request': request}).data
+        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
+                "id", "nombre", "descripcion", "portada", "fecha_creacion"
+            ))
+        user_data["public_calendars"] = public_calendars
+        return Response(user_data)
+
+class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    queryset = Evento.objects.all()
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated & IsCreator]
 
 
-
-
-@api_view(['GET'])
+@api_view(["GET"])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
@@ -429,7 +447,7 @@ def buscar_usuarios(request):
             "email": user.email,
             "pronombres": user.pronombres,
             "biografia": user.biografia,
-            "foto": user.foto.url if user.foto else None,
+            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
             "total_seguidores": user.total_seguidores,
             "total_seguidos": user.total_seguidos,
             "total_calendarios_seguidos": user.total_calendarios_seguidos,
@@ -591,12 +609,90 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
+            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
         }
         for cal in queryset
     ]
 
     return Response(results, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+def list_events_from_calendar(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        calendarId (int) -- filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+    calendar_id = request.GET.get('calendarId')
+
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+        }
+        for event in queryset
+    ]
+    return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def list_events(request):
+    """
+    List and search events.
+
+    GET /api/v1/eventos/list
+
+    Query parameters:
+        q (str)         -- case-insensitive substring match on title or description
+        calendarId (int)-- optional filter by calendar ID
+    """
+    queryset = Evento.objects.all()
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        queryset = queryset.filter(
+            Q(titulo__icontains=q) | Q(descripcion__icontains=q)
+        )
+
+    calendar_id = request.GET.get('calendarId')
+    if calendar_id:
+        queryset = queryset.filter(calendarios__id=calendar_id)
+
+    queryset = queryset.order_by('-fecha_creacion')
+
+    results = [
+        {
+            "id": event.id,
+            "titulo": event.titulo,
+            "descripcion": event.descripcion,
+            "nombre_lugar": event.nombre_lugar,
+            "fecha": event.fecha,
+            "hora": event.hora,
+            "recurrencia": event.recurrencia,
+            "id_externo": event.id_externo,
+            "calendarios": list(event.calendarios.values_list("id", flat=True)),
+            "fecha_creacion": event.fecha_creacion,
+            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
+        }
+        for event in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def list_events(request):
@@ -1007,3 +1103,58 @@ def publish_calendar(request, calendario_id):
         },
         status=status.HTTP_200_OK,
     )
+
+@api_view(['GET'])
+def radar_events(request):
+    #/api/radar?lat=..&lon=..&radio=5
+    lat = request.GET.get("lat")
+    lon = request.GET.get("lon")
+    radio = request.GET.get("radio", 5)
+
+    if not lat or not lon:
+        return Response(
+            {"error": "Debes enviar lat y lon"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        lat = float(lat)
+        lon = float(lon)
+        radio = float(radio)
+    except ValueError:
+        return Response(
+            {"error": "lat, lon y radio deben ser numéricos"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user_location = Point(lon, lat, srid=4326)
+
+    eventos = (
+        Evento.objects
+        .filter(
+            ubicacion__isnull=False,
+            fecha__gte=timezone.now().date()
+        )
+        .annotate(distancia=Distance("ubicacion", user_location))
+        .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
+        .order_by("distancia")
+    )
+
+    resultados = [
+        {
+            "id": evento.id,
+            "titulo": evento.titulo,
+            "descripcion": evento.descripcion,
+            "nombre_lugar": evento.nombre_lugar,
+            "fecha": evento.fecha,
+            "hora": evento.hora,
+            "distancia_km": round(evento.distancia.km, 2),
+            "latitud": evento.ubicacion.y if evento.ubicacion else None,
+            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+            "foto": evento.foto.url if evento.foto else None,
+            "creador_username": evento.creador.username,
+        }
+        for evento in eventos
+    ]
+
+    return Response(resultados, status=status.HTTP_200_OK)

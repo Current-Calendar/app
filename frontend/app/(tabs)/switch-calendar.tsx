@@ -1,11 +1,13 @@
 import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
 import { API_CONFIG } from '@/constants/api';
 
 export default function CalendarsScreen() {
+  const router = useRouter();
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +51,7 @@ export default function CalendarsScreen() {
   }, []);
 
   const handleOpenCalendar = (id: string) => {
-    // Connect with calendar detail screen
-    // router.push(`/calendars/${id}`);
+    router.push(`/calendar-view?calendarId=${id}`);
   };
 
   const handleSubscribe = (id: string) => {
