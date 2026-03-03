@@ -64,7 +64,7 @@ class Command(BaseCommand):
             creador=user1, 
             origen='GOOGLE', 
             id_externo='google_123', 
-            portada='portadas_calendarios/portada.jpeg'
+            portada='portadas/portada.jpeg'
         )
         cal_carlos_amigos = Calendario.objects.create(
             nombre="Planes Carlos", 
@@ -87,16 +87,18 @@ class Command(BaseCommand):
             ubicacion=Point(-3.7038, 40.4168, srid=4326),
             fecha=date(2026, 3, 15), 
             hora=time(18, 30),
-            foto='fotos_eventos/evento.jpg',
+            foto='eventos/evento.jpg',
             creador=user1
         )
         evento_tech.calendarios.add(cal_ana_pub)
 
         evento_cena = Evento.objects.create(
-            titulo="Cena cumpleaños", 
+            titulo="Cena cumpleaños",
+            nombre_lugar="Restaurante El Buen Sabor",
             descripcion="Nos vemos en el restaurante de siempre.",
             fecha=date(2026, 3, 20), 
             hora=time(21, 00),
+            foto='eventos/evento.jpg',
             creador=user2
         )
         evento_cena.calendarios.add(cal_carlos_amigos, cal_ana_priv)
@@ -107,6 +109,7 @@ class Command(BaseCommand):
             ubicacion=Point(-3.6900, 40.4200, srid=4326),
             fecha=date(2026, 2, 25), 
             hora=time(10, 00),
+            foto='eventos/evento.jpg',
             creador=user3
         )
         evento_gym.calendarios.add(cal_gym, cal_carlos_amigos)
@@ -118,6 +121,7 @@ class Command(BaseCommand):
             ubicacion=Point(-6.0062, 37.3866, srid=4326),  # lon, lat
             fecha=date(2026, 3, 12),
             hora=time(20, 30),
+            foto='eventos/evento.jpg',
             creador=user3
         )
 
@@ -127,7 +131,8 @@ class Command(BaseCommand):
             ubicacion=Point(-5.9930, 37.3929, srid=4326),  # lon, lat
             fecha=date(2026, 3, 18),
             hora=time(19, 15),
-            creador=user3
+            creador=user3,
+            foto='eventos/evento.jpg',
         )
 
         evento_heliopolis = Evento.objects.create(
@@ -136,14 +141,13 @@ class Command(BaseCommand):
             ubicacion=Point(-6.0038, 37.4236, srid=4326),  # lon, lat
             fecha=date(2026, 3, 23),
             hora=time(12, 0),
-            creador=user3
+            creador=user3,
+            foto='eventos/evento.jpg',
         )
-        evento_triana.foto.name = "eventos/evento.jpg"
-        evento_triana.save()
-        evento_heliopolis.foto.name = "eventos/evento.jpg"
-        evento_heliopolis.save()
-        evento_centro.foto.name = "eventos/evento.jpg"
-        evento_centro.save()
+
+        evento_triana.calendarios.add(cal_gym)
+        evento_centro.calendarios.add(cal_gym)
+        evento_heliopolis.calendarios.add(cal_gym)
 
         self.stdout.write('Creando MockElements...')
         MockElement.objects.create(

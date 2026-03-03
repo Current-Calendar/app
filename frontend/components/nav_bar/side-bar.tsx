@@ -1,13 +1,22 @@
-import { View, Pressable, StyleSheet, Image, Text } from "react-native";
+import { View, Pressable, StyleSheet, Image, Modal, Text, TouchableWithoutFeedback } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, type Href } from "expo-router";
+import { Link, type Href, useRouter } from "expo-router";
+import { useAuth } from "../../app/context/AuthContext"; 
+import { useState } from "react";
 
-interface Props {
-  expanded: boolean;
-  setExpanded: (value: boolean) => void;
-}
+export default function Sidebar() {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-export default function Sidebar({ expanded, setExpanded }: Props) {
+  const handleAddPress = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+
+  const navigateTo = (path: string) => {
+    closeMenu();
+    router.push(path as any);
+  }; 
+
   const getTodayFormatted = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -19,18 +28,17 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
   const SidebarItem = ({
     icon,
     label,
-    expanded,
     href,
+    onPress,
   }: {
     icon: any;
     label: string;
-    expanded: boolean;
     href?: string;
+    onPress?: () => void;
   }) => {
     const content = (
-      <Pressable style={styles.sidebarItem}>
+      <Pressable style={styles.sidebarItem} onPress={onPress}>
         <Ionicons name={icon} size={22} color="#ffffff" />
-        {expanded && <Text style={styles.sidebarText}>{label}</Text>}
       </Pressable>
     );
 
@@ -45,51 +53,72 @@ export default function Sidebar({ expanded, setExpanded }: Props) {
     return content;
   };
 
+  // lógica Profile/Login
+  const profileLabel = isAuthenticated ? "Profile" : "Login";
+  const profileHref: Href = isAuthenticated ? ("/" as Href/*"/profile" as Href*/) : ("/login" as Href);
+
+
   return (
-    <View
-      style={[
-        styles.sidebar,
-        expanded && styles.sidebarExpanded,
-      ]}
-    >
+    <View style={[styles.sidebar]}>
       {/* TOP */}
       <View style={styles.sidebarTop}>
         <Image
           source={require("../../assets/images/icon-current-white.png")}
-          style={[
-            styles.sidebarLogo,
-            expanded && styles.sidebarLogoExpanded,
-          ]}
+          style={[styles.sidebarLogo]}
           resizeMode="contain"
         />
       </View>
 
       {/* CENTER */}
       <View style={styles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" expanded={expanded} href="/(tabs)/calendars" />
-        <SidebarItem icon="search" label="Search" expanded={expanded} href="/(tabs)/search" />
-        <SidebarItem icon="calendar-clear" label="My Calendar" expanded={expanded} href="/(tabs)/calendar-view" />
-        <SidebarItem icon="add-circle" label="Create" expanded={expanded} href={`/create_events?date=${getTodayFormatted()}`} />
-        <SidebarItem icon="calendar" label="Discover" expanded={expanded}  href="/(tabs)/switch-calendar" />
-        <SidebarItem icon="people" label="Our Team" expanded={expanded} />
-        <SidebarItem icon="compass" label="Map" expanded={expanded} href="/radar"/>
-        <SidebarItem icon="settings" label="Settings" expanded={expanded} />
-        {/*<SidebarItem icon="people" label="Activity" expanded={expanded} />*/}
-        {/*<SidebarItem icon="compass" label="Map" expanded={expanded} />*/}
-        <SidebarItem icon="person" label="Profile" expanded={expanded} />
-      </View>
+        <SidebarItem icon="home" label="Home" href="/(tabs)/calendars" />
+        <SidebarItem icon="search" label="Search" href="/(tabs)/search" />
+        <SidebarItem icon="add-circle" label="Create" onPress={handleAddPress} />
+        <SidebarItem icon="calendar" label="Discover"  href="/(tabs)/switch-calendar" />
+        <SidebarItem icon="people" label="Our Team"/>
+        <SidebarItem icon="compass" label="Map" href="/radar"/>
+        <SidebarItem icon="person" label={profileLabel} href={profileHref} />
 
-      {/* BOTTOM */}
-      <Pressable
-        style={styles.expandButton}
-        onPress={() => setExpanded(!expanded)}
-      >
-        <Ionicons
-          name={expanded ? "chevron-back" : "chevron-forward"}
-          size={22}
-          color="#ffffff"
-        />
-      </Pressable>
+        <Modal
+          visible={menuVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeMenu}
+        >
+          <TouchableWithoutFeedback onPress={closeMenu}>
+            <View style={styles.overlay}>
+              <View style={styles.menuContainer}>
+                <Text style={styles.menuTitle}>Create New</Text>
+  
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
+                >
+                  <View style={[styles.iconBg, { backgroundColor: "#10464d" }]}>
+                    <Ionicons name="add" size={24} color="#fff" />
+                  </View>
+                  <Text style={styles.menuItemText}>New Event</Text>
+                </Pressable>
+  
+                <Pressable
+                  style={styles.menuItem}
+                  onPress={() => navigateTo("/create")}
+                >
+                  <View style={[styles.iconBg, { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#10464d" }]}>
+                    <Ionicons name="calendar-outline" size={22} color="#10464d" />
+                  </View>
+                  <Text style={styles.menuItemText}>New Calendar</Text>
+                </Pressable>
+  
+                <Pressable style={styles.closeBtn} onPress={closeMenu}>
+                  <Ionicons name="close" size={24} color="#888" />
+                </Pressable>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+        
+      </View>
     </View>
   );
 }
@@ -103,10 +132,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  sidebarExpanded: {
-    width: 170,
-    alignItems: "flex-start",
-    paddingLeft: 20,
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  menuContainer: {
+    width: 250,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 15,
+  },
+
+  menuTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: "#888",
+    marginBottom: 20,
+  },
+
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "stretch",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    gap: 15,
+  },
+
+  iconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  menuItemText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#10464d",
   },
 
   sidebarTop: {
@@ -118,12 +193,6 @@ const styles = StyleSheet.create({
   sidebarLogo: {
     width: 50,
     height: 50,
-  },
-
-  sidebarLogoExpanded: {
-    width: 110,
-    height: 110,
-    transform: [{ translateX: -10 }],
   },
 
   sidebarCenter: {
@@ -143,7 +212,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
 
-  expandButton: {
-    marginBottom: 10,
+  closeBtn: {
+    marginTop: 10,
+    padding: 10,
   },
 });

@@ -5,6 +5,7 @@ import {
     Modal,
     Alert,
     ActivityIndicator,
+    Platform,
     Pressable,
     TouchableOpacity,
     StyleSheet,
@@ -29,18 +30,15 @@ interface CalendarInfoModalProps {
     calendar: Calendar | null;
     onClose: () => void;
     onDelete?: (calendar: Calendar) => Promise<void> | void;
+    onEdit?: (calendar: Calendar) => void;
     isDeleting?: boolean;
 }
 
-/**
- * Modal that shows full info for a specific calendar.
- *
- * TODO BACKEND - Data should come from GET /calendars/:id
- */
 export function CalendarInfoModal({
     calendar,
     onClose,
     onDelete,
+    onEdit,
     isDeleting = false,
 }: CalendarInfoModalProps) {
     if (!calendar) return null;
@@ -51,6 +49,13 @@ export function CalendarInfoModal({
 
     const handleDeletePress = () => {
         if (!onDelete) return;
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`)) {
+                onDelete(calendar);
+            }
+            return;
+        }
 
         Alert.alert(
             'Delete calendar',
@@ -113,8 +118,17 @@ export function CalendarInfoModal({
                         </View>
                     </View>
 
-                    {onDelete && (
-                        <View style={styles.actions}>
+                    <View style={styles.actions}>
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={() => onEdit?.(calendar)}
+                            activeOpacity={0.75}
+                        >
+                            <Ionicons name="pencil" size={16} color="#fff" />
+                            <Text style={styles.editButtonLabel}>Edit calendar</Text>
+                        </TouchableOpacity>
+
+                        {onDelete && (
                             <TouchableOpacity
                                 style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
                                 onPress={handleDeletePress}
@@ -130,8 +144,8 @@ export function CalendarInfoModal({
                                     {isDeleting ? 'Deleting...' : 'Delete calendar'}
                                 </Text>
                             </TouchableOpacity>
-                        </View>
-                    )}
+                        )}
+                    </View>
                 </Pressable>
             </Pressable>
         </Modal>
@@ -229,9 +243,32 @@ const styles = StyleSheet.create({
         color: '#2D2D2D',
     },
     actions: {
-        marginTop: 16,
+        flexDirection: 'row',
+        gap: 12,
+    },
+    editButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: '#10464d',
+        borderRadius: 14,
+        paddingVertical: 12,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+        marginTop: 8,
+    },
+    editButtonLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#fff',
     },
     deleteButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -241,6 +278,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#eb8c8514',
         borderRadius: 14,
         paddingVertical: 11,
+        marginTop: 8,
     },
     deleteButtonDisabled: {
         opacity: 0.7,

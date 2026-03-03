@@ -66,6 +66,7 @@ export default function EditScreen() {
       const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           nombre: calendarData.nombre,
           descripcion: calendarData.descripcion,
@@ -78,14 +79,7 @@ export default function EditScreen() {
         throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
       }
 
-      Alert.alert("Success", "Calendar updated successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.replace('/(tabs)/calendars');
-          },
-        },
-      ]);
+      router.replace('/(tabs)/calendars');
     } catch (error) {
       Alert.alert("Error", "Failed to update calendar. Please try again.");
       console.error("Edit error:", error);
