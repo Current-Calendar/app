@@ -1,9 +1,19 @@
+import React from "react";
 import { View, Pressable, StyleSheet, Image } from "react-native";
+import { useRouter, type Href } from "expo-router";
+import { useAuth } from "@/app/context/AuthContext"; // ajusta si tu import es distinto
 
 export default function TopBar() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+
+  const goProfileOrLogin = () => {
+    router.push((isAuthenticated ? "/" : "/login") as Href);
+  };
+
   return (
     <View style={styles.topBar}>
-      <Pressable style={styles.profileContainer}>
+      <Pressable style={styles.profileContainer} onPress={goProfileOrLogin}>
         <View style={styles.profileAvatar} />
       </Pressable>
 
@@ -29,32 +39,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
   },
-
-  logoContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  sidePlaceholder: {
-    width: 35,
-  },
-
+  logoContainer: { alignItems: "center", justifyContent: "center" },
+  sidePlaceholder: { width: 35 },
   profileContainer: {
     width: 35,
     height: 35,
     borderRadius: 18,
     overflow: "hidden",
   },
-
   profileAvatar: {
     width: "100%",
     height: "100%",
     backgroundColor: "#ccc",
     borderRadius: 18,
   },
-
-  logo: {
-    width: 120,
-    height: 40,
-  },
+  logo: { width: 120, height: 40 },
 });
