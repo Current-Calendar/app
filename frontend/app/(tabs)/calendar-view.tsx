@@ -195,7 +195,14 @@ export default function CalendarViewScreen() {
         </View>
       </ScrollView>
 
-      <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
+      <EventDetailModal 
+        event={activeEvent} 
+        onClose={() => setActiveEvent(null)}
+        onEventDeleted={() => {
+          loadEvents();
+          setActiveEvent(null);
+        }}
+      />
     </View>
   );
 }

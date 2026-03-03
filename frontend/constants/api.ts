@@ -41,6 +41,7 @@ export const API_CONFIG = {
     createEvent: buildEndpoint('eventos'),
     getEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
     editEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
+    deleteEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}/`),
   },
 };
 

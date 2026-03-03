@@ -124,7 +124,7 @@ class UserViewSet(viewsets.GenericViewSet):
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated & IsCreator]
+    permission_classes = [IsAuthenticated, IsCreator]
 
 
 @api_view(["GET"])

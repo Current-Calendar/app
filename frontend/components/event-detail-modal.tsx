@@ -1,105 +1,159 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
     Modal,
-    Pressable,
     TouchableOpacity,
     StyleSheet,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
+import API_CONFIG from '@/constants/api';
 
 
 interface EventDetailModalProps {
     event: CalendarEvent | null;
     onClose: () => void;
+    onEventDeleted?: () => void;
 }
 
-export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+export function EventDetailModal({ event, onClose, onEventDeleted }: EventDetailModalProps) {
     const router = useRouter();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     if (!event) return null;
 
-
     const accent = event.color ?? '#10464d';
 
+    const handleDeleteEvent = async () => {
+        setIsDeleting(true);
+        try {
+            const deleteUrl = API_CONFIG.endpoints.deleteEvent(event.id);
+            console.log('Borrando evento:', event.id, 'URL:', deleteUrl);
+            
+            const response = await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            console.log('Status:', response.status);
+
+            if (response.status === 204 || response.ok) {
+                console.log('Evento borrado exitosamente');
+                if (onEventDeleted) {
+                    onEventDeleted();
+                }
+                onClose();
+            } else if (response.status === 403) {
+                Alert.alert('Error', 'No tienes permisos para borrar este evento');
+                setIsDeleting(false);
+            } else {
+                Alert.alert('Error', `Error al borrar: ${response.status}`);
+                setIsDeleting(false);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            Alert.alert('Error', 'No se pudo borrar el evento');
+            setIsDeleting(false);
+        }
+    };
+
     return (
-        <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.sheet} onPress={() => { }}>
-                    <View style={styles.handleBar} />
+        <>
+            <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
+                <View style={styles.overlay}>
+                    <TouchableOpacity
+                        style={{ flex: 1 }}
+                        activeOpacity={1}
+                        onPress={onClose}
+                    />
+                    <View style={styles.sheet}>
+                        <View style={styles.handleBar} />
 
-                    <View style={styles.titleRow}>
-                        <View style={[styles.accentBar, { backgroundColor: accent }]} />
-                        <View style={styles.titleContent}>
-                            <Text style={styles.title}>{event.titulo}</Text>
+                        <View style={styles.titleRow}>
+                            <View style={[styles.accentBar, { backgroundColor: accent }]} />
+                            <View style={styles.titleContent}>
+                                <Text style={styles.title}>{event.titulo}</Text>
+                            </View>
+                            <TouchableOpacity onPress={onClose} hitSlop={12}>
+                                <Ionicons name="close-circle" size={26} color="#bbb" />
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity onPress={onClose} hitSlop={12}>
-                            <Ionicons name="close-circle" size={26} color="#bbb" />
-                        </TouchableOpacity>
-                    </View>
 
-                    {event.descripcion ? (
-                        <Text style={styles.description}>{event.descripcion}</Text>
-                    ) : null}
-
-                    {/* Info details */}
-                    <View style={styles.detailsContainer}>
-                        {/* Date */}
-                        <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
-
-                        {/* Time */}
-                        <DetailRow icon="time-outline" label={event.hora} />
-
-                        {/* Place */}
-                        {event.nombre_lugar ? (
-                            <DetailRow icon="location-outline" label={event.nombre_lugar} />
+                        {event.descripcion ? (
+                            <Text style={styles.description}>{event.descripcion}</Text>
                         ) : null}
 
-                        {/* Coordinates */}
-                        {event.ubicacion && (
-                            <DetailRow
-                                icon="navigate-outline"
-                                label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
-                            />
-                        )}
+                        {/* Info details */}
+                        <View style={styles.detailsContainer}>
+                            {/* Date */}
+                            <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
 
-                        {/* Recurrence */}
-                        {event.recurrencia && (
-                            <DetailRow icon="repeat-outline" label={event.recurrencia} />
-                        )}
+                            {/* Time */}
+                            <DetailRow icon="time-outline" label={event.hora} />
+
+                            {/* Place */}
+                            {event.nombre_lugar ? (
+                                <DetailRow icon="location-outline" label={event.nombre_lugar} />
+                            ) : null}
+
+                            {/* Coordinates */}
+                            {event.ubicacion && (
+                                <DetailRow
+                                    icon="navigate-outline"
+                                    label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
+                                />
+                            )}
+
+                            {/* Recurrence */}
+                            {event.recurrencia && (
+                                <DetailRow icon="repeat-outline" label={event.recurrencia} />
+                            )}
+                        </View>
+
+                        <View style={styles.actions}>
+                            <TouchableOpacity
+                                style={styles.editButton}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    onClose();
+                                    router.push({ pathname: "/events/edit_events", params: { id: event.id } });
+                                }}
+                            >
+                                <Ionicons name="pencil" size={16} color="#fff" />
+                                <Text style={styles.editButtonLabel}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    console.log('Delete presionado');
+                                    handleDeleteEvent();
+                                }}
+                            >
+                                {isDeleting ? (
+                                    <ActivityIndicator size="small" color="#B33F37" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="trash-outline" size={16} color="#eb8c85" />
+                                        <Text style={styles.deleteButtonLabel}>Delete</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+
                     </View>
+                </View>
+            </Modal>
 
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={styles.editButton}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                                onClose();
-                                router.push({ pathname: "/events/edit_events", params: { id: event.id } });
-                            }}
-                        >
-                            <Ionicons name="pencil" size={16} color="#fff" />
-                            <Text style={styles.editButtonLabel}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.deleteButton}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                                console.log("Deleting event:", event.id);
-                                onClose();
-                            }}
-                        >
-                            <Ionicons name="trash-outline" size={16} color="#eb8c85" />
-                            <Text style={styles.deleteButtonLabel}>Delete</Text>
-                        </TouchableOpacity>
-                    </View>
 
-                </Pressable>
-            </Pressable>
-        </Modal>
+        </>
     );
 }
 
@@ -135,6 +189,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#00000040',
         justifyContent: 'flex-end',
     },
+
     sheet: {
         backgroundColor: '#fff',
         borderTopLeftRadius: 24,
