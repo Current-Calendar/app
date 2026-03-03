@@ -32,7 +32,6 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" onPress={handleAddPress} />
-      <NavButton icon="calendar-clear" href="/calendar-view" />
       <NavButton icon="calendar" href="/switch-calendar" />
       <NavButton icon="chatbubble-ellipses" />
       <NavButton icon="compass" href="/radar" />
