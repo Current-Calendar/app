@@ -4,8 +4,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { CalendarGrid } from "@/components/calendar-grid";
 import { CalendarHeader } from "@/components/calendar-header";
-import { EventDetailModal } from "@/components/event-detail-modal";
-import { MOCK_CALENDARS, MOCK_EVENTS } from "@/constants/mock-data";
+import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
 import API_CONFIG from "@/constants/api";
 
@@ -36,9 +35,10 @@ export default function CalendarViewScreen() {
         const response = await fetch(API_CONFIG.endpoints.getCalendars);
         if (!response.ok) throw new Error('Failed to load calendars');
         const data = await response.json();
-        setBackendCalendars(data.calendarios || []);
+        // Backend returns array directly, not { calendarios: [...] }
+        const calendars = Array.isArray(data) ? data : [];
+        setBackendCalendars(calendars);
       } catch (error) {
-        console.error("❌ Error loading calendars:", error);
         setBackendCalendars([]);
       }
     };
@@ -48,7 +48,7 @@ export default function CalendarViewScreen() {
   const calendar = useMemo(
     () => {
       const found = backendCalendars.find((c) => String(c.id) === calendarId);
-      return found || backendCalendars[0] || MOCK_CALENDARS[0];
+      return found || backendCalendars[0] || null;
     },
     [calendarId, backendCalendars]
   );
@@ -64,12 +64,12 @@ export default function CalendarViewScreen() {
   // Function to load events
   const loadEvents = useCallback(async () => {
     try {
-      console.log("📡 Loading events from backend...");
       const response = await fetch(API_CONFIG.endpoints.getEvents);
       if (!response.ok) throw new Error('Failed to load events');
       
       const data = await response.json();
-      const allEvents = data.eventos || [];
+      // Backend returns array directly, not { eventos: [...] }
+      const allEvents = Array.isArray(data) ? data : [];
       
       // Transform backend events: expand by calendar
       const transformed: CalendarEvent[] = [];
@@ -92,10 +92,8 @@ export default function CalendarViewScreen() {
         }
       });
       
-      console.log(`✅ Loaded ${transformed.length} event instances from ${allEvents.length} events`);
       setBackendEvents(transformed);
     } catch (error) {
-      console.error("❌ Error loading events:", error);
       setBackendEvents([]);
     } finally {
       setLoadingEvents(false);
@@ -117,10 +115,10 @@ export default function CalendarViewScreen() {
   // Filter events by selected calendar
   const events = useMemo(
     () => {
-      if (loadingEvents) return [];
-      return backendEvents.filter((event) => event.calendarId === calendar.id);
+      if (loadingEvents || !calendar) return [];
+      return backendEvents.filter((event) => String(event.calendarId) === String(calendar.id));
     },
-    [calendar.id, backendEvents, loadingEvents]
+    [calendar, backendEvents, loadingEvents]
   );
 
   const goToPrevMonth = () => {
@@ -149,11 +147,20 @@ export default function CalendarViewScreen() {
 
   return (
     <View style={styles.screenWrapper}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <Text style={styles.title}>{calendar.nombre}</Text>
-          <Text style={styles.subtitle}>by {calendar.creador}</Text>
+      {!calendar ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No calendar found</Text>
+          <Text style={styles.emptyText}>Please select a calendar to view</Text>
+          <Pressable style={styles.primaryButton} onPress={() => router.push("/switch-calendar")}>
+            <Text style={styles.primaryButtonText}>Select Calendar</Text>
+          </Pressable>
         </View>
+      ) : (
+        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.topRow}>
+            <Text style={styles.title}>{calendar.nombre}</Text>
+            <Text style={styles.subtitle}>by {calendar.creador?.username || calendar.creador || 'Unknown'}</Text>
+          </View>
 
         <View style={styles.headerBlock}>
           <CalendarHeader
@@ -163,19 +170,6 @@ export default function CalendarViewScreen() {
             onTodayPress={goToToday}
           />
         </View>
-
-        {selectedDay && (
-          <TouchableOpacity
-            style={styles.mobileBanner}
-            activeOpacity={0.85}
-            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${calendar.id}`)}
-          >
-            <Text style={styles.mobileBannerDate}>{formatSelectedDay(selectedDay)}</Text>
-            <View style={styles.mobileBannerBtn}>
-              <Text style={styles.mobileBannerBtnText}>＋ Add Event</Text>
-            </View>
-          </TouchableOpacity>
-        )}
 
         <View style={styles.gridWrap}>
           <CalendarGrid
@@ -194,8 +188,9 @@ export default function CalendarViewScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      )}
 
-      <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
+      {calendar && <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />}
     </View>
   );
 }
@@ -204,6 +199,35 @@ const styles = StyleSheet.create({
   screenWrapper: {
     flex: 1,
     backgroundColor: "#FFFDED",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#10464d",
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "#5E6E6E",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  primaryButton: {
+    backgroundColor: "#10464d",
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   container: {
     flex: 1,
