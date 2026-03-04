@@ -23,3 +23,24 @@ def get_safe_ip(url):
         return ip_address
     except (socket.gaierror, ValueError):
         return None
+    
+
+def mask_email(email):
+    if not email or '@' not in email:
+        return None
+    local, domain = email.split('@')
+    return f"{local[0]}***@{domain}"
+
+def sanitize_user_for_list(user):
+    return {
+        'id': user.id,
+        'username': user.username,
+        'first_name': user.first_name,
+        'last_name': user.last_name
+    }
+    
+def sanitize_user_for_websocket(user):
+    return {
+        'id': user.id,
+        'username': user.username
+    }

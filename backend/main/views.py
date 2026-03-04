@@ -92,7 +92,7 @@ def _is_safe_calendar_url(raw_url: str):
 
 
 class UserViewSet(viewsets.GenericViewSet):
-    queryset = Usuario.objects.all()
+    queryset = Usuario.objects.defer('password', 'reset_token', 'refresh_token')
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["post"])
@@ -115,14 +115,25 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
-    def retrieve(self, request, pk) -> Response:
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        
         user = self.get_object()
-        user_data = PublicUserSerializer(user, context={'request': request}).data
-        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
-                "id", "nombre", "descripcion", "portada", "fecha_creacion"
-            ))
-        user_data["public_calendars"] = public_calendars
-        return Response(user_data)
+        serializer = UsuarioSerializer(user, context={'request': request})
+        return Response(serializer.data)
+    
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = PublicUserSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        """
+        GET /api/usuarios/me/ - Perfil propio del usuario autenticado.
+        Incluye email.
+        """
+        serializer = UserSerializer(request.user, context={'request': request})
+        return Response(serializer.data)
 
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
@@ -212,7 +223,7 @@ def import_google_calendar(request):
     """Endpoint para importar eventos del calendario de Google."""
     momento_actual = timezone.now().isoformat()
     events = []
-    usuario_creador = Usuario.objects.filter().first()
+    usuario_creador = Usuario.objects.defer('password', 'reset_token', 'refresh_token').filter().first()
     estado_solicitado = 'AMIGOS'
     raw_credentials = request.session.get('google_credentials')
     if not raw_credentials:
@@ -265,7 +276,7 @@ def iOS_calendar_import(request):
     webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
     user_id = request.data.get('user')
     estado_solicitado = request.data.get('estado', 'PRIVADO') 
-    usuario_creador = Usuario.objects.filter(id=user_id).first()
+    usuario_creador = Usuario.objects.defer('password', 'reset_token', 'refresh_token').filter(id=user_id).first()
 
     if not webcal_url:
         return Response({"error": "webcal_url es requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
@@ -362,7 +373,7 @@ def ics_import(request):
 
     momento_actual = timezone.now()
     estado_solicitado = request.data.get('estado', 'PRIVADO')
-    usuario_creador = Usuario.objects.filter(id=request.data.get('user')).first()
+    usuario_creador = Usuario.objects.defer('password', 'reset_token', 'refresh_token').filter(id=request.data.get('user')).first()
     if not usuario_creador:
         return Response({"error": "Usuario no encontrado"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
@@ -432,37 +443,31 @@ def export_to_ics(request, calendario_id):
     return response
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def buscar_usuarios(request):
-    query = request.GET.get("search")
+    query = request.GET.get("search", "").strip()
 
-    if not query:
+    if not query or len(query) < 2:
         return Response(
-            {"errors": ["El parámetro 'search' es obligatorio."]},
+            {"error": "El parámetro 'search' debe tener al menos 2 caracteres."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    usuarios = Usuario.objects.filter(
+    
+    usuarios = Usuario.objects.defer(
+        'password',
+        'reset_token',
+        'refresh_token'
+    ).filter(
         Q(username__icontains=query) |
-        Q(email__icontains=query) |
-        Q(pronombres__icontains=query)
-    ).distinct()
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query)
+    ).distinct()[:20]
 
-    resultados = [
-        {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "pronombres": user.pronombres,
-            "biografia": user.biografia,
-            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
-            "total_seguidores": user.total_seguidores,
-            "total_seguidos": user.total_seguidos,
-            "total_calendarios_seguidos": user.total_calendarios_seguidos,
-        }
-        for user in usuarios
-    ]
-
-    return Response(resultados, status=status.HTTP_200_OK)
+    
+    serializer = PublicUserSerializer(usuarios, many=True, context={'request': request})
+    
+    return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 @api_view(['POST'])
@@ -830,27 +835,28 @@ class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Obtener datos del usuario autenticado"""
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data, status=200)
+        serializer = UserSerializer(request.user, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request):
-        serializer = UserSerializer(
-            request.user,
-            data=request.data,
-            partial=True
-        )
+        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def delete(self, request):
         request.user.delete()
         return Response(
             {"message": "Usuario eliminado satisfactoriamente"},
             status=202
         )
-  
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 @api_view(['GET', 'PUT'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)

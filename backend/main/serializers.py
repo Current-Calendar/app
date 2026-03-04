@@ -108,44 +108,14 @@ class UsuarioRegistroSerializer(serializers.ModelSerializer):
         return usuario
 
 class PublicUserSerializer(serializers.ModelSerializer):
-    """
-    Serializer para mostrar información pública del usuario.
-    No incluye email ni password por seguridad.
-    """
-    # 1. Definimos el campo que NO está en el modelo pero queremos calcular al vuelo
-    is_following = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
-        fields = (
-            'id',
-            'username',
-            'pronombres',
-            'biografia',
-            'foto',
-            'link',
-            'total_seguidores',  
-            'total_seguidos',
-            'is_following'       # Esto lo calcula el método de abajo
-        )
-        read_only_fields = ('id',)
-
-    def get_is_following(self, obj):
-        # Sacamos la 'request' del contexto que envía la vista
-        request = self.context.get('request')
-        
-        # Si el usuario está logueado, comprobamos si sigue a este perfil (obj)
-        if request and request.user.is_authenticated:
-            # Usamos 'seguidores_set' porque es el related_name que pusiste en tu modelo
-            return obj.seguidores_set.filter(id=request.user.id).exists()
-        
-        # Si no está logueado o no lo sigue, devolvemos False
-        return False
+        fields = ['id','username','first_name','last_name']
+        read_only_fields = fields
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    """
-    Serializer para mostrar información del usuario (sin contraseña).
-    """
+    email = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
@@ -156,11 +126,19 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'pronombres',
             'biografia',
         )
-        read_only_fields = ('id', 'date_joined')
+        read_only_fields = ('id', 'username')
+        
+    def get_email(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and request.user.id == obj.id:
+            return obj.email
+        return None
+    
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=Usuario
-        fields=['foto','email','username','pronombres','link','biografia']
+        fields = ['id', 'foto', 'email', 'username', 'pronombres', 'link', 'biografia']
+        read_only_fields = ['id', 'username']
 
 
 class EventoSerializer(serializers.ModelSerializer):
