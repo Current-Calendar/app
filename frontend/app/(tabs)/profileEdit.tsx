@@ -23,7 +23,7 @@ import apiClient from '@/services/api-client';
 
 const EditProfileScreen = () => {
   const router = useRouter();
-  const { user: currentUser, setUser: updateUserContext } = useAuth();
+  const { user: currentUser, setUser: updateUserContext, logout } = useAuth();
 
 
   // State for form fields - initialize with params from navigation
@@ -97,7 +97,7 @@ const EditProfileScreen = () => {
       await apiClient.delete('/users/me');
 
       setShowDeleteConfirm(false);
-      updateUserContext(null);
+      await logout();
       router.replace('/calendars');
     } catch (error) {
       console.error('Error deleting profile:', error);
