@@ -74,7 +74,7 @@ const mapCalendarsFromApi = (
 const ProfileScreen = () => {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
   
   // Determinamos si es "Mi Perfil"
   const isMe = !userId || userId === String(currentUser?.id);
@@ -151,6 +151,11 @@ const ProfileScreen = () => {
     router.push('/profileEdit');
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
+  };
+
   // Si no es mi perfil, delegamos a PublicProfile pasándole el userId
   if (!isMe && userId) {
     return <PublicProfile targetUserId={userId} />;
@@ -206,6 +211,10 @@ const ProfileScreen = () => {
 
           <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
             <Text style={profileStyles.actionButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[profileStyles.actionButton, profileStyles.logoutButton]} onPress={handleLogout}>
+            <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>Logout</Text>
           </TouchableOpacity>
         </View>
 

@@ -22,6 +22,8 @@ const profileStyles = StyleSheet.create({
     actionButtonAlt: { backgroundColor: '#e0e0e0' },
     actionButtonText: { fontSize: 14, fontWeight: '600', color: '#ffffff' },
     actionButtonTextAlt: { color: '#262626' },
+    logoutButton: { backgroundColor: '#B33F37' },
+    logoutButtonText: { color: '#ffffff' },
     postsGrid: { marginTop: 8, borderTopWidth: 1, borderTopColor: '#e0e0e0', alignItems: 'center' },
     gridHeaderText: { padding: 16, fontSize: 16, fontWeight: '600', color: '#262626' },
     emptyText: { marginTop: 20, color: '#737373', fontStyle: 'italic' },
