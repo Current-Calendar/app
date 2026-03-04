@@ -800,7 +800,7 @@ def editar_calendario(request, calendario_id):
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
     ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'estado']
+    campos_editables = ['nombre', 'estado', 'descripcion']
 
 
     for campo in campos_editables:
