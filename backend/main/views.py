@@ -613,6 +613,53 @@ def list_calendars(request):
     return Response(results, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_my_calendars(request):
+    """
+    List calendars created by the authenticated user.
+
+    GET /api/v1/calendarios/mis-calendarios
+
+    Query parameters:
+        q       (str)  -- case-insensitive substring match on calendar name
+        estado  (str)  -- filter by privacy status (PRIVADO | AMIGOS | PUBLICO)
+    """
+    queryset = Calendario.objects.select_related('creador').filter(creador=request.user)
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        queryset = queryset.filter(nombre__icontains=q)
+
+    estado = request.GET.get('estado', '').strip().upper()
+    valid_estados = {choice[0] for choice in Calendario.ESTADOS_PRIVACIDAD}
+    if estado:
+        if estado not in valid_estados:
+            return Response(
+                {"errors": [f"Invalid 'estado' value. Allowed values: {', '.join(sorted(valid_estados))}."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        queryset = queryset.filter(estado=estado)
+
+    queryset = queryset.order_by('-fecha_creacion')
+
+    results = [
+        {
+            "id": cal.id,
+            "nombre": cal.nombre,
+            "descripcion": cal.descripcion,
+            "estado": cal.estado,
+            "origen": cal.origen,
+            "creador_id": cal.creador_id,
+            "creador_username": cal.creador.username,
+            "fecha_creacion": cal.fecha_creacion,
+            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
 def list_events_from_calendar(request):
     """
     List and search events.

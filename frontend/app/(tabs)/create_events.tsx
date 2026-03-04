@@ -333,7 +333,7 @@ export default function CreateEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiFetch<any>("/calendarios/list", { method: "GET" });
+      const data: any = await apiClient.get<any>("/calendarios/mis-calendarios");
 
       const list =
         (Array.isArray(data) && data) ||
