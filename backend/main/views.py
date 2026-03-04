@@ -791,7 +791,7 @@ def eliminar_calendario(request, calendario_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['PUT', 'PATCH'])
+@api_view(['PUT', 'PATCH','GET'])
 @permission_classes([IsAuthenticated])
 def editar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -800,7 +800,7 @@ def editar_calendario(request, calendario_id):
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
     ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'descripcion', 'estado']
+    campos_editables = ['nombre', 'estado']
 
 
     for campo in campos_editables:
@@ -851,17 +851,29 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
+@api_view(['GET', 'PUT'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
-
-    if event.creador !=request.user:
+    
+    # Handle GET: Return event data
+    if request.method == 'GET':
         return Response(
-            {"errors": ["No tienes permiso para editar este evento."]},
-            status = status.HTTP_403_FORBIDDEN
+            {
+                "id": event.id,
+                "titulo": event.titulo,
+                "descripcion": event.descripcion,
+                "nombre_lugar": event.nombre_lugar,
+                "fecha": event.fecha,
+                "hora": event.hora,
+                "recurrencia": event.recurrencia,
+                "id_externo": event.id_externo,
+                "calendarios": list(event.calendarios.values_list("id", flat=True)),
+                "fecha_creacion": event.fecha_creacion,
+            },
+            status=status.HTTP_200_OK,
         )
-
+    
+    # Handle PUT: Update event
     data = request.data
 
     # Validate required fields are not empty if provided
