@@ -855,12 +855,7 @@ class UsuarioPropioView(APIView):
 @permission_classes([IsAuthenticated])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
-    if request.method in ['PUT','PATCH']:
-           if event.creador !=request.user:
-                return Response(
-                    {"errors": ["No tienes permiso para editar este evento."]},
-                    status = status.HTTP_403_FORBIDDEN
-        )
+   
     if request.method == 'GET':
         return Response({
             "id": event.id,
@@ -868,7 +863,13 @@ def edit_event(request, evento_id):
             "descripcion": event.descripcion,
             "calendarios": list(event.calendarios.values_list("id", flat=True)),
         }, status= status.HTTP_200_OK)
-      
+    
+    
+    if event.creador !=request.user:
+         return Response(
+                {"errors": ["No tienes permiso para editar este evento."]},
+                status = status.HTTP_403_FORBIDDEN
+        )
  
     data = request.data
 
