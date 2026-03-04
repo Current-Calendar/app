@@ -14,10 +14,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User } from '../../types/user';
-import { useAuth } from '@/context/authContext';
+import { User } from '../../types/auth';
+import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
 import { API_CONFIG } from '@/constants/api';
+import apiClient from '@/services/api-client';
 
 
 const EditProfileScreen = () => {
@@ -26,11 +27,11 @@ const EditProfileScreen = () => {
 
 
   // State for form fields - initialize with params from navigation
-  const [firstName, setFirstName] = useState<string>(currentUser?._firstName || '');
-  const [lastName, setLastName] = useState<string>(currentUser?._lastName || '');
-  const [pronouns, setPronouns] = useState<string>(currentUser?._pronouns || '');
-  const [bio, setBio] = useState<string>(currentUser?._bio || '');
-  const [photo, setPhoto] = useState<string>(currentUser?._photo || '');
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [pronouns, setPronouns] = useState<string>(currentUser?.pronombres || '');
+  const [bio, setBio] = useState<string>(currentUser?.biografia || '');
+  const [photo, setPhoto] = useState<string>(currentUser?.foto || '');
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -64,31 +65,16 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const response = await fetch(API_CONFIG.endpoints.ownProfile, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          pronombres: pronouns,
-          biografia: bio,
-        }),
+      const data: User = await apiClient.put('/users/me', {
+        pronombres: pronouns,
+        biografia: bio,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      const data: User = await response.json();
 
       updateUserContext({
         ...currentUser,
-        _firstName: firstName,
-        _lastName: lastName,
-        _pronouns: data._pronouns ?? pronouns,
-        _bio: data._bio ?? bio,
-        _photo: photo,
+        pronombres: data.pronombres ?? pronouns,
+        biografia: data.biografia ?? bio,
+        foto: photo,
       });
 
       Alert.alert('Success', 'Profile updated successfully!');
@@ -108,23 +94,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
-      const response = await fetch(API_CONFIG.endpoints.ownProfile, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        let errorMessage = `Delete failed (HTTP ${response.status}).`;
-        try {
-          const data = await response.json();
-          if (typeof data?.message === 'string' && data.message.trim()) {
-            errorMessage = data.message;
-          }
-        } catch {
-          // fallback error message when response body is not JSON
-        }
-        throw new Error(errorMessage);
-      }
+      await apiClient.delete('/users/me');
 
       setShowDeleteConfirm(false);
       updateUserContext(null);

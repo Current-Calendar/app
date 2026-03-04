@@ -14,13 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
-import { useAuth } from '../../../context/authContext';
+import { useAuth } from "@/hooks/use-auth";
 import { User } from '../../../types/user';
+import apiClient from '../../../services/api-client';
 
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
     const { user: currentUser } = useAuth();
-    type AuthenticatedUser = User & { token?: string };
-    const authToken = (currentUser as AuthenticatedUser | null)?.token;
     
     //Hook personalizado para manejar toda la lógica de perfil público (datos del usuario, seguimiento, calendarios públicos, etc.)
     const {
@@ -51,6 +50,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
             try {
                 setFollowingLoading(true);
                 const headers: Record<string, string> = {};
+                const authToken = apiClient.getAccessToken();
                 if (authToken) {
                     headers.Authorization = `Bearer ${authToken}`;
                 }

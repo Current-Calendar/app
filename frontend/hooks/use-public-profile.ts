@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
-import { useAuth } from '../context/authContext';
+import { useAuth } from "@/hooks/use-auth";
 import { User } from '../types/user';
+import apiClient from '@/services/api-client';
 
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
 
@@ -55,9 +56,6 @@ export const useUserProfile = (userId?: string) => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userNotFound, setUserNotFound] = useState(false);
     const [followError, setFollowError] = useState<string | null>(null);
-
-    type AuthenticatedUser = User & { token?: string };
-    const authToken = (currentUser as AuthenticatedUser | null)?.token;
 
     // ----- MOCK follow toggle -----
     const mockFollowToggle = () => {
@@ -111,6 +109,7 @@ export const useUserProfile = (userId?: string) => {
 
             try {
                 const headers: Record<string, string> = { Accept: 'application/json' };
+                const authToken = apiClient.getAccessToken();
                 if (authToken) {
                     headers['Authorization'] = `Bearer ${authToken}`;
                 }
@@ -156,6 +155,7 @@ export const useUserProfile = (userId?: string) => {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
             };
+            const authToken = apiClient.getAccessToken();
             if (authToken) {
                 headers['Authorization'] = `Bearer ${authToken}`;
             }

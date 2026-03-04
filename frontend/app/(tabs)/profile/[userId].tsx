@@ -9,13 +9,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { User } from '../../../types/user';
+import { User } from '../../../types/auth';
 import { Calendar } from '../../../types/calendar';
-import { useAuth } from '../../../context/authContext'; 
+import { useAuth } from "@/hooks/use-auth";
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile'; 
 import API_CONFIG from '../../../constants/api';
+import apiClient from '../../../services/api-client';
 
 const ACCENT_COLORS = ['#A0D842', '#FF8C42', '#42A5F5', '#6C5DD3', '#E96F92'];
 
@@ -47,14 +48,12 @@ type OwnProfileResponse = {
 };
 
 const mapUserFromApi = (payload: OwnProfileResponse): User => ({
-  _id: String(payload.id),
-  _username: payload.username,
-  _email: payload.email,
-  _firstName: payload.first_name ?? undefined,
-  _lastName: payload.last_name ?? undefined,
-  _bio: payload.biografia ?? undefined,
-  _pronouns: payload.pronombres ?? undefined,
-  _photo: payload.foto ?? undefined,
+  id: payload.id,
+  username: payload.username,
+  email: payload.email,
+  biografia: payload.biografia ?? undefined,
+  pronombres: payload.pronombres ?? undefined,
+  foto: payload.foto ?? undefined,
 });
 
 const mapCalendarsFromApi = (
@@ -78,7 +77,7 @@ const ProfileScreen = () => {
   const { user: currentUser } = useAuth();
   
   // Determinamos si es "Mi Perfil"
-  const isMe = !userId || userId === currentUser?._id;
+  const isMe = !userId || userId === String(currentUser?.id);
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);
@@ -109,25 +108,7 @@ const ProfileScreen = () => {
       setProfileError(null);
 
       try {
-        const headers: Record<string, string> = { Accept: 'application/json' };
-        type AuthenticatedUser = User & { token?: string };
-        const authToken = (currentUser as AuthenticatedUser)?.token;
-        if (authToken) {
-          headers.Authorization = `Bearer ${authToken}`;
-        }
-
-        const response = await fetch(API_CONFIG.endpoints.ownProfile, {
-          headers,
-          credentials: 'include',
-          signal: controller.signal,
-        });
-
-        const data: OwnProfileResponse = await response.json();
-
-        if (!response.ok) {
-          const message = (data as { detail?: string })?.detail ?? 'No se pudo cargar tu perfil.';
-          throw new Error(message);
-        }
+        const data: OwnProfileResponse = await apiClient.get('/users/me');
 
         if (!isMounted) {
           return;
@@ -161,7 +142,7 @@ const ProfileScreen = () => {
       isMounted = false;
       controller.abort();
     };
-  }, [isMe, currentUser?._id, reloadKey]);
+  }, [isMe, currentUser?.id, reloadKey]);
 
   const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
 
@@ -205,22 +186,22 @@ const ProfileScreen = () => {
           <View style={profileStyles.profileRow}>
             <View style={profileStyles.profilePictureContainer}>
               <Image
-                source={shownUser._photo ? { uri: shownUser._photo } : require('../../../assets/images/default-user.jpg')}
+                source={shownUser.foto ? { uri: shownUser.foto } : require('../../../assets/images/default-user.jpg')}
                 style={profileStyles.profilePicture}
               />
             </View>
 
             <View style={profileStyles.statsContainer}>
-              <Text style={profileStyles.name}>{shownUser._username}</Text>
+              <Text style={profileStyles.name}>{shownUser.username}</Text>
               <Text style={profileStyles.fullname}>
-                {[shownUser._firstName, shownUser._lastName].filter(Boolean).join(' ') || ' '}
+                {shownUser.username}
               </Text>
-              <Text style={profileStyles.pronouns}>{shownUser._pronouns || ''}</Text>
+              <Text style={profileStyles.pronouns}>{shownUser.pronombres || ''}</Text>
             </View>
           </View>
 
           <View style={profileStyles.bioSection}>
-            <Text style={profileStyles.bio}>{shownUser._bio || 'Añade una biografía para que otros te conozcan.'}</Text>
+            <Text style={profileStyles.bio}>{shownUser.biografia || 'Añade una biografía para que otros te conozcan.'}</Text>
           </View>
 
           <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
