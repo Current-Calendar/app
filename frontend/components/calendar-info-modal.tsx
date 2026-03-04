@@ -5,6 +5,7 @@ import {
     Modal,
     Alert,
     ActivityIndicator,
+    Platform,
     Pressable,
     TouchableOpacity,
     StyleSheet,
@@ -48,6 +49,13 @@ export function CalendarInfoModal({
 
     const handleDeletePress = () => {
         if (!onDelete) return;
+
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`)) {
+                onDelete(calendar);
+            }
+            return;
+        }
 
         Alert.alert(
             'Delete calendar',

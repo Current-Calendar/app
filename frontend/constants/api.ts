@@ -1,21 +1,33 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
-const stripLeadingSlashes = (value: string) => value.replace(/^\/+/, '');
+const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
+const stripLeadingSlashes = (value: string) => value.replace(/^\/+/, "");
 
 const normalizedBaseURL = stripTrailingSlashes(API_URL);
 
+const rootBaseURL = normalizedBaseURL.replace(/\/api\/v1$/, "");
+
+
+const buildRootEndpoint = (path: string) => {
+  const normalizedPath = stripLeadingSlashes(path);
+  if (!rootBaseURL) return `/${normalizedPath}`;
+  return `${rootBaseURL}/${normalizedPath}`;
+};
+
 const buildEndpoint = (path: string) => {
   const normalizedPath = stripLeadingSlashes(path);
-  if (!normalizedBaseURL) {
-    return `/${normalizedPath}`;
-  }
+  if (!normalizedBaseURL) return `/${normalizedPath}`;
   return `${normalizedBaseURL}/${normalizedPath}`;
 };
 
 export const API_CONFIG = {
-  baseURL: normalizedBaseURL,
+  rootBaseURL,
+  BaseURL: normalizedBaseURL,
+
   endpoints: {
+    graphql: buildRootEndpoint("graphql/"),
+
+    register: buildEndpoint("auth/registro/"),
     mock: buildEndpoint('mock'),
     getCalendars: buildEndpoint('calendarios/list'),
     getEvents: buildEndpoint('eventos/list'),
@@ -27,6 +39,7 @@ export const API_CONFIG = {
     nearbyEvents: (lat: number, lon: number, radio: number) => buildEndpoint(`radar?lat=${lat}&lon=${lon}&radio=${radio}`),
     createCalendar: buildEndpoint('calendarios'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
+    deleteEvent: (eventId: string) => buildEndpoint(`eventos/${eventId}/delete/`), // debería cambiarse a number, y para eso hay que tocar la interfaz evento
   },
 };
 

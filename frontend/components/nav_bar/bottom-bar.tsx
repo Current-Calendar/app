@@ -32,7 +32,6 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" onPress={handleAddPress} />
-      <NavButton icon="calendar-clear" href="/calendar-view" />
       <NavButton icon="calendar" href="/switch-calendar" />
       <NavButton icon="chatbubble-ellipses" />
       <NavButton icon="compass" href="/radar" />
@@ -60,7 +59,7 @@ export default function BottomBar({ NavButton }: Props) {
 
               <Pressable
                 style={styles.menuItem}
-                onPress={() => navigateTo("/modal")}
+                onPress={() => navigateTo("/create")}
               >
                 <View style={[styles.iconBg, { backgroundColor: "#fff", borderWidth: 1.5, borderColor: "#10464d" }]}>
                   <Ionicons name="calendar-outline" size={22} color="#10464d" />

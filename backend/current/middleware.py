@@ -31,7 +31,7 @@ class CorsMiddleware(MiddlewareMixin):
         return None
 
     def process_response(self, request, response):
-        origin = request.headers.get('Origin')
+        return self._add_cors_headers(request, response)
 
         if self._is_allowed_origin(origin):
             self._add_cors_headers(response, origin)
@@ -42,6 +42,9 @@ class CorsMiddleware(MiddlewareMixin):
         if origin:
             response["Access-Control-Allow-Origin"] = origin
             response["Access-Control-Allow-Credentials"] = "true"
+            response["Vary"] = "Origin"
+        else:
+            response["Access-Control-Allow-Origin"] = "*"
 
         response["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
         response["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"

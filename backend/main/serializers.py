@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from main.models import Evento
 
 from .models import Calendario
 
@@ -161,7 +162,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=Usuario
-        fields=['foto','email','username','password','pronombres','link','biografia']
+        fields=['foto','email','username','pronombres','link','biografia']
 
 
 class CalendarioSummarySerializer(serializers.ModelSerializer):
@@ -212,3 +213,48 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "calendars",
             "following_calendars",
         )
+
+
+
+class EventoSerializer(serializers.ModelSerializer):
+    foto = serializers.SerializerMethodField()
+    distancia_km = serializers.SerializerMethodField()
+    latitud = serializers.SerializerMethodField()
+    longitud = serializers.SerializerMethodField()
+    creador_username = serializers.CharField(source='creador.username', read_only=True)
+    calendarios = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Evento
+        fields = [
+            'id', 'titulo', 'descripcion', 'nombre_lugar',
+            'fecha', 'hora', 'recurrencia', 'id_externo',
+            'calendarios', 'fecha_creacion',
+            'distancia_km', 'latitud', 'longitud',
+            'foto', 'creador_username'
+        ]
+
+    def get_foto(self, obj):
+        if not obj.foto:
+            return None
+        foto_str = str(obj.foto)
+        if foto_str.startswith('http'):
+            return foto_str
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.foto.url)
+        return foto_str
+
+    def get_distancia_km(self, obj):
+        if hasattr(obj, 'distancia') and obj.distancia:
+            return round(obj.distancia.km, 2)
+        return None
+
+    def get_latitud(self, obj):
+        return obj.ubicacion.y if obj.ubicacion else None
+
+    def get_longitud(self, obj):
+        return obj.ubicacion.x if obj.ubicacion else None
+
+    def get_calendarios(self, obj):
+        return list(obj.calendarios.values_list('id', flat=True))

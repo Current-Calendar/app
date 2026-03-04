@@ -23,12 +23,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars, radar_events
 from rest_framework import routers
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 api_router = routers.DefaultRouter()
 api_router.register("users", views.UserViewSet, basename="users")
 api_router.register("events", views.EventViewSet, basename="events")
 
 urlpatterns = [
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
@@ -47,6 +50,7 @@ urlpatterns = [
     path('api/v1/eventos/list/<int:calendario_id>', views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
     path('api/eventos/desasignar/', desasignar_evento_de_calendario),
+    path('api/v1/eventos/<int:evento_id>/delete/', views.delete_event, name='delete_event'),
     path('api/v1/google-auth', views.google_authorization),
     path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
     path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),

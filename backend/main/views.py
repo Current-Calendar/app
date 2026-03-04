@@ -6,6 +6,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 from django.conf import settings
+from django.contrib.auth import login
 from django.contrib.gis.geos import Point
 from main.models import MockElement
 from rest_framework.views import APIView
@@ -30,6 +31,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
+from django.http import HttpResponse
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -37,6 +39,7 @@ from main.serializers import (
     UserSerializer,
     PublicUserSerializer,
     OwnProfileSerializer,
+    EventoSerializer
 )
 import requests
 from rest_framework.views import APIView
@@ -46,6 +49,9 @@ from main.models import MockElement, Calendario, Evento, Usuario
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 from .permissions import IsCreator
+from django.db.models import Q
+
+from rest_framework.decorators import api_view, permission_classes
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -88,7 +94,6 @@ def _is_safe_calendar_url(raw_url: str):
 
 class UserViewSet(viewsets.GenericViewSet):
     queryset = Usuario.objects.all()
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["post"])
@@ -122,7 +127,6 @@ class UserViewSet(viewsets.GenericViewSet):
 
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated & IsCreator]
 
 
@@ -246,6 +250,7 @@ def import_google_calendar(request):
                 fecha=start[:10],
                 hora=start[11:19] if 'T' in start else '00:00:00',
                 id_externo=event['id'],
+                creador=usuario_creador,
             )
             evento.calendarios.add(calendar)
     
@@ -327,6 +332,7 @@ def iOS_calendar_import(request):
                 descripcion=descripcion,
                 fecha=fecha_str,
                 hora=hora_str,
+                creador= usuario_creador,
                 id_externo=uid,
             )
             evento.calendarios.add(calendario)
@@ -397,6 +403,7 @@ def ics_import(request):
             descripcion=descripcion,
             fecha=fecha_str,
             hora=hora_str,
+            creador = usuario_creador,
             id_externo=uid,
         )
         evento.calendarios.add(calendario)
@@ -420,7 +427,7 @@ def export_to_ics(request, calendario_id):
         cal.add_component(event)
 
     ics_content = cal.to_ical()
-    response = Response(ics_content, content_type='text/calendar')
+    response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
@@ -490,31 +497,18 @@ def registro_usuario(request):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def crear_calendario(request):
     data = request.data
 
-    creador_id = data.get('creador_id')
     nombre = data.get('nombre')
-
-    if not creador_id:
-        return Response(
-            {"errors": ["El campo 'creador_id' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     if not nombre:
         return Response(
             {"errors": ["El campo 'nombre' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
+            status = status.HTTP_400_BAD_REQUEST
         )
-
-    try:
-        creador = Usuario.objects.get(pk=creador_id)
-    except Usuario.DoesNotExist:
-        return Response(
-            {"errors": ["El usuario creador no existe."]},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+    creador = request.user
 
     calendario = Calendario(
         creador=creador,
@@ -525,6 +519,7 @@ def crear_calendario(request):
         id_externo=data.get('id_externo'),
     )
 
+  
     CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
 
     try:
@@ -653,15 +648,6 @@ def list_events_from_calendar(request):
 
 @api_view(['GET'])
 def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        q (str)         -- case-insensitive substring match on title or description
-        calendarId (int)-- optional filter by calendar ID
-    """
     queryset = Evento.objects.all()
 
     q = request.GET.get('q', '').strip()
@@ -676,60 +662,13 @@ def list_events(request):
 
     queryset = queryset.order_by('-fecha_creacion')
 
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
-        }
-        for event in queryset
-    ]
+    serializer = EventoSerializer(queryset, many=True, context={'request': request})
 
-    return Response(results, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-def list_events(request):
-    """
-    List and search events.
-
-    GET /api/v1/eventos/list
-
-    Query parameters:
-        calendarId (int) -- filter by calendar ID
-    """
-    queryset = Evento.objects.all()
-    calendar_id = request.GET.get('calendarId')
-
-    if calendar_id:
-        queryset = queryset.filter(calendarios__id=calendar_id)
-
-    results = [
-        {
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "nombre_lugar": event.nombre_lugar,
-            "fecha": event.fecha,
-            "hora": event.hora,
-            "recurrencia": event.recurrencia,
-            "id_externo": event.id_externo,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-            "fecha_creacion": event.fecha_creacion,
-        }
-        for event in queryset
-    ]
-    return Response(results, status=status.HTTP_200_OK)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -750,6 +689,16 @@ def asignar_evento_a_calendario(request):
     except Calendario.DoesNotExist:
         return Response({"error": "Calendario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
+    if calendario.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para modificar este calendario."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
+    if evento.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para usar este evento."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
     if evento.calendarios.filter(pk=calendario.pk).exists():
         return Response(
             {"error": "El evento ya está asignado a este calendario"},
@@ -764,6 +713,7 @@ def asignar_evento_a_calendario(request):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def desasignar_evento_de_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -783,6 +733,17 @@ def desasignar_evento_de_calendario(request):
         calendario = Calendario.objects.get(pk=calendario_id)
     except Calendario.DoesNotExist:
         return Response({"error": "Calendario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    if calendario.creador != request.user:
+        return Response(
+            {"error": "No tienes permiso para modificar este calendario"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    if evento.creador != request.user:
+        return Response(
+            {"error": "No tienes permiso sobre este evento"},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
     if not evento.calendarios.filter(pk=calendario.pk).exists():
         return Response(
@@ -795,9 +756,30 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
-
-
+    
 @api_view(['DELETE'])
+def delete_event(request, evento_id):
+    # TODO: Validar que el usuario tenga permisos para borrar el evento (ej. sea el creador del evento o del calendario)
+
+    if not evento_id :
+        return Response(
+            {"error": "Se requieren evento_id"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        evento = Evento.objects.get(pk=evento_id)
+    except Evento.DoesNotExist:
+        return Response({"error": "Evento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    evento.delete()
+    return Response(
+        {"mensaje": f"Evento '{evento.titulo}' borrado'"},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def eliminar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -869,9 +851,17 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
+
+    if event.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para editar este evento."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
+
     data = request.data
 
     # Validate required fields are not empty if provided
@@ -965,7 +955,9 @@ def edit_event(request, evento_id):
         },
         status=status.HTTP_200_OK,
     )
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def crear_evento(request):
 
     data = request.data
@@ -974,7 +966,7 @@ def crear_evento(request):
     fecha = data.get("fecha")
     hora = data.get("hora")
     calendarios_ids = data.get("calendarios")
-    creador_id = data.get("creador_id")
+    creador = request.user
     
 
     if not titulo:
@@ -1000,21 +992,6 @@ def crear_evento(request):
             {"errors": ["Debe indicar al menos un calendario válido."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    if not creador_id:
-        return Response(
-            {"errors": ["El campo 'creador_id' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    creador = Usuario.objects.filter(id=creador_id).first()
-    if not creador:
-        return Response(
-            {"errors": ["Usuario no encontrado."]},
-            status=status.HTTP_404_NOT_FOUND,
-    )
-
-    # TODO: Validar que el calendario pertenece al usuario si es privado, que es de algún amigo si es de amigos, o que es público
 
     calendarios = Calendario.objects.filter(id__in=calendarios_ids)
 
@@ -1023,6 +1000,11 @@ def crear_evento(request):
             {"errors": ["Algún calendario no existe."]},
             status=status.HTTP_404_NOT_FOUND,
         )
+    for calendario in calendarios:
+        if calendario.creador != creador:
+            return Response({"errors": [f"No tienes permiso para añadir eventos al calendario {calendario.id}."]},
+            status=status.HTTP_403_FORBIDDEN
+            )
 
     ubicacion = None
     lat = data.get("latitud")
@@ -1072,6 +1054,7 @@ def crear_evento(request):
         {
             "id": evento.id,
             "titulo": evento.titulo,
+            "creador": evento.creador.id,
             "descripcion": evento.descripcion,
             "nombre_lugar": evento.nombre_lugar,
             "fecha": evento.fecha,
@@ -1084,8 +1067,15 @@ def crear_evento(request):
         status=status.HTTP_201_CREATED,
     )
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def publish_calendar(request, calendario_id):
     calendar = get_object_or_404(Calendario, id=calendario_id)
+
+    if calendar.creador !=request.user:
+        return Response(
+            {"errors": ["No tienes permiso para publicar este calendario."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
 
     if calendar.estado == 'PUBLICO':
         return Response(
@@ -1111,7 +1101,7 @@ def publish_calendar(request, calendario_id):
 
 @api_view(['GET'])
 def radar_events(request):
-    #/api/radar?lat=..&lon=..&radio=5
+    # /api/radar?lat=..&lon=..&radio=5
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
     radio = request.GET.get("radio", 5)
@@ -1134,15 +1124,28 @@ def radar_events(request):
 
     user_location = Point(lon, lat, srid=4326)
 
+    user = request.user
+
+    if user.is_authenticated:
+        amigos = user.seguidos.all()
+
+        filtro_privacidad = Q(calendarios__estado='PUBLICO') | \
+                            Q(calendarios__estado='AMIGOS', calendarios__creador__in=amigos) | \
+                            Q(creador=user)
+    else:
+        filtro_privacidad = Q(calendarios__estado='PUBLICO')
+
     eventos = (
         Evento.objects
         .filter(
+            filtro_privacidad,
             ubicacion__isnull=False,
             fecha__gte=timezone.now().date()
         )
         .annotate(distancia=Distance("ubicacion", user_location))
         .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
         .order_by("distancia")
+        .distinct()
     )
 
     resultados = [
@@ -1156,10 +1159,13 @@ def radar_events(request):
             "distancia_km": round(evento.distancia.km, 2),
             "latitud": evento.ubicacion.y if evento.ubicacion else None,
             "longitud": evento.ubicacion.x if evento.ubicacion else None,
-            "foto": evento.foto.url if evento.foto else None,
-            "creador_username": evento.creador.username,
         }
         for evento in eventos
     ]
+    serializer = EventoSerializer(
+        eventos, 
+        many=True, 
+        context={'request': request}
+    )
 
-    return Response(resultados, status=status.HTTP_200_OK)
+    return Response(serializer.data, status=status.HTTP_200_OK)

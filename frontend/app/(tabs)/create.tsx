@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import API_CONFIG from "@/constants/api";
+import { useAuth } from "@/hooks/use-auth";
+
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
@@ -17,6 +19,7 @@ interface PublishData {
 }
 export default function CreateScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>('PRIVADO');
   const [selectedOrigin, setSelectedOrigin] = useState<CalendarOrigin>('CURRENT');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,28 +54,34 @@ export default function CreateScreen() {
     },
   ];
 
-  const originOptions: { label: string; value: CalendarOrigin }[] = [
-    { label: "Current", value: "CURRENT" },
-    { label: "Google", value: "GOOGLE" },
-    { label: "Apple", value: "APPLE" },
-  ];
-
   const handlePublish = async () => {
     if (!calendarData.nombre.trim()) {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
+    if (!user?.username) {
+      Alert.alert("Error", "You must be logged in to create a calendar.");
+      return;
+    }
     setIsLoading(true);
     try {
+      // Resolve the logged-in user's ID using the search endpoint
+      const userRes = await fetch(API_CONFIG.endpoints.searchUsers(user.username));
+      const users = await userRes.json();
+      const me = Array.isArray(users) ? users.find((u: any) => u.username === user.username) : null;
+      if (!me) {
+        throw new Error('Could not resolve user ID.');
+      }
+
       const response = await fetch(API_CONFIG.endpoints.createCalendar, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          creador_id: 2, // TODO: replace with real user id when auth is done
+          creador_id: me.id,
           nombre: calendarData.nombre,
           descripcion: calendarData.descripcion,
           estado: selectedPrivacy,
-          origen: selectedOrigin,
+          origen: "CURRENT",
         }),
       });
 
@@ -142,35 +151,6 @@ export default function CreateScreen() {
 
           {/* DIVIDER */}
           <View style={styles.divider} />
-
-          {/* CALENDAR SOURCE */}
-          <View style={styles.sourceSection}>
-            <Text style={styles.sectionTitle}>Calendar Source:</Text>
-            <View style={styles.originButtons}>
-              {originOptions.map((option) => (
-                <Pressable
-                  key={option.value}
-                  style={[
-                    styles.originBtn,
-                    selectedOrigin === option.value && styles.originBtnActive,
-                  ]}
-                  onPress={() => setSelectedOrigin(option.value)}
-                >
-                  <Text
-                    style={[
-                      styles.originBtnText,
-                      selectedOrigin === option.value && styles.originBtnTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* DIVIDER */}
-          <View style={styles.divider} />
           <View style={styles.privacySection}>
             <Text style={styles.sectionTitle}>Who can see this?</Text>
 
@@ -224,8 +204,8 @@ export default function CreateScreen() {
               {selectedPrivacy === "PRIVADO"
                 ? "Only you can access and modify this calendar."
                 : selectedPrivacy === "AMIGOS"
-                ? "Your friends will receive an invitation to view this calendar."
-                : "Anyone with the link can view this calendar."}
+                  ? "Your friends will receive an invitation to view this calendar."
+                  : "Anyone with the link can view this calendar."}
             </Text>
           </View>
 

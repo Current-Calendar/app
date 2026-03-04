@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
+import { API_CONFIG } from '@/constants/api';
 
 
 interface EventDetailModalProps {
@@ -24,6 +25,27 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
 
     const accent = event.color ?? '#10464d';
+
+    const handleDeleteEvent = async (eventId: string) => {
+        try {
+            const response = await fetch(API_CONFIG.endpoints.deleteEvent(eventId), {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                onClose();
+                router.replace('/calendars'); 
+            } else {
+                console.log('Failed to delete event:', response.status);
+            }
+        }
+        catch (error) {
+            console.log('Error deleting event:', error);
+        }
+    }
 
     return (
         <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
@@ -87,10 +109,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                         <TouchableOpacity
                             style={styles.deleteButton}
                             activeOpacity={0.7}
-                            onPress={() => {
-                                console.log("Deleting event:", event.id);
-                                onClose();
-                            }}
+                            onPress={() => handleDeleteEvent(event.id)}
                         >
                             <Ionicons name="trash-outline" size={16} color="#eb8c85" />
                             <Text style={styles.deleteButtonLabel}>Delete</Text>
