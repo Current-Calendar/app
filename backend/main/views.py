@@ -20,6 +20,7 @@ from django.db.models import Q
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -32,6 +33,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 from django.http import HttpResponse
+from functools import wraps
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -52,6 +54,8 @@ from django.db.models import Q
 
 from rest_framework.decorators import api_view, permission_classes
 
+
+
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 REQUEST_TIMEOUT_SECONDS = 5
@@ -61,6 +65,36 @@ if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 
+#DECORADORES 
+def requiere_ser_creador(modelo):
+    """
+    Decorador que verifica si el usuario es el dueño del objeto.
+    Busca automáticamente el ID en los argumentos de la URL.
+    """
+    def decorador(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+        
+            obj_id = kwargs.get('calendario_id') or kwargs.get('evento_id')
+            objeto = get_object_or_404(modelo, id=obj_id)
+            
+            if not request.user.is_authenticated:
+                return Response(
+                    {"errors": ["Debes iniciar sesión para realizar esta acción."]},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if objeto.creador != request.user:
+                return Response(
+                    {"errors": ["No tienes permiso: no eres el creador de este recurso."]},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+           
+            request.objeto_validado = objeto
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorador
 
 
 def _is_safe_calendar_url(raw_url: str):
@@ -779,14 +813,9 @@ def delete_event(request, evento_id):
 
 
 @api_view(['GET','DELETE'])
-@permission_classes([IsAuthenticated])
+@requiere_ser_creador(Calendario)
 def eliminar_calendario(request, calendario_id):
-    calendario = get_object_or_404(Calendario, id=calendario_id)
-    
-    # Only the creator can delete the calendar
-    if calendario.creador != request.user:
-        return Response({'error': 'You do not have permission to delete this calendar.'}, status=status.HTTP_403_FORBIDDEN)
-    
+    calendario = request.objeto_validado
     calendario.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1079,16 +1108,10 @@ def crear_evento(request):
         status=status.HTTP_201_CREATED,
     )
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated])
+@requiere_ser_creador(Calendario)
 def publish_calendar(request, calendario_id):
-    calendar = get_object_or_404(Calendario, id=calendario_id)
-
-    if calendar.creador !=request.user:
-        return Response(
-            {"errors": ["No tienes permiso para publicar este calendario."]},
-            status = status.HTTP_403_FORBIDDEN
-        )
-
+    calendar = request.objeto_validado
+    
     if calendar.estado == 'PUBLICO':
         return Response(
             {"errors": ["El calendario ya es público."]},
