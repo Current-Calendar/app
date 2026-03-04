@@ -39,7 +39,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     async (username: string, password: string) => {
       setIsLoading(true);
       try {
-        apiClient.login(username, password);
+        await apiClient.login(username, password);
 
         setUser(apiClient.user);
         setIsAuthenticated(true);

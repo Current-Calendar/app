@@ -4,8 +4,8 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import API_CONFIG from "@/constants/api";
 import { useAuth } from "@/hooks/use-auth";
+import apiClient from '@/services/api-client';
 
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
@@ -21,7 +21,6 @@ export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>('PRIVADO');
-  const [selectedOrigin, setSelectedOrigin] = useState<CalendarOrigin>('CURRENT');
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState<PublishData>({
     nombre: "",
@@ -65,30 +64,12 @@ export default function CreateScreen() {
     }
     setIsLoading(true);
     try {
-      // Resolve the logged-in user's ID using the search endpoint
-      const userRes = await fetch(API_CONFIG.endpoints.searchUsers(user.username));
-      const users = await userRes.json();
-      const me = Array.isArray(users) ? users.find((u: any) => u.username === user.username) : null;
-      if (!me) {
-        throw new Error('Could not resolve user ID.');
-      }
-
-      const response = await fetch(API_CONFIG.endpoints.createCalendar, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creador_id: me.id,
-          nombre: calendarData.nombre,
-          descripcion: calendarData.descripcion,
-          estado: selectedPrivacy,
-          origen: "CURRENT",
-        }),
+      await apiClient.post('/calendarios', {
+        nombre: calendarData.nombre,
+        descripcion: calendarData.descripcion,
+        estado: selectedPrivacy,
+        origen: "CURRENT",
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.errors?.[0] ?? 'Unknown error');
-      }
 
       router.replace('/(tabs)/calendars');
     } catch (error) {
@@ -105,7 +86,7 @@ export default function CreateScreen() {
       Alert.alert("Success", "Calendar saved as draft");
       console.log("Calendar saved as draft");
     } catch (error) {
-      Alert.alert("Error", "Failed to save draft");
+      Alert.alert("Error", "Failed to save draft" + error);
     }
   };
 
