@@ -52,7 +52,7 @@ export function CalendarInfoModal({
 
         if (Platform.OS === 'web') {
             if (window.confirm(`Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`)) {
-                onDelete(calendar);
+                void onDelete(calendar);
             }
             return;
         }
@@ -65,7 +65,7 @@ export function CalendarInfoModal({
                 {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: () => onDelete(calendar),
+                    onPress: () => void onDelete(calendar),
                 },
             ]
         );

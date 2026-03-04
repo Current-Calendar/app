@@ -8,7 +8,6 @@ import { CalendarGrid } from '@/components/calendar-grid';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
 import { EventFilterBar } from '@/components/event-filter-bar';
@@ -57,7 +56,6 @@ export default function CalendarScreen() {
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    const navigation = useNavigation<any>();
     const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
@@ -68,60 +66,53 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [calData, evData] = await Promise.all([
+                apiClient.get<any[]>('/calendarios/list'),
+                apiClient.get<any[]>('/eventos/list'),
+            ]);
+
+            const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+
+            const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+                id: String(c.id),
+                nombre: c.nombre,
+                descripcion: c.descripcion || '',
+                estado: c.estado,
+                origen: c.origen,
+                creador: c.creador_username || 'unknown',
+                color: COLORS[index % COLORS.length],
+            }));
+
+            const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
+            const calendar = mappedCalendars.find(c => e.calendarios.includes(Number(c.id)));
+            return {
+                id: String(e.id),
+                calendarId: String(e.calendarios[0] || ''),
+                titulo: e.titulo,
+                descripcion: e.descripcion || '',
+                nombre_lugar: e.nombre_lugar || '',
+                fecha: e.fecha,
+                hora: e.hora.substring(0, 5),
+                recurrencia: e.recurrencia,
+                type: 'other', // Default type
+                color: calendar?.color || '#6C63FF',
+            };
+        });
+
+        setCalendars(mappedCalendars);
+        setEvents(mappedEvents);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert('Error', 'Could not load calendars or events.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [calRes, evRes] = await Promise.all([
-                    fetch(API_CONFIG.endpoints.getCalendars),
-                    fetch(API_CONFIG.endpoints.getEvents),
-                ]);
-
-                if (!calRes.ok || !evRes.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-
-                const calData = await calRes.json();
-                const evData = await evRes.json();
-
-                const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
-
-                const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
-                    id: String(c.id),
-                    nombre: c.nombre,
-                    descripcion: c.descripcion || '',
-                    estado: c.estado,
-                    origen: c.origen,
-                    creador: c.creador_username || 'unknown',
-                    color: COLORS[index % COLORS.length],
-                }));
-
-                const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
-                    const calendar = mappedCalendars.find(c => e.calendarios.includes(Number(c.id)));
-                    return {
-                        id: String(e.id),
-                        calendarId: String(e.calendarios[0] || ''),
-                        titulo: e.titulo,
-                        descripcion: e.descripcion || '',
-                        nombre_lugar: e.nombre_lugar || '',
-                        fecha: e.fecha,
-                        hora: e.hora.substring(0, 5),
-                        recurrencia: e.recurrencia,
-                        type: 'other', // Default type
-                        color: calendar?.color || '#6C63FF',
-                    };
-                });
-
-                setCalendars(mappedCalendars);
-                setEvents(mappedEvents);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                Alert.alert('Error', 'Could not load calendars or events.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         void fetchData();
     }, []);
 
@@ -180,12 +171,6 @@ export default function CalendarScreen() {
         setInfoCalendar(null);
     };
 
-    const getCsrfToken = (): string => {
-        if (typeof document === 'undefined') return '';
-        const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    };
-
     const handleDeleteCalendar = async (calendar: Calendar) => {
         const calendarId = Number(calendar.id);
 
@@ -202,32 +187,17 @@ export default function CalendarScreen() {
 
         setDeletingCalendarId(calendar.id);
         try {
-            const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            removeCalendarFromState(calendar.id);
-        } catch {
+            await apiClient.delete(`/calendarios/${calendar.id}/eliminar/`);
+            setInfoCalendar(null);       
+            setDeletingCalendarId(null); 
+            await fetchData();
+        } catch (e) {
+            console.error('Delete error:', e);
+            Alert.alert('Delete failed', String(e));
             Alert.alert('Delete failed', 'Could not delete the calendar. Please try again.');
         } finally {
             setDeletingCalendarId(null);
         }
-    };
-
-    const handleDeleteCalendarPress = (calendar: Calendar) => {
-        if (deletingCalendarId) {
-            return;
-        }
-
-        void handleDeleteCalendar(calendar);
     };
 
     const goToPrevMonth = () => {
@@ -427,7 +397,7 @@ export default function CalendarScreen() {
                 <CalendarInfoModal
                     calendar={infoCalendar}
                     onClose={() => setInfoCalendar(null)}
-                    onDelete={handleDeleteCalendarPress}
+                    onDelete={handleDeleteCalendar}
                     onEdit={(calendar) => {
                         setInfoCalendar(null);
                         router.push({
