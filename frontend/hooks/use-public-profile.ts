@@ -50,7 +50,7 @@ export type CalendarItem = {
 };
 
 export const useUserProfile = (userId?: string) => {
-    const { user: currentUser } = useAuth();
+    const { user: currentUser, isLoading: authLoading } = useAuth();
     const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -74,6 +74,11 @@ export const useUserProfile = (userId?: string) => {
             setIsFollowing(false);
             setUserNotFound(false);
             setIsLoading(false);
+            return;
+        }
+
+        // Wait for auth to finish loading before making API calls
+        if (authLoading) {
             return;
         }
 
@@ -135,7 +140,7 @@ export const useUserProfile = (userId?: string) => {
         }
 
         fetchData();
-    }, [userId]);
+    }, [userId, authLoading]);
 
     // ----- Follow toggle -----
     const handleFollowToggle = async () => {
