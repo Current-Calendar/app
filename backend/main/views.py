@@ -31,6 +31,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
+from django.http import HttpResponse
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -47,6 +48,7 @@ from main.models import MockElement, Calendario, Evento, Usuario
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 from .permissions import IsCreator
+from django.db.models import Q
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -424,7 +426,7 @@ def export_to_ics(request, calendario_id):
         cal.add_component(event)
 
     ics_content = cal.to_ical()
-    response = Response(ics_content, content_type='text/calendar')
+    response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
@@ -744,9 +746,30 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
-
-
+    
 @api_view(['DELETE'])
+def delete_event(request, evento_id):
+    # TODO: Validar que el usuario tenga permisos para borrar el evento (ej. sea el creador del evento o del calendario)
+
+    if not evento_id :
+        return Response(
+            {"error": "Se requieren evento_id"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        evento = Evento.objects.get(pk=evento_id)
+    except Evento.DoesNotExist:
+        return Response({"error": "Evento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    evento.delete()
+    return Response(
+        {"mensaje": f"Evento '{evento.titulo}' borrado'"},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def eliminar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -1076,7 +1099,7 @@ def publish_calendar(request, calendario_id):
 
 @api_view(['GET'])
 def radar_events(request):
-    #/api/radar?lat=..&lon=..&radio=5
+    # /api/radar?lat=..&lon=..&radio=5
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
     radio = request.GET.get("radio", 5)
@@ -1099,17 +1122,44 @@ def radar_events(request):
 
     user_location = Point(lon, lat, srid=4326)
 
+    user = request.user
+
+    if user.is_authenticated:
+        amigos = user.seguidos.all()
+
+        filtro_privacidad = Q(calendarios__estado='PUBLICO') | \
+                            Q(calendarios__estado='AMIGOS', calendarios__creador__in=amigos) | \
+                            Q(creador=user)
+    else:
+        filtro_privacidad = Q(calendarios__estado='PUBLICO')
+
     eventos = (
         Evento.objects
         .filter(
+            filtro_privacidad,
             ubicacion__isnull=False,
             fecha__gte=timezone.now().date()
         )
         .annotate(distancia=Distance("ubicacion", user_location))
         .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
         .order_by("distancia")
+        .distinct()
     )
 
+    resultados = [
+        {
+            "id": evento.id,
+            "titulo": evento.titulo,
+            "descripcion": evento.descripcion,
+            "nombre_lugar": evento.nombre_lugar,
+            "fecha": evento.fecha,
+            "hora": evento.hora,
+            "distancia_km": round(evento.distancia.km, 2),
+            "latitud": evento.ubicacion.y if evento.ubicacion else None,
+            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+        }
+        for evento in eventos
+    ]
     serializer = EventoSerializer(
         eventos, 
         many=True, 
