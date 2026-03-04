@@ -1,8 +1,8 @@
 import { View, Pressable, StyleSheet, Image, Modal, Text, TouchableWithoutFeedback } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Link, type Href, useRouter } from "expo-router";
-import { useAuth } from "../../app/context/AuthContext"; 
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Sidebar() {
   const [menuVisible, setMenuVisible] = useState(false);
@@ -15,7 +15,7 @@ export default function Sidebar() {
   const navigateTo = (path: string) => {
     closeMenu();
     router.push(path as any);
-  }; 
+  };
 
   const getTodayFormatted = () => {
     const today = new Date();
@@ -74,9 +74,9 @@ export default function Sidebar() {
         <SidebarItem icon="home" label="Home" href="/(tabs)/calendars" />
         <SidebarItem icon="search" label="Search" href="/(tabs)/search" />
         <SidebarItem icon="add-circle" label="Create" onPress={handleAddPress} />
-        <SidebarItem icon="calendar" label="Discover"  href="/(tabs)/switch-calendar" />
-        <SidebarItem icon="people" label="Our Team"/>
-        <SidebarItem icon="compass" label="Map" href="/radar"/>
+        <SidebarItem icon="calendar" label="Discover" href="/(tabs)/switch-calendar" />
+        <SidebarItem icon="people" label="Our Team" />
+        <SidebarItem icon="compass" label="Map" href="/radar" />
         <SidebarItem icon="person" label={profileLabel} href={profileHref} />
 
         <Modal
@@ -89,7 +89,7 @@ export default function Sidebar() {
             <View style={styles.overlay}>
               <View style={styles.menuContainer}>
                 <Text style={styles.menuTitle}>Create New</Text>
-  
+
                 <Pressable
                   style={styles.menuItem}
                   onPress={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
@@ -99,7 +99,7 @@ export default function Sidebar() {
                   </View>
                   <Text style={styles.menuItemText}>New Event</Text>
                 </Pressable>
-  
+
                 <Pressable
                   style={styles.menuItem}
                   onPress={() => navigateTo("/create")}
@@ -109,7 +109,7 @@ export default function Sidebar() {
                   </View>
                   <Text style={styles.menuItemText}>New Calendar</Text>
                 </Pressable>
-  
+
                 <Pressable style={styles.closeBtn} onPress={closeMenu}>
                   <Ionicons name="close" size={24} color="#888" />
                 </Pressable>
@@ -117,7 +117,7 @@ export default function Sidebar() {
             </View>
           </TouchableWithoutFeedback>
         </Modal>
-        
+
       </View>
     </View>
   );

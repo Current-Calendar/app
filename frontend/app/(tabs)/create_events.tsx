@@ -17,6 +17,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
+import apiClient from '@/services/api-client';
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -575,10 +576,7 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiFetch<any>("/eventos", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      await apiClient.post<any>('/eventos', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
