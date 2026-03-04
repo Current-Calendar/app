@@ -95,8 +95,9 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${API_CONFIG.BaseURL}${endpoint}`;
+    const isFormData = options.body instanceof FormData;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(options.headers as Record<string, string>),
     };
 
@@ -140,23 +141,24 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, data?: unknown): Promise<T> {
+    const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data ? (isFormData ? data as BodyInit : JSON.stringify(data)) : undefined,
     });
   }
 
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: data ? (isFormData ? data as BodyInit : JSON.stringify(data)) : undefined,
     });
   }
 
   async delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
-
 }
 
 const apiClient = new ApiClient();

@@ -1,14 +1,26 @@
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, useWindowDimensions, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
-import apiClient from '@/services/api-client';
+import apiClient from "@/services/api-client";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 
-type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
-type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
+type PrivacyStatus = "PRIVADO" | "AMIGOS" | "PUBLICO";
+type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
 
 interface PublishData {
   nombre: string;
@@ -20,19 +32,27 @@ interface PublishData {
 export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>('PRIVADO');
+  const [selectedPrivacy, setSelectedPrivacy] =
+    useState<PrivacyStatus>("PRIVADO");
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState<PublishData>({
     nombre: "",
     descripcion: "",
-    estado: 'PRIVADO',
-    origen: 'CURRENT',
+    estado: "PRIVADO",
+    origen: "CURRENT",
   });
+  const [coverImage, setCoverImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
+  const privacyOptions: {
+    label: string;
+    value: PrivacyStatus;
+    icon: string;
+    description: string;
+  }[] = [
     {
       label: "Private",
       value: "PRIVADO",
@@ -53,6 +73,32 @@ export default function CreateScreen() {
     },
   ];
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Please allow access to your photo library.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setCoverImage(result.assets[0]);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverImage(null);
+  };
+
   const handlePublish = async () => {
     if (!calendarData.nombre.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -64,14 +110,22 @@ export default function CreateScreen() {
     }
     setIsLoading(true);
     try {
-      await apiClient.post('/calendarios', {
-        nombre: calendarData.nombre,
-        descripcion: calendarData.descripcion,
-        estado: selectedPrivacy,
-        origen: "CURRENT",
-      });
+      const formData = new FormData();
+      formData.append("nombre", calendarData.nombre);
+      formData.append("descripcion", calendarData.descripcion);
+      formData.append("estado", selectedPrivacy);
+      formData.append("origen", "CURRENT");
 
-      router.replace('/(tabs)/calendars');
+      if (coverImage) {
+        const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
+        const fetchResponse = await fetch(coverImage.uri);
+        const blob = await fetchResponse.blob();
+        formData.append("portada", blob, filename);
+      }
+
+      await apiClient.post("/calendarios", formData);
+
+      router.replace("/(tabs)/calendars");
     } catch (error) {
       Alert.alert("Error", "Failed to publish calendar. Please try again.");
       console.error("Publish error:", error);
@@ -93,21 +147,70 @@ export default function CreateScreen() {
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
+        contentContainerStyle={[
+          styles.container,
+          isDesktop && styles.containerDesktop,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* FORM CARD */}
         <View style={[styles.card, isDesktop && styles.cardDesktop]}>
-
           {/* TITLE */}
           <ThemedText
             type="title"
             lightColor="#10464d"
             darkColor="#10464d"
-            style={{ fontFamily: Fonts.rounded, textAlign: "center", marginVertical: 16 }}
+            style={{
+              fontFamily: Fonts.rounded,
+              textAlign: "center",
+              marginVertical: 16,
+            }}
           >
             Create Calendar
           </ThemedText>
+
+          {/* COVER IMAGE */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Cover Image</Text>
+
+            {coverImage ? (
+              <View style={styles.coverPreviewContainer}>
+                <Image
+                  source={{ uri: coverImage.uri }}
+                  style={styles.coverPreview}
+                />
+                <Pressable
+                  style={styles.coverRemoveButton}
+                  onPress={handleRemoveCover}
+                >
+                  <Ionicons name="close-circle" size={26} color="#fff" />
+                </Pressable>
+                <Pressable
+                  style={styles.coverChangeButton}
+                  onPress={handlePickImage}
+                >
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.coverChangeText}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.coverPickerEmpty}
+                onPress={handlePickImage}
+              >
+                <View style={styles.coverPickerIconWrap}>
+                  <Ionicons name="image-outline" size={28} color="#10464d" />
+                </View>
+                <Text style={styles.coverPickerLabel}>Add a cover image</Text>
+                <Text style={styles.coverPickerSub}>
+                  Recommended: 16:9 ratio
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* DIVIDER */}
+          <View style={styles.divider} />
 
           {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
@@ -117,14 +220,18 @@ export default function CreateScreen() {
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
               value={calendarData.nombre}
-              onChangeText={(text) => setCalendarData({ ...calendarData, nombre: text })}
+              onChangeText={(text) =>
+                setCalendarData({ ...calendarData, nombre: text })
+              }
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
               value={calendarData.descripcion}
-              onChangeText={(text) => setCalendarData({ ...calendarData, descripcion: text })}
+              onChangeText={(text) =>
+                setCalendarData({ ...calendarData, descripcion: text })
+              }
               multiline
               numberOfLines={3}
             />
@@ -140,7 +247,8 @@ export default function CreateScreen() {
                 key={option.value}
                 style={[
                   styles.privacyOption,
-                  selectedPrivacy === option.value && styles.privacyOptionSelected,
+                  selectedPrivacy === option.value &&
+                    styles.privacyOptionSelected,
                 ]}
                 onPress={() => setSelectedPrivacy(option.value)}
               >
@@ -148,26 +256,32 @@ export default function CreateScreen() {
                   <Ionicons
                     name={option.icon as any}
                     size={20}
-                    color={selectedPrivacy === option.value ? "#10464d" : "#999"}
+                    color={
+                      selectedPrivacy === option.value ? "#10464d" : "#999"
+                    }
                   />
                 </View>
                 <View style={styles.privacyContent}>
                   <Text
                     style={[
                       styles.privacyLabel,
-                      selectedPrivacy === option.value && styles.privacyLabelSelected,
+                      selectedPrivacy === option.value &&
+                        styles.privacyLabelSelected,
                     ]}
                   >
                     {option.label}
                   </Text>
-                  <Text style={styles.privacyDescription}>{option.description}</Text>
+                  <Text style={styles.privacyDescription}>
+                    {option.description}
+                  </Text>
                 </View>
 
                 {/* Radio Button */}
                 <View
                   style={[
                     styles.radioButton,
-                    selectedPrivacy === option.value && styles.radioButtonSelected,
+                    selectedPrivacy === option.value &&
+                      styles.radioButtonSelected,
                   ]}
                 >
                   {selectedPrivacy === option.value && (
@@ -180,7 +294,12 @@ export default function CreateScreen() {
 
           {/* INFO BOX */}
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={20} color="#10464d" style={{ marginRight: 12 }} />
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="#10464d"
+              style={{ marginRight: 12 }}
+            />
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVADO"
                 ? "Only you can access and modify this calendar."
@@ -191,17 +310,19 @@ export default function CreateScreen() {
           </View>
 
           {/* ACTION BUTTONS */}
-          <View style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}>
-            <Pressable
-              style={styles.draftButton}
-              onPress={handleDraft}
-            >
+          <View
+            style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}
+          >
+            <Pressable style={styles.draftButton} onPress={handleDraft}>
               <Text style={styles.draftButtonText}>Save as Draft</Text>
             </Pressable>
 
             {isDesktop && (
               <Pressable
-                style={[styles.publishButton, isLoading && styles.publishButtonDisabled]}
+                style={[
+                  styles.publishButton,
+                  isLoading && styles.publishButtonDisabled,
+                ]}
                 onPress={handlePublish}
                 disabled={isLoading}
               >
@@ -213,7 +334,6 @@ export default function CreateScreen() {
               </Pressable>
             )}
           </View>
-
         </View>
       </ScrollView>
 
@@ -221,7 +341,10 @@ export default function CreateScreen() {
       {!isDesktop && (
         <View style={styles.publishContainer}>
           <Pressable
-            style={[styles.publishButton, isLoading && styles.publishButtonDisabled]}
+            style={[
+              styles.publishButton,
+              isLoading && styles.publishButtonDisabled,
+            ]}
             onPress={handlePublish}
             disabled={isLoading}
           >
@@ -459,5 +582,69 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: Fonts?.rounded,
+  },
+  coverPickerEmpty: {
+    borderWidth: 1.5,
+    borderColor: "#c8dfe1",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f5fafa",
+    gap: 6,
+  },
+  coverPickerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#e0eff0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  coverPickerLabel: {
+    fontSize: 14,
+    color: "#10464d",
+    fontWeight: "600",
+  },
+  coverPickerSub: {
+    fontSize: 12,
+    color: "#999",
+  },
+  coverPreviewContainer: {
+    borderRadius: 12,
+    overflow: "hidden",
+    height: 160,
+    position: "relative",
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  coverRemoveButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 13,
+  },
+  coverChangeButton: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  coverChangeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

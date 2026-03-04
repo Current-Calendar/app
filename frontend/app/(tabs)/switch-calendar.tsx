@@ -36,6 +36,7 @@ export default function CalendarsScreen() {
           origen: c.origen,
           creador: c.creador_username || 'unknown',
           color: COLORS[index % COLORS.length],
+          portada: c.portada || null,
         }));
 
         setCalendars(mappedCalendars);

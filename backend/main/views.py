@@ -500,6 +500,8 @@ def registro_usuario(request):
 @permission_classes([IsAuthenticated])
 def crear_calendario(request):
     data = request.data
+    print("DATA:", request.data)
+    print("FILES:", request.FILES)
 
     nombre = data.get('nombre')
 
@@ -517,7 +519,10 @@ def crear_calendario(request):
         estado=data.get('estado', 'PRIVADO'),
         origen=data.get('origen', 'CURRENT'),
         id_externo=data.get('id_externo'),
+        portada=request.FILES.get('portada')
     )
+
+
 
   
     CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
@@ -562,6 +567,7 @@ def crear_calendario(request):
             "estado": calendario.estado,
             "creador_id": calendario.creador_id,
             "fecha_creacion": calendario.fecha_creacion,
+            "portada": request.build_absolute_uri(calendario.portada.url) if calendario.portada else None,
         },
         status=status.HTTP_201_CREATED,
     )
