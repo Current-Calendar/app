@@ -782,7 +782,7 @@ def eliminar_calendario(request, calendario_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['PUT', 'PATCH'])
+@api_view(['PUT', 'PATCH','GET'])
 @permission_classes([IsAuthenticated])
 def editar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -791,7 +791,7 @@ def editar_calendario(request, calendario_id):
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
     ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'descripcion', 'estado']
+    campos_editables = ['nombre', 'estado']
 
 
     for campo in campos_editables:

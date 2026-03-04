@@ -17,7 +17,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import API_CONFIG from "@/constants/api";
 
 const BG = "#FBF7EA";
@@ -270,7 +270,7 @@ export default function EditEventsScreen() {
       console.log("✅ Event updated:", result);
 
       Alert.alert("Success", "Event updated successfully");
-      router.back();
+      router.replace("/calendars");
     } catch (error) {
       console.error("❌ Error saving event:", error);
       Alert.alert("Error", "Failed to save event: " + (error as Error).message);
@@ -297,7 +297,9 @@ export default function EditEventsScreen() {
   const selectedCalendar = calendars.find(cal => cal.id === selectedCalendarId);
 
   return (
-    <View style={styles.container}>
+    <>
+    <Stack.Screen options={{headerShown:false}}/>
+    <View style={styles.container}> 
       <View style={styles.topBar}>
         <Pressable style={styles.iconBtn} hitSlop={10} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={26} color={WHITE} />
@@ -512,6 +514,7 @@ export default function EditEventsScreen() {
         </Modal>
       )}
     </View>
+    </>
   );
 }
 
