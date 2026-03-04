@@ -130,28 +130,6 @@ const EditProfileScreen = () => {
         </View>
 
         <View style={styles.formSection}>
-          <View style={{...styles.fieldContainer, flexDirection: 'row'}}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Enter your first name"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Enter your last name"
-                placeholderTextColor="#999"
-              />
-            </View>
-          </View>
           <View style={styles.fieldContainer}>
             <Text style={styles.label}>Pronouns</Text>
             <TextInput
