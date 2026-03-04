@@ -17,6 +17,8 @@ export default function Sidebar() {
     router.push(path as any);
   };
 
+  const { user } = useAuth();
+
   const getTodayFormatted = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -55,7 +57,8 @@ export default function Sidebar() {
 
   // lógica Profile/Login
   const profileLabel = isAuthenticated ? "Profile" : "Login";
-  const profileHref: string = isAuthenticated ? "/" /*"/profile"*/ : "/login";
+
+  const profileHref: string = isAuthenticated ? `/profile/${user?.id}` : "/login";
 
 
   return (

@@ -6,16 +6,24 @@ import {
     StyleSheet,
     Image,
     Pressable,
+    TouchableOpacity,
+    GestureResponderEvent,
 } from "react-native";
 import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import API_CONFIG from '@/constants/api';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
+    const router = useRouter();
+    const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -106,17 +114,46 @@ export default function SearchScreen() {
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events]);
 
-    const toggleFollow = (id: string) => {
-        setUsers((prev) =>
-            prev.map((user) =>
-                user.id === id ? { ...user, followed: !user.followed } : user
-            )
-        );
+    const followUser = async (id: string) => {
+        setLoadingId(id);
+
+        if (USE_MOCK) {
+            setUsers(prev =>
+                prev.map(u => u.id === id ? { ...u, followed: !u.followed } : u)
+            );
+            setLoadingId(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}users/${id}/follow/`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) throw new Error("Follow failed");
+
+            const data = await response.json();
+
+            setUsers(prev =>
+                prev.map(u =>
+                    u.id === id ? { ...u, followed: data.followed } : u
+                )
+            );
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingId(null);
+        }
+    };
+
+    const handleUserSelect = (id: string) => {
+        router.push(`/profile/${id}`);
     };
 
     return (
         <View style={styles.container}>
-
             {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
@@ -136,7 +173,7 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <View style={styles.userCard}>
+                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.id)}>
                                 <View style={styles.userInfo}>
                                     <Image
                                         source={{ uri: user.foto || 'https://i.pravatar.cc/100' }}
@@ -153,13 +190,16 @@ export default function SearchScreen() {
                                         styles.followButton,
                                         user.followed && styles.followingButton,
                                     ]}
-                                    onPress={() => toggleFollow(user.id)}
+                                    onPress={(event) => {
+                                        event.stopPropagation();
+                                        followUser(user.id);
+                                    }}
                                 >
                                     <Text style={styles.followText}>
-                                        {user.followed ? 'Following' : 'Follow'}
+                                        {loadingId === user.id ? "..." : user.followed ? "Following" : "Follow"}
                                     </Text>
                                 </Pressable>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }
 
@@ -168,10 +208,7 @@ export default function SearchScreen() {
                         return (
                             <View style={styles.calendarCard}>
                                 {cal.portada && (
-                                    <Image
-                                        source={{ uri: cal.portada }}
-                                        style={styles.calendarCover}
-                                    />
+                                    <Image source={{ uri: cal.portada }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
                                     <Text style={styles.calendarName}>{cal.nombre}</Text>

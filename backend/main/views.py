@@ -38,6 +38,7 @@ from main.serializers import (
     UsuarioSerializer,
     UserSerializer,
     PublicUserSerializer,
+    OwnProfileSerializer,
     EventoSerializer
 )
 import requests
@@ -830,9 +831,8 @@ class UsuarioPropioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Obtener datos del usuario autenticado"""
-        serializer = UserSerializer(request.user)
-        return Response(serializer.data, status=200)
+        serializer = OwnProfileSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
 
     def put(self, request):
         serializer = UserSerializer(

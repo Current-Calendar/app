@@ -41,6 +41,10 @@ class ApiClient {
     await this.storage.clear();
   }
 
+  getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
   async login(username: string, password: string) {
     const response = await this.post<TokenResponse>("/token/", { username, password });
 
