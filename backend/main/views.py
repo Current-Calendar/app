@@ -29,8 +29,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
+
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
+from django.http import HttpResponse
+from .permissions import IsCreator
 
 
 from main.serializers import (
@@ -48,7 +51,6 @@ from utils.security import get_safe_ip
 from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
 from main.models import MockElement, Calendario, Evento, Usuario
-
 from rest_framework.decorators import api_view, permission_classes
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -90,7 +92,6 @@ def _is_safe_calendar_url(raw_url: str):
 
 class UserViewSet(viewsets.GenericViewSet):
     queryset = Usuario.objects.all()
-    authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=["post"])
@@ -113,6 +114,19 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
+
+    def retrieve(self, request, pk) -> Response:
+        user = self.get_object()
+        user_data = PublicUserSerializer(user, context={'request': request}).data
+        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
+                "id", "nombre", "descripcion", "portada", "fecha_creacion"
+            ))
+        user_data["public_calendars"] = public_calendars
+        return Response(user_data)
+
+class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    queryset = Evento.objects.all()
+    permission_classes = [IsAuthenticated & IsCreator]
 
 
 
@@ -414,7 +428,7 @@ def export_to_ics(request, calendario_id):
         cal.add_component(event)
 
     ics_content = cal.to_ical()
-    response = Response(ics_content, content_type='text/calendar')
+    response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
@@ -471,8 +485,6 @@ def registro_usuario(request):
     
     if serializer.is_valid():
         usuario = serializer.save()
-        usuario.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, usuario)
         
         # Devolver datos del usuario creado
         usuario_serializer = UsuarioSerializer(usuario)
@@ -655,6 +667,7 @@ def list_events(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def asignar_evento_a_calendario(request):
     evento_id = request.data.get('evento_id')
     calendario_id = request.data.get('calendario_id')
@@ -742,9 +755,30 @@ def desasignar_evento_de_calendario(request):
         {"mensaje": f"Evento '{evento.titulo}' desasignado del calendario '{calendario.nombre}'"},
         status=status.HTTP_200_OK
     )
-
-
+    
 @api_view(['DELETE'])
+def delete_event(request, evento_id):
+    # TODO: Validar que el usuario tenga permisos para borrar el evento (ej. sea el creador del evento o del calendario)
+
+    if not evento_id :
+        return Response(
+            {"error": "Se requieren evento_id"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        evento = Evento.objects.get(pk=evento_id)
+    except Evento.DoesNotExist:
+        return Response({"error": "Evento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+    
+    evento.delete()
+    return Response(
+        {"mensaje": f"Evento '{evento.titulo}' borrado'"},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def eliminar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -757,7 +791,7 @@ def eliminar_calendario(request, calendario_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@api_view(['PUT', 'PATCH'])
+@api_view(['PUT', 'PATCH','GET'])
 @permission_classes([IsAuthenticated])
 def editar_calendario(request, calendario_id):
     calendario = get_object_or_404(Calendario, id=calendario_id)
@@ -766,7 +800,7 @@ def editar_calendario(request, calendario_id):
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
     ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'descripcion', 'estado']
+    campos_editables = ['nombre', 'estado']
 
 
     for campo in campos_editables:
@@ -827,7 +861,7 @@ def edit_event(request, evento_id):
             {"errors": ["No tienes permiso para editar este evento."]},
             status = status.HTTP_403_FORBIDDEN
         )
-
+      
     data = request.data
 
     # Validate required fields are not empty if provided
@@ -921,7 +955,9 @@ def edit_event(request, evento_id):
         },
         status=status.HTTP_200_OK,
     )
+
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def crear_evento(request):
 
     data = request.data
@@ -1067,7 +1103,7 @@ def publish_calendar(request, calendario_id):
 
 @api_view(['GET'])
 def radar_events(request):
-    #/api/radar?lat=..&lon=..&radio=5
+    # /api/radar?lat=..&lon=..&radio=5
     lat = request.GET.get("lat")
     lon = request.GET.get("lon")
     radio = request.GET.get("radio", 5)
@@ -1090,17 +1126,44 @@ def radar_events(request):
 
     user_location = Point(lon, lat, srid=4326)
 
+    user = request.user
+
+    if user.is_authenticated:
+        amigos = user.seguidos.all()
+
+        filtro_privacidad = Q(calendarios__estado='PUBLICO') | \
+                            Q(calendarios__estado='AMIGOS', calendarios__creador__in=amigos) | \
+                            Q(creador=user)
+    else:
+        filtro_privacidad = Q(calendarios__estado='PUBLICO')
+
     eventos = (
         Evento.objects
         .filter(
+            filtro_privacidad,
             ubicacion__isnull=False,
             fecha__gte=timezone.now().date()
         )
         .annotate(distancia=Distance("ubicacion", user_location))
         .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
         .order_by("distancia")
+        .distinct()
     )
 
+    resultados = [
+        {
+            "id": evento.id,
+            "titulo": evento.titulo,
+            "descripcion": evento.descripcion,
+            "nombre_lugar": evento.nombre_lugar,
+            "fecha": evento.fecha,
+            "hora": evento.hora,
+            "distancia_km": round(evento.distancia.km, 2),
+            "latitud": evento.ubicacion.y if evento.ubicacion else None,
+            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+        }
+        for evento in eventos
+    ]
     serializer = EventoSerializer(
         eventos, 
         many=True, 

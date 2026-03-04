@@ -13,14 +13,14 @@ const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
 const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
 
 export const downloadCalendar = async (id: string, token?: string) => {
-  const url = `${BACKEND_URL}calendars/${id}/export`;
+  const url = `${ROOT_BACKEND_URL}api/calendars/${id}/export`;
 
   try {
     if (Platform.OS === "web") {
       const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
-      if (!response.ok) throw new Error("No se pudo descargar el calendario");
 
-      const blob = await response.blob();
+      const text = await response.text();
+      const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
       const downloadUrl = window.URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -35,7 +35,6 @@ export const downloadCalendar = async (id: string, token?: string) => {
     } else {
       const file = new File(Paths.document, `calendar-${id}.ics`);
       const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
-      if (!response.ok) throw new Error("Error descargando el calendario");
 
       const arrayBuffer = await response.arrayBuffer();
       await file.write(new Uint8Array(arrayBuffer));

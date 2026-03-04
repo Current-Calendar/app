@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { CalendarGrid } from "@/components/calendar-grid";
 import { CalendarHeader } from "@/components/calendar-header";
 import { EventDetailModal } from "@/components/event-detail-modal";
 import { MOCK_CALENDARS, MOCK_EVENTS } from "@/constants/mock-data";
 import { CalendarEvent } from "@/types/calendar";
+import API_CONFIG from "@/constants/api";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -26,9 +27,30 @@ export default function CalendarViewScreen() {
   const params = useLocalSearchParams<{ calendarId?: string | string[] }>();
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
+  const [backendCalendars, setBackendCalendars] = useState<any[]>([]);
+  
+  // Load calendars from backend
+  useEffect(() => {
+    const loadCalendars = async () => {
+      try {
+        const response = await fetch(API_CONFIG.endpoints.getCalendars);
+        if (!response.ok) throw new Error('Failed to load calendars');
+        const data = await response.json();
+        setBackendCalendars(data.calendarios || []);
+      } catch (error) {
+        console.error("❌ Error loading calendars:", error);
+        setBackendCalendars([]);
+      }
+    };
+    loadCalendars();
+  }, []);
+
   const calendar = useMemo(
-    () => MOCK_CALENDARS.find((c) => c.id === calendarId) ?? MOCK_CALENDARS[0],
-    [calendarId]
+    () => {
+      const found = backendCalendars.find((c) => String(c.id) === calendarId);
+      return found || backendCalendars[0] || MOCK_CALENDARS[0];
+    },
+    [calendarId, backendCalendars]
   );
 
   const today = new Date();
@@ -36,10 +58,69 @@ export default function CalendarViewScreen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [backendEvents, setBackendEvents] = useState<CalendarEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
+  // Function to load events
+  const loadEvents = useCallback(async () => {
+    try {
+      console.log("📡 Loading events from backend...");
+      const response = await fetch(API_CONFIG.endpoints.getEvents);
+      if (!response.ok) throw new Error('Failed to load events');
+      
+      const data = await response.json();
+      const allEvents = data.eventos || [];
+      
+      // Transform backend events: expand by calendar
+      const transformed: CalendarEvent[] = [];
+      allEvents.forEach((evt: any) => {
+        if (evt.calendarios && evt.calendarios.length > 0) {
+          evt.calendarios.forEach((calId: number) => {
+            transformed.push({
+              id: String(evt.id),
+              calendarId: String(calId),
+              titulo: evt.titulo,
+              descripcion: evt.descripcion,
+              nombre_lugar: evt.nombre_lugar,
+              fecha: evt.fecha,
+              hora: evt.hora,
+              recurrencia: evt.recurrencia,
+              foto: evt.foto,
+              color: undefined,
+            });
+          });
+        }
+      });
+      
+      console.log(`✅ Loaded ${transformed.length} event instances from ${allEvents.length} events`);
+      setBackendEvents(transformed);
+    } catch (error) {
+      console.error("❌ Error loading events:", error);
+      setBackendEvents([]);
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, []);
+
+  // Load events when screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadEvents();
+    }, [loadEvents])
+  );
+
+  // Also load on initial mount
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  // Filter events by selected calendar
   const events = useMemo(
-    () => MOCK_EVENTS.filter((event) => event.calendarId === calendar.id),
-    [calendar.id]
+    () => {
+      if (loadingEvents) return [];
+      return backendEvents.filter((event) => event.calendarId === calendar.id);
+    },
+    [calendar.id, backendEvents, loadingEvents]
   );
 
   const goToPrevMonth = () => {

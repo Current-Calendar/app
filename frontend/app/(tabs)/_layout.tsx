@@ -2,10 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, Link, Slot } from "expo-router";
 import React, { useState } from "react";
 import {
-  Image,
   Pressable,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from "react-native";
