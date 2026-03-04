@@ -5,7 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import API_CONFIG from "@/constants/api";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
+
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
@@ -203,8 +204,8 @@ export default function CreateScreen() {
               {selectedPrivacy === "PRIVADO"
                 ? "Only you can access and modify this calendar."
                 : selectedPrivacy === "AMIGOS"
-                ? "Your friends will receive an invitation to view this calendar."
-                : "Anyone with the link can view this calendar."}
+                  ? "Your friends will receive an invitation to view this calendar."
+                  : "Anyone with the link can view this calendar."}
             </Text>
           </View>
 
