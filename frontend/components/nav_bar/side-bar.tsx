@@ -55,7 +55,7 @@ export default function Sidebar() {
 
   // lógica Profile/Login
   const profileLabel = isAuthenticated ? "Profile" : "Login";
-  const profileHref: Href = isAuthenticated ? ("/" as Href/*"/profile" as Href*/) : ("/login" as Href);
+  const profileHref: string = isAuthenticated ? "/" /*"/profile"*/ : "/login";
 
 
   return (
