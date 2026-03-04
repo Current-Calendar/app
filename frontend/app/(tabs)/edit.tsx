@@ -4,7 +4,7 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import API_CONFIG from "@/constants/api";
+import apiClient from '@/services/api-client';
 
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 
@@ -63,21 +63,11 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          nombre: calendarData.nombre,
-          descripcion: calendarData.descripcion,
-          estado: selectedPrivacy,
-        }),
+      await apiClient.put(`/calendarios/${Number(calendarId)}/editar/`, {
+        nombre: calendarData.nombre,
+        descripcion: calendarData.descripcion,
+        estado: selectedPrivacy,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
-      }
 
       router.replace('/(tabs)/calendars');
     } catch (error) {

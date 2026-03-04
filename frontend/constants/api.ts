@@ -39,6 +39,9 @@ export const API_CONFIG = {
     nearbyEvents: (lat: number, lon: number, radio: number) => buildEndpoint(`radar?lat=${lat}&lon=${lon}&radio=${radio}`),
     createCalendar: buildEndpoint('calendarios'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/editar/`),
+    createEvent: buildEndpoint('eventos'),
+    getEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
+    editEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
     deleteEvent: (eventId: string) => buildEndpoint(`eventos/${eventId}/delete/`), // debería cambiarse a number, y para eso hay que tocar la interfaz evento
   },
 };

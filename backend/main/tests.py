@@ -367,11 +367,16 @@ class EditEventTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
 
-    def test_get_not_allowed(self):
-        self.client.force_authenticate(self.user)
-
+    def test_get_event_data(self):
         response = self.client.get(self.endpoint())
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.event.id)
+        self.assertEqual(response.data["titulo"], self.event.titulo)
+        self.assertEqual(response.data["descripcion"], self.event.descripcion)
+        self.assertEqual(response.data["nombre_lugar"], self.event.nombre_lugar)
+        self.assertEqual(str(response.data["fecha"]), str(self.event.fecha))
+        self.assertEqual(str(response.data["hora"]), str(self.event.hora))
+        self.assertIn(self.calendar1.id, response.data["calendarios"])
 
     def test_post_not_allowed(self):
         self.client.force_authenticate(self.user)
