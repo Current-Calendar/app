@@ -49,6 +49,16 @@ class Command(BaseCommand):
             foto='perfiles/avatar.png'
         )
 
+        Usuario.objects.create_user(
+            username='admin',
+            email='admin@currentcalendar.es',
+            password='password123',
+            biografia='Tu admin de confianza.',
+            foto='perfiles/avatar.png',
+            is_superuser=True,
+            is_staff=True
+        )
+
         user1.seguidos.add(user2, user3)
         user2.seguidos.add(user1)
 
