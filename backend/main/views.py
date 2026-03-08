@@ -489,8 +489,6 @@ def registro_usuario(request):
 @permission_classes([IsAuthenticated])
 def crear_calendario(request):
     data = request.data
-    print("DATA:", request.data)
-    print("FILES:", request.FILES)
 
     nombre = data.get('nombre')
 
@@ -501,6 +499,8 @@ def crear_calendario(request):
         )
     creador = request.user
 
+    portada_file = request.FILES.get('portada')
+
     calendario = Calendario(
         creador=creador,
         nombre=nombre,
@@ -508,7 +508,6 @@ def crear_calendario(request):
         estado=data.get('estado', 'PRIVADO'),
         origen=data.get('origen', 'CURRENT'),
         id_externo=data.get('id_externo'),
-        portada=request.FILES.get('portada')
     )
 
     CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
@@ -542,8 +541,40 @@ def crear_calendario(request):
             {"errors": ["El usuario ya tiene un calendario privado."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    except Exception as exc:
+        import traceback
+        print("ERROR al guardar calendario:")
+        print(traceback.format_exc())
+        return Response(
+            {"errors": [f"Error interno al guardar el calendario: {str(exc)}"]},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
-    portada_url = calendario.portada.url if calendario.portada else None
+    portada_url = None
+    if portada_file:
+        try:
+            calendario.portada.save(portada_file.name, portada_file, save=True)
+            portada_url = calendario.portada.url
+        except Exception as exc:
+            import traceback
+            print("ERROR al subir portada a S3:")
+            print(traceback.format_exc())
+
+            return Response(
+                {
+                    "id": calendario.id,
+                    "origen": calendario.origen,
+                    "id_externo": calendario.id_externo,
+                    "nombre": calendario.nombre,
+                    "descripcion": calendario.descripcion,
+                    "estado": calendario.estado,
+                    "creador_id": calendario.creador_id,
+                    "fecha_creacion": calendario.fecha_creacion,
+                    "portada": None,
+                    "warning": f"Calendario creado pero no se pudo subir la portada: {str(exc)}",
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
     return Response(
         {

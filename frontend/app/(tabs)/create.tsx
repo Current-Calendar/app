@@ -117,10 +117,23 @@ export default function CreateScreen() {
       formData.append("origen", "CURRENT");
 
       if (coverImage) {
-        const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
+        const mimeType = coverImage.mimeType ?? "image/jpeg";
+        const extFromMime: Record<string, string> = {
+          "image/jpeg": ".jpg",
+          "image/jpg": ".jpg",
+          "image/png": ".png",
+          "image/gif": ".gif",
+          "image/webp": ".webp",
+          "image/heic": ".heic",
+        };
+        const ext = extFromMime[mimeType] ?? ".jpg";
+        const rawName = coverImage.uri.split("/").pop() ?? "cover";
+        const filename = rawName.includes(".") ? rawName : rawName + ext;
+
         const fetchResponse = await fetch(coverImage.uri);
         const blob = await fetchResponse.blob();
-        formData.append("portada", blob, filename);
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append("portada", file, filename);
       }
 
       await apiClient.post("/calendarios", formData);
