@@ -1,31 +1,20 @@
 import datetime
-from asyncio import events
 from icalendar import Calendar
 import os
 import ipaddress
 import socket
 from urllib.parse import urlparse
 from django.conf import settings
-from django.contrib.auth import login
-from django.contrib.gis.geos import Point
-from main.models import MockElement
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import redirect
 from django.utils import timezone
-from django.db import IntegrityError, transaction
-from django.db.models import Q
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status, viewsets, mixins
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -522,9 +511,6 @@ def crear_calendario(request):
         portada=request.FILES.get('portada')
     )
 
-
-
-  
     CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
 
     try:
@@ -557,6 +543,8 @@ def crear_calendario(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    portada_url = calendario.portada.url if calendario.portada else None
+
     return Response(
         {
             "id": calendario.id,
@@ -567,7 +555,7 @@ def crear_calendario(request):
             "estado": calendario.estado,
             "creador_id": calendario.creador_id,
             "fecha_creacion": calendario.fecha_creacion,
-            "portada": request.build_absolute_uri(calendario.portada.url) if calendario.portada else None,
+            "portada": portada_url,
         },
         status=status.HTTP_201_CREATED,
     )
@@ -611,7 +599,7 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
-            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
+            "portada": cal.portada.url if cal.portada else None
         }
         for cal in queryset
     ]

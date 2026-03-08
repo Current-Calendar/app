@@ -48,7 +48,7 @@ class Calendario(models.Model):
     id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True) 
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
-    portada = models.FileField(upload_to='portadas_calendarios/', null=True, blank=True)
+    portada = models.FileField(upload_to='portadas/', null=True, blank=True)
     estado = models.CharField(max_length=10, choices=ESTADOS_PRIVACIDAD, default='PRIVADO')
     creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='calendarios_creados')
     fecha_creacion = models.DateTimeField(default=timezone.now)
