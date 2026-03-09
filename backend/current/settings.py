@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'main',
     'storages',
+    'django.contrib.gis',
 ]
 
 ASGI_APPLICATION = 'current.asgi.application'
