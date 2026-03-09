@@ -20,7 +20,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import API_CONFIG from "@/constants/api";
 
-const BG = "#FBF7EA";
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -522,7 +521,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   topBar: {
     height: 54,

@@ -236,7 +236,6 @@ const EditProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fffded',
   },
   header: {
     flexDirection: 'row',

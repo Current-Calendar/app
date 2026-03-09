@@ -130,7 +130,6 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
     alignItems: "center",
   },
   inner: {

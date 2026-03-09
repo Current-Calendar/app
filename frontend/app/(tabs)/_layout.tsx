@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { APP_BACKGROUND } from "@/constants/theme";
 import Sidebar from "../../components/nav_bar/side-bar"
 import BottomBar from "../../components/nav_bar/bottom-bar"
 import TopBar from "../../components/nav_bar/top-bar"
@@ -61,10 +62,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
+    backgroundColor: APP_BACKGROUND,
   },
   content: {
     flex: 1,
-    backgroundColor: "#FFFDED",
+    backgroundColor: APP_BACKGROUND,
   },
   navButton: {
     padding: 10,

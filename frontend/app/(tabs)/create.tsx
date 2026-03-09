@@ -363,7 +363,6 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
   },
   container: {
     paddingHorizontal: 24,

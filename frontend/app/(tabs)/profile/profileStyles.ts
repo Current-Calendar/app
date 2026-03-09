@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 const profileStyles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fffded' },
+    container: { flex: 1 },
     centerContent: { justifyContent: 'center', alignItems: 'center' },
     scrollView: { flex: 1 },
     profileSection: { paddingHorizontal: 16, paddingTop: 16 },
