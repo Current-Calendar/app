@@ -1,6 +1,7 @@
 import datetime
 from icalendar import Calendar
 import os
+import json
 import ipaddress
 import socket
 from urllib.parse import urlparse
@@ -924,7 +925,8 @@ class UsuarioPropioView(APIView):
         )
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=200)
+            response_serializer = OwnProfileSerializer(request.user, context={"request": request})
+            return Response(response_serializer.data, status=200)
         return Response(serializer.errors, status=400)
     def delete(self, request):
         request.user.delete()
@@ -951,6 +953,7 @@ def edit_event(request, evento_id):
                 "id_externo": event.id_externo,
                 "calendarios": list(event.calendarios.values_list("id", flat=True)),
                 "fecha_creacion": event.fecha_creacion,
+                "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
             },
             status=status.HTTP_200_OK,
         )
@@ -1002,6 +1005,11 @@ def edit_event(request, evento_id):
     calendars = None
     if "calendarios" in data:
         calendar_ids = data["calendarios"]
+        if isinstance(calendar_ids, str):
+            try:
+                calendar_ids = json.loads(calendar_ids)
+            except (ValueError, TypeError):
+                calendar_ids = None
         if not calendar_ids or not isinstance(calendar_ids, list):
             return Response(
                 {"errors": ["Debe indicar al menos un calendario válido."]},
@@ -1013,6 +1021,15 @@ def edit_event(request, evento_id):
                 {"errors": ["Algún calendario no existe."]},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+    if 'foto' in request.FILES:
+        if event.foto:
+            event.foto.delete(save=False)
+        event.foto = request.FILES['foto']
+    elif request.data.get('remove_foto') == 'true':
+        if event.foto:
+            event.foto.delete(save=False)
+        event.foto = None
 
     try:
         event.full_clean()
@@ -1046,6 +1063,7 @@ def edit_event(request, evento_id):
             "id_externo": event.id_externo,
             "calendarios": list(event.calendarios.values_list("id", flat=True)),
             "fecha_creacion": event.fecha_creacion,
+            "foto": request.build_absolute_uri(event.foto.url) if event.foto else None,
         },
         status=status.HTTP_200_OK,
     )
@@ -1061,7 +1079,13 @@ def crear_evento(request):
     hora = data.get("hora")
     calendarios_ids = data.get("calendarios")
     creador = request.user
-    
+
+    if isinstance(calendarios_ids, str):
+        try:
+            calendarios_ids = json.loads(calendarios_ids)
+        except (ValueError, TypeError):
+            calendarios_ids = None
+
 
     if not titulo:
         return Response(
@@ -1144,6 +1168,10 @@ def crear_evento(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if 'foto' in request.FILES:
+        evento.foto = request.FILES['foto']
+        evento.save()
+
     return Response(
         {
             "id": evento.id,
@@ -1157,6 +1185,7 @@ def crear_evento(request):
             "id_externo": evento.id_externo,
             "calendarios": calendarios_ids,
             "fecha_creacion": evento.fecha_creacion,
+            "foto": request.build_absolute_uri(evento.foto.url) if evento.foto else None,
         },
         status=status.HTTP_201_CREATED,
     )

@@ -85,7 +85,7 @@ class Evento(models.Model):
     ubicacion = models.PointField(geography=True, spatial_index=True, null=True, blank=True)
     fecha = models.DateField()
     hora = models.TimeField()
-    foto = models.ImageField(upload_to='fotos_eventos/', null=True, blank=True)
+    foto = models.ImageField(upload_to='eventos/', null=True, blank=True)
     recurrencia = models.IntegerField(null=True, blank=True)
     id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     calendarios = models.ManyToManyField(Calendario, related_name='eventos')

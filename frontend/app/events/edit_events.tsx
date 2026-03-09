@@ -18,7 +18,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
-import API_CONFIG from "@/constants/api";
+import apiClient from "@/services/api-client";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -52,6 +52,8 @@ export default function EditEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
   const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [existingFoto, setExistingFoto] = useState<string | null>(null);
+  const [removeFoto, setRemoveFoto] = useState(false);
   const [eventDate, setEventDate] = useState<Date>(new Date());
   const [time, setTime] = useState<Date>(new Date());
 
@@ -66,21 +68,12 @@ export default function EditEventsScreen() {
   // Load calendars and event data on mount
   useEffect(() => {
     const initData = async () => {
-      console.log("📱 Edit Events Screen Loaded");
-      console.log("📥 Event ID from params:", eventId);
-      console.log("🔗 API Base URL:", API_CONFIG.BaseURL);
-      
       if (!eventId) {
-        console.error("❌ No event ID provided!");
         Alert.alert("Error", "No event ID found");
         setLoading(false);
         return;
       }
-      
-      // Load calendars first
       const loadedCalendars = await loadCalendars();
-      
-      // Then load event data
       await loadEventData(loadedCalendars);
     };
     initData();
@@ -88,29 +81,22 @@ export default function EditEventsScreen() {
 
   const loadCalendars = async () => {
     try {
-      console.log("📋 Loading calendars...");
-      const url = API_CONFIG.endpoints.getCalendars;
-      console.log("📡 Calling:", url);
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to load calendars: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const loadedCalendars = data.calendarios || [];
-      console.log("✅ Calendars loaded:", loadedCalendars.length);
-      setCalendars(loadedCalendars);
-      return loadedCalendars;
+      const data = await apiClient.get<any>("/calendarios/mis-calendarios");
+      const list: CalendarItem[] = (Array.isArray(data) ? data : []).map((c: any) => ({
+        id: c.id,
+        nombre: c.nombre,
+        imagen_portada: c.portada ?? undefined,
+      }));
+      setCalendars(list);
+      return list;
     } catch (error) {
-      console.error("❌ Error loading calendars:", error);
       Alert.alert("Error", "Failed to load calendars");
       setLoading(false);
       return [];
     }
   };
 
-  const loadEventData = async (availableCalendars: CalendarItem[]) => {
+  const loadEventData = async (_availableCalendars: CalendarItem[]) => {
     if (!eventId) {
       Alert.alert("Error", "Event ID is missing");
       setLoading(false);
@@ -119,38 +105,21 @@ export default function EditEventsScreen() {
 
     setLoading(true);
     try {
-      const url = API_CONFIG.endpoints.getEvent(eventId);
-      console.log("🔍 Fetching event from:", url);
-      
-      const response = await fetch(url);
-      console.log("📊 Response status:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Error response:", errorText);
-        throw new Error(`Failed to load event: ${response.status}`);
-      }
-      
-      const event = await response.json();
-      console.log("✅ Event loaded:", JSON.stringify(event, null, 2));
-      
-      // Set basic fields
+      const event = await apiClient.get<any>(`/eventos/${eventId}`);
+
       setTitle(event.titulo || "");
       setDescription(event.descripcion || "");
       setPlace(event.nombre_lugar || "");
-      
-      console.log("📝 Title:", event.titulo);
-      console.log("📝 Description:", event.descripcion);
-      console.log("📝 Place:", event.nombre_lugar);
-      
-      // Parse date
+
+      if (event.foto) {
+        setExistingFoto(event.foto);
+      }
+
       if (event.fecha) {
         const [year, month, day] = event.fecha.split('-').map(Number);
         const dateObj = new Date(year, month - 1, day);
         setEventDate(dateObj);
-        console.log("📅 Date:", dateObj);
-        
-        // Parse time
+
         if (event.hora) {
           const [hours, minutes] = event.hora.split(':').map(Number);
           const timeObj = new Date(dateObj);
@@ -158,23 +127,16 @@ export default function EditEventsScreen() {
           setTime(timeObj);
           setWebHour(hours);
           setWebMinute(minutes);
-          console.log("⏰ Time:", timeObj);
         }
       }
-      
-      // Set calendar
+
       if (event.calendarios && event.calendarios.length > 0) {
-        const calendarId = event.calendarios[0];
-        console.log("🗓️ Calendar ID:", calendarId);
-        setSelectedCalendarId(calendarId);
+        setSelectedCalendarId(event.calendarios[0]);
       }
-      
     } catch (error) {
-      console.error("❌ Error loading event:", error);
       Alert.alert("Error", "Failed to load event data: " + (error as Error).message);
     } finally {
       setLoading(false);
-      console.log("✔️ Loading complete");
     }
   };
 
@@ -219,7 +181,14 @@ export default function EditEventsScreen() {
 
     if (!result.canceled) {
       setCoverUri(result.assets[0].uri);
+      setRemoveFoto(false);
     }
+  };
+
+  const handleRemoveFoto = () => {
+    setCoverUri(null);
+    setExistingFoto(null);
+    setRemoveFoto(true);
   };
 
   const handleUpdate = async () => {
@@ -237,42 +206,31 @@ export default function EditEventsScreen() {
     try {
       const dateStr = `${eventDate.getFullYear()}-${pad2(eventDate.getMonth() + 1)}-${pad2(eventDate.getDate())}`;
       const timeStr = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
-      
-      const updateData = {
-        titulo: title,
-        descripcion: description,
-        nombre_lugar: place,
-        fecha: dateStr,
-        hora: timeStr,
-        calendarios: [selectedCalendarId],
-      };
 
-      console.log("💾 Saving event:", JSON.stringify(updateData, null, 2));
+      const formData = new FormData();
+      formData.append("titulo", title);
+      formData.append("descripcion", description);
+      formData.append("nombre_lugar", place);
+      formData.append("fecha", dateStr);
+      formData.append("hora", timeStr);
+      formData.append("calendarios", JSON.stringify([selectedCalendarId]));
 
-      const url = API_CONFIG.endpoints.editEvent(eventId!);
-      console.log("📡 Calling:", url);
-
-      const response = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      });
-
-      console.log("📊 Response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Error response:", errorText);
-        throw new Error(`Failed to update event: ${response.status}`);
+      if (coverUri) {
+        const mimeType = "image/jpeg";
+        const filename = coverUri.split("/").pop() ?? "foto.jpg";
+        const fetchResponse = await fetch(coverUri);
+        const blob = await fetchResponse.blob();
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append("foto", file, filename);
+      } else if (removeFoto) {
+        formData.append("remove_foto", "true");
       }
 
-      const result = await response.json();
-      console.log("✅ Event updated:", result);
+      await apiClient.put<any>(`/eventos/${eventId}`, formData);
 
       Alert.alert("Success", "Event updated successfully");
       router.replace("/calendars");
     } catch (error) {
-      console.error("❌ Error saving event:", error);
       Alert.alert("Error", "Failed to save event: " + (error as Error).message);
     } finally {
       setSaving(false);
@@ -335,13 +293,25 @@ export default function EditEventsScreen() {
             <View style={styles.block}>
               <Text style={styles.smallLabelCentered}>Photos</Text>
 
-              <Pressable style={styles.photoBox} onPress={pickCoverImage}>
-                {coverUri ? (
-                  <Image source={{ uri: coverUri }} style={styles.photoPreview} />
-                ) : (
+              {coverUri || existingFoto ? (
+                <View style={styles.photoPreviewContainer}>
+                  <Image
+                    source={{ uri: (coverUri ?? existingFoto)! }}
+                    style={styles.photoPreview}
+                  />
+                  <Pressable style={styles.photoRemoveBtn} onPress={handleRemoveFoto}>
+                    <Ionicons name="close-circle" size={24} color="#fff" />
+                  </Pressable>
+                  <Pressable style={styles.photoChangeBtn} onPress={pickCoverImage}>
+                    <Ionicons name="camera-outline" size={14} color="#fff" />
+                    <Text style={styles.photoChangeTxt}>Change</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.photoBox} onPress={pickCoverImage}>
                   <Ionicons name="camera" size={28} color={TEXT} />
-                )}
-              </Pressable>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -606,9 +576,51 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  form: { paddingHorizontal: 6, paddingTop: 4 },
+  photoPreviewContainer: {
+    position: "relative",
+    width: 90,
+    height: 82,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+
+  photoPreview: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
+
+  photoRemoveBtn: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 12,
+  },
+
+  photoChangeBtn: {
+    position: "absolute",
+    bottom: 4,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 3,
+    gap: 3,
+  },
+
+  photoChangeTxt: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
 
   fieldLabel: { color: TEXT, fontSize: 14, fontWeight: "800", marginBottom: 6 },
+
+  form: { paddingHorizontal: 6, paddingTop: 4 },
 
   input: {
     height: 34,
@@ -619,11 +631,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.45)",
   },
 
-  photoPreview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 12,
-  },
 
   textAreaSmall: {
     height: 64,

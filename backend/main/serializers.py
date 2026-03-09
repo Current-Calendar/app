@@ -222,6 +222,7 @@ class EventoSerializer(serializers.ModelSerializer):
     latitud = serializers.SerializerMethodField()
     longitud = serializers.SerializerMethodField()
     creador_username = serializers.CharField(source='creador.username', read_only=True)
+    creador_foto = serializers.SerializerMethodField()
     calendarios = serializers.SerializerMethodField()
 
     class Meta:
@@ -231,7 +232,7 @@ class EventoSerializer(serializers.ModelSerializer):
             'fecha', 'hora', 'recurrencia', 'id_externo',
             'calendarios', 'fecha_creacion',
             'distancia_km', 'latitud', 'longitud',
-            'foto', 'creador_username'
+            'foto', 'creador_username', 'creador_foto'
         ]
 
     def get_foto(self, obj):
@@ -243,6 +244,17 @@ class EventoSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request:
             return request.build_absolute_uri(obj.foto.url)
+        return foto_str
+
+    def get_creador_foto(self, obj):
+        if not obj.creador or not obj.creador.foto:
+            return None
+        foto_str = str(obj.creador.foto)
+        if foto_str.startswith('http'):
+            return foto_str
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.creador.foto.url)
         return foto_str
 
     def get_distancia_km(self, obj):

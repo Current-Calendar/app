@@ -40,7 +40,15 @@ export default function EventCard({
   return (
     <View style={styles.card}>
       <View style={styles.userRow}>
-        <Image source={{ uri: event.userAvatar }} style={styles.avatar} />
+        {event.userAvatar ? (
+          <Image source={{ uri: event.userAvatar }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatarFallback, { backgroundColor: event.avatarColor }]}>
+            <Text style={styles.avatarInitial}>
+              {event.username.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
         <Text style={styles.username}>{event.username}</Text>
       </View>
 
@@ -127,6 +135,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+  },
+  avatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitial: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   username: {
     fontWeight: "600",

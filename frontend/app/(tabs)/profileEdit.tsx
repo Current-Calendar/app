@@ -32,32 +32,33 @@ const EditProfileScreen = () => {
   const [pronouns, setPronouns] = useState<string>(currentUser?.pronombres || '');
   const [bio, setBio] = useState<string>(currentUser?.biografia || '');
   const [photo, setPhoto] = useState<string>(currentUser?.foto || '');
+  const [newPhoto, setNewPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleChangePhoto = async () => {
-  try {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'Permission to access media library is required!');
-      return;
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'Permission to access media library is required!');
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!pickerResult.canceled) {
+        setNewPhoto(pickerResult.assets[0]);
+        setPhoto(pickerResult.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Could not pick image. Please try again.');
     }
-    const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!pickerResult.canceled) {
-      // TODO: Upload the selected image to your server and get the URL, then setPhoto(uploadedUrl);
-      setPhoto(pickerResult.assets[0].uri);
-    }
-  } catch (error) {
-    console.error('Error picking image:', error);
-    Alert.alert('Error', 'Could not pick image. Please try again.');
-  }
-};
+  };
 
  const handleSave = async () => {
     try {
@@ -65,16 +66,38 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const data: User = await apiClient.put('/users/me', {
-        pronombres: pronouns,
-        biografia: bio,
-      });
+
+      const formData = new FormData();
+      formData.append('pronombres', pronouns);
+      formData.append('biografia', bio);
+
+      if (newPhoto) {
+        const mimeType = newPhoto.mimeType ?? 'image/jpeg';
+        const extFromMime: Record<string, string> = {
+          'image/jpeg': '.jpg',
+          'image/jpg': '.jpg',
+          'image/png': '.png',
+          'image/gif': '.gif',
+          'image/webp': '.webp',
+          'image/heic': '.heic',
+        };
+        const ext = extFromMime[mimeType] ?? '.jpg';
+        const rawName = newPhoto.uri.split('/').pop() ?? 'avatar';
+        const filename = rawName.includes('.') ? rawName : rawName + ext;
+
+        const fetchResponse = await fetch(newPhoto.uri);
+        const blob = await fetchResponse.blob();
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append('foto', file, filename);
+      }
+
+      const data: User = await apiClient.put('/users/me', formData);
 
       updateUserContext({
         ...currentUser,
         pronombres: data.pronombres ?? pronouns,
         biografia: data.biografia ?? bio,
-        foto: photo,
+        foto: data.foto ?? photo,
       });
 
       Alert.alert('Success', 'Profile updated successfully!');

@@ -557,26 +557,32 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    const payload: any = {
-      titulo,
-      descripcion: description?.trim() ?? "",
-      nombre_lugar: place?.trim() ?? "",
-      fecha: toISODate(date),
-      hora: toHMS(time),
-      calendarios: [Number(selectedCalendar.id)],
-      creador_id: 2, // MOCK por ahora
-    };
-
-    // 👇 Enviar coords si existen (backend espera latitud/longitud)
-    if (lat != null && lon != null) {
-      payload.latitud = lat;
-      payload.longitud = lon;
-    }
-
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/eventos', payload);
+      const formData = new FormData();
+      formData.append("titulo", titulo);
+      formData.append("descripcion", description?.trim() ?? "");
+      formData.append("nombre_lugar", place?.trim() ?? "");
+      formData.append("fecha", toISODate(date));
+      formData.append("hora", toHMS(time));
+      formData.append("calendarios", JSON.stringify([Number(selectedCalendar.id)]));
+
+      if (lat != null && lon != null) {
+        formData.append("latitud", String(lat));
+        formData.append("longitud", String(lon));
+      }
+
+      if (coverUri) {
+        const mimeType = "image/jpeg";
+        const filename = coverUri.split("/").pop() ?? "foto.jpg";
+        const fetchResponse = await fetch(coverUri);
+        const blob = await fetchResponse.blob();
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append("foto", file, filename);
+      }
+
+      await apiClient.post<any>('/eventos', formData);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
@@ -638,17 +644,22 @@ export default function CreateEventsScreen() {
             <View style={styles.block}>
               <Text style={styles.smallLabelCentered}>Photos</Text>
 
-              <Pressable style={styles.photoBox} onPress={pickCoverImage}>
-                {coverUri ? (
+              {coverUri ? (
+                <View style={styles.photoPreviewContainer}>
                   <Image source={{ uri: coverUri }} style={styles.photoPreview} />
-                ) : (
+                  <Pressable style={styles.photoRemoveBtn} onPress={() => setCoverUri(null)}>
+                    <Ionicons name="close-circle" size={24} color="#fff" />
+                  </Pressable>
+                  <Pressable style={styles.photoChangeBtn} onPress={pickCoverImage}>
+                    <Ionicons name="camera-outline" size={14} color="#fff" />
+                    <Text style={styles.photoChangeTxt}>Change</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.photoBox} onPress={pickCoverImage}>
                   <Ionicons name="camera" size={28} color={TEXT} />
-                )}
-              </Pressable>
-
-              <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /eventos no recibe imagen)
-              </Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -989,7 +1000,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  photoPreviewContainer: {
+    position: "relative",
+    width: 90,
+    height: 82,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+
   photoPreview: { width: "100%", height: "100%", borderRadius: 12 },
+
+  photoRemoveBtn: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 12,
+  },
+
+  photoChangeBtn: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingVertical: 3,
+    gap: 3,
+  },
+
+  photoChangeTxt: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
 
   helperText: {
     marginTop: 6,

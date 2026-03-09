@@ -3,11 +3,19 @@ import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
+import apiClient from "@/services/api-client";
 import { API_CONFIG } from "@/constants/api";
+
+const AVATAR_COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8', '#10464d', '#eb8c85'];
+
+function colorForUsername(username: string): string {
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 /**
  * 🔹 Tipo compartido con backend
- * Cuando backend conecte, este type debe alinearse con el DTO real
  */
 export interface Event {
   id: string;
@@ -17,7 +25,8 @@ export interface Event {
   date: string;
   image: string;
   username: string;
-  userAvatar: string;
+  userAvatar: string | null;
+  avatarColor: string;
   calendarId: string;
   calendarName: string;
 }
@@ -31,44 +40,37 @@ export default function EventsScreen() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [calRes, evRes] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-          fetch(API_CONFIG.endpoints.getEvents),
+        const [calData, evData] = await Promise.all([
+          apiClient.get<any[]>(API_CONFIG.endpoints.getCalendars.replace(API_CONFIG.BaseURL, '')),
+          apiClient.get<any[]>(API_CONFIG.endpoints.getEvents.replace(API_CONFIG.BaseURL, '')),
         ]);
-
-        if (!calRes.ok || !evRes.ok) {
-          throw new Error("Failed to fetch data");
-        }
-
-        const calData = await calRes.json();
-        const evData = await evRes.json();
 
         // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
-        calData.forEach((c: any) => {
-          calendarMap[c.id] = c;
-        });
+        calData.forEach((c: any) => { calendarMap[c.id] = c; });
 
-        const mappedEvents: any[] = evData.map((e: any) => {
+        const mappedEvents: Event[] = evData.map((e: any) => {
           const cal = calendarMap[e.calendarios[0]];
+          const username = e.creador_username || cal?.creador_username || 'unknown';
           return {
             id: String(e.id),
             title: e.titulo,
-            description: e.descripcion || "",
-            location: e.nombre_lugar || "",
+            description: e.descripcion || '',
+            location: e.nombre_lugar || '',
             date: e.fecha,
-            image: e.foto, // Placeholder for now
-            username: cal?.creador_username || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(e.calendarios[0] || ""),
-            calendarName: cal?.nombre || "General",
+            image: e.foto || '',
+            username,
+            userAvatar: e.creador_foto || null,
+            avatarColor: colorForUsername(username),
+            calendarId: String(e.calendarios[0] || ''),
+            calendarName: cal?.nombre || 'General',
           };
         });
 
         setEvents(mappedEvents);
       } catch (error) {
-        console.error("Error fetching events:", error);
-        Alert.alert("Error", "Could not load events.");
+        console.error('Error fetching events:', error);
+        Alert.alert('Error', 'Could not load events.');
       } finally {
         setLoading(false);
       }
