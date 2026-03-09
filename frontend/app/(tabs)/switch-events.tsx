@@ -1,9 +1,10 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
+import { View, FlatList, StyleSheet, ActivityIndicator, Text } from "react-native";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import { API_CONFIG } from "@/constants/api";
+import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
+import type { CalendarEvent } from "@/types/calendar";
 
 /**
  * 🔹 Tipo compartido con backend
@@ -15,6 +16,7 @@ export interface Event {
   description?: string;
   location: string;
   date: string;
+  time: string;
   image: string;
   username: string;
   userAvatar: string;
@@ -23,13 +25,18 @@ export interface Event {
 }
 
 export default function EventsScreen() {
-  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchData = async () => {
       setLoading(true);
+      setErrorMessage(null);
       try {
         const [calRes, evRes] = await Promise.all([
           fetch(API_CONFIG.endpoints.getCalendars),
@@ -43,43 +50,87 @@ export default function EventsScreen() {
         const calData = await calRes.json();
         const evData = await evRes.json();
 
+        const calendars =
+          (Array.isArray(calData) && calData) ||
+          (Array.isArray(calData?.calendarios) && calData.calendarios) ||
+          (Array.isArray(calData?.results) && calData.results) ||
+          [];
+
+        const eventsList =
+          (Array.isArray(evData) && evData) ||
+          (Array.isArray(evData?.eventos) && evData.eventos) ||
+          (Array.isArray(evData?.results) && evData.results) ||
+          [];
+
         // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
-        calData.forEach((c: any) => {
+        calendars.forEach((c: any) => {
           calendarMap[c.id] = c;
         });
 
-        const mappedEvents: any[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendarios[0]];
+        const resolveImageUrl = (rawUrl?: string) => {
+          if (!rawUrl) return "https://picsum.photos/seed/event/640/360";
+          if (/^https?:\/\//.test(rawUrl)) return rawUrl;
+          const base = API_CONFIG.rootBaseURL || API_CONFIG.BaseURL;
+          return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
+        };
+
+        const mappedEvents: Event[] = eventsList.map((e: any) => {
+          const firstCalendarId = Array.isArray(e.calendarios) ? e.calendarios[0] : undefined;
+          const cal = firstCalendarId ? calendarMap[firstCalendarId] : undefined;
           return {
             id: String(e.id),
             title: e.titulo,
             description: e.descripcion || "",
             location: e.nombre_lugar || "",
             date: e.fecha,
-            image: e.foto, // Placeholder for now
+            time: typeof e.hora === "string" ? e.hora.slice(0, 5) : "",
+            image: resolveImageUrl(e.foto),
             username: cal?.creador_username || "unknown",
             userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(e.calendarios[0] || ""),
+            calendarId: String(firstCalendarId || ""),
             calendarName: cal?.nombre || "General",
           };
-        });
+        }).filter((evt) => evt.id && evt.title);
 
-        setEvents(mappedEvents);
+        if (!cancelled) {
+          setEvents(mappedEvents);
+        }
       } catch (error) {
         console.error("Error fetching events:", error);
-        Alert.alert("Error", "Could not load events.");
+        if (!cancelled) {
+          setEvents([]);
+          setErrorMessage("No se pudieron cargar los eventos. Intentalo de nuevo.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void fetchData();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const handleOpenEvent = (id: string) => {
-    // Conectar con show de events
-    //router.push(`/events/${id}`);
+    const selected = events.find((event) => event.id === id);
+    if (!selected) return;
+
+    setActiveEvent({
+      id: selected.id,
+      calendarId: selected.calendarId,
+      titulo: selected.title,
+      descripcion: selected.description ?? "",
+      nombre_lugar: selected.location,
+      fecha: selected.date,
+      hora: selected.time,
+      foto: selected.image,
+      color: "#10464d",
+    });
   };
 
   const handleLike = (id: string) => {
@@ -96,8 +147,21 @@ export default function EventsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
+      <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#10464d" />
+        <Text style={styles.loadingText}>Cargando feed...</Text>
+      </View>
+    );
+  }
+
+  if (errorMessage) {
+    return (
+      <View style={styles.loadingScreen}>
+        <Text style={styles.errorTitle}>No se pudo cargar el feed</Text>
+        <Text style={styles.loadingText}>{errorMessage}</Text>
+        <Text style={styles.retryLink} onPress={() => setReloadKey((k) => k + 1)}>
+          Reintentar
+        </Text>
       </View>
     );
   }
@@ -119,8 +183,14 @@ export default function EventsScreen() {
               onSave={handleSave}
             />
           )}
+          ListEmptyComponent={<Text style={styles.emptyText}>No hay eventos para mostrar.</Text>}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+        />
+
+        <PublicEventDetailModal
+          event={activeEvent}
+          onClose={() => setActiveEvent(null)}
         />
       </View>
     </View>
@@ -133,6 +203,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8E5D8",
     alignItems: "center",
   },
+  loadingScreen: {
+    flex: 1,
+    backgroundColor: "#E8E5D8",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: "#10464d",
+    opacity: 0.85,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  errorTitle: {
+    color: "#c75146",
+    fontWeight: "700",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  retryLink: {
+    marginTop: 12,
+    color: "#10464d",
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
   inner: {
     width: "100%",
     maxWidth: 800,
@@ -141,5 +237,12 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 120,
+  },
+  emptyText: {
+    marginTop: 40,
+    textAlign: "center",
+    color: "#10464d",
+    opacity: 0.8,
+    fontWeight: "600",
   },
 });
