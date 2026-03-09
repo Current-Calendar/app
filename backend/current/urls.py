@@ -17,12 +17,13 @@ Including another URLconf
 from django.urls import path, include
 from main import views
 from main.users import views as user_views
+from main.calendars import views as calendar_views
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, list_calendars, list_my_calendars, radar_events
+from main.views import asignar_evento_a_calendario, desasignar_evento_de_calendario, radar_events
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib import admin
@@ -38,14 +39,8 @@ urlpatterns = [
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
     path('api/v1/mock', views.hola_mundo),
-    path('api/v1/calendarios/<int:calendario_id>/publicar', views.publish_calendar),
-    path('api/v1/calendarios/<int:calendario_id>/eliminar/', views.eliminar_calendario, name='eliminar_calendario'),
-    path('api/v1/calendarios/<int:calendario_id>/editar/', views.editar_calendario, name='editar_calendario'),
     path('api/v1/eventos', views.crear_evento),
     path('api/v1/eventos/<int:evento_id>', views.edit_event),
-    path('api/v1/calendarios', views.crear_calendario),
-    path('api/v1/calendarios/list', list_calendars, name='list_calendarios'),
-    path('api/v1/calendarios/mis-calendarios', list_my_calendars, name='list_my_calendarios'),
     path('api/v1/eventos/list', views.list_events, name='list_eventos'),
     path('api/v1/eventos/list/<int:calendario_id>', views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/eventos/asignar/', asignar_evento_a_calendario),
@@ -53,10 +48,6 @@ urlpatterns = [
     path('api/v1/eventos/<int:evento_id>/delete/', views.delete_event, name='delete_event'),
     path('api/v1/google-auth', views.google_authorization),
     path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
-    path('api/calendars/import-google-calendar', views.import_google_calendar, name='import_google_calendar'),
-    path('api/calendars/import-ios-calendar', views.iOS_calendar_import, name='import_ios_calendar'),
-    path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
-    path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
     path('api/v1/radar/', radar_events, name='radar_eventos'),
     path('admin/', admin.site.urls),
     path('api/v1/auth/register/', user_views.register_user, name='register'),
@@ -66,6 +57,16 @@ urlpatterns = [
     path('/api/v1/users/me/', user_views.get_own_user, name='get_profile'),
     path('/api/v1/users/me/edit/', user_views.edit_profile, name='edit_profile'),
     path('/api/v1/users/me/delete/', user_views.delete_own_user, name='delete_own_user'),
+    path('api/v1/calendars/<int:calendar_id>/publish', calendar_views.publish_calendar),
+    path('api/v1/calendars/<int:calendar_id>/delete/', calendar_views.delete_calendar, name='delete_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/edit/', calendar_views.edit_calendar, name='edit_calendar'),
+    path('api/v1/calendars/create', calendar_views.create_calendar, name='create_calendar'),
+    path('api/v1/calendars/list', calendar_views.list_calendars, name='list_calendarios'),
+    path('api/v1/calendars/my-calendars', calendar_views.list_my_calendars, name='list_my_calendarios'),
+    path('api/v1/calendars/import-google-calendar', calendar_views.import_google_calendar, name='import_google_calendar'),
+    path('api/v1/calendars/import-ios-calendar', calendar_views.iOS_calendar_import, name='import_ios_calendar'),
+    path('api/v1/calendars/import-ics', calendar_views.ics_import, name='import_ics_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/export', calendar_views.export_to_ics, name='export_to_ics'),
 ]
 
 

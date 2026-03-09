@@ -1,11 +1,10 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from ..models import Usuario
 from ..serializers import UserSerializer, UsuarioRegistroSerializer, UsuarioSerializer, PublicUserSerializer, OwnProfileSerializer
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import permission_classes
 
 
 @api_view(['POST'])
