@@ -33,7 +33,7 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" onPress={handleAddPress} />
       <NavButton icon="calendar" href="/switch-calendar" />
-      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="people"  />
       <NavButton icon="compass" href="/radar" />
 
       <Modal
