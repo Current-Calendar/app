@@ -43,6 +43,9 @@ export const API_CONFIG = {
     getEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
     editEvent: (eventId: number | string) => buildEndpoint(`eventos/${eventId}`),
     deleteEvent: (eventId: string) => buildEndpoint(`eventos/${eventId}/delete/`), // debería cambiarse a number, y para eso hay que tocar la interfaz evento
+    recoverPassword: buildEndpoint('auth/recover-password/'),
+    setNewPassword: buildEndpoint('auth/set-new-password/'),
+    validateResetToken: buildEndpoint('auth/validate-reset-token/'),
   },
 };
 

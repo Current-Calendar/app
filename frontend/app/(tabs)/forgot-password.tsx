@@ -6,14 +6,13 @@ import {
   TextInput,
   Pressable,
   Image,
-  ImageBackground,
   Dimensions,
   Platform,
   useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
-import { useAuth } from "@/hooks/use-auth";
+import { useRouter } from "expo-router";
+import { API_CONFIG } from "@/constants/api";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -25,43 +24,53 @@ const TEXT = "#10464D";
 
 
 const Otter = require("../../assets/images/Mascota.png");
-const Cloud = require("../../assets/images/nube_login.png");
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-
-  const { login } = useAuth();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const onLogin = async () => {
+  const recoverpass = async (email: string) => {
+    const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to send password recovery email.");
+    }
+  };
+
+  const onForgotPassword = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const u = username.trim();
-    if (!u || !password) {
-      setErrorMsg("Rellena username y password.");
+    const u = email.trim();
+    if (!u) {
+      setErrorMsg("Please, enter the email address associated with your account.");
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(u)) {
+      setErrorMsg("Please, enter a valid email address.");
+      return;
+    }
     setLoading(true);
 
     try {
-      await login(username, password);
-
-      setSuccessMsg("Login exitoso.");
-      setTimeout(() => router.push("/"), 250);
+      await recoverpass(u);
+      setSuccessMsg("Password recovery email sent.");
     } catch (error) {
-      setErrorMsg("Usuario o contraseña incorrectos.");
+      setErrorMsg("Error sending password recovery email.");
     } finally {
       setLoading(false);
     }
@@ -72,76 +81,37 @@ export default function LoginScreen() {
       <View style={styles.content}>
         <View style={styles.hero}>
           <Image source={Otter} style={styles.otter} resizeMode="contain" />
-
-          <ImageBackground source={Cloud} style={styles.cloudImg} resizeMode="contain">
-            <Text style={styles.cloudText}>Welcome Back</Text>
-          </ImageBackground>
         </View>
 
-        <Text style={styles.title}>Log In</Text>
+        <Text style={styles.title}>Forgot Password</Text>
 
         <View style={[styles.form, { width: formWidth }]}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>Email</Text>
           <TextInput
-            value={username}
-            onChangeText={setUsername}
+            value={email}
+            onChangeText={setEmail}
             placeholder=""
             placeholderTextColor="#999"
             autoCapitalize="none"
             style={styles.input}
           />
 
-          <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
-
-          <Pressable style={styles.forgot}>
-          <Link href="/forgot-password" asChild>
-            <Pressable>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
-          </Link>
-          </Pressable>
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
 
           <Pressable
             style={[styles.btn, loading && { opacity: 0.75 }]}
-            onPress={onLogin}
+            onPress={onForgotPassword}
             disabled={loading}
           >
-            <View style={styles.btnBubbles} pointerEvents="none">
-              <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
-              <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
-              <View style={[styles.bubbleDot, { bottom: 8, left: 14, width: 10, height: 10 }]} />
-
-              <View style={[styles.bubbleDot, { top: 8, right: 12 }]} />
-              <View style={[styles.bubbleDot, { top: 20, right: 26, width: 6, height: 6 }]} />
-              <View style={[styles.bubbleDot, { bottom: 10, right: 16, width: 10, height: 10 }]} />
-            </View>
 
             {loading ? (
               <ActivityIndicator color="#EAF7F6" />
             ) : (
-              <Text style={styles.btnText}>Login</Text>
+              <Text style={styles.btnText}>Send Recovery Email</Text>
             )}
           </Pressable>
-        </View>
-
-        <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>Don’t have an account?</Text>
-          <Link href="/register" asChild>
-            <Pressable>
-              <Text style={styles.bottomLink}>Sign Up</Text>
-            </Pressable>
-          </Link>
         </View>
 
         <View style={{ height: 18 }} />
@@ -228,7 +198,7 @@ const styles = StyleSheet.create({
   successText: { marginTop: 6, color: TEAL, fontWeight: "900" },
 
   btn: {
-    marginTop: 4,
+    marginTop: 20,
     alignSelf: "center",
     width: 170,
     paddingVertical: 10,
