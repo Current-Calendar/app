@@ -100,7 +100,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                             activeOpacity={0.7}
                             onPress={() => {
                                 onClose();
-                                router.push({ pathname: "/events/edit_events", params: { id: event.id } });
+                                router.push({ pathname: "/edit_events", params: { id: event.id } });
                             }}
                         >
                             <Ionicons name="pencil" size={16} color="#fff" />
