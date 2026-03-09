@@ -55,8 +55,8 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+       <Pressable style={styles.card} onPress={() => {}}>
           <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
@@ -127,8 +127,8 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
           <Pressable onPress={onClose} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Cerrar</Text>
           </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
