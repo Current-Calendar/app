@@ -157,12 +157,16 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'email',
             'pronombres',
             'biografia',
+            'foto',
+            'total_seguidores',
+            'total_seguidos',
+            'total_calendarios_seguidos',
         )
         read_only_fields = ('id', 'date_joined')
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=Usuario
-        fields=['foto','email','username','pronombres','link','biografia']
+        fields=['foto','email','username','pronombres','link','biografia','total_seguidores','total_seguidos','total_calendarios_seguidos']
 
 
 class CalendarioSummarySerializer(serializers.ModelSerializer):

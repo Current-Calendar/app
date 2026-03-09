@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.urls import path, include
 from main import views
+from main.users import views as user_views
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from django.views.decorators.csrf import csrf_exempt
 from graphene_django.views import GraphQLView
@@ -27,7 +28,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib import admin
 
 api_router = routers.DefaultRouter()
-api_router.register("users", views.UserViewSet, basename="users")
 api_router.register("events", views.EventViewSet, basename="events")
 
 urlpatterns = [
@@ -43,8 +43,6 @@ urlpatterns = [
     path('api/v1/calendarios/<int:calendario_id>/editar/', views.editar_calendario, name='editar_calendario'),
     path('api/v1/eventos', views.crear_evento),
     path('api/v1/eventos/<int:evento_id>', views.edit_event),
-    path('api/v1/usuarios', views.buscar_usuarios),
-    path('api/v1/auth/registro/', views.registro_usuario, name='registro'),
     path('api/v1/calendarios', views.crear_calendario),
     path('api/v1/calendarios/list', list_calendars, name='list_calendarios'),
     path('api/v1/calendarios/mis-calendarios', list_my_calendars, name='list_my_calendarios'),
@@ -60,8 +58,14 @@ urlpatterns = [
     path('api/calendars/import-ics', views.ics_import, name='import_ics_calendar'),
     path('api/calendars/<int:calendario_id>/export', views.export_to_ics, name='export_to_ics'),
     path('api/v1/radar/', radar_events, name='radar_eventos'),
-    path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
     path('admin/', admin.site.urls),
+    path('api/v1/auth/register/', user_views.register_user, name='register'),
+    path('api/v1/users/search/', user_views.search_users, name='search_users'),
+    path('/api/v1/usuarios/<int:pk>/follow/', user_views.follow_or_unfollow_user, name='follow_users_logic'),
+    path('/api/v1/usuarios/<int:pk>/', user_views.get_user_by_id, name='get_user'),
+    path('/api/v1/users/me/', user_views.get_own_user, name='get_profile'),
+    path('/api/v1/users/me/edit/', user_views.edit_profile, name='edit_profile'),
+    path('/api/v1/users/me/delete/', user_views.delete_own_user, name='delete_own_user'),
 ]
 
 

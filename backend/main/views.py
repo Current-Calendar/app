@@ -22,9 +22,8 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
-from rest_framework.request import Request
 from rest_framework import status, viewsets, mixins
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
@@ -34,15 +33,9 @@ from django.contrib.gis.geos import Point
 from django.http import HttpResponse
 
 from main.serializers import (
-    UsuarioRegistroSerializer,
-    UsuarioSerializer,
-    UserSerializer,
-    PublicUserSerializer,
-    OwnProfileSerializer,
     EventoSerializer
 )
 import requests
-from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
 from main.models import MockElement, Calendario, Evento, Usuario
@@ -91,39 +84,6 @@ def _is_safe_calendar_url(raw_url: str):
 
     return True, None
 
-
-class UserViewSet(viewsets.GenericViewSet):
-    queryset = Usuario.objects.all()
-    permission_classes = [IsAuthenticated]
-
-    @action(detail=True, methods=["post"])
-    def follow(self, request: Request, pk: int) -> Response:
-        user: Usuario = request.user
-        user_to_follow: Usuario = self.get_object()
-
-        if user.seguidos.filter(pk=user_to_follow.pk).exists():
-            user.seguidos.remove(user_to_follow)
-            followed = False
-        else:
-            user.seguidos.add(user_to_follow)
-            followed = True
-
-        user.save()
-
-        return Response(
-            {
-                "user": user_to_follow.pk,
-                "followed": followed,
-            }
-        )
-    def retrieve(self, request, pk) -> Response:
-        user = self.get_object()
-        user_data = PublicUserSerializer(user, context={'request': request}).data
-        public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
-                "id", "nombre", "descripcion", "portada", "fecha_creacion"
-            ))
-        user_data["public_calendars"] = public_calendars
-        return Response(user_data)
 
 class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Evento.objects.all()
@@ -431,70 +391,6 @@ def export_to_ics(request, calendario_id):
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
-
-@api_view(['GET'])
-def buscar_usuarios(request):
-    query = request.GET.get("search")
-
-    if not query:
-        return Response(
-            {"errors": ["El parámetro 'search' es obligatorio."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    usuarios = Usuario.objects.filter(
-        Q(username__icontains=query) |
-        Q(email__icontains=query) |
-        Q(pronombres__icontains=query)
-    ).distinct()
-
-    resultados = [
-        {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "pronombres": user.pronombres,
-            "biografia": user.biografia,
-            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
-            "total_seguidores": user.total_seguidores,
-            "total_seguidos": user.total_seguidos,
-            "total_calendarios_seguidos": user.total_calendarios_seguidos,
-        }
-        for user in usuarios
-    ]
-
-    return Response(resultados, status=status.HTTP_200_OK)
-    
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def registro_usuario(request):
-    """
-    Endpoint para registrar un nuevo usuario.
-    
-    POST /api/v1/auth/registro/
-    Body: {
-        "username": "string",
-        "email": "string",
-        "password": "string",
-        "password2": "string"
-    }
-    """
-    serializer = UsuarioRegistroSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        usuario = serializer.save()
-        
-        # Devolver datos del usuario creado
-        usuario_serializer = UsuarioSerializer(usuario)
-        
-        return Response({
-            'message': 'Usuario registrado exitosamente',
-            'usuario': usuario_serializer.data
-        }, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -879,30 +775,7 @@ def editar_calendario(request, calendario_id):
         'descripcion': calendario.descripcion,
         'estado': calendario.estado,
     }, status=status.HTTP_200_OK)
-
-class UsuarioPropioView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        serializer = OwnProfileSerializer(request.user, context={"request": request})
-        return Response(serializer.data)
-
-    def put(self, request):
-        serializer = UserSerializer(
-            request.user,
-            data=request.data,
-            partial=True
-        )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=200)
-        return Response(serializer.errors, status=400)
-    def delete(self, request):
-        request.user.delete()
-        return Response(
-            {"message": "Usuario eliminado satisfactoriamente"},
-            status=202
-        )
+    
   
 @api_view(['GET', 'PUT'])
 def edit_event(request, evento_id):
