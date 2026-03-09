@@ -62,6 +62,9 @@ urlpatterns = [
     path('api/v1/radar/', radar_events, name='radar_eventos'),
     path('api/v1/users/me',views.UsuarioPropioView.as_view(),name="usuario-propio-view"),
     path('admin/', admin.site.urls),
+    path('api/v1/auth/recover-password/', views.recover_password, name='recover_password'),
+    path('api/v1/auth/set-new-password/', views.set_new_password, name='set_new_password'),
+    path('api/v1/auth/validate-reset-token/', views.validate_reset_token, name='validate_reset_token'),
 ]
 
 

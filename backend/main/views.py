@@ -32,6 +32,11 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import Point
 from django.http import HttpResponse
+import jwt
+from datetime import datetime, timedelta
+import resend
+
+
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -1234,3 +1239,151 @@ def radar_events(request):
     )
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def send_password_reset_email(user, reset_url):
+    """Send password reset email to user"""
+    resend.api_key = settings.RESEND_API_KEY
+    
+    params = {
+        "from": settings.RESEND_EMAIL_FROM, 
+        "to": [user.email],
+        "subject": "Password Reset Request",
+        "html": f"""
+            <p>Hi {user.username},</p>
+            <p>Click the link below to reset your password:</p>
+            <a href="{reset_url}">{reset_url}</a>
+            <p>This link expires in 1 hour.</p>
+            <p>If you didn't request this, ignore this email.</p>
+        """
+    }
+    
+    try:
+        resend.Emails.send(params)
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        raise
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def recover_password(request):
+    email = request.data.get('email')
+    
+    if not email:
+        return Response(
+            {"error": "Email address is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        user = Usuario.objects.get(email=email)
+        payload = {
+            'email': email,
+            'exp': datetime.now() + timedelta(hours=1),
+            'iat': datetime.now()
+        }
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+        frontend_url = "https://staging.currentcalendar.es"
+        reset_url = f"{frontend_url}/reset-password?token={token}"
+        send_password_reset_email(user, reset_url)
+        
+    except Usuario.DoesNotExist:
+        pass # don't reveal user doesn't exist
+    
+    return Response(
+        {"message": "If an account exists with this email, a password reset link has been sent."},
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def set_new_password(request):
+    token = request.data.get('token')
+    new_password = request.data.get('new_password')
+    
+    if not token or not new_password:
+        return Response(
+            {"error": "token and new_password are required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        email = payload.get('email')
+        
+        if not email:
+            return Response(
+                {"error": "Invalid token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user = Usuario.objects.get(email=email)        
+        user.set_password(new_password)
+        user.save()
+        
+        return Response(
+            {"message": "Password has been reset successfully"},
+            status=status.HTTP_200_OK
+        )
+        
+    except jwt.ExpiredSignatureError:
+        return Response(
+            {"error": "Reset token has expired"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except jwt.InvalidTokenError:
+        return Response(
+            {"error": "Invalid reset token"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Usuario.DoesNotExist:
+        return Response(
+            {"error": "User not found"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def validate_reset_token(request):
+    token = request.data.get('token')
+    if not token:
+        return Response(
+            {"error": "token is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        email = payload.get('email')
+        
+        if not email:
+            return Response(
+                {"valid": False, "error": "Invalid token"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        Usuario.objects.get(email=email)
+        
+        return Response(
+            {"valid": True, "message": "Token is valid"},
+            status=status.HTTP_200_OK
+        )
+            
+    except jwt.ExpiredSignatureError:
+        return Response(
+            {"valid": False, "error": "Token has expired"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except jwt.InvalidTokenError:
+        return Response(
+            {"valid": False, "error": "Invalid token"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Usuario.DoesNotExist:
+        return Response(
+            {"valid": False, "error": "User not found"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
