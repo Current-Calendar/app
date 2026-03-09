@@ -630,7 +630,7 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
-            "portada": cal.portada.url if cal.portada else None
+            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None
         }
         for cal in queryset
     ]
@@ -891,12 +891,22 @@ def editar_calendario(request, calendario_id):
                 )
             setattr(calendario, campo, valor)
 
+    if 'portada' in request.FILES:
+        if calendario.portada:
+            calendario.portada.delete(save=False)
+        calendario.portada = request.FILES['portada']
+    elif request.data.get('remove_portada') == 'true':
+        if calendario.portada:
+            calendario.portada.delete(save=False)
+        calendario.portada = None
+
     calendario.save()
     return Response({
         'id': calendario.id,
         'nombre': calendario.nombre,
         'descripcion': calendario.descripcion,
         'estado': calendario.estado,
+        'portada': request.build_absolute_uri(calendario.portada.url) if calendario.portada else None,
     }, status=status.HTTP_200_OK)
 
 class UsuarioPropioView(APIView):

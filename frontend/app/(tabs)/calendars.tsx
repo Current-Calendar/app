@@ -80,6 +80,7 @@ export default function CalendarScreen() {
                 id: String(c.id),
                 nombre: c.nombre,
                 descripcion: c.descripcion || '',
+                portada: c.portada || undefined,
                 estado: c.estado,
                 origen: c.origen,
                 creador: c.creador_username || 'unknown',
@@ -407,6 +408,7 @@ export default function CalendarScreen() {
                                 nombre: calendar.nombre,
                                 descripcion: calendar.descripcion ?? '',
                                 estado: calendar.estado,
+                                portada: calendar.portada ?? '',
                             },
                         });
                     }}

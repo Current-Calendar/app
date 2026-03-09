@@ -1,12 +1,24 @@
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, useWindowDimensions, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import apiClient from '@/services/api-client';
+import apiClient from "@/services/api-client";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 
-type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
+type PrivacyStatus = "PRIVADO" | "AMIGOS" | "PUBLICO";
 
 export default function EditScreen() {
   const router = useRouter();
@@ -15,21 +27,38 @@ export default function EditScreen() {
     nombre: string;
     descripcion: string;
     estado: PrivacyStatus;
+    portada: string;
   }>();
 
-  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.estado ?? 'PRIVADO');
+  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(
+    params.estado ?? "PRIVADO"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState({
     nombre: params.nombre ?? "",
     descripcion: params.descripcion ?? "",
   });
 
+  const [coverImage, setCoverImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [existingPortada, setExistingPortada] = useState<string | null>(() => {
+    const p = params.portada;
+    if (!p || p === 'null' || p === 'undefined' || p.trim() === '') return null;
+    return p;
+  });
+  const [removePortada, setRemovePortada] = useState(false);
+
   const calendarId = params.id;
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
+  const privacyOptions: {
+    label: string;
+    value: PrivacyStatus;
+    icon: string;
+    description: string;
+  }[] = [
     {
       label: "Private",
       value: "PRIVADO",
@@ -50,6 +79,35 @@ export default function EditScreen() {
     },
   ];
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Please allow access to your photo library."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setCoverImage(result.assets[0]);
+      setRemovePortada(false);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverImage(null);
+    setExistingPortada(null);
+    setRemovePortada(true);
+  };
+
   const handleEdit = async () => {
     if (!calendarData.nombre.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -63,13 +121,39 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      await apiClient.put(`/calendarios/${Number(calendarId)}/editar/`, {
-        nombre: calendarData.nombre,
-        descripcion: calendarData.descripcion,
-        estado: selectedPrivacy,
-      });
+      const formData = new FormData();
+      formData.append("nombre", calendarData.nombre);
+      formData.append("descripcion", calendarData.descripcion);
+      formData.append("estado", selectedPrivacy);
 
-      router.replace('/(tabs)/calendars');
+      if (coverImage) {
+        const mimeType = coverImage.mimeType ?? "image/jpeg";
+        const extFromMime: Record<string, string> = {
+          "image/jpeg": ".jpg",
+          "image/jpg": ".jpg",
+          "image/png": ".png",
+          "image/gif": ".gif",
+          "image/webp": ".webp",
+          "image/heic": ".heic",
+        };
+        const ext = extFromMime[mimeType] ?? ".jpg";
+        const rawName = coverImage.uri.split("/").pop() ?? "cover";
+        const filename = rawName.includes(".") ? rawName : rawName + ext;
+
+        const fetchResponse = await fetch(coverImage.uri);
+        const blob = await fetchResponse.blob();
+        const file = new File([blob], filename, { type: mimeType });
+        formData.append("portada", file, filename);
+      } else if (removePortada) {
+        formData.append("remove_portada", "true");
+      }
+
+      await apiClient.put(
+        `/calendarios/${Number(calendarId)}/editar/`,
+        formData
+      );
+
+      router.replace("/(tabs)/calendars");
     } catch (error) {
       Alert.alert("Error", "Failed to update calendar. Please try again.");
       console.error("Edit error:", error);
@@ -78,10 +162,15 @@ export default function EditScreen() {
     }
   };
 
+  const previewUri = coverImage ? coverImage.uri : existingPortada;
+
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
+        contentContainerStyle={[
+          styles.container,
+          isDesktop && styles.containerDesktop,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* FORM CARD */}
@@ -92,10 +181,56 @@ export default function EditScreen() {
             type="title"
             lightColor="#10464d"
             darkColor="#10464d"
-            style={{ fontFamily: Fonts.rounded, textAlign: "center", marginVertical: 16 }}
+            style={{
+              fontFamily: Fonts.rounded,
+              textAlign: "center",
+              marginVertical: 16,
+            }}
           >
             Edit Calendar
           </ThemedText>
+
+          {/* COVER IMAGE */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Cover Image</Text>
+
+            {previewUri ? (
+              <View style={styles.coverPreviewContainer}>
+                <Image
+                  source={{ uri: previewUri }}
+                  style={styles.coverPreview}
+                />
+                <Pressable
+                  style={styles.coverRemoveButton}
+                  onPress={handleRemoveCover}
+                >
+                  <Ionicons name="close-circle" size={26} color="#fff" />
+                </Pressable>
+                <Pressable
+                  style={styles.coverChangeButton}
+                  onPress={handlePickImage}
+                >
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.coverChangeText}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.coverPickerEmpty}
+                onPress={handlePickImage}
+              >
+                <View style={styles.coverPickerIconWrap}>
+                  <Ionicons name="image-outline" size={28} color="#10464d" />
+                </View>
+                <Text style={styles.coverPickerLabel}>Add a cover image</Text>
+                <Text style={styles.coverPickerSub}>
+                  Recommended: 16:9 ratio
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          <View style={styles.divider} />
 
           {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
@@ -246,6 +381,74 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+  },
+
+  // COVER IMAGE
+  coverPreviewContainer: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+  },
+  coverRemoveButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 13,
+  },
+  coverChangeButton: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 4,
+  },
+  coverChangeText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  coverPickerEmpty: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#c5dde0",
+    borderStyle: "dashed",
+    backgroundColor: "#f0f9fa",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coverPickerIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#d8eef0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  coverPickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#10464d",
+    marginBottom: 4,
+  },
+  coverPickerSub: {
+    fontSize: 12,
+    color: "#888",
   },
 
   // INPUT SECTION
