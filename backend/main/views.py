@@ -1,6 +1,7 @@
 import datetime
 from asyncio import events
 from icalendar import Calendar
+
 import os
 import ipaddress
 import socket
@@ -28,10 +29,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
-from django.contrib.gis.geos import Point
+
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
 from django.http import HttpResponse
+from .permissions import IsCreator
+
 
 from main.serializers import (
     UsuarioRegistroSerializer,
@@ -41,16 +44,14 @@ from main.serializers import (
     OwnProfileSerializer,
     EventoSerializer
 )
+
 import requests
 from rest_framework.views import APIView
 from utils.security import get_safe_ip
 
-from main.models import MockElement, Calendario, Evento, Usuario
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.measure import D
-from .permissions import IsCreator
-from django.db.models import Q
+from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
 
+from main.models import MockElement, Calendario, Evento, Usuario
 from rest_framework.decorators import api_view, permission_classes
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -60,8 +61,6 @@ REQUEST_TIMEOUT_SECONDS = 5
 #if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 if "localhost" in GOOGLE_REDIRECT_URIS:
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-
-
 
 
 def _is_safe_calendar_url(raw_url: str):
@@ -116,6 +115,7 @@ class UserViewSet(viewsets.GenericViewSet):
                 "followed": followed,
             }
         )
+
     def retrieve(self, request, pk) -> Response:
         user = self.get_object()
         user_data = PublicUserSerializer(user, context={'request': request}).data
@@ -130,7 +130,9 @@ class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated & IsCreator]
 
 
-@api_view(["GET"])
+
+
+@api_view(['GET'])
 def hola_mundo(request):
     cache_key = "sevilla_point_data"
     cached_data = cache.get(cache_key)    
@@ -455,7 +457,7 @@ def buscar_usuarios(request):
             "email": user.email,
             "pronombres": user.pronombres,
             "biografia": user.biografia,
-            "foto": request.build_absolute_uri(user.foto.url) if user.foto else None,
+            "foto": user.foto.url if user.foto else None,
             "total_seguidores": user.total_seguidores,
             "total_seguidos": user.total_seguidos,
             "total_calendarios_seguidos": user.total_calendarios_seguidos,
@@ -611,7 +613,6 @@ def list_calendars(request):
             "creador_id": cal.creador_id,
             "creador_username": cal.creador.username,
             "fecha_creacion": cal.fecha_creacion,
-            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
         }
         for cal in queryset
     ]
@@ -718,7 +719,6 @@ def list_events(request):
     serializer = EventoSerializer(queryset, many=True, context={'request': request})
 
     return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -904,11 +904,10 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['GET', 'PUT'])
+@api_view(['GET', 'PUT', 'PATCH'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
-    
-    # Handle GET: Return event data
+
     if request.method == 'GET':
         return Response(
             {
@@ -925,30 +924,31 @@ def edit_event(request, evento_id):
             },
             status=status.HTTP_200_OK,
         )
-    
-    # Handle PUT: Update event
+
+ 
+    if not request.user.is_authenticated:
+        return Response(
+            {"errors": ["Debes iniciar sesión para realizar esta acción."]},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    if event.creador != request.user:
+        return Response(
+            {"errors": ["No tienes permiso para editar este evento."]},
+            status=status.HTTP_403_FORBIDDEN
+        )
+        
     data = request.data
 
-    # Validate required fields are not empty if provided
     if "titulo" in data and not data["titulo"]:
-        return Response(
-            {"errors": ["El campo 'titulo' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'titulo' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
     if "fecha" in data and not data["fecha"]:
-        return Response(
-            {"errors": ["El campo 'fecha' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'fecha' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
     if "hora" in data and not data["hora"]:
-        return Response(
-            {"errors": ["El campo 'hora' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'hora' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Update scalar fields if present
     editable_fields = [
         "titulo", "descripcion", "nombre_lugar",
         "fecha", "hora", "recurrencia", "id_externo",
@@ -957,33 +957,22 @@ def edit_event(request, evento_id):
         if field in data:
             setattr(event, field, data[field])
 
-    # Location via lat/lon
     if "latitud" in data or "longitud" in data:
         lat = data.get("latitud")
         lon = data.get("longitud")
         try:
             event.ubicacion = Point(float(lon), float(lat))
         except Exception:
-            return Response(
-                {"errors": ["Latitud o longitud inválidas."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"errors": ["Latitud o longitud inválidas."]}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Calendars M2M
     calendars = None
     if "calendarios" in data:
         calendar_ids = data["calendarios"]
         if not calendar_ids or not isinstance(calendar_ids, list):
-            return Response(
-                {"errors": ["Debe indicar al menos un calendario válido."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"errors": ["Debe indicar al menos un calendario válido."]}, status=status.HTTP_400_BAD_REQUEST)
         calendars = Calendario.objects.filter(id__in=calendar_ids)
         if calendars.count() != len(calendar_ids):
-            return Response(
-                {"errors": ["Algún calendario no existe."]},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"errors": ["Algún calendario no existe."]}, status=status.HTTP_404_NOT_FOUND)
 
     try:
         event.full_clean()
@@ -1162,7 +1151,9 @@ def publish_calendar(request, calendario_id):
             "fecha_creacion": calendar.fecha_creacion,
         },
         status=status.HTTP_200_OK,
+
     )
+
 
 @api_view(['GET'])
 def radar_events(request):
@@ -1234,3 +1225,4 @@ def radar_events(request):
     )
 
     return Response(serializer.data, status=status.HTTP_200_OK)
+
