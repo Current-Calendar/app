@@ -7,6 +7,8 @@ import {
   ScrollView,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
+  Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { User } from '../../../types/auth';
@@ -151,10 +153,29 @@ const ProfileScreen = () => {
     router.push('/profileEdit');
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
+  const handleLogout = () => {
+  const message = "¿Estás seguro de que quieres salir de tu cuenta?";
+  
+  if (Platform.OS === 'web') {
+    
+    const confirmLogout = window.confirm(message);
+    if (confirmLogout) {
+      performLogout();
+    }
+  } else {
+    
+    Alert.alert("Cerrar sesión", message, [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Sí, salir", style: "destructive", onPress: performLogout },
+    ]);
+  }
+};
+
+// He separado la lógica de salida para que sea más limpia
+const performLogout = async () => {
+  await logout();
+  router.replace('/login');
+};
 
   // Si no es mi perfil, delegamos a PublicProfile pasándole el userId
   if (!isMe && userId) {
