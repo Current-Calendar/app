@@ -3,12 +3,9 @@ import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
+import EventFeedModal from "@/components/event-feed-modal";
 import { API_CONFIG } from "@/constants/api";
 
-/**
- * 🔹 Tipo compartido con backend
- * Cuando backend conecte, este type debe alinearse con el DTO real
- */
 export interface Event {
   id: string;
   title: string;
@@ -26,6 +23,8 @@ export default function EventsScreen() {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,24 +42,24 @@ export default function EventsScreen() {
         const calData = await calRes.json();
         const evData = await evRes.json();
 
-        // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
         calData.forEach((c: any) => {
           calendarMap[c.id] = c;
         });
 
-        const mappedEvents: any[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendarios[0]];
+        const mappedEvents: Event[] = evData.map((e: any) => {
+          const cal = calendarMap[e.calendarios?.[0]];
           return {
             id: String(e.id),
             title: e.titulo,
             description: e.descripcion || "",
             location: e.nombre_lugar || "",
             date: e.fecha,
-            image: e.foto, // Placeholder for now
+            image: e.foto || "",
             username: cal?.creador_username || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(e.calendarios[0] || ""),
+            userAvatar:
+              "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
+            calendarId: String(e.calendarios?.[0] || ""),
             calendarName: cal?.nombre || "General",
           };
         });
@@ -78,8 +77,16 @@ export default function EventsScreen() {
   }, []);
 
   const handleOpenEvent = (id: string) => {
-    // Conectar con show de events
-    //router.push(`/events/${id}`);
+    const found = events.find((e) => e.id === id);
+    if (!found) return;
+
+    setSelectedEvent(found);
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setSelectedEvent(null);
   };
 
   const handleLike = (id: string) => {
@@ -121,6 +128,12 @@ export default function EventsScreen() {
           )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+        />
+
+        <EventFeedModal
+          visible={modalVisible}
+          onClose={handleCloseModal}
+          event={selectedEvent}
         />
       </View>
     </View>
