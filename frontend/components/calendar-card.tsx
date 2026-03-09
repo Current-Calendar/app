@@ -8,50 +8,50 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// ---------- Tipos ----------
+// ---------- Types ----------
 export interface CalendarData {
     id: string | number;
-    nombre: string;
-    descripcion?: string;
-    portada?: string;
-    estado?: 'AMIGOS' | 'PUBLICO' | 'PRIVADO' | string; // ← puedes ajustar
+    name: string;
+    description?: string;
+    cover?: string;
+    privacy?: 'FRIENDS' | 'PUBLIC' | 'PRIVATE' | string;
 }
 
 interface CalendarCardProps {
-    calendario: CalendarData;
+    calendar: CalendarData;
     onPress?: () => void;
 }
 
-export default function CalendarCard({ calendario, onPress }: CalendarCardProps) {
-    if (!calendario) return null;
+export default function CalendarCard({ calendar, onPress }: CalendarCardProps) {
+    if (!calendar) return null;
 
     return (
-        <TouchableOpacity 
-            style={styles.cardContainer} 
-            onPress={onPress} 
+        <TouchableOpacity
+            style={styles.cardContainer}
+            onPress={onPress}
             activeOpacity={0.8}
         >
             <View style={styles.cardContent}>
 
-                <Image 
-                    source={{ uri: calendario.portada || 'https://via.placeholder.com/150' }} 
-                    style={styles.cardImage} 
+                <Image
+                    source={{ uri: calendar.cover || 'https://via.placeholder.com/150' }}
+                    style={styles.cardImage}
                 />
-                
+
                 <View style={styles.cardDetails}>
-                    
+
                     <View style={styles.titleRow}>
                         <Text style={styles.cardTitle} numberOfLines={1}>
-                            {calendario.nombre}
+                            {calendar.name}
                         </Text>
 
-                        {calendario.estado === 'AMIGOS' && (
+                        {calendar.privacy === 'FRIENDS' && (
                             <Ionicons name="star" size={18} color="#A0D842" style={{ marginLeft: 6 }} />
                         )}
                     </View>
-                    
+
                     <Text style={styles.cardDesc} numberOfLines={3}>
-                        {calendario.descripcion || 'Sin descripción disponible.'}
+                        {calendar.description || 'No description available.'}
                     </Text>
                 </View>
             </View>
@@ -59,7 +59,7 @@ export default function CalendarCard({ calendario, onPress }: CalendarCardProps)
     );
 }
 
-// ---------- Estilos ----------
+// ---------- Styles ----------
 const styles = StyleSheet.create({
     cardContainer: { 
         width: '90%',

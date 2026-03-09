@@ -15,9 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
-    PRIVADO: { label: 'Private', icon: 'lock-closed-outline' },
-    AMIGOS: { label: 'Friends', icon: 'people-outline' },
-    PUBLICO: { label: 'Public', icon: 'globe-outline' },
+    PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
+    FRIENDS: { label: 'Friends', icon: 'people-outline' },
+    PUBLIC: { label: 'Public', icon: 'globe-outline' },
 };
 
 const ORIGIN_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
@@ -44,14 +44,14 @@ export function CalendarInfoModal({
     if (!calendar) return null;
 
     const accent = calendar.color;
-    const privacy = PRIVACY_LABELS[calendar.estado] ?? PRIVACY_LABELS.PRIVADO;
+    const privacy = PRIVACY_LABELS[calendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
     const origin = ORIGIN_LABELS[calendar.origen] ?? ORIGIN_LABELS.CURRENT;
 
     const handleDeletePress = () => {
         if (!onDelete) return;
 
         if (Platform.OS === 'web') {
-            if (window.confirm(`Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`)) {
+            if (window.confirm(`Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`)) {
                 void onDelete(calendar);
             }
             return;
@@ -59,7 +59,7 @@ export function CalendarInfoModal({
 
         Alert.alert(
             'Delete calendar',
-            `Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`,
+            `Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -80,25 +80,25 @@ export function CalendarInfoModal({
                     <View style={styles.header}>
                         <View style={[styles.colorBadge, { backgroundColor: accent }]} />
                         <View style={styles.headerContent}>
-                            <Text style={styles.title}>{calendar.nombre}</Text>
-                            <Text style={styles.creatorText}>by @{calendar.creador}</Text>
+                            <Text style={styles.title}>{calendar.name}</Text>
+                            <Text style={styles.creatorText}>by @{calendar.creator}</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} hitSlop={12}>
                             <Ionicons name="close-circle" size={26} color="#bbb" />
                         </TouchableOpacity>
                     </View>
 
-                    {/* Display cover image (portada) if it exists */}
-                    {calendar.portada ? (
+                    {/* Display cover image if it exists */}
+                    {calendar.cover ? (
                         <Image
-                            source={{ uri: calendar.portada }}
+                            source={{ uri: calendar.cover }}
                             style={styles.coverImage}
                             resizeMode="cover"
                         />
                     ) : null}
 
-                    {calendar.descripcion ? (
-                        <Text style={styles.description}>{calendar.descripcion}</Text>
+                    {calendar.description ? (
+                        <Text style={styles.description}>{calendar.description}</Text>
                     ) : null}
 
                     <View style={styles.infoGrid}>

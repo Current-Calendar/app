@@ -2,9 +2,9 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  foto?: string;
-  pronombres?: string;
-  biografia?: string;
+  photo?: string;
+  pronouns?: string;
+  bio?: string;
 }
 
 export interface TokenResponse {

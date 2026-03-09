@@ -55,7 +55,7 @@ export default function Sidebar() {
     return content;
   };
 
-  // lógica Profile/Login
+  // Profile/Login logic
   const profileLabel = isAuthenticated ? "Profile" : "Login";
 
   const profileHref: string = isAuthenticated ? `/profile/${user?.id}` : "/login";

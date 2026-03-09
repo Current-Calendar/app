@@ -52,7 +52,7 @@ export default function MapComponent({ location, events }: { location: any; even
   const apiBase = String(API_CONFIG.baseURL || "");
   const mediaOrigin = getOriginFromApiBase(apiBase);
 
-  // 📍 Icono normal
+  // Default marker icon
   const defaultIcon = useMemo(() => {
     const markerUri = Asset.fromModule(require("../assets/images/marcador_evento.png")).uri;
     const markerRetinaUri = Asset.fromModule(require("../assets/images/marcador_evento_2x.png")).uri;
@@ -66,7 +66,7 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [L]);
 
-  // ⭐ Icono estrella para el evento más cercano
+  // Star icon for the closest event
   const starIcon = useMemo(() => {
     const starUri = Asset.fromModule(require("../assets/images/star_marker.png")).uri;
 
@@ -78,7 +78,7 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [L]);
 
-  // 📍 Icono posición usuario
+  // User position icon
   const yourPositionIcon = useMemo(() => {
     const markerUri = Asset.fromModule(require("../assets/images/position_icon.png")).uri;
 
@@ -149,28 +149,28 @@ export default function MapComponent({ location, events }: { location: any; even
         />
 
         <Marker position={center} icon={yourPositionIcon}>
-          <Popup closeButton={false}>Estás aquí</Popup>
+          <Popup closeButton={false}>You are here</Popup>
         </Marker>
 
         {events.map((event, index) => {
           const id = String(event?.id ?? "");
-          const lat = Number(event.latitud);
-          const lon = Number(event.longitud);
+          const lat = Number(event.latitude);
+          const lon = Number(event.longitude);
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
-          const title = String(event?.titulo ?? "Evento");
-          const place = String(event?.nombre_lugar ?? "");
-          const dateStr = formatDate(event?.fecha);
-          const timeStr = formatTime(event?.hora);
+          const title = String(event?.title ?? "Event");
+          const place = String(event?.place_name ?? "");
+          const dateStr = formatDate(event?.date);
+          const timeStr = formatTime(event?.time);
           const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
 
-          const imgUrl = buildImageUrl(apiBase, event?.foto);
+          const imgUrl = buildImageUrl(apiBase, event?.photo);
 
           return (
             <Marker
               key={id}
               position={[lat, lon]}
-              icon={index === 0 ? starIcon : defaultIcon} // ⭐ aquí está la magia
+              icon={index === 0 ? starIcon : defaultIcon} // star for closest event
               eventHandlers={{
                 mouseover: (e: any) => e?.target?.openPopup(),
                 mouseout: (e: any) => e?.target?.closePopup(),
