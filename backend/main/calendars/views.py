@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendario, Evento, Usuario
+from main.models import Calendar, Event, User
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.conf import settings
 from utils.security import get_safe_ip
-from icalendar import Calendar
+from icalendar import Calendar as ICalCalendar
 from urllib.parse import urlparse
 
 REQUEST_TIMEOUT_SECONDS = 5
@@ -25,32 +25,32 @@ ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def publish_calendar(request, calendar_id):
-    calendar = get_object_or_404(Calendario, id=calendar_id)
+    calendar = get_object_or_404(Calendar, id=calendar_id)
 
-    if calendar.creador !=request.user:
+    if calendar.creator !=request.user:
         return Response(
-            {"errors": ["No tienes permiso para publicar este calendario."]},
+            {"errors": ["No tienes permiso para publicar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
         )
 
-    if calendar.estado == 'PUBLICO':
+    if calendar.privacy == 'PUBLIC':
         return Response(
-            {"errors": ["El calendario ya es público."]},
+            {"errors": ["El calendar ya es público."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    calendar.estado = 'PUBLICO'
+    calendar.privacy = 'PUBLIC'
     calendar.save()
 
     return Response(
         {
             "id": calendar.id,
-            "nombre": calendar.nombre,
-            "descripcion": calendar.descripcion,
-            "estado": calendar.estado,
-            "origen": calendar.origen,
-            "creador": calendar.creador.id,
-            "fecha_creacion": calendar.fecha_creacion,
+            "name": calendar.name,
+            "description": calendar.description,
+            "privacy": calendar.privacy,
+            "origin": calendar.origin,
+            "creator": calendar.creator.id,
+            "created_at": calendar.created_at,
         },
         status=status.HTTP_200_OK,
     )
@@ -59,26 +59,26 @@ def publish_calendar(request, calendar_id):
 @api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_calendar(request, calendar_id):
-    calendario = get_object_or_404(Calendario, id=calendar_id)
+    calendar = get_object_or_404(Calendar, id=calendar_id)
     
     # Only the creator can delete the calendar
-    if calendario.creador != request.user:
+    if calendar.creator != request.user:
         return Response({'error': 'You do not have permission to delete this calendar.'}, status=status.HTTP_403_FORBIDDEN)
     
-    calendario.delete()
+    calendar.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['PUT', 'PATCH','GET'])
 @permission_classes([IsAuthenticated])
 def edit_calendar(request, calendar_id):
-    calendario = get_object_or_404(Calendario, id=calendar_id)
+    calendar = get_object_or_404(Calendar, id=calendar_id)
 
-    if calendario.creador != request.user:
+    if calendar.creator != request.user:
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
 
-    ESTADOS_VALIDOS = {'PRIVADO', 'AMIGOS', 'PUBLICO'}
-    campos_editables = ['nombre', 'estado', 'descripcion']
+    ESTADOS_VALIDOS = {'PRIVATE', 'FRIENDS', 'PUBLIC'}
+    campos_editables = ['name', 'privacy', 'description']
 
 
     for campo in campos_editables:
@@ -89,19 +89,19 @@ def edit_calendar(request, calendar_id):
                     {'error': f"El campo '{campo}' no puede ser una cadena vacía."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            if campo == 'estado' and valor not in ESTADOS_VALIDOS:
+            if campo == 'privacy' and valor not in ESTADOS_VALIDOS:
                 return Response(
-                    {'error': f"El estado '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
+                    {'error': f"El privacy '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            setattr(calendario, campo, valor)
+            setattr(calendar, campo, valor)
 
-    calendario.save()
+    calendar.save()
     return Response({
-        'id': calendario.id,
-        'nombre': calendario.nombre,
-        'descripcion': calendario.descripcion,
-        'estado': calendario.estado,
+        'id': calendar.id,
+        'name': calendar.name,
+        'description': calendar.description,
+        'privacy': calendar.privacy,
     }, status=status.HTTP_200_OK)
 
 
@@ -112,34 +112,34 @@ def create_calendar(request):
     print("DATA:", request.data)
     print("FILES:", request.FILES)
 
-    nombre = data.get('nombre')
+    name = data.get('name')
 
-    if not nombre:
+    if not name:
         return Response(
-            {"errors": ["El campo 'nombre' es obligatorio."]},
+            {"errors": ["El campo 'name' es obligatorio."]},
             status = status.HTTP_400_BAD_REQUEST
         )
-    creador = request.user
+    creator = request.user
 
-    calendario = Calendario(
-        creador=creador,
-        nombre=nombre,
-        descripcion=data.get('descripcion', ''),
-        estado=data.get('estado', 'PRIVADO'),
-        origen=data.get('origen', 'CURRENT'),
-        id_externo=data.get('id_externo'),
-        portada=request.FILES.get('portada')
+    calendar = Calendar(
+        creator=creator,
+        name=name,
+        description=data.get('description', ''),
+        privacy=data.get('privacy', 'PRIVATE'),
+        origin=data.get('origin', 'CURRENT'),
+        external_id=data.get('external_id'),
+        cover=request.FILES.get('cover')
     )
 
-    CONSTRAINT_PRIVADO = "unico_calendario_privado_por_usuario"
+    CONSTRAINT_PRIVADO = "unique_private_calendar_per_user"
 
     try:
-        calendario.full_clean()
+        calendar.full_clean()
         with transaction.atomic():
-            calendario.save()
+            calendar.save()
     except ValidationError as exc:
         # full_clean() / validate_constraints() puede lanzar ValidationError
-        # cuando se viola el UniqueConstraint condicional (estado=PRIVADO).
+        # cuando se viola el UniqueConstraint condicional (privacy=PRIVADO).
         raw_messages = []
         if hasattr(exc, "message_dict"):
             for field_errors in exc.message_dict.values():
@@ -165,15 +165,15 @@ def create_calendar(request):
 
     return Response(
         {
-            "id": calendario.id,
-            "origen": calendario.origen,
-            "id_externo": calendario.id_externo,
-            "nombre": calendario.nombre,
-            "descripcion": calendario.descripcion,
-            "estado": calendario.estado,
-            "creador_id": calendario.creador_id,
-            "fecha_creacion": calendario.fecha_creacion,
-            "portada": request.build_absolute_uri(calendario.portada.url) if calendario.portada else None,
+            "id": calendar.id,
+            "origin": calendar.origin,
+            "external_id": calendar.external_id,
+            "name": calendar.name,
+            "description": calendar.description,
+            "privacy": calendar.privacy,
+            "creator_id": calendar.creator_id,
+            "created_at": calendar.created_at,
+            "cover": request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
         },
         status=status.HTTP_201_CREATED,
     )
@@ -184,41 +184,41 @@ def list_calendars(request):
     """
     List and search calendars.
 
-    GET /api/v1/calendarios/list
+    GET /api/v1/calendars/list
 
     Query parameters:
         q       (str)  -- case-insensitive substring match on calendar name
-        estado  (str)  -- filter by privacy status (PRIVADO | AMIGOS | PUBLICO)
+        privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
     """
-    queryset = Calendario.objects.select_related('creador').all()
+    queryset = Calendar.objects.select_related('creator').all()
 
     q = request.GET.get('q', '').strip()
     if q:
-        queryset = queryset.filter(nombre__icontains=q)
+        queryset = queryset.filter(name__icontains=q)
 
-    estado = request.GET.get('estado', '').strip().upper()
-    valid_estados = {choice[0] for choice in Calendario.ESTADOS_PRIVACIDAD}
-    if estado:
-        if estado not in valid_estados:
+    privacy = request.GET.get('privacy', '').strip().upper()
+    valid_privacys = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+    if privacy:
+        if privacy not in valid_privacys:
             return Response(
-                {"errors": [f"Invalid 'estado' value. Allowed values: {', '.join(sorted(valid_estados))}."]},
+                {"errors": [f"Invalid 'privacy' value. Allowed values: {', '.join(sorted(valid_privacys))}."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        queryset = queryset.filter(estado=estado)
+        queryset = queryset.filter(privacy=privacy)
 
-    queryset = queryset.order_by('-fecha_creacion')
+    queryset = queryset.order_by('-created_at')
 
     results = [
         {
             "id": cal.id,
-            "nombre": cal.nombre,
-            "descripcion": cal.descripcion,
-            "estado": cal.estado,
-            "origen": cal.origen,
-            "creador_id": cal.creador_id,
-            "creador_username": cal.creador.username,
-            "fecha_creacion": cal.fecha_creacion,
-            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "created_at": cal.created_at,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset
     ]
@@ -232,41 +232,41 @@ def list_my_calendars(request):
     """
     List calendars created by the authenticated user.
 
-    GET /api/v1/calendarios/mis-calendarios
+    GET /api/v1/calendars/mis-calendars
 
     Query parameters:
         q       (str)  -- case-insensitive substring match on calendar name
-        estado  (str)  -- filter by privacy status (PRIVADO | AMIGOS | PUBLICO)
+        privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
     """
-    queryset = Calendario.objects.select_related('creador').filter(creador=request.user)
+    queryset = Calendar.objects.select_related('creator').filter(creator=request.user)
 
     q = request.GET.get('q', '').strip()
     if q:
-        queryset = queryset.filter(nombre__icontains=q)
+        queryset = queryset.filter(name__icontains=q)
 
-    estado = request.GET.get('estado', '').strip().upper()
-    valid_estados = {choice[0] for choice in Calendario.ESTADOS_PRIVACIDAD}
-    if estado:
-        if estado not in valid_estados:
+    privacy = request.GET.get('privacy', '').strip().upper()
+    valid_privacys = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+    if privacy:
+        if privacy not in valid_privacys:
             return Response(
-                {"errors": [f"Invalid 'estado' value. Allowed values: {', '.join(sorted(valid_estados))}."]},
+                {"errors": [f"Invalid 'privacy' value. Allowed values: {', '.join(sorted(valid_privacys))}."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        queryset = queryset.filter(estado=estado)
+        queryset = queryset.filter(privacy=privacy)
 
-    queryset = queryset.order_by('-fecha_creacion')
+    queryset = queryset.order_by('-created_at')
 
     results = [
         {
             "id": cal.id,
-            "nombre": cal.nombre,
-            "descripcion": cal.descripcion,
-            "estado": cal.estado,
-            "origen": cal.origen,
-            "creador_id": cal.creador_id,
-            "creador_username": cal.creador.username,
-            "fecha_creacion": cal.fecha_creacion,
-            "portada": request.build_absolute_uri(cal.portada.url) if cal.portada else None,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "created_at": cal.created_at,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset
     ]
@@ -277,11 +277,11 @@ def list_my_calendars(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def import_google_calendar(request):
-    """Endpoint para importar eventos del calendario de Google."""
+    """Endpoint para importar eventos del calendar de Google."""
     momento_actual = timezone.now().isoformat()
     events = []
-    usuario_creador = Usuario.objects.filter().first()
-    estado_solicitado = 'AMIGOS'
+    user_creator = User.objects.filter().first()
+    privacy_solicitado = 'FRIENDS'
     raw_credentials = request.session.get('google_credentials')
     if not raw_credentials:
         return Response({"error": "No hay credenciales de Google en sesión"}, status=400)
@@ -298,28 +298,28 @@ def import_google_calendar(request):
         events_result = service.events().list(calendarId='primary', singleEvents=True, maxResults=2500, timeMin=momento_actual, orderBy='startTime').execute()
         events = events_result.get('items', [])
 
-        calendar = Calendario.objects.create(
-            nombre="Calendario de Google",
-            descripcion="Calendario importado desde Google Calendar",
-            estado=estado_solicitado,
-            creador=usuario_creador,
-            origen='GOOGLE',
-            id_externo=service.calendarList().get(calendarId='primary').execute().get('id'),
+        calendar = Calendar.objects.create(
+            name="Calendar de Google",
+            description="Calendar importado desde Google Calendar",
+            privacy=privacy_solicitado,
+            creator=user_creator,
+            origin='GOOGLE',
+            external_id=service.calendarList().get(calendarId='primary').execute().get('id'),
         )
 
         for event in events:
             start = event['start'].get('dateTime', event['start'].get('date'))
             end = event['end'].get('dateTime', event['end'].get('date'))
 
-            evento = Evento.objects.create(
-                titulo=event.get('summary', 'Sin título'),
-                descripcion=event.get('description', ''),
-                fecha=start[:10],
-                hora=start[11:19] if 'T' in start else '00:00:00',
-                id_externo=event['id'],
-                creador=usuario_creador,
+            event = Event.objects.create(
+                title=event.get('summary', 'Sin título'),
+                description=event.get('description', ''),
+                date=start[:10],
+                time=start[11:19] if 'T' in start else '00:00:00',
+                external_id=event['id'],
+                creator=user_creator,
             )
-            evento.calendarios.add(calendar)
+            event.calendars.add(calendar)
     
     except Exception as e:
         print(f"Error al importar eventos: {e}")
@@ -334,8 +334,8 @@ def iOS_calendar_import(request):
 
     webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
     user_id = request.data.get('user')
-    estado_solicitado = request.data.get('estado', 'PRIVADO') 
-    usuario_creador = Usuario.objects.filter(id=user_id).first()
+    privacy_solicitado = request.data.get('privacy', 'PRIVATE') 
+    user_creator = User.objects.filter(id=user_id).first()
 
     if not webcal_url:
         return Response({"error": "webcal_url es requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
@@ -360,17 +360,17 @@ def iOS_calendar_import(request):
         response = requests.get(http_url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False)  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests
         response.raise_for_status()
 
-        cal = Calendar.from_ical(response.content)
+        cal = ICalCalendar.from_ical(response.content)
         momento_actual = timezone.now()
         eventos_guardados = 0
 
-        calendario = Calendario.objects.create(
-            nombre="Calendario de iOS",
-            descripcion="Calendario importado desde iOS Calendar",
-            estado=estado_solicitado,
-            creador=usuario_creador,
-            origen='APPLE',
-            id_externo=http_url,
+        calendar = Calendar.objects.create(
+            name="Calendar de iOS",
+            description="Calendar importado desde iOS Calendar",
+            privacy=privacy_solicitado,
+            creator=user_creator,
+            origin='APPLE',
+            external_id=http_url,
         )
 
         for component in cal.walk():
@@ -389,31 +389,31 @@ def iOS_calendar_import(request):
                 continue
             
             
-            titulo = str(component.get('summary', 'Sin título'))
-            descripcion = str(component.get('description', ''))
+            title = str(component.get('summary', 'Sin título'))
+            description = str(component.get('description', ''))
             uid = str(component.get('uid'))
             
-            fecha_str = inicio_dt.strftime('%Y-%m-%d')
-            hora_str = inicio_dt.strftime('%H:%M:%S')
+            date_str = inicio_dt.strftime('%Y-%m-%d')
+            time_str = inicio_dt.strftime('%H:%M:%S')
 
-            evento = Evento.objects.create(
-                titulo=titulo,
-                descripcion=descripcion,
-                fecha=fecha_str,
-                hora=hora_str,
-                creador= usuario_creador,
-                id_externo=uid,
+            event = Event.objects.create(
+                title=title,
+                description=description,
+                date=date_str,
+                time=time_str,
+                creator= user_creator,
+                external_id=uid,
             )
-            evento.calendarios.add(calendario)
+            event.calendars.add(calendar)
             eventos_guardados += 1
 
         return Response({
-            "message": "Calendario iOS importado exitosamente", 
+            "message": "Calendar iOS importado exitosamente", 
             "count": eventos_guardados
         })
 
     except requests.exceptions.RequestException as e:
-        return Response({"error": f"Error al descargar el calendario: {str(e)}"}, status=400)
+        return Response({"error": f"Error al descargar el calendar: {str(e)}"}, status=400)
     except Exception as e:
         return Response({"error": f"Error procesando el archivo: {str(e)}"}, status=400)
     
@@ -448,30 +448,30 @@ def _is_safe_calendar_url(raw_url: str):
 
 @api_view(['POST']) 
 def ics_import(request):
-    """Endpoint para importar eventos desde un archivo ICS subido por el usuario."""
+    """Endpoint para importar eventos desde un archivo ICS subido por el user."""
     if 'file' not in request.FILES:
         return Response({"error": "Archivo ICS requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
     upload = request.FILES['file']
 
     try:
-        cal = Calendar.from_ical(upload.read())
+        cal = ICalCalendar.from_ical(upload.read())
     except Exception as exc:  # malformed ICS
         return Response({"error": f"Archivo ICS inválido: {exc}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
     momento_actual = timezone.now()
-    estado_solicitado = request.data.get('estado', 'PRIVADO')
-    usuario_creador = Usuario.objects.filter(id=request.data.get('user')).first()
-    if not usuario_creador:
-        return Response({"error": "Usuario no encontrado"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+    privacy_solicitado = request.data.get('privacy', 'PRIVATE')
+    user_creator = User.objects.filter(id=request.data.get('user')).first()
+    if not user_creator:
+        return Response({"error": "User no encontrado"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
-    calendario = Calendario.objects.create(
-            nombre="Calendario de ICS",
-            descripcion="Calendario importado desde archivo ICS",
-            estado=estado_solicitado,
-            creador=usuario_creador,
-            origen='CURRENT',
-            id_externo=upload.name,
+    calendar = Calendar.objects.create(
+            name="Calendar de ICS",
+            description="Calendar importado desde archivo ICS",
+            privacy=privacy_solicitado,
+            creator=user_creator,
+            origin='CURRENT',
+            external_id=upload.name,
         )
     for component in cal.walk():
         if component.name != "VEVENT":
@@ -489,40 +489,40 @@ def ics_import(request):
             continue
         
         # Extraer los datos
-        titulo = str(component.get('summary', 'Sin título'))
-        descripcion = str(component.get('description', ''))
+        title = str(component.get('summary', 'Sin título'))
+        description = str(component.get('description', ''))
         uid = str(component.get('uid'))
         
-        fecha_str = inicio_dt.strftime('%Y-%m-%d')
-        hora_str = inicio_dt.strftime('%H:%M:%S')
+        date_str = inicio_dt.strftime('%Y-%m-%d')
+        time_str = inicio_dt.strftime('%H:%M:%S')
 
-        evento = Evento.objects.create(
-            titulo=titulo,
-            descripcion=descripcion,
-            fecha=fecha_str,
-            hora=hora_str,
-            creador = usuario_creador,
-            id_externo=uid,
+        event = Event.objects.create(
+            title=title,
+            description=description,
+            date=date_str,
+            time=time_str,
+            creator = user_creator,
+            external_id=uid,
         )
-        evento.calendarios.add(calendario)
+        event.calendars.add(calendar)
 
     return Response({"message": "Archivo ICS importado exitosamente"}, headers={"Access-Control-Allow-Origin": "*"})
 
 
 @api_view(['GET'])
 def export_to_ics(request, calendar_id):
-    """Endpoint para exportar un calendario a formato ICS."""
+    """Endpoint para exportar un calendar a formato ICS."""
     try:
-        calendario = Calendario.objects.get(id=calendar_id)
-    except Calendario.DoesNotExist:
-        return Response({"error": "Calendario no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
+        calendar = Calendar.objects.get(id=calendar_id)
+    except Calendar.DoesNotExist:
+        return Response({"error": "Calendar no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
 
-    cal = Calendar()
+    cal = ICalCalendar()
     cal.add('prodid', '-//Current Calendar//')
     cal.add('version', '2.0')
 
-    for evento in calendario.eventos.all():
-        event = evento.to_ical_event()
+    for event in calendar.eventos.all():
+        event = event.to_ical_event()
         cal.add_component(event)
 
     ics_content = cal.to_ical()

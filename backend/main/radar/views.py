@@ -6,8 +6,8 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 from django.db.models import Q
 from django.utils import timezone
-from ..models import Evento
-from ..serializers import EventoSerializer
+from ..models import Event
+from ..serializers import EventSerializer
 
 @api_view(['GET'])
 def radar_events(request):
@@ -37,43 +37,43 @@ def radar_events(request):
     user = request.user
 
     if user.is_authenticated:
-        amigos = user.seguidos.all()
+        friends = user.following.all()
 
-        filtro_privacidad = Q(calendarios__estado='PUBLICO') | \
-                            Q(calendarios__estado='AMIGOS', calendarios__creador__in=amigos) | \
-                            Q(creador=user)
+        filtro_privacidad = Q(calendars__privacy='PUBLIC') | \
+                            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends) | \
+                            Q(creator=user)
     else:
-        filtro_privacidad = Q(calendarios__estado='PUBLICO')
+        filtro_privacidad = Q(calendars__privacy='PUBLIC')
 
-    eventos = (
-        Evento.objects
+    events = (
+        Event.objects
         .filter(
             filtro_privacidad,
-            ubicacion__isnull=False,
-            fecha__gte=timezone.now().date()
+            location__isnull=False,
+            date__gte=timezone.now().date()
         )
-        .annotate(distancia=Distance("ubicacion", user_location))
-        .filter(ubicacion__distance_lte=(user_location, D(km=radio)))
+        .annotate(distancia=Distance("location", user_location))
+        .filter(location__distance_lte=(user_location, D(km=radio)))
         .order_by("distancia")
         .distinct()
     )
 
     resultados = [
         {
-            "id": evento.id,
-            "titulo": evento.titulo,
-            "descripcion": evento.descripcion,
-            "nombre_lugar": evento.nombre_lugar,
-            "fecha": evento.fecha,
-            "hora": evento.hora,
-            "distancia_km": round(evento.distancia.km, 2),
-            "latitud": evento.ubicacion.y if evento.ubicacion else None,
-            "longitud": evento.ubicacion.x if evento.ubicacion else None,
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "place_name": event.place_name,
+            "date": event.date,
+            "time": event.time,
+            "distancia_km": round(event.distancia.km, 2),
+            "latitud": event.location.y if event.location else None,
+            "longitud": event.location.x if event.location else None,
         }
-        for evento in eventos
+        for event in events
     ]
-    serializer = EventoSerializer(
-        eventos, 
+    serializer = EventSerializer(
+        events, 
         many=True, 
         context={'request': request}
     )

@@ -2,11 +2,11 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password
-from main.models import Usuario
+from main.models import User
 
 class RegistroUsuarioTests(APITestCase):
     """
-    Tests completos para el sistema de registro de usuarios.
+    Tests completos para el sistema de registro de users.
     """
     
     def setUp(self):
@@ -17,8 +17,8 @@ class RegistroUsuarioTests(APITestCase):
             'email': 'test@example.com',
             'password': 'TestPassword123!',
             'password2': 'TestPassword123!',
-            'pronombres': 'él/he',
-            'biografia': 'Esta es mi biografía de prueba'
+            'pronouns': 'él/he',
+            'bio': 'Esta es mi biografía de prueba'
         }
 
     def test_registro_exitoso(self):
@@ -28,20 +28,20 @@ class RegistroUsuarioTests(APITestCase):
         # Verificar respuesta
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('message', response.data)
-        self.assertIn('usuario', response.data)
-        self.assertEqual(response.data['message'], 'Usuario registered succesfully')
+        self.assertIn('user', response.data)
+        self.assertEqual(response.data['message'], 'User registered succesfully')
         
-        # Verificar datos del usuario en la respuesta
-        self.assertEqual(response.data['usuario']['username'], 'testuser')
-        self.assertEqual(response.data['usuario']['email'], 'test@example.com')
-        self.assertNotIn('password', response.data['usuario'])  # No debe devolver password
+        # Verificar datos del user en la respuesta
+        self.assertEqual(response.data['user']['username'], 'testuser')
+        self.assertEqual(response.data['user']['email'], 'test@example.com')
+        self.assertNotIn('password', response.data['user'])  # No debe devolver password
         
-        # Verificar que el usuario existe en la base de datos
-        self.assertTrue(Usuario.objects.filter(username='testuser').exists())
-        usuario = Usuario.objects.get(username='testuser')
-        self.assertEqual(usuario.email, 'test@example.com')
-        self.assertEqual(usuario.pronombres, 'él/he')
-        self.assertEqual(usuario.biografia, 'Esta es mi biografía de prueba')
+        # Verificar que el user existe en la base de datos
+        self.assertTrue(User.objects.filter(username='testuser').exists())
+        user = User.objects.get(username='testuser')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.pronouns, 'él/he')
+        self.assertEqual(user.bio, 'Esta es mi biografía de prueba')
 
     def test_password_hasheada_correctamente(self):
         """Test: La contraseña debe estar hasheada con Argon2."""
@@ -50,15 +50,15 @@ class RegistroUsuarioTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         
         # Verificar que la contraseña está hasheada
-        usuario = Usuario.objects.get(username='testuser')
-        self.assertNotEqual(usuario.password, 'TestPassword123!')  # No debe estar en texto plano
-        self.assertTrue(usuario.password.startswith('argon2'))  # Debe usar Argon2
+        user = User.objects.get(username='testuser')
+        self.assertNotEqual(user.password, 'TestPassword123!')  # No debe estar en texto plano
+        self.assertTrue(user.password.startswith('argon2'))  # Debe usar Argon2
         
         # Verificar que la contraseña hasheada es válida
-        self.assertTrue(check_password('TestPassword123!', usuario.password))
+        self.assertTrue(check_password('TestPassword123!', user.password))
 
     def test_registro_sin_campos_opcionales(self):
-        """Test: Registro exitoso sin campos opcionales (pronombres, biografia, link)."""
+        """Test: Registro exitoso sin campos opcionales (pronouns, bio, link)."""
         datos_minimos = {
             'username': 'userminimo',
             'email': 'minimo@example.com',
@@ -69,10 +69,10 @@ class RegistroUsuarioTests(APITestCase):
         response = self.client.post(self.url, datos_minimos, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        usuario = Usuario.objects.get(username='userminimo')
-        self.assertEqual(usuario.pronombres, '')
-        self.assertEqual(usuario.biografia, '')
-        self.assertEqual(usuario.link, '')
+        user = User.objects.get(username='userminimo')
+        self.assertEqual(user.pronouns, '')
+        self.assertEqual(user.bio, '')
+        self.assertEqual(user.link, '')
 
     def test_passwords_no_coinciden(self):
         """Test: Error cuando las contraseñas no coinciden."""
@@ -83,35 +83,35 @@ class RegistroUsuarioTests(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
-        self.assertFalse(Usuario.objects.filter(username='testuser').exists())
+        self.assertFalse(User.objects.filter(username='testuser').exists())
 
     def test_email_duplicado(self):
         """Test: Error cuando el email ya está registrado."""
-        # Crear primer usuario
+        # Crear primer user
         self.client.post(self.url, self.datos_validos, format='json')
         
-        # Intentar registrar usuario con mismo email
+        # Intentar registrar user con mismo email
         datos_duplicados = self.datos_validos.copy()
         datos_duplicados['username'] = 'otrouser'
         response = self.client.post(self.url, datos_duplicados, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
-        self.assertEqual(Usuario.objects.count(), 1)
+        self.assertEqual(User.objects.count(), 1)
 
     def test_username_duplicado(self):
         """Test: Error cuando el username ya está registrado."""
-        # Crear primer usuario
+        # Crear primer user
         self.client.post(self.url, self.datos_validos, format='json')
         
-        # Intentar registrar usuario con mismo username
+        # Intentar registrar user con mismo username
         datos_duplicados = self.datos_validos.copy()
         datos_duplicados['email'] = 'otro@example.com'
         response = self.client.post(self.url, datos_duplicados, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('username', response.data)
-        self.assertEqual(Usuario.objects.count(), 1)
+        self.assertEqual(User.objects.count(), 1)
 
     def test_username_muy_corto(self):
         """Test: Error cuando el username tiene menos de 3 caracteres."""
@@ -222,16 +222,16 @@ class RegistroUsuarioTests(APITestCase):
         response = self.client.post(self.url, datos_mayusculas, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        usuario = Usuario.objects.get(username='testuser')
-        self.assertEqual(usuario.email, 'test@example.com')
+        user = User.objects.get(username='testuser')
+        self.assertEqual(user.email, 'test@example.com')
 
     def test_registro_no_devuelve_password(self):
         """Test: La respuesta no debe incluir la contraseña."""
         response = self.client.post(self.url, self.datos_validos, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertNotIn('password', response.data['usuario'])
-        self.assertNotIn('password2', response.data['usuario'])
+        self.assertNotIn('password', response.data['user'])
+        self.assertNotIn('password2', response.data['user'])
 
     def test_username_valido_con_guiones(self):
         """Test: Username válido con guiones y guiones bajos."""
@@ -245,4 +245,4 @@ class RegistroUsuarioTests(APITestCase):
             response = self.client.post(self.url, datos_validos, format='json')
             
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-            self.assertTrue(Usuario.objects.filter(username=username_valido).exists())
+            self.assertTrue(User.objects.filter(username=username_valido).exists())

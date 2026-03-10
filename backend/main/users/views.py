@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from ..models import Usuario
-from ..serializers import UserSerializer, UsuarioSerializer, PublicUserSerializer, OwnProfileSerializer
+from ..models import User
+from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -22,13 +22,13 @@ def search_users(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    users = Usuario.objects.filter(
+    users = User.objects.filter(
         Q(username__icontains=query) |
         Q(email__icontains=query) |
-        Q(pronombres__icontains=query)
+        Q(pronouns__icontains=query)
     ).distinct()
     
-    users = UsuarioSerializer(users, many=True, context={'request': request})
+    users = UserSerializer(users, many=True, context={'request': request})
 
     return Response(users.data, status=status.HTTP_200_OK)
 
@@ -38,21 +38,21 @@ def search_users(request):
 def follow_or_unfollow_user(request, pk):
     """
     Endpoint to follow or unfollow another user
-    POST /api/v1/usuarios/<pk>/follow/
+    POST /api/v1/users/<pk>/follow/
     """
     
     try:
-        user_to_follow = Usuario.objects.get(pk=pk)
-    except Usuario.DoesNotExist:
+        user_to_follow = User.objects.get(pk=pk)
+    except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     user = request.user
     
-    if user.seguidos.filter(pk=user_to_follow.pk).exists():
-        user.seguidos.remove(user_to_follow)
+    if user.following.filter(pk=user_to_follow.pk).exists():
+        user.following.remove(user_to_follow)
         followed = False
     else:
-        user.seguidos.add(user_to_follow)
+        user.following.add(user_to_follow)
         followed = True
         
     return Response({
@@ -66,17 +66,17 @@ def follow_or_unfollow_user(request, pk):
 def get_user_by_id(request, pk):
     """
     Endpoint to obtain the profile of a user by their id.
-    GET /api/v1/usuarios/<pk>/
+    GET /api/v1/users/<pk>/
     """
     
     try:
-        user = Usuario.objects.get(pk=pk)
-    except Usuario.DoesNotExist:
-        return Response({"error": "Usuario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     
     user_data = PublicUserSerializer(user, context={'request': request}).data
-    public_calendars = list(user.calendarios_creados.filter(estado="PUBLICO").values(
-            "id", "nombre", "descripcion", "portada", "fecha_creacion"
+    public_calendars = list(user.calendarios_creados.filter(privacy="PUBLIC").values(
+            "id", "name", "description", "cover", "created_at"
         ))
     user_data["public_calendars"] = public_calendars
     
@@ -115,7 +115,7 @@ def edit_profile(request):
     
     return Response({
         'message': 'Profile updated correctly',
-        'usuario': serializer.data
+        'user': serializer.data
     }, status=status.HTTP_200_OK)
     
     

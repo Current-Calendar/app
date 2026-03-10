@@ -23,8 +23,8 @@ function getOriginFromApiBase(apiBaseUrl: string) {
   }
 }
 
-function buildImageUrl(apiBaseUrl: string, foto: any) {
-  const raw = foto?.url ?? foto;
+function buildImageUrl(apiBaseUrl: string, photo: any) {
+  const raw = photo?.url ?? photo;
   if (!raw) return null;
 
   const s = String(raw);

@@ -40,7 +40,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setUsers(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando usuarios:", error);
+                console.error("Error buscando users:", error);
             }
         };
 
@@ -60,7 +60,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setCalendars(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando calendarios:", error);
+                console.error("Error buscando calendars:", error);
             }
         };
 
@@ -80,7 +80,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setEvents(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando eventos:", error);
+                console.error("Error buscando events:", error);
             }
         };
 

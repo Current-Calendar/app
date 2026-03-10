@@ -59,7 +59,7 @@ export default function CalendarCard({
               style={styles.badge}
             />
             <Ionicons
-              name={originIcon[calendar.origen] || "help"}
+              name={originIcon[calendar.origin] || "help"}
               size={16}
               color="#666"
             />

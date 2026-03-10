@@ -6,7 +6,7 @@ from rest_framework import status
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
 from django.conf import settings
 from django.shortcuts import redirect
-from ..serializers import UsuarioSerializer, UsuarioRegistroSerializer
+from ..serializers import UserSerializer, UserRegistrationSerializer
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -25,16 +25,16 @@ def register_user(request):
     POST /api/v1/auth/register/
     """
     
-    serializer = UsuarioRegistroSerializer(data=request.data)
+    serializer = UserRegistrationSerializer(data=request.data)
     
     if serializer.is_valid():
         user = serializer.save()
         
-        user_serializer = UsuarioSerializer(user)
+        user_serializer = UserSerializer(user)
         
         return Response({
-            'message': 'Usuario registered succesfully',
-            'usuario': user_serializer.data
+            'message': 'User registered succesfully',
+            'user': user_serializer.data
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -148,19 +148,19 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
-            'pronombres',
-            'biografia',
-            'foto',
-            'total_seguidores',
-            'total_seguidos',
-            'total_calendarios_seguidos',
+            'pronouns',
+            'bio',
+            'photo',
+            'total_followers',
+            'total_following',
+            'subscribed_calendars',
         )
         read_only_fields = ('id', 'date_joined')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
-        fields=['foto','email','username','pronombres','link','biografia','total_seguidores','total_seguidos','total_calendarios_seguidos']
+        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
 
 
 class CalendarSummarySerializer(serializers.ModelSerializer):

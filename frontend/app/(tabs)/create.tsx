@@ -27,7 +27,7 @@ interface PublishData {
   description: string;
   cover?: string;
   privacy: PrivacyStatus;
-  origen?: CalendarOrigin;
+  origin?: CalendarOrigin;
 }
 export default function CreateScreen() {
   const router = useRouter();
@@ -39,7 +39,7 @@ export default function CreateScreen() {
     name: "",
     description: "",
     privacy: "PRIVATE",
-    origen: "CURRENT",
+    origin: "CURRENT",
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -114,7 +114,7 @@ export default function CreateScreen() {
       formData.append("name", calendarData.name);
       formData.append("description", calendarData.description);
       formData.append("privacy", selectedPrivacy);
-      formData.append("origen", "CURRENT");
+      formData.append("origin", "CURRENT");
 
       if (coverImage) {
         const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";

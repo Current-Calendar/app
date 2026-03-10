@@ -39,7 +39,6 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
-    path('api/v1/mock', views.hola_mundo),
     path('admin/', admin.site.urls),
     path('api/v1/auth/google-auth', auth_views.google_authorization, name='google_authorization'),
     path('api/v1/auth/oauth2callback/', auth_views.google_oauth2callback, name='google_oauth2_callback'),

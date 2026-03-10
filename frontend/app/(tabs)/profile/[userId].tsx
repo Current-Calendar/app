@@ -26,7 +26,7 @@ type OwnProfileCalendarResponse = {
   description?: string | null;
   cover?: string | null;
   privacy: Calendar['privacy'];
-  origen: Calendar['origen'];
+  origin: Calendar['origin'];
   creator: string;
   created_at: string;
 };
@@ -66,7 +66,7 @@ const mapCalendarsFromApi = (
     description: item.description ?? '',
     cover: item.cover ?? undefined,
     privacy: item.privacy,
-    origen: item.origen,
+    origin: item.origin,
     creator: item.creator,
     color: ACCENT_COLORS[(offset + index) % ACCENT_COLORS.length],
   }));
@@ -221,12 +221,12 @@ const ProfileScreen = () => {
         <View style={profileStyles.postsGrid}>
           <Text style={profileStyles.gridHeaderText}>My Calendars</Text>
           {myCalendars.map((cal) => (
-            <CalendarCard key={cal.id} calendario={cal} />
+            <CalendarCard key={cal.id} calendar={cal} />
           ))}
 
           <Text style={profileStyles.gridHeaderText}>Following</Text>
           {followingCalendars.map((cal) => (
-            <CalendarCard key={cal.id} calendario={cal} />
+            <CalendarCard key={cal.id} calendar={cal} />
           ))}
         </View>
 
