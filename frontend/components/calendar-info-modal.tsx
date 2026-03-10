@@ -2,17 +2,16 @@ import React from 'react';
 import {
     View,
     Text,
-    Modal,
     Alert,
     ActivityIndicator,
     Platform,
-    Pressable,
     TouchableOpacity,
-    StyleSheet,
     Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
+import { calendarInfoModalStyles } from '@/styles/calendar-styles';
+import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
     PRIVADO: { label: 'Private', icon: 'lock-closed-outline' },
@@ -72,220 +71,76 @@ export function CalendarInfoModal({
     };
 
     return (
-        <Modal visible={!!calendar} transparent animationType="fade" onRequestClose={onClose}>
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={styles.sheet} onPress={() => { }}>
-                    <View style={styles.handleBar} />
+        <BottomSheetModal visible={!!calendar} onClose={onClose}>
+            <View style={calendarInfoModalStyles.header}>
+                <View style={[calendarInfoModalStyles.colorBadge, { backgroundColor: accent }]} />
+                <View style={calendarInfoModalStyles.headerContent}>
+                    <Text style={calendarInfoModalStyles.title}>{calendar.nombre}</Text>
+                    <Text style={calendarInfoModalStyles.creatorText}>by @{calendar.creador}</Text>
+                </View>
+                <TouchableOpacity onPress={onClose} hitSlop={12}>
+                    <Ionicons name="close-circle" size={26} color="#bbb" />
+                </TouchableOpacity>
+            </View>
 
-                    <View style={styles.header}>
-                        <View style={[styles.colorBadge, { backgroundColor: accent }]} />
-                        <View style={styles.headerContent}>
-                            <Text style={styles.title}>{calendar.nombre}</Text>
-                            <Text style={styles.creatorText}>by @{calendar.creador}</Text>
-                        </View>
-                        <TouchableOpacity onPress={onClose} hitSlop={12}>
-                            <Ionicons name="close-circle" size={26} color="#bbb" />
-                        </TouchableOpacity>
+            {calendar.portada ? (
+                <Image
+                    source={{ uri: calendar.portada }}
+                    style={calendarInfoModalStyles.coverImage}
+                    resizeMode="cover"
+                />
+            ) : null}
+
+            {calendar.descripcion ? (
+                <Text style={calendarInfoModalStyles.description}>{calendar.descripcion}</Text>
+            ) : null}
+
+            <View style={calendarInfoModalStyles.infoGrid}>
+                <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
+                    <Ionicons name={privacy.icon} size={18} color={accent} />
+                    <View>
+                        <Text style={calendarInfoModalStyles.infoLabel}>Privacy</Text>
+                        <Text style={calendarInfoModalStyles.infoValue}>{privacy.label}</Text>
                     </View>
-
-                    {/* Display cover image (portada) if it exists */}
-                    {calendar.portada ? (
-                        <Image
-                            source={{ uri: calendar.portada }}
-                            style={styles.coverImage}
-                            resizeMode="cover"
-                        />
-                    ) : null}
-
-                    {calendar.descripcion ? (
-                        <Text style={styles.description}>{calendar.descripcion}</Text>
-                    ) : null}
-
-                    <View style={styles.infoGrid}>
-                        <View style={[styles.infoCard, { borderLeftColor: accent }]}>
-                            <Ionicons name={privacy.icon} size={18} color={accent} />
-                            <View>
-                                <Text style={styles.infoLabel}>Privacy</Text>
-                                <Text style={styles.infoValue}>{privacy.label}</Text>
-                            </View>
-                        </View>
-                        <View style={[styles.infoCard, { borderLeftColor: accent }]}>
-                            <Ionicons name={origin.icon} size={18} color={accent} />
-                            <View>
-                                <Text style={styles.infoLabel}>Source</Text>
-                                <Text style={styles.infoValue}>{origin.label}</Text>
-                            </View>
-                        </View>
+                </View>
+                <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
+                    <Ionicons name={origin.icon} size={18} color={accent} />
+                    <View>
+                        <Text style={calendarInfoModalStyles.infoLabel}>Source</Text>
+                        <Text style={calendarInfoModalStyles.infoValue}>{origin.label}</Text>
                     </View>
+                </View>
+            </View>
 
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={styles.editButton}
-                            onPress={() => onEdit?.(calendar)}
-                            activeOpacity={0.75}
-                        >
-                            <Ionicons name="pencil" size={16} color="#fff" />
-                            <Text style={styles.editButtonLabel}>Edit calendar</Text>
-                        </TouchableOpacity>
+            <View style={calendarInfoModalStyles.actions}>
+                <TouchableOpacity
+                    style={calendarInfoModalStyles.editButton}
+                    onPress={() => onEdit?.(calendar)}
+                    activeOpacity={0.75}
+                >
+                    <Ionicons name="pencil" size={16} color="#fff" />
+                    <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
+                </TouchableOpacity>
 
-                        {onDelete && (
-                            <TouchableOpacity
-                                style={[styles.deleteButton, isDeleting && styles.deleteButtonDisabled]}
-                                onPress={handleDeletePress}
-                                disabled={isDeleting}
-                                activeOpacity={0.75}
-                            >
-                                {isDeleting ? (
-                                    <ActivityIndicator size="small" color="#B33F37" />
-                                ) : (
-                                    <Ionicons name="trash-outline" size={16} color="#B33F37" />
-                                )}
-                                <Text style={styles.deleteButtonLabel}>
-                                    {isDeleting ? 'Deleting...' : 'Delete calendar'}
-                                </Text>
-                            </TouchableOpacity>
+                {onDelete && (
+                    <TouchableOpacity
+                        style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
+                        onPress={handleDeletePress}
+                        disabled={isDeleting}
+                        activeOpacity={0.75}
+                    >
+                        {isDeleting ? (
+                            <ActivityIndicator size="small" color="#B33F37" />
+                        ) : (
+                            <Ionicons name="trash-outline" size={16} color="#B33F37" />
                         )}
-                    </View>
-                </Pressable>
-            </Pressable>
-        </Modal>
+                        <Text style={calendarInfoModalStyles.deleteButtonLabel}>
+                            {isDeleting ? 'Deleting...' : 'Delete calendar'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+        </BottomSheetModal>
     );
 }
 
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: '#00000040',
-        justifyContent: 'flex-end',
-    },
-    sheet: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 20,
-        paddingBottom: 36,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 16,
-        elevation: 10,
-    },
-    handleBar: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#D5D5D5',
-        alignSelf: 'center',
-        marginBottom: 14,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
-        marginBottom: 12,
-    },
-    colorBadge: {
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        marginTop: 4,
-    },
-    headerContent: {
-        flex: 1,
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#2D2D2D',
-    },
-    creatorText: {
-        fontSize: 13,
-        color: '#888',
-        marginTop: 2,
-    },
-    description: {
-        fontSize: 14,
-        color: '#555',
-        lineHeight: 20,
-        marginBottom: 16,
-    },
-    coverImage: {
-        width: '100%',
-        height: 160,
-        borderRadius: 12,
-        marginBottom: 16,
-        backgroundColor: '#E8E5D8',
-    },
-    infoGrid: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    infoCard: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        backgroundColor: '#F7F6F2',
-        borderRadius: 12,
-        borderLeftWidth: 3,
-        padding: 12,
-    },
-    infoLabel: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#888',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    infoValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#2D2D2D',
-    },
-    actions: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    editButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        backgroundColor: '#10464d',
-        borderRadius: 14,
-        paddingVertical: 12,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-        marginTop: 8,
-    },
-    editButtonLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#fff',
-    },
-    deleteButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        borderWidth: 1.5,
-        borderColor: '#EB8C85',
-        backgroundColor: '#eb8c8514',
-        borderRadius: 14,
-        paddingVertical: 11,
-        marginTop: 8,
-    },
-    deleteButtonDisabled: {
-        opacity: 0.7,
-    },
-    deleteButtonLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#B33F37',
-    },
-});
