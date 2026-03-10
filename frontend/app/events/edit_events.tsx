@@ -98,7 +98,7 @@ export default function EditEventsScreen() {
       }
       
       const data = await response.json();
-      const loadedCalendars = data.calendars || data.calendarios || [];
+      const loadedCalendars = data.calendars || data.calendars || [];
       console.log("✅ Calendars loaded:", loadedCalendars.length);
       setCalendars(loadedCalendars);
       return loadedCalendars;
@@ -374,7 +374,7 @@ export default function EditEventsScreen() {
             {/* Calendar placeholder */}
             <View style={styles.calendarCenterWrap}>
               <View style={styles.calendarSquare}>
-                <Text style={styles.calendarSquareText}>calendario</Text>
+                <Text style={styles.calendarSquareText}>calendar</Text>
               </View>
             </View>
 

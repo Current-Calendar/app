@@ -35,7 +35,7 @@ export default function CalendarViewScreen() {
         const response = await fetch(API_CONFIG.endpoints.getCalendars);
         if (!response.ok) throw new Error('Failed to load calendars');
         const data = await response.json();
-        // Backend returns array directly, not { calendarios: [...] }
+        // Backend returns array directly, not { calendars: [...] }
         const calendars = Array.isArray(data) ? data : [];
         setBackendCalendars(calendars);
       } catch (error) {
@@ -68,7 +68,7 @@ export default function CalendarViewScreen() {
       if (!response.ok) throw new Error('Failed to load events');
       
       const data = await response.json();
-      // Backend returns array directly, not { eventos: [...] }
+      // Backend returns array directly, not { events: [...] }
       const allEvents = Array.isArray(data) ? data : [];
       
       // Transform backend events: expand by calendar

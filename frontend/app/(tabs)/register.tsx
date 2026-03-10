@@ -82,7 +82,7 @@ export default function SignUpScreen() {
         return;
       }
 
-      setSuccessMsg("Usuario registrado exitosamente");
+      setSuccessMsg("User registrado exitosamente");
 
       await login(username.trim(), password);
 
