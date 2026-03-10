@@ -1,7 +1,7 @@
 from datetime import date, time
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import Calendario, Evento
+from main.models import Calendario, Evento
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 
