@@ -128,6 +128,7 @@ export default function CalendarScreen() {
 
     const showSheet = (dateKey: string) => {
         setSelectedDay(dateKey);
+        if (open) toggleMenu();
         Animated.spring(sheetY, {
             toValue: 0,
             useNativeDriver: true,
@@ -453,7 +454,7 @@ export default function CalendarScreen() {
                     </View>
                 </Animated.View>
             )}
-            {optionAnimations.map((anim, index) => {
+            {!selectedDay && optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
                 const fabBottom = Platform.OS === "web" ? 30 : 90;
@@ -471,7 +472,7 @@ export default function CalendarScreen() {
                             opacity,
                             transform: [{ translateY }],
                         }}
-                        pointerEvents={open ? "auto" : "none"}
+                        pointerEvents={open && !selectedDay ? "auto" : "none"}
                     >
                         <Pressable style={styles.option} onPress={onPress}>
                             <Text style={styles.optionText}>{text}</Text>
@@ -479,11 +480,13 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
-                <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-                    <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
-                </Animated.View>
-            </Pressable>
+{!selectedDay && (
+  <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
+    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+      <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+    </Animated.View>
+  </Pressable>
+)}
         </View>
     );
 }
