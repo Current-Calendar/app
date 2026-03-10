@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from ..models import Calendario, Evento, Usuario
+from main.models import Calendario, Evento, Usuario
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -24,8 +24,8 @@ ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def publish_calendar(request, calendario_id):
-    calendar = get_object_or_404(Calendario, id=calendario_id)
+def publish_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendario, id=calendar_id)
 
     if calendar.creador !=request.user:
         return Response(
@@ -58,8 +58,8 @@ def publish_calendar(request, calendario_id):
 
 @api_view(['GET','DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_calendar(request, calendario_id):
-    calendario = get_object_or_404(Calendario, id=calendario_id)
+def delete_calendar(request, calendar_id):
+    calendario = get_object_or_404(Calendario, id=calendar_id)
     
     # Only the creator can delete the calendar
     if calendario.creador != request.user:
@@ -71,8 +71,8 @@ def delete_calendar(request, calendario_id):
 
 @api_view(['PUT', 'PATCH','GET'])
 @permission_classes([IsAuthenticated])
-def edit_calendar(request, calendario_id):
-    calendario = get_object_or_404(Calendario, id=calendario_id)
+def edit_calendar(request, calendar_id):
+    calendario = get_object_or_404(Calendario, id=calendar_id)
 
     if calendario.creador != request.user:
         return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
@@ -510,10 +510,10 @@ def ics_import(request):
 
 
 @api_view(['GET'])
-def export_to_ics(request, calendario_id):
+def export_to_ics(request, calendar_id):
     """Endpoint para exportar un calendario a formato ICS."""
     try:
-        calendario = Calendario.objects.get(id=calendario_id)
+        calendario = Calendario.objects.get(id=calendar_id)
     except Calendario.DoesNotExist:
         return Response({"error": "Calendario no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
 
@@ -527,6 +527,6 @@ def export_to_ics(request, calendario_id):
 
     ics_content = cal.to_ical()
     response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="calendario_{calendario_id}.ics"'
+    response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
