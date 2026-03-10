@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
 from django.db import IntegrityError, transaction
@@ -1347,7 +1348,14 @@ def set_new_password(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        user = Usuario.objects.get(email=email)        
+        user = Usuario.objects.get(email=email)
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError:
+            return Response(
+                {"error": "New password does not meet complexity requirements."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         user.set_password(new_password)
         user.save()
         
@@ -1373,10 +1381,10 @@ def set_new_password(request):
         )
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def validate_reset_token(request):
-    token = request.data.get('token')
+    token = request.query_params.get('token')
     if not token:
         return Response(
             {"error": "token is required"},

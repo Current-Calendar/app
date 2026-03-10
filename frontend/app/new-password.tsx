@@ -65,7 +65,7 @@ export default function ForgotPasswordScreen() {
       const response = await fetch(API_CONFIG.endpoints.setNewPassword, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: newPassword, token }),
+        body: JSON.stringify({ new_password: newPassword, token }),
       });
       if (!response.ok) {
         throw new Error("Failed to set new password.");
