@@ -5,21 +5,21 @@ from django.contrib.auth.admin import UserAdmin
 
 @admin.register(Calendar)
 class CalendarioAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'creador', 'estado', 'origen', 'fecha_creacion')
-    list_filter  = ('estado', 'origen')
-    search_fields = ('nombre', 'creador__username')
+    list_display = ('name', 'creator', 'privacy', 'origin', 'created_at')
+    list_filter  = ('privacy', 'origin')
+    search_fields = ('name', 'creator__username')
 
 @admin.register(Event)
 class EventoAdmin(GISModelAdmin):
-    list_display = ('titulo', 'creador', 'nombre_lugar', 'fecha_creacion', 'fecha')
-    search_fields = ('titulo', 'creador__username')
-    filter_horizontal = ('calendarios',) 
-@admin.register(Event)
+    list_display = ('title', 'creator', 'place_name', 'created_at', 'date')
+    search_fields = ('title', 'creator__username')
+    filter_horizontal = ('calendars',) 
+@admin.register(User)
 class UsuarioAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ('Perfil', {'fields': ('pronombres', 'biografia', 'link', 'foto')}),
-        ('Social',  {'fields': ('seguidos', 'calendarios_seguidos')}),
+        ('Profile', {'fields': ('pronouns', 'biography', 'link', 'photo')}),
+        ('Social',  {'fields': ('following', 'subscribed_calendars')}),
     )
-    filter_horizontal = ('seguidos', 'calendarios_seguidos') 
+    filter_horizontal = ('following', 'subscribed_calendars') 
 
-    list_display = ('username', 'email', 'is_staff', 'total_seguidores')    
+    list_display = ('username', 'email', 'is_staff', 'total_following')    
