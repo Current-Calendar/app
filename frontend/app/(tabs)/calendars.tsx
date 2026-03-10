@@ -503,6 +503,7 @@ export default function CalendarScreen() {
             <ImportCalendarModal
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
+                onSuccess={fetchData}
             />
         </View>
     );

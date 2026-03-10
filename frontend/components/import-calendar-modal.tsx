@@ -8,9 +8,10 @@ import { Alert } from 'react-native';
 interface Props {
     visible: boolean;
     onClose: () => void;
+    onSuccess?: () => void; 
 }
 
-export function ImportCalendarModal({ visible, onClose }: Props) {
+export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
     const [iosModalVisible, setIosModalVisible] = useState(false);
     const [iosUrl, setIosUrl] = useState('');
 
@@ -19,6 +20,7 @@ export function ImportCalendarModal({ visible, onClose }: Props) {
             const result = await importICS();
             Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
             onClose();
+            onSuccess?.();
         } catch {
             Alert.alert("Error", "No se pudo importar el calendario ICS");
         }
@@ -29,6 +31,7 @@ export function ImportCalendarModal({ visible, onClose }: Props) {
             const result = await importGoogleCalendar();
             Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
             onClose();
+            onSuccess?.();
         } catch {
             Alert.alert("Error", "No se pudo importar desde Google Calendar");
         }
@@ -41,6 +44,7 @@ export function ImportCalendarModal({ visible, onClose }: Props) {
             setIosModalVisible(false);
             setIosUrl('');
             onClose();
+            onSuccess?.();
         } catch {
             Alert.alert("Error", "No se pudo importar desde iOS Calendar");
         }
