@@ -68,7 +68,9 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ new_password: newPassword, token }),
       });
       if (!response.ok) {
-        throw new Error("Failed to set new password.");
+        const data = await response.json().catch(() => ({}));
+        setErrorMsg(data.error || "Error setting new password. The link may have expired.");
+        return;
       }
       setSuccessMsg("Password updated successfully.");
       setTimeout(() => router.push("/"), 2000);
