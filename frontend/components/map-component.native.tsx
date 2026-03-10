@@ -34,8 +34,8 @@ export default function MapComponent({ location, events }) {
         showsMyLocationButton={true}
       >
         {events.map((event, index) => {
-          const lat = parseFloat(event.latitud);
-          const lon = parseFloat(event.longitud);
+          const lat = parseFloat(event.latitude);
+          const lon = parseFloat(event.longitude);
           if (!isFinite(lat) || !isFinite(lon)) return null;
 
           return (
@@ -47,7 +47,7 @@ export default function MapComponent({ location, events }) {
               }}
               onPress={() => openEventModal(event)}
             >
-              {/* ⭐ Evento más cercano */}
+              {/* Closest event */}
               {index === 0 ? (
                 <Image
                   source={require("../assets/images/star_marker.png")}
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
   },
 
   starMarker: {
-    width: 32, // ⭐ un poco más pequeña como pediste
+    width: 32, // slightly smaller star marker
     height: 32,
   },
 });

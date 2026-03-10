@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { User } from '../types/user';
 import apiClient from '@/services/api-client';
 
-const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+const USE_MOCK = false; // <<--- ENABLE ONLY FOR DEVELOPMENT
 
 const deriveDebuggerHost = () => {
     const hostUri =
@@ -42,11 +42,11 @@ const API_BASE = ensureTrailingSlash(
 
 export type CalendarItem = {
     id: number;
-    nombre: string;
-    descripcion: string;
-    estado: string;
-    portada: string;
-    fecha_creacion?: string;
+    name: string;
+    description: string;
+    privacy: string;
+    cover: string;
+    created_at?: string;
 };
 
 export const useUserProfile = (userId?: string) => {
@@ -90,19 +90,19 @@ export const useUserProfile = (userId?: string) => {
                 const mockUser = {
                     id: userId,
                     username: "john_doe",
-                    pronombres: "he/him",
-                    biografia: "I'm a mock user for testing 😄",
-                    foto: "https://i.pravatar.cc/300",
+                    pronouns: "he/him",
+                    bio: "I'm a mock user for testing 😄",
+                    photo: "https://i.pravatar.cc/300",
                     is_following: false,
-                    total_seguidores: 123,
-                    total_seguidos: 456,
+                    total_followers: 123,
+                    total_following: 456,
                     public_calendars: [
                         {
                             id: 1,
-                            nombre: "Calendar A",
-                            descripcion: "Calendario de prueba",
-                            estado: "PUBLICO",
-                            portada: "https://images.unsplash.com/photo-1508780709619-79562169bc64"
+                            name: "Calendar A",
+                            description: "Test calendar",
+                            privacy: "PUBLIC",
+                            cover: "https://images.unsplash.com/photo-1508780709619-79562169bc64"
                         }
                     ]
                 };
@@ -172,9 +172,9 @@ export const useUserProfile = (userId?: string) => {
             });
 
             if (!response.ok) {
-                let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
+                let message = 'Could not update follow status. Please try again.';
                 if (response.status === 401 || response.status === 403) {
-                    message = 'Necesitas iniciar sesión para seguir a este usuario.';
+                    message = 'You need to log in to follow this user.';
                 }
                 setFollowError(message);
                 setIsFollowing(previousState);
@@ -185,7 +185,7 @@ export const useUserProfile = (userId?: string) => {
             setIsFollowing(Boolean(data.followed));
         } catch (error) {
             console.error('Error follow:', error);
-            setFollowError('Hubo un problema de red. Revisa tu conexión e inténtalo de nuevo.');
+            setFollowError('There was a network problem. Check your connection and try again.');
             setIsFollowing(previousState);
         }
     };

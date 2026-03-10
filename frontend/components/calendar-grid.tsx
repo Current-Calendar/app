@@ -61,7 +61,7 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
     const eventsByDate = useMemo(() => {
         const map: Record<string, CalendarEvent[]> = {};
         for (const ev of events) {
-            (map[ev.fecha] ??= []).push(ev);
+            (map[ev.date] ??= []).push(ev);
         }
         return map;
     }, [events]);

@@ -19,13 +19,13 @@ export function EventPill({ event, onPress }: EventPillProps) {
             onPress={() => onPress?.(event)}
             style={[styles.pill, { backgroundColor: bg + '1A', borderLeftColor: bg }]}
         >
-            {event.hora && event.hora !== '00:00' && (
+            {event.time && event.time !== '00:00' && (
                 <Text style={[styles.time, { color: bg }]} numberOfLines={1}>
-                    {event.hora}
+                    {event.time}
                 </Text>
             )}
             <Text style={[styles.title, { color: bg }]} numberOfLines={1}>
-                {event.titulo}
+                {event.title}
             </Text>
         </TouchableOpacity>
     );
