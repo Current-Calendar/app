@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.contrib.auth.hashers import check_password, identify_hasher
 
 
-ENDPOINT_BUSCAR_USUARIOS = "/api/v1/usuarios"
+ENDPOINT_BUSCAR_USUARIOS = "/api/v1/users/search/"
 
 
 class UsuarioTests(APITestCase):
@@ -54,7 +54,7 @@ class BorrarUsuarioTestCase(APITestCase):
         self.user = Usuario.objects.create_user(
             email="user@example.com", password="password123", username="user1"
         )
-        self.url=reverse("usuario-propio-view")
+        self.url=reverse("delete_own_user")
     def test_borrar(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(
@@ -214,7 +214,7 @@ class EditarUsuarioTestCase(TestCase):
         self.user = Usuario.objects.create_user(
             email="user@example.com", password="password123", username="user1"
         )
-        self.url=reverse("usuario-propio-view")
+        self.url=reverse("edit_profile")
     def test_usuario_actualiza_su_perfil(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.put(

@@ -95,7 +95,7 @@ def get_own_user(request):
     return Response(serializer.data)
 
 
-@api_view(['PATCH','POST'])
+@api_view(['PATCH','POST','PUT'])
 @permission_classes([IsAuthenticated])
 def edit_profile(request):
     """
@@ -119,7 +119,7 @@ def edit_profile(request):
     }, status=status.HTTP_200_OK)
     
     
-@api_view(['POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_own_user(request):
     """
