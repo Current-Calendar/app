@@ -1302,7 +1302,7 @@ def recover_password(request):
             'iat': datetime.now()
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        reset_url = f"{source}/reset-password?token={token}"
+        reset_url = f"{source}/new-password?token={token}"
         
         try:
             send_password_reset_email(user, reset_url)
