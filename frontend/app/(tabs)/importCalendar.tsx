@@ -17,7 +17,7 @@ export default function ImportCalendarScreen() {
 
     const handleICS = async () => {
         try {
-            const result = await importICS(1);      //Meter currentUserId
+            const result = await importICS();
             Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
         } catch (err) {
             console.error(err);
@@ -37,7 +37,7 @@ export default function ImportCalendarScreen() {
 
     const handleIOS = async () => {
         try {
-            const result = await importIOSCalendar(iosUrl, 1);  //Meter currentUserId
+            const result = await importIOSCalendar(iosUrl);
             Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
             setIosModalVisible(false);
             setIosUrl("");
