@@ -1,10 +1,11 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
 import { API_CONFIG } from '@/constants/api';
+//import { styles } from "./switch-events";
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -70,6 +71,22 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+         <View style={styles.authHeader}>
+          <TouchableOpacity 
+          style={styles.loginButton}
+          onPress={() => router.push('/login')}
+          >
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+          style={styles.registerButton}
+          onPress={() => router.push('/register')}
+          >
+            <Text style={styles.registerButtonText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
         <EventsSwitch />
 
         <FlatList
@@ -104,5 +121,37 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 120,
+  },
+    authHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
+  },
+  loginButton: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loginButtonText:{
+    color: '#10464d',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  registerButton: {
+    flex: 1,
+    backgroundColor: '#10464d',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  registerButtonText:{
+    color:'#FFFFFF',
+    fontWeight:'600',
+    fontSize: 16,
   },
 });
