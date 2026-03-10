@@ -31,10 +31,11 @@ interface PublishData {
 }
 export default function CreateScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [selectedPrivacy, setSelectedPrivacy] =
     useState<PrivacyStatus>("PRIVADO");
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [calendarData, setCalendarData] = useState<PublishData>({
     nombre: "",
     descripcion: "",
@@ -100,12 +101,19 @@ export default function CreateScreen() {
   };
 
   const handlePublish = async () => {
+    setSubmitError(null);
+
+    if (isAuthLoading) {
+      setSubmitError("Cargando sesion, espera un momento y vuelve a intentarlo.");
+      return;
+    }
+
     if (!calendarData.nombre.trim()) {
-      Alert.alert("Error", "Calendar name is required.");
+      setSubmitError("El nombre del calendario es obligatorio.");
       return;
     }
     if (!user?.username) {
-      Alert.alert("Error", "You must be logged in to create a calendar.");
+      setSubmitError("Debes iniciar sesion para crear un calendario.");
       return;
     }
     setIsLoading(true);
@@ -127,7 +135,12 @@ export default function CreateScreen() {
 
       router.replace("/(tabs)/calendars");
     } catch (error) {
-      Alert.alert("Error", "Failed to publish calendar. Please try again.");
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "No se pudo crear el calendario. Intentalo de nuevo.";
+      setSubmitError(message);
+      Alert.alert("Error", message);
       console.error("Publish error:", error);
     } finally {
       setIsLoading(false);
@@ -321,10 +334,10 @@ export default function CreateScreen() {
               <Pressable
                 style={[
                   styles.publishButton,
-                  isLoading && styles.publishButtonDisabled,
+                  (isLoading || isAuthLoading) && styles.publishButtonDisabled,
                 ]}
                 onPress={handlePublish}
-                disabled={isLoading}
+                disabled={isLoading || isAuthLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#fff" size="small" />
@@ -334,6 +347,8 @@ export default function CreateScreen() {
               </Pressable>
             )}
           </View>
+
+          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
         </View>
       </ScrollView>
 
@@ -343,10 +358,10 @@ export default function CreateScreen() {
           <Pressable
             style={[
               styles.publishButton,
-              isLoading && styles.publishButtonDisabled,
+              (isLoading || isAuthLoading) && styles.publishButtonDisabled,
             ]}
             onPress={handlePublish}
-            disabled={isLoading}
+            disabled={isLoading || isAuthLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -582,6 +597,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: Fonts?.rounded,
+  errorText: {
+    marginTop: 12,
+    color: "#c75146",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+  },
   },
   coverPickerEmpty: {
     borderWidth: 1.5,

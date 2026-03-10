@@ -124,10 +124,20 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `HTTP ${response.status}`
-      );
+      const errorData = await response.json().catch(() => null);
+      const errorMessage =
+        (errorData && typeof errorData === 'object' && 'detail' in errorData && typeof (errorData as { detail?: unknown }).detail === 'string'
+          ? (errorData as { detail: string }).detail
+          : null) ||
+        (errorData && typeof errorData === 'object' && 'message' in errorData && typeof (errorData as { message?: unknown }).message === 'string'
+          ? (errorData as { message: string }).message
+          : null) ||
+        (errorData && typeof errorData === 'object' && 'errors' in errorData && Array.isArray((errorData as { errors?: unknown }).errors)
+          ? String(((errorData as { errors: unknown[] }).errors[0] ?? '')).trim()
+          : null) ||
+        `HTTP ${response.status}`;
+
+      throw new Error(errorMessage);
     }
 
     if (response.status === 204) {
