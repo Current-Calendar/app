@@ -6,27 +6,27 @@ from main.models import MockElement
 
 
 @api_view(["GET"])
-def hola_mundo(request):
+def hello_world(request):
     cache_key = "sevilla_point_data"
-    cached_data = cache.get(cache_key)    
+    cached_data = cache.get(cache_key)
     if cached_data:
         return Response({
             "source": "Redis (Cache)",
             "data": cached_data
         }, headers={"Access-Control-Allow-Origin": "*"})
 
-    pnt = Point(-5.9926, 37.3861)    
+    pnt = Point(-5.9926, 37.3861)
     obj, created = MockElement.objects.get_or_create(
-        nombre="La Giralda Mock",
-        defaults={'punto_geografico': pnt}
+        name="La Giralda Mock",
+        defaults={'geo_point': pnt}
     )
 
     result = {
         "id": obj.id,
-        "nombre": obj.nombre,
-        "coordenadas": {
-            "longitude": obj.punto_geografico.x,
-            "latitude": obj.punto_geografico.y
+        "name": obj.name,
+        "coordinates": {
+            "longitude": obj.geo_point.x,
+            "latitude": obj.geo_point.y
         },
         "created_in_db": created,
         "timestamp": str(obj.created_at)
@@ -35,6 +35,6 @@ def hola_mundo(request):
     cache.set(cache_key, result, 60)
 
     return Response({
-        "source": "PostgreSQL (Base de Datos)",
+        "source": "PostgreSQL (Database)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})

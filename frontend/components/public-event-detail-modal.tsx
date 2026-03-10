@@ -30,41 +30,41 @@ export function PublicEventDetailModal({ event, onClose }: PublicEventDetailModa
                     <View style={styles.titleRow}>
                         <View style={[styles.accentBar, { backgroundColor: accent }]} />
                         <View style={styles.titleContent}>
-                            <Text style={styles.title}>{event.titulo}</Text>
+                            <Text style={styles.title}>{event.title}</Text>
                         </View>
                         <TouchableOpacity onPress={onClose} hitSlop={12}>
                             <Ionicons name="close-circle" size={26} color="#bbb" />
                         </TouchableOpacity>
                     </View>
 
-                    {event.descripcion ? (
-                        <Text style={styles.description}>{event.descripcion}</Text>
+                    {event.description ? (
+                        <Text style={styles.description}>{event.description}</Text>
                     ) : null}
 
                     {/* Info details */}
                     <View style={styles.detailsContainer}>
                         {/* Date */}
-                        <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
+                        <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
 
                         {/* Time */}
-                        <DetailRow icon="time-outline" label={event.hora} />
+                        <DetailRow icon="time-outline" label={event.time} />
 
                         {/* Place */}
-                        {event.nombre_lugar ? (
-                            <DetailRow icon="location-outline" label={event.nombre_lugar} />
+                        {event.place_name ? (
+                            <DetailRow icon="location-outline" label={event.place_name} />
                         ) : null}
 
                         {/* Coordinates */}
-                        {event.ubicacion && (
+                        {event.location && (
                             <DetailRow
                                 icon="navigate-outline"
-                                label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
+                                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                             />
                         )}
 
                         {/* Recurrence */}
-                        {event.recurrencia && (
-                            <DetailRow icon="repeat-outline" label={event.recurrencia} />
+                        {event.recurrence && (
+                            <DetailRow icon="repeat-outline" label={event.recurrence} />
                         )}
                     </View>
                 </Pressable>
