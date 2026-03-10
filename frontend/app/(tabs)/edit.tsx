@@ -6,22 +6,22 @@ import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import apiClient from '@/services/api-client';
 
-type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
+type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     id: string;
-    nombre: string;
-    descripcion: string;
-    estado: PrivacyStatus;
+    name: string;
+    description: string;
+    privacy: PrivacyStatus;
   }>();
 
-  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.estado ?? 'PRIVADO');
+  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.privacy ?? 'PRIVATE');
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState({
-    nombre: params.nombre ?? "",
-    descripcion: params.descripcion ?? "",
+    name: params.name ?? "",
+    description: params.description ?? "",
   });
 
   const calendarId = params.id;
@@ -32,26 +32,26 @@ export default function EditScreen() {
   const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
     {
       label: "Private",
-      value: "PRIVADO",
+      value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
     },
     {
       label: "Friends",
-      value: "AMIGOS",
+      value: "FRIENDS",
       icon: "people-outline",
       description: "Visible to your friends only",
     },
     {
       label: "Public",
-      value: "PUBLICO",
+      value: "PUBLIC",
       icon: "globe-outline",
       description: "Visible to everyone",
     },
   ];
 
   const handleEdit = async () => {
-    if (!calendarData.nombre.trim()) {
+    if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
@@ -63,10 +63,10 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      await apiClient.put(`/calendarios/${Number(calendarId)}/editar/`, {
-        nombre: calendarData.nombre,
-        descripcion: calendarData.descripcion,
-        estado: selectedPrivacy,
+      await apiClient.put(`/calendars/${Number(calendarId)}/edit/`, {
+        name: calendarData.name,
+        description: calendarData.description,
+        privacy: selectedPrivacy,
       });
 
       router.replace('/(tabs)/calendars');
@@ -104,15 +104,15 @@ export default function EditScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
-              value={calendarData.nombre}
-              onChangeText={(text) => setCalendarData({ ...calendarData, nombre: text })}
+              value={calendarData.name}
+              onChangeText={(text) => setCalendarData({ ...calendarData, name: text })}
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
-              value={calendarData.descripcion}
-              onChangeText={(text) => setCalendarData({ ...calendarData, descripcion: text })}
+              value={calendarData.description}
+              onChangeText={(text) => setCalendarData({ ...calendarData, description: text })}
               multiline
               numberOfLines={3}
             />
@@ -172,9 +172,9 @@ export default function EditScreen() {
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={20} color="#10464d" style={{ marginRight: 12 }} />
             <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVADO"
+              {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "AMIGOS"
+                : selectedPrivacy === "FRIENDS"
                 ? "Your friends will receive an invitation to view this calendar."
                 : "Anyone with the link can view this calendar."}
             </Text>

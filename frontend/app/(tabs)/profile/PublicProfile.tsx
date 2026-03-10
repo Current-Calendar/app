@@ -21,7 +21,7 @@ import apiClient from '../../../services/api-client';
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
     const { user: currentUser } = useAuth();
     
-    //Hook personalizado para manejar toda la lógica de perfil público (datos del usuario, seguimiento, calendarios públicos, etc.)
+    //Hook personalizado para manejar toda la lógica de perfil público (datos del user, seguimiento, calendars públicos, etc.)
     const {
         userBeingViewed,
         calendars,
@@ -32,7 +32,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         handleFollowToggle,
     } = useUserProfile(targetUserId);
 
-    //  Estado para los calendarios que sigo de este usuario
+    //  Estado para los calendars que sigo de este user
     const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
     const [followingLoading, setFollowingLoading] = useState(false);
 
@@ -84,7 +84,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         return (
             <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}> 
                 <Ionicons name="person-circle-outline" size={60} color="#dbdbdb" />
-                <Text style={profileStyles.errorText}>Selecciona un usuario.</Text>
+                <Text style={profileStyles.errorText}>Selecciona un user.</Text>
             </SafeAreaView>
         );
     }
@@ -115,22 +115,22 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     <View style={profileStyles.profileRow}>
                         <View style={profileStyles.profilePictureContainer}>
                             <Image
-                                source={{ uri: userBeingViewed.foto || 'https://via.placeholder.com/150' }}
+                                source={{ uri: userBeingViewed.photo || 'https://via.placeholder.com/150' }}
                                 style={profileStyles.profilePicture}
                             />
                         </View>
 
                         <View style={profileStyles.statsContainer}>
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-                            <Text style={profileStyles.pronouns}>{userBeingViewed.pronombres || 'they/them'}</Text>
-                            
+                            <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns || 'they/them'}</Text>
+
                             <View style={profileStyles.statsRow}>
                                 <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidores || 0}</Text>
+                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
                                     <Text style={profileStyles.statLabel}>Followers</Text>
                                 </View>
                                 <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidos || 0}</Text>
+                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
                                     <Text style={profileStyles.statLabel}>Following</Text>
                                 </View>
                             </View>
@@ -138,7 +138,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     </View>
 
                     <View style={profileStyles.bioSection}>
-                        <Text style={profileStyles.bio}>{userBeingViewed.biografia}</Text>
+                        <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
                     </View>
 
                     <TouchableOpacity 
@@ -155,7 +155,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     ) : null}
                 </View>
 
-                {/* Calendarios que sigo de este usuario */}
+                {/* Calendars que sigo de este user */}
                 {followingLoading ? (
                     <ActivityIndicator size="small" color="#262626" />
                 ) : followingCalendars.length > 0 && (
@@ -164,20 +164,20 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                         {followingCalendars.map((cal) => (
                             <CalendarCard
                                 key={cal.id}
-                                calendario={cal}
-                                // onPress={() => console.log('Abrir calendario', cal.id)}
+                                calendar={cal}
+                                // onPress={() => console.log('Abrir calendar', cal.id)}
                             />
                         ))}
                     </View>
                 )}
 
-                {/*Renderizado de calendarios públicos */}
+                {/*Renderizado de calendars públicos */}
                 <View style={profileStyles.postsGrid}>
                     <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Public Calendars`}</Text>
                     
                     {calendars.length > 0 ? (
                         calendars.map((cal: CalendarItem) => (
-                            <CalendarCard key={cal.id} calendario={cal} />
+                            <CalendarCard key={cal.id} calendar={cal} />
                         ))
                     ) : (
                         <Text style={profileStyles.emptyText}>No public calendars yet.</Text>

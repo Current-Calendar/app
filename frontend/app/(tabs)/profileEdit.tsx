@@ -29,9 +29,9 @@ const EditProfileScreen = () => {
   // State for form fields - initialize with params from navigation
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
-  const [pronouns, setPronouns] = useState<string>(currentUser?.pronombres || '');
-  const [bio, setBio] = useState<string>(currentUser?.biografia || '');
-  const [photo, setPhoto] = useState<string>(currentUser?.foto || '');
+  const [pronouns, setPronouns] = useState<string>(currentUser?.pronouns || '');
+  const [bio, setBio] = useState<string>(currentUser?.bio || '');
+  const [photo, setPhoto] = useState<string>(currentUser?.photo || '');
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -69,15 +69,15 @@ const EditProfileScreen = () => {
         return;
       }
       const data: User = await apiClient.put('/users/me', {
-        pronombres: pronouns,
-        biografia: bio,
+        pronouns: pronouns,
+        bio: bio,
       });
 
       updateUserContext({
         ...currentUser,
-        pronombres: data.pronombres ?? pronouns,
-        biografia: data.biografia ?? bio,
-        foto: photo,
+        pronouns: data.pronouns ?? pronouns,
+        bio: data.bio ?? bio,
+        photo: photo,
       });
 
       Alert.alert('Success', 'Profile updated successfully!');
