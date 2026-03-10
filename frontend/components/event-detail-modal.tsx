@@ -49,34 +49,34 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
             <View style={eventDetailModalStyles.titleRow}>
                 <View style={[eventDetailModalStyles.accentBar, { backgroundColor: accent }]} />
                 <View style={eventDetailModalStyles.titleContent}>
-                    <Text style={eventDetailModalStyles.title}>{event.titulo}</Text>
+                    <Text style={eventDetailModalStyles.title}>{event.title}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} hitSlop={12}>
                     <Ionicons name="close-circle" size={26} color="#bbb" />
                 </TouchableOpacity>
             </View>
 
-            {event.descripcion ? (
-                <Text style={eventDetailModalStyles.description}>{event.descripcion}</Text>
+            {event.description ? (
+                <Text style={eventDetailModalStyles.description}>{event.description}</Text>
             ) : null}
 
             <View style={eventDetailModalStyles.detailsContainer}>
-                <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
-                <DetailRow icon="time-outline" label={event.hora} />
+                <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+                <DetailRow icon="time-outline" label={event.time} />
 
-                {event.nombre_lugar ? (
-                    <DetailRow icon="location-outline" label={event.nombre_lugar} />
+                {event.place_name ? (
+                    <DetailRow icon="location-outline" label={event.place_name} />
                 ) : null}
 
-                {event.ubicacion && (
+                {event.location && (
                     <DetailRow
                         icon="navigate-outline"
-                        label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
+                        label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                     />
                 )}
 
-                {event.recurrencia && (
-                    <DetailRow icon="repeat-outline" label={event.recurrencia} />
+                {event.recurrence && (
+                    <DetailRow icon="repeat-outline" label={event.recurrence} />
                 )}
             </View>
 

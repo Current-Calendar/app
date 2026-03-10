@@ -15,9 +15,9 @@ export default function CalendarCard({
   onSubscribe,
 }: CalendarCardProps) {
   const privacyIcon: Record<string, any> = {
-    PRIVADO: "lock-closed",
-    AMIGOS: "people",
-    PUBLICO: "globe",
+    PRIVATE: "lock-closed",
+    FRIENDS: "people",
+    PUBLIC: "globe",
   };
 
   const originIcon: Record<string, any> = {
@@ -31,17 +31,17 @@ export default function CalendarCard({
       style={eventCalendarCalendarCardStyles.card}
       onPress={() => onPress(calendar.id)}
     >
-      {calendar.portada && (
+      {calendar.cover && (
         <Image
-          source={{ uri: calendar.portada }}
+          source={{ uri: calendar.cover }}
           style={eventCalendarCalendarCardStyles.cover}
-        />
+        />  
       )}
 
       <View
         style={[
           eventCalendarCalendarCardStyles.coverFallback,
-          !calendar.portada && eventCalendarCalendarCardStyles.coverFallbackShown,
+          !calendar.cover && eventCalendarCalendarCardStyles.coverFallbackShown,
           { backgroundColor: calendar.color },
         ]}
       />
@@ -49,18 +49,18 @@ export default function CalendarCard({
       <View style={eventCalendarCalendarCardStyles.content}>
         <View style={eventCalendarCalendarCardStyles.header}>
           <View style={eventCalendarCalendarCardStyles.titleSection}>
-            <Text style={eventCalendarCalendarCardStyles.title}>{calendar.nombre}</Text>
-            <Text style={eventCalendarCalendarCardStyles.creator}>by {calendar.creador}</Text>
+            <Text style={eventCalendarCalendarCardStyles.title}>{calendar.name}</Text>
+            <Text style={eventCalendarCalendarCardStyles.creator}>by {calendar.creator}</Text>
           </View>
           <View style={eventCalendarCalendarCardStyles.badges}>
             <Ionicons
-              name={privacyIcon[calendar.estado] || "help"}
+              name={privacyIcon[calendar.privacy] || "help"}
               size={16}
               color="#666"
               style={eventCalendarCalendarCardStyles.badge}
             />
             <Ionicons
-              name={originIcon[calendar.origen] || "help"}
+              name={originIcon[calendar.origin] || "help"}
               size={16}
               color="#666"
             />
@@ -68,7 +68,7 @@ export default function CalendarCard({
         </View>
 
         <Text style={eventCalendarCalendarCardStyles.description} numberOfLines={2}>
-          {calendar.descripcion}
+          {calendar.description}
         </Text>
 
         <View style={eventCalendarCalendarCardStyles.footer}>

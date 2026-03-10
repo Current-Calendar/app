@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Image } from "react-native";
 import MapView, { Marker } from "react-native-maps";
@@ -57,6 +58,7 @@ export default function MapComponent({ location, events }) {
               ) : (
                 <Image
                   source={require("../assets/images/marcador_evento.png")}
+
                   style={mapComponentNativeStyles.defaultMarker}
                   resizeMode="contain"
                 />
@@ -75,4 +77,3 @@ export default function MapComponent({ location, events }) {
     </>
   );
 }
-

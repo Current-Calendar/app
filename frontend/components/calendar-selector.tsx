@@ -31,16 +31,16 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
 
     const selected = selectedId ? calendars.find((c) => c.id === selectedId) : null;
     const displayColor = selected?.color ?? AppColors.brand;
-    const displayName = selected?.nombre ?? 'All Calendars';
+    const displayName = selected?.name ?? 'All Calendars';
 
     // "All Calendars" pseudo-entry
     const allOption: Calendar = {
         id: '__all__',
-        nombre: 'All Calendars',
-        descripcion: '',
-        estado: 'PUBLICO',
-        origen: 'CURRENT',
-        creador: '',
+        name: 'All Calendars',
+        description: '',
+        privacy: 'PUBLIC',
+        origin: 'CURRENT',
+        creator: '',
         color: AppColors.brand,
     };
     const options = [allOption, ...calendars];
@@ -105,7 +105,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                                                 { flex: 1 },
                                             ]}
                                         >
-                                            {item.nombre}
+                                            {item.name}
                                         </Text>
 
                                         {isActive && (

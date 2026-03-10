@@ -41,19 +41,19 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
     return null;
   }
 
-  const title = String(event?.titulo ?? "");
-  const place = String(event?.nombre_lugar ?? "");
-  const username = String(event?.creador_username ?? event?.creador?.username ?? "").trim();
-  const description = String(event?.descripcion ?? "").trim();
+  const title = String(event?.title ?? "");
+  const place = String(event?.place_name ?? "");
+  const username = String(event?.creator_username ?? event?.creator?.username ?? "").trim();
+  const description = String(event?.description ?? "").trim();
 
   const dateStr = formatDate(event?.fecha);
   const timeStr = formatTime(event?.hora);
   const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
-  const distanceKm = formatDistanceKm(event?.distancia_km);
+  const distanceKm = formatDistanceKm(event?.distance_km);
 
   if (__DEV__) {
-    console.log("EVENT FOTO:", event?.foto);
+    console.log("EVENT PHOTO:", event?.photo);
   }
 
   return (
@@ -70,8 +70,8 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
                 source={{ uri: event.foto }}
                 style={eventDetailsModalStyles.cover}
                 resizeMode="cover"
-                onError={(e) => console.log("IMG ERROR:", event.foto, e?.nativeEvent)}
-                onLoad={() => console.log("IMG OK:", event.foto)}
+                onError={(e) => console.log("IMG ERROR:", event.photo, e?.nativeEvent)}
+                onLoad={() => console.log("IMG OK:", event.photo)}
               />
             </View>
           ) : null}

@@ -1,111 +1,110 @@
 import datetime
 
-from icalendar import Event
+from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.utils import timezone
 
-class Usuario(AbstractUser):
-    email = models.EmailField(unique=True) 
-    pronombres = models.CharField(max_length=150, blank=True)
-    biografia = models.TextField(blank=True)
+class User(AbstractUser):
+    email = models.EmailField(unique=True)
+    pronouns = models.CharField(max_length=150, blank=True)
+    bio = models.TextField(blank=True)
     link = models.URLField(blank=True)
-    foto = models.ImageField(upload_to='perfiles/', null=True, blank=True)
-    seguidos = models.ManyToManyField('self', symmetrical=False, related_name='seguidores_set', blank=True)
-    calendarios_seguidos = models.ManyToManyField('Calendario', related_name='suscriptores', blank=True)
+    photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
+    following = models.ManyToManyField('self', symmetrical=False, related_name='followers_set', blank=True)
+    subscribed_calendars = models.ManyToManyField('Calendar', related_name='subscribers', blank=True)
 
     @property
-    def total_seguidores(self):
-        return self.seguidores_set.count()
+    def total_followers(self):
+        return self.followers_set.count()
 
     @property
-    def total_seguidos(self):
-        return self.seguidos.count()
-    
+    def total_following(self):
+        return self.following.count()
+
     @property
-    def total_calendarios_seguidos(self):
-        return self.calendarios_seguidos.count()
-    
+    def total_subscribed_calendars(self):
+        return self.subscribed_calendars.count()
 
     def __str__(self):
         return self.username
 
-class Calendario(models.Model):
-    ESTADOS_PRIVACIDAD = [
-        ('PRIVADO', 'Privado'),
-        ('AMIGOS', 'Amigos'),
-        ('PUBLICO', 'Público'),
+class Calendar(models.Model):
+    PRIVACY_CHOICES = [
+        ('PRIVATE', 'Private'),
+        ('FRIENDS', 'Friends'),
+        ('PUBLIC', 'Public'),
     ]
-    
-    ORIGEN_CHOICES = [
-        ('CURRENT', 'Nativo de Current'),
+
+    ORIGIN_CHOICES = [
+        ('CURRENT', 'Native Current'),
         ('GOOGLE', 'Google Calendar'),
         ('APPLE', 'Apple Calendar'),
     ]
-    
-    origen = models.CharField(max_length=20, choices=ORIGEN_CHOICES, default='CURRENT')
-    id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True) 
-    nombre = models.CharField(max_length=100)
-    descripcion = models.TextField(blank=True)
-    portada = models.FileField(upload_to='portadas_calendarios/', null=True, blank=True)
-    estado = models.CharField(max_length=10, choices=ESTADOS_PRIVACIDAD, default='PRIVADO')
-    creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='calendarios_creados')
-    fecha_creacion = models.DateTimeField(default=timezone.now)
+
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='CURRENT')
+    external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    cover = models.FileField(upload_to='calendar_covers/', null=True, blank=True)
+    privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
+    created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['creador'],
-                condition=Q(estado='PRIVADO'),
-                name='unico_calendario_privado_por_usuario'
+                fields=['creator'],
+                condition=Q(privacy='PRIVATE'),
+                name='unique_private_calendar_per_user'
             )
         ]
 
     @property
-    def num_suscriptores(self):
-        return self.suscriptores.count()
+    def num_subscribers(self):
+        return self.subscribers.count()
 
     def __str__(self):
-        return f"{self.nombre} ({self.get_origen_display()})"
+        return f"{self.name} ({self.get_origin_display()})"
 
-class Evento(models.Model):
-    titulo = models.CharField(max_length=150)
-    descripcion = models.TextField(blank=True)
-    nombre_lugar = models.CharField(max_length=255, blank=True) 
-    ubicacion = models.PointField(geography=True, spatial_index=True, null=True, blank=True)
-    fecha = models.DateField()
-    hora = models.TimeField()
-    foto = models.ImageField(upload_to='fotos_eventos/', null=True, blank=True)
-    recurrencia = models.IntegerField(null=True, blank=True)
-    id_externo = models.CharField(max_length=255, null=True, blank=True, db_index=True)
-    calendarios = models.ManyToManyField(Calendario, related_name='eventos')
-    creador = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='eventos_creados')
-    fecha_creacion = models.DateTimeField(default=timezone.now)
+class Event(models.Model):
+    title = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    place_name = models.CharField(max_length=255, blank=True)
+    location = models.PointField(geography=True, spatial_index=True, null=True, blank=True)
+    date = models.DateField()
+    time = models.TimeField()
+    photo = models.ImageField(upload_to='event_photos/', null=True, blank=True)
+    recurrence = models.IntegerField(null=True, blank=True)
+    external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+    calendars = models.ManyToManyField(Calendar, related_name='events')
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.titulo} - {self.fecha}"
+        return f"{self.title} - {self.date}"
 
     def to_ical_event(self):
         """Build an iCalendar VEVENT component for this event."""
-        event = Event()
-        event.add('summary', self.titulo)
-        if self.descripcion:
-            event.add('description', self.descripcion)
-        if self.nombre_lugar:
-            event.add('location', self.nombre_lugar)
+        event = ICalEvent()
+        event.add('summary', self.title)
+        if self.description:
+            event.add('description', self.description)
+        if self.place_name:
+            event.add('location', self.place_name)
 
-        start_dt = datetime.datetime.combine(self.fecha, self.hora)
+        start_dt = datetime.datetime.combine(self.date, self.time)
         if timezone.is_naive(start_dt):
             start_dt = timezone.make_aware(start_dt, timezone.get_current_timezone())
         event.add('dtstart', start_dt)
         event.add('dtend', start_dt + datetime.timedelta(hours=1))
 
-        uid = self.id_externo or f"evento-{self.pk}@current"
+        uid = self.external_id or f"event-{self.pk}@current"
         event.add('uid', uid)
         return event
 
 class MockElement(models.Model):
-    nombre = models.CharField(max_length=100)
-    punto_geografico = models.PointField()
+    name = models.CharField(max_length=100)
+    geo_point = models.PointField()
     created_at = models.DateTimeField(auto_now_add=True)

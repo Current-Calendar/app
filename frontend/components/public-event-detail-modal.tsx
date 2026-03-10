@@ -24,34 +24,34 @@ export function PublicEventDetailModal({ event, onClose }: PublicEventDetailModa
             <View style={publicEventDetailModalStyles.titleRow}>
                 <View style={[publicEventDetailModalStyles.accentBar, { backgroundColor: accent }]} />
                 <View style={publicEventDetailModalStyles.titleContent}>
-                    <Text style={publicEventDetailModalStyles.title}>{event.titulo}</Text>
+                    <Text style={publicEventDetailModalStyles.title}>{event.title}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} hitSlop={12}>
                     <Ionicons name="close-circle" size={26} color="#bbb" />
                 </TouchableOpacity>
             </View>
 
-            {event.descripcion ? (
-                <Text style={publicEventDetailModalStyles.description}>{event.descripcion}</Text>
+            {event.description ? (
+                <Text style={publicEventDetailModalStyles.description}>{event.description}</Text>
             ) : null}
 
             <View style={publicEventDetailModalStyles.detailsContainer}>
-                <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
-                <DetailRow icon="time-outline" label={event.hora} />
+                <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+                <DetailRow icon="time-outline" label={event.time} />
 
-                {event.nombre_lugar ? (
-                    <DetailRow icon="location-outline" label={event.nombre_lugar} />
+                {event.place_name ? (
+                    <DetailRow icon="location-outline" label={event.place_name} />
                 ) : null}
 
-                {event.ubicacion && (
+                {event.location && (
                     <DetailRow
                         icon="navigate-outline"
-                        label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
+                        label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                     />
                 )}
 
-                {event.recurrencia && (
-                    <DetailRow icon="repeat-outline" label={event.recurrencia} />
+                {event.recurrence && (
+                    <DetailRow icon="repeat-outline" label={event.recurrence} />
                 )}
             </View>
         </BottomSheetModal>

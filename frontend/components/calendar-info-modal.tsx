@@ -14,9 +14,9 @@ import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
-    PRIVADO: { label: 'Private', icon: 'lock-closed-outline' },
-    AMIGOS: { label: 'Friends', icon: 'people-outline' },
-    PUBLICO: { label: 'Public', icon: 'globe-outline' },
+    PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
+    FRIENDS: { label: 'Friends', icon: 'people-outline' },
+    PUBLIC: { label: 'Public', icon: 'globe-outline' },
 };
 
 const ORIGIN_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
@@ -43,14 +43,14 @@ export function CalendarInfoModal({
     if (!calendar) return null;
 
     const accent = calendar.color;
-    const privacy = PRIVACY_LABELS[calendar.estado] ?? PRIVACY_LABELS.PRIVADO;
-    const origin = ORIGIN_LABELS[calendar.origen] ?? ORIGIN_LABELS.CURRENT;
+    const privacy = PRIVACY_LABELS[calendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
+    const origin = ORIGIN_LABELS[calendar.origin] ?? ORIGIN_LABELS.CURRENT;
 
     const handleDeletePress = () => {
         if (!onDelete) return;
 
         if (Platform.OS === 'web') {
-            if (window.confirm(`Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`)) {
+            if (window.confirm(`Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`)) {
                 void onDelete(calendar);
             }
             return;
@@ -58,7 +58,7 @@ export function CalendarInfoModal({
 
         Alert.alert(
             'Delete calendar',
-            `Are you sure you want to delete "${calendar.nombre}"? This action cannot be undone.`,
+            `Are you sure you want to delete "${calendar.name}"? This action cannot be undone.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -75,24 +75,24 @@ export function CalendarInfoModal({
             <View style={calendarInfoModalStyles.header}>
                 <View style={[calendarInfoModalStyles.colorBadge, { backgroundColor: accent }]} />
                 <View style={calendarInfoModalStyles.headerContent}>
-                    <Text style={calendarInfoModalStyles.title}>{calendar.nombre}</Text>
-                    <Text style={calendarInfoModalStyles.creatorText}>by @{calendar.creador}</Text>
+                    <Text style={calendarInfoModalStyles.title}>{calendar.name}</Text>
+                    <Text style={calendarInfoModalStyles.creatorText}>by @{calendar.creator}</Text>
                 </View>
                 <TouchableOpacity onPress={onClose} hitSlop={12}>
                     <Ionicons name="close-circle" size={26} color="#bbb" />
                 </TouchableOpacity>
             </View>
 
-            {calendar.portada ? (
+            {calendar.cover ? (
                 <Image
-                    source={{ uri: calendar.portada }}
+                    source={{ uri: calendar.cover }}
                     style={calendarInfoModalStyles.coverImage}
                     resizeMode="cover"
                 />
             ) : null}
 
-            {calendar.descripcion ? (
-                <Text style={calendarInfoModalStyles.description}>{calendar.descripcion}</Text>
+            {calendar.description ? (
+                <Text style={calendarInfoModalStyles.description}>{calendar.description}</Text>
             ) : null}
 
             <View style={calendarInfoModalStyles.infoGrid}>

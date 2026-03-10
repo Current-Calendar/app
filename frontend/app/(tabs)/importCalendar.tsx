@@ -18,17 +18,17 @@ export default function ImportCalendarScreen() {
     const handleICS = async () => {
         try {
             const result = await importICS(1);      //Meter currentUserId
-            Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} events`);
         } catch (err) {
             console.error(err);
-            Alert.alert("Error", "No se pudo importar el calendario ICS");
+            Alert.alert("Error", "No se pudo importar el calendar ICS");
         }
     };
 
     const handleGoogle = async () => {
         try {
             const result = await importGoogleCalendar();
-            Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} events`);
         } catch (err) {
             console.error(err);
             Alert.alert("Error", "No se pudo importar desde Google Calendar");
@@ -38,7 +38,7 @@ export default function ImportCalendarScreen() {
     const handleIOS = async () => {
         try {
             const result = await importIOSCalendar(iosUrl, 1);  //Meter currentUserId
-            Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} events`);
             setIosModalVisible(false);
             setIosUrl("");
         } catch (err) {
@@ -53,9 +53,9 @@ export default function ImportCalendarScreen() {
             <View style={styles.card}>
 
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Importar calendario</Text>
+                    <Text style={styles.headerTitle}>Importar calendar</Text>
                     <Text style={styles.headerSubtitle}>
-                        Conecta tu calendario desde otra plataforma
+                        Conecta tu calendar desde otra plataforma
                     </Text>
                 </View>
 
@@ -115,7 +115,7 @@ export default function ImportCalendarScreen() {
                         <View style={styles.modalBackground}>
                             <View style={styles.modalCard}>
                                 <View style={styles.modalHeader}>
-                                    <Text style={styles.modalHeaderText}>Importar calendario iOS</Text>
+                                    <Text style={styles.modalHeaderText}>Importar calendar iOS</Text>
                                 </View>
                                 <View style={styles.modalBody}>
                                     <TextInput
