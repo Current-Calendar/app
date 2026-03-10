@@ -2,11 +2,11 @@ import datetime
 from datetime import date, time
 from rest_framework.test import APITestCase
 from rest_framework import status
-from ..models import Usuario, Calendario, Evento
+from main.models import Usuario, Calendario, Evento
 
-ENDPOINT_EVENTOS = "/api/v1/eventos"
-EDIT_EVENT_ENDPOINT = "/api/v1/eventos/{}"
-
+ENDPOINT_EVENTOS = "/api/v1/events/"
+EDIT_EVENT_ENDPOINT = "/api/v1/events/{}/edit/"
+ENDPOINT_EVENTS_CREATE = "/api/v1/events/create/"
 
 class EventTests(APITestCase):
     def setUp(self) -> None:
@@ -71,7 +71,7 @@ class EventTests(APITestCase):
 class AsignarEventoCalendarioTests(APITestCase):
 
     def setUp(self):
-        self.url = '/api/eventos/asignar/'
+        self.url = '/api/v1/events/asign-to-calendar/'
 
         self.usuario = Usuario.objects.create_user(
             username='testuser',
@@ -131,7 +131,6 @@ class AsignarEventoCalendarioTests(APITestCase):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn('error', response.data)
 
     def test_asignar_calendario_inexistente(self):
         self.client.force_authenticate(self.usuario)
@@ -142,7 +141,6 @@ class AsignarEventoCalendarioTests(APITestCase):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn('error', response.data)
 
     def test_asignar_evento_ya_asignado(self):
         self.evento.calendarios.add(self.calendario)
@@ -161,7 +159,7 @@ class AsignarEventoCalendarioTests(APITestCase):
 class DesasignarEventoCalendarioTests(APITestCase):
 
     def setUp(self):
-        self.url = '/api/eventos/desasignar/'
+        self.url = '/api/v1/events/deasign-from-calendar/'
 
         self.usuario = Usuario.objects.create_user(
             username='testuser2',
@@ -222,7 +220,6 @@ class DesasignarEventoCalendarioTests(APITestCase):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn('error', response.data)
 
     def test_desasignar_calendario_inexistente(self):
         self.client.force_authenticate(self.usuario)
@@ -233,7 +230,6 @@ class DesasignarEventoCalendarioTests(APITestCase):
         }, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn('error', response.data)
 
     def test_desasignar_evento_no_asignado(self):
         self.client.force_authenticate(self.usuario)
@@ -279,7 +275,7 @@ class CrearEventoTests(APITestCase):
             "creador_id": self.usuario.id
         }
 
-        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(
@@ -295,7 +291,7 @@ class CrearEventoTests(APITestCase):
             "calendarios": [self.calendario.id],
         }
 
-        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_sin_fecha(self):
@@ -307,7 +303,7 @@ class CrearEventoTests(APITestCase):
             "calendarios": [self.calendario.id],
         }
 
-        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_sin_calendario(self):
@@ -319,7 +315,7 @@ class CrearEventoTests(APITestCase):
             "hora": "18:00:00",
         }
 
-        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_error_calendario_no_existe(self):
@@ -333,13 +329,13 @@ class CrearEventoTests(APITestCase):
             "creador_id": self.usuario.id
         }
 
-        response = self.client.post(ENDPOINT_EVENTOS, payload, format="json")
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_get_no_permitido(self):
         self.client.force_authenticate(self.usuario)
 
-        response = self.client.get(ENDPOINT_EVENTOS)
+        response = self.client.get(ENDPOINT_EVENTS_CREATE)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 

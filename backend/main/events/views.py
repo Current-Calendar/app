@@ -123,27 +123,13 @@ def create_event(request):
     )
 
 
-@api_view(['GET', 'PUT'])
-def edit_event(request, evento_id):
-    event = get_object_or_404(Evento, id=evento_id)
+@api_view(['GET', 'PUT', 'PATCH'])
+def edit_event(request, event_id):
+    event = get_object_or_404(Evento, id=event_id)
     
-    # Handle GET: Return event data
     if request.method == 'GET':
-        return Response(
-            {
-                "id": event.id,
-                "titulo": event.titulo,
-                "descripcion": event.descripcion,
-                "nombre_lugar": event.nombre_lugar,
-                "fecha": event.fecha,
-                "hora": event.hora,
-                "recurrencia": event.recurrencia,
-                "id_externo": event.id_externo,
-                "calendarios": list(event.calendarios.values_list("id", flat=True)),
-                "fecha_creacion": event.fecha_creacion,
-            },
-            status=status.HTTP_200_OK,
-        )
+        serializer = EventoSerializer(event, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     # Handle PUT: Update event
     data = request.data
@@ -390,9 +376,9 @@ def deasign_event_from_calendar(request):
  
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
-def delete_event(request, pk):
+def delete_event(request, event_id):
     try:
-        evento = Evento.objects.get(pk=pk)
+        evento = Evento.objects.get(pk=event_id)
     except Evento.DoesNotExist:
         return Response({"error": "Evento no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
