@@ -39,10 +39,12 @@ export default function ForgotPasswordScreen() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const recoverpass = async (email: string) => {
+  
+    const source = window.location.origin;
     const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: email, source: source }),
     });
     if (!response.ok) {
       throw new Error("Failed to send password recovery email.");

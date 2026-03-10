@@ -100,7 +100,7 @@ const EditProfileScreen = () => {
       const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: currentUser.email }),
+        body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
       });
       if (!response.ok) {
         throw new Error('Failed to send password recovery email.');
