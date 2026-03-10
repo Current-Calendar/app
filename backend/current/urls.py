@@ -14,20 +14,20 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.urls import path, include
+from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
+from graphene_django.views import GraphQLView
+from rest_framework import routers
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from main import views
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
-from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
-from django.views.decorators.csrf import csrf_exempt
-from graphene_django.views import GraphQLView
-from django.conf import settings
-from django.conf.urls.static import static
-from main.views import radar_events
-from rest_framework import routers
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from main.radar import views as radar_views
+from django.urls import path, include
 from django.contrib import admin
+from django.views.decorators.csrf import csrf_exempt
+from django.conf.urls.static import static
+from django.conf import settings
 
 api_router = routers.DefaultRouter()
 api_router.register("events", views.EventViewSet, basename="events")
@@ -42,7 +42,6 @@ urlpatterns = [
     path('api/v1/mock', views.hola_mundo),
     path('api/v1/google-auth', views.google_authorization),
     path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
-    path('api/v1/radar/', radar_events, name='radar_eventos'),
     path('admin/', admin.site.urls),
     path('api/v1/auth/register/', user_views.register_user, name='register'),
     path('api/v1/users/search/', user_views.search_users, name='search_users'),
@@ -68,6 +67,7 @@ urlpatterns = [
     path('/api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
     path('/api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('/api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
+    path('/api/v1/radar/', radar_views.radar_events, name='radar_events'),
 ]
 
 
