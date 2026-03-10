@@ -31,17 +31,16 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 api_router = routers.DefaultRouter()
-api_router.register("events", views.EventViewSet, basename="events")
 
 urlpatterns = [
-    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
-    path("api/v1/", include(api_router.urls)),
-    path('api/v1/mock', views.hola_mundo),
-    path('admin/', admin.site.urls),
+    path('/api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('/api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('/api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('/api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path("/graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path("/api/v1/", include(api_router.urls)),
+    path('/api/v1/mock', views.hola_mundo),
+    path('/admin/', admin.site.urls),
     path('/api/v1/auth/google-auth', auth_views.google_authorization, name='google_authorization'),
     path('/api/v1/auth/oauth2callback/', auth_views.google_oauth2callback, name='google_oauth2_callback'),
     path('/api/v1/auth/register/', auth_views.register_user, name='register'),
