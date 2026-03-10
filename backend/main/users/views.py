@@ -1,33 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from ..models import Usuario
-from ..serializers import UserSerializer, UsuarioRegistroSerializer, UsuarioSerializer, PublicUserSerializer, OwnProfileSerializer
+from ..serializers import UserSerializer, UsuarioSerializer, PublicUserSerializer, OwnProfileSerializer
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register_user(request):
-    """
-    Endpoint to register a new user.
-    POST /api/v1/auth/register/
-    """
-    
-    serializer = UsuarioRegistroSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        user = serializer.save()
-        
-        user_serializer = UsuarioSerializer(user)
-        
-        return Response({
-            'message': 'Usuario registered succesfully',
-            'usuario': user_serializer.data
-        }, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

@@ -23,6 +23,7 @@ from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
 from main.radar import views as radar_views
+from main.auth import views as auth_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -40,11 +41,11 @@ urlpatterns = [
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path("api/v1/", include(api_router.urls)),
     path('api/v1/mock', views.hola_mundo),
-    path('api/v1/google-auth', views.google_authorization),
-    path('oauth2callback/', views.google_oauth2callback, name='google_oauth2_callback'),
     path('admin/', admin.site.urls),
-    path('api/v1/auth/register/', user_views.register_user, name='register'),
-    path('api/v1/users/search/', user_views.search_users, name='search_users'),
+    path('/api/v1/auth/google-auth', auth_views.google_authorization, name='google_authorization'),
+    path('/api/v1/auth/oauth2callback/', auth_views.google_oauth2callback, name='google_oauth2_callback'),
+    path('/api/v1/auth/register/', auth_views.register_user, name='register'),
+    path('/api/v1/users/search/', user_views.search_users, name='search_users'),
     path('/api/v1/users/<int:pk>/follow/', user_views.follow_or_unfollow_user, name='follow_users_logic'),
     path('/api/v1/users/<int:pk>/', user_views.get_user_by_id, name='get_user'),
     path('/api/v1/users/me/', user_views.get_own_user, name='get_profile'),
