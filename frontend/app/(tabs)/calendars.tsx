@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, Modal, TextInput } from 'react-native';
 
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
 import { API_CONFIG } from '@/constants/api';
-import { downloadCalendar } from '@/services/calendarService';
+import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
 
@@ -66,6 +66,10 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
+    const [importDropdownVisible, setImportDropdownVisible] = useState(false);
+    const [iosModalVisible, setIosModalVisible] = useState(false);
+    const [iosUrl, setIosUrl] = useState('');
+
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -87,23 +91,23 @@ export default function CalendarScreen() {
             }));
 
             const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
-            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
-            return {
-                id: String(e.id),
-                calendarId: String(e.calendars[0] || ''),
-                title: e.title,
-                description: e.description || '',
-                place_name: e.place_name || '',
-                date: e.date,
-                time: e.time.substring(0, 5),
-                recurrence: e.recurrence,
-                type: 'other', // Default type
-                color: calendar?.color || '#6C63FF',
-            };
-        });
+                const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
+                return {
+                    id: String(e.id),
+                    calendarId: String(e.calendars[0] || ''),
+                    title: e.title,
+                    description: e.description || '',
+                    place_name: e.place_name || '',
+                    date: e.date,
+                    time: e.time.substring(0, 5),
+                    recurrence: e.recurrence,
+                    type: 'other', // Default type
+                    color: calendar?.color || '#6C63FF',
+                };
+            });
 
-        setCalendars(mappedCalendars);
-        setEvents(mappedEvents);
+            setCalendars(mappedCalendars);
+            setEvents(mappedEvents);
         } catch (error) {
             console.error('Error fetching data:', error);
             Alert.alert('Error', 'Could not load calendars or events.');
@@ -189,8 +193,8 @@ export default function CalendarScreen() {
         setDeletingCalendarId(calendar.id);
         try {
             await apiClient.delete(`/calendars/${calendar.id}/delete/`);
-            setInfoCalendar(null);       
-            setDeletingCalendarId(null); 
+            setInfoCalendar(null);
+            setDeletingCalendarId(null);
             await fetchData();
         } catch (e) {
             console.error('Delete error:', e);
@@ -316,6 +320,38 @@ export default function CalendarScreen() {
         }
     }
 
+    const handleICS = async () => {
+        try {
+            const result = await importICS();
+            Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
+            await fetchData();
+        } catch {
+            Alert.alert("Error", "No se pudo importar el calendario ICS");
+        }
+    };
+
+    const handleGoogle = async () => {
+        try {
+            const result = await importGoogleCalendar();
+            Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            await fetchData();
+        } catch {
+            Alert.alert("Error", "No se pudo importar desde Google Calendar");
+        }
+    };
+
+    const handleIOS = async () => {
+        try {
+            const result = await importIOSCalendar(iosUrl);
+            Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            setIosModalVisible(false);
+            setIosUrl('');
+            await fetchData();
+        } catch {
+            Alert.alert("Error", "No se pudo importar desde iOS Calendar");
+        }
+    };
+
     return (
         <View style={styles.screenWrapper}>
             <ScrollView
@@ -350,6 +386,60 @@ export default function CalendarScreen() {
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
                             </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => setImportDropdownVisible(v => !v)}
+                            >
+                                <Ionicons name="download-outline" size={18} color="#10464d" />
+                                <Text style={styles.secondaryBtnText}>Import Calendar</Text>
+                            </TouchableOpacity>
+
+                            {importDropdownVisible && (
+                                <View style={styles.importDropdown}>
+
+                                    <Pressable style={styles.importOption} onPress={() => {
+                                        setImportDropdownVisible(false);
+                                        setIosModalVisible(true);
+                                    }}>
+                                        <View style={[styles.importIconCircle, { backgroundColor: '#d1faff' }]}>
+                                            <Ionicons name="logo-apple" size={18} color="#10464d" />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.importOptionTitle}>iOS</Text>
+                                            <Text style={styles.importOptionDesc}>Apple Calendar</Text>
+                                        </View>
+                                    </Pressable>
+
+                                    <Pressable style={styles.importOption} onPress={() => {
+                                        setImportDropdownVisible(false);
+                                        handleGoogle();
+                                    }}>
+                                        <View style={[styles.importIconCircle, { backgroundColor: '#fde0dd' }]}>
+                                            <MaterialCommunityIcons name="google" size={18} color="#10464d" />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.importOptionTitle}>Google Calendar</Text>
+                                            <Text style={styles.importOptionDesc}>Sincronizar con Google</Text>
+                                        </View>
+                                    </Pressable>
+
+                                    <Pressable style={styles.importOption} onPress={() => {
+                                        setImportDropdownVisible(false);
+                                        handleICS();
+                                    }}>
+                                        <View style={[styles.importIconCircle, { backgroundColor: '#eae0ff' }]}>
+                                            <MaterialCommunityIcons name="file" size={18} color="#10464d" />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.importOptionTitle}>Archivo .ICS</Text>
+                                            <Text style={styles.importOptionDesc}>Subir desde dispositivo</Text>
+                                        </View>
+                                    </Pressable>
+
+                                </View>
+                            )}
                         </View>
                     )}
                 </View>
@@ -413,6 +503,38 @@ export default function CalendarScreen() {
                     }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
+
+                <Modal
+                    transparent
+                    visible={iosModalVisible}
+                    animationType="fade"
+                    onRequestClose={() => setIosModalVisible(false)}
+                >
+                    <View style={styles.modalBackground}>
+                        <View style={styles.modalCard}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalHeaderText}>Importar calendario iOS</Text>
+                            </View>
+                            <View style={styles.modalBody}>
+                                <TextInput
+                                    style={styles.modalInput}
+                                    placeholder="https://..."
+                                    placeholderTextColor="#10464d"
+                                    value={iosUrl}
+                                    onChangeText={setIosUrl}
+                                />
+                                <View style={styles.modalButtons}>
+                                    <Pressable style={styles.cancelButton} onPress={() => setIosModalVisible(false)}>
+                                        <Text style={{ color: '#10464d' }}>Cancelar</Text>
+                                    </Pressable>
+                                    <Pressable style={styles.submitButton} onPress={handleIOS}>
+                                        <Text style={{ color: '#fff' }}>Importar</Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </ScrollView>
 
             {/* DESKTOP: scrim + animated bottom sheet */}
@@ -480,13 +602,13 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-{!selectedDay && (
-  <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
-    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-      <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
-    </Animated.View>
-  </Pressable>
-)}
+            {!selectedDay && (
+                <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
+                    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                        <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+                    </Animated.View>
+                </Pressable>
+            )}
         </View>
     );
 }
@@ -495,10 +617,12 @@ const styles = StyleSheet.create({
     screenWrapper: {
         flex: 1,
         backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     container: {
         flex: 1,
         backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     contentContainer: {
         flexGrow: 1,
@@ -512,11 +636,15 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         gap: 12,
         flexWrap: 'wrap',
+        overflow: 'visible',
+        zIndex: 999,
     },
     toolbarButtons: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        overflow: 'visible',
+        zIndex: 999,
     },
     primaryBtn: {
         flexDirection: 'row',
@@ -740,5 +868,104 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         marginBottom: 20,
+    },
+    importDropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+        padding: 8,
+        zIndex: 999,
+        minWidth: 220,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+    },
+    importOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        padding: 10,
+        borderRadius: 10,
+    },
+    importIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+    },
+    importOptionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#10464d',
+    },
+    importOptionDesc: {
+        fontSize: 12,
+        color: '#10464d',
+        opacity: 0.6,
+    },
+    modalBackground: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    modalCard: {
+        width: '90%',
+        maxWidth: 400,
+        borderRadius: 16,
+        backgroundColor: '#fffded',
+        overflow: 'hidden',
+        elevation: 5,
+    },
+    modalHeader: {
+        backgroundColor: '#10464d',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+    },
+    modalHeaderText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    modalBody: {
+        padding: 20,
+    },
+    modalInput: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#10464d',
+        marginBottom: 16,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#fcfcfc',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#10464d',
+    },
+    submitButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#10464d',
+        borderRadius: 12,
     },
 });
