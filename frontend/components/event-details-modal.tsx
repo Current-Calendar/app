@@ -44,19 +44,19 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
     return null;
   }
 
-  const title = String(event?.titulo ?? "");
-  const place = String(event?.nombre_lugar ?? "");
-  const username = String(event?.creador_username ?? event?.creador?.username ?? "").trim();
-  const description = String(event?.descripcion ?? "").trim();
+  const title = String(event?.title ?? "");
+  const place = String(event?.place_name ?? "");
+  const username = String(event?.creator_username ?? event?.creator?.username ?? "").trim();
+  const description = String(event?.description ?? "").trim();
 
-  const dateStr = formatDate(event?.fecha);
-  const timeStr = formatTime(event?.hora);
+  const dateStr = formatDate(event?.date);
+  const timeStr = formatTime(event?.time);
   const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
 
-  const distanceKm = formatDistanceKm(event?.distancia_km);
+  const distanceKm = formatDistanceKm(event?.distance_km);
 
   if (__DEV__) {
-    console.log("EVENT FOTO:", event?.foto);
+    console.log("EVENT PHOTO:", event?.photo);
   }
 
   return (
@@ -69,14 +69,14 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
           </Pressable>
 
           {/* Image */}
-          {event.foto ? (
+          {event.photo ? (
             <View style={styles.coverWrap}>
               <Image
-                source={{ uri: event.foto }}
+                source={{ uri: event.photo }}
                 style={styles.cover}
                 resizeMode="cover"
-                onError={(e) => console.log("IMG ERROR:", event.foto, e?.nativeEvent)}
-                onLoad={() => console.log("IMG OK:", event.foto)}
+                onError={(e) => console.log("IMG ERROR:", event.photo, e?.nativeEvent)}
+                onLoad={() => console.log("IMG OK:", event.photo)}
               />
             </View>
           ) : null}
@@ -99,10 +99,10 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
               </View>
             )}
 
-            {/* ✅ A X km de ti (debajo de ubicación) */}
+            {/* Distance from user location */}
             {!!distanceKm && (
               <View style={styles.rowSub}>
-                <Text style={styles.subText}>A {distanceKm} de ti</Text>
+                <Text style={styles.subText}>{distanceKm} away</Text>
               </View>
             )}
 
@@ -113,10 +113,10 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
               </View>
             )}
 
-            {/* ✅ Descripción (debajo de todo) */}
+            {/* Description */}
             {!!description && (
               <View style={styles.descWrap}>
-                <Text style={styles.descTitle}>Descripción</Text>
+                <Text style={styles.descTitle}>Description</Text>
                 <Text style={styles.descText}>{description}</Text>
               </View>
             )}
@@ -124,7 +124,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
           {/* Footer */}
           <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Cerrar</Text>
+            <Text style={styles.primaryBtnText}>Close</Text>
           </Pressable>
         </View>
       </View>
@@ -201,10 +201,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-  // distancia bajo ubicación
+  // distance below location
   rowSub: {
     marginTop: -6,
-    marginLeft: 26, // alinear con texto (dejando hueco del icono)
+    marginLeft: 26, // align with text (leaving space for the icon)
   },
   subText: {
     color: TEXT,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // descripción al final
+  // description at the bottom
   descWrap: {
     marginTop: 4,
     paddingTop: 10,

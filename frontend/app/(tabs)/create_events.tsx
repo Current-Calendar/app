@@ -53,12 +53,12 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-// DRF suele aceptar mejor HH:MM:SS
+// DRF usually accepts HH:MM:SS format better
 const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
-  name: String(raw?.nombre ?? raw?.name ?? raw?.titulo ?? "Calendar"),
+  name: String(raw?.name ?? raw?.title ?? "Calendar"),
 });
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -333,12 +333,12 @@ export default function CreateEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiClient.get<any>("/calendarios/mis-calendarios");
+      const data: any = await apiClient.get<any>("/calendars/my-calendars");
 
       const list =
         (Array.isArray(data) && data) ||
         (Array.isArray(data?.results) && data.results) ||
-        (Array.isArray(data?.calendarios) && data.calendarios) ||
+        (Array.isArray(data?.calendars) && data.calendars) ||
         (Array.isArray(data?.data) && data.data) ||
         [];
 
@@ -347,7 +347,7 @@ export default function CreateEventsScreen() {
       setCalendars(mapped);
       if (!selectedCalendar && mapped.length > 0) setSelectedCalendar(mapped[0]);
     } catch (e: any) {
-      setCalError(e?.message ?? "Error cargando calendarios");
+      setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
       setSelectedCalendar(null);
     } finally {
@@ -365,7 +365,7 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
-  // Coordenadas
+  // Coordinates
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
 
@@ -375,7 +375,7 @@ export default function CreateEventsScreen() {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [placeFocused, setPlaceFocused] = useState(false);
 
-  // Para no relanzar búsqueda cuando el usuario selecciona una sugerencia
+  // Prevents re-triggering search when the user selects a suggestion
   const suppressNextSearchRef = useRef(false);
 
   const [date, setDate] = useState<Date>(() => {
@@ -547,8 +547,8 @@ export default function CreateEventsScreen() {
   const publish = async () => {
     setFormError(null);
 
-    const titulo = title.trim();
-    if (!titulo) {
+    const titleTrimmed = title.trim();
+    if (!titleTrimmed) {
       setFormError("El título es obligatorio.");
       return;
     }
@@ -558,25 +558,25 @@ export default function CreateEventsScreen() {
     }
 
     const payload: any = {
-      titulo,
-      descripcion: description?.trim() ?? "",
-      nombre_lugar: place?.trim() ?? "",
-      fecha: toISODate(date),
-      hora: toHMS(time),
-      calendarios: [Number(selectedCalendar.id)],
+      title: titleTrimmed,
+      description: description?.trim() ?? "",
+      place_name: place?.trim() ?? "",
+      date: toISODate(date),
+      time: toHMS(time),
+      calendars: [Number(selectedCalendar.id)],
       creador_id: 2, // MOCK por ahora
     };
 
-    // 👇 Enviar coords si existen (backend espera latitud/longitud)
+    // Send coords if available (backend expects latitude/longitude)
     if (lat != null && lon != null) {
-      payload.latitud = lat;
-      payload.longitud = lon;
+      payload.latitude = lat;
+      payload.longitude = lon;
     }
 
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/eventos', payload);
+      await apiClient.post<any>('/events', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {

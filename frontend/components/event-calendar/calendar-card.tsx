@@ -14,9 +14,9 @@ export default function CalendarCard({
   onSubscribe,
 }: CalendarCardProps) {
   const privacyIcon: Record<string, any> = {
-    PRIVADO: "lock-closed",
-    AMIGOS: "people",
-    PUBLICO: "globe",
+    PRIVATE: "lock-closed",
+    FRIENDS: "people",
+    PUBLIC: "globe",
   };
 
   const originIcon: Record<string, any> = {
@@ -30,9 +30,9 @@ export default function CalendarCard({
       style={styles.card}
       onPress={() => onPress(calendar.id)}
     >
-      {calendar.portada && (
+      {calendar.cover && (
         <Image
-          source={{ uri: calendar.portada }}
+          source={{ uri: calendar.cover }}
           style={styles.cover}
         />
       )}
@@ -40,7 +40,7 @@ export default function CalendarCard({
       <View
         style={[
           styles.coverFallback,
-          !calendar.portada && styles.coverFallbackShown,
+          !calendar.cover && styles.coverFallbackShown,
           { backgroundColor: calendar.color },
         ]}
       />
@@ -48,12 +48,12 @@ export default function CalendarCard({
       <View style={styles.content}>
         <View style={styles.header}>
           <View style={styles.titleSection}>
-            <Text style={styles.title}>{calendar.nombre}</Text>
-            <Text style={styles.creator}>by {calendar.creador}</Text>
+            <Text style={styles.title}>{calendar.name}</Text>
+            <Text style={styles.creator}>by {calendar.creator}</Text>
           </View>
           <View style={styles.badges}>
             <Ionicons
-              name={privacyIcon[calendar.estado] || "help"}
+              name={privacyIcon[calendar.privacy] || "help"}
               size={16}
               color="#666"
               style={styles.badge}
@@ -67,7 +67,7 @@ export default function CalendarCard({
         </View>
 
         <Text style={styles.description} numberOfLines={2}>
-          {calendar.descripcion}
+          {calendar.description}
         </Text>
 
         <View style={styles.footer}>
