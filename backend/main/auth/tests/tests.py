@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password
-from ..models import Usuario
+from main.models import Usuario
 
 class RegistroUsuarioTests(APITestCase):
     """
@@ -11,7 +11,7 @@ class RegistroUsuarioTests(APITestCase):
     
     def setUp(self):
         """Configuración inicial para cada test."""
-        self.url = reverse('registro')
+        self.url = reverse('register')
         self.datos_validos = {
             'username': 'testuser',
             'email': 'test@example.com',
@@ -29,7 +29,7 @@ class RegistroUsuarioTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn('message', response.data)
         self.assertIn('usuario', response.data)
-        self.assertEqual(response.data['message'], 'Usuario registrado exitosamente')
+        self.assertEqual(response.data['message'], 'Usuario registered succesfully')
         
         # Verificar datos del usuario en la respuesta
         self.assertEqual(response.data['usuario']['username'], 'testuser')
