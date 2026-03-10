@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Pressable, StyleSheet, Modal, Text, TouchableWithoutFeedback } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 
 interface Props {
   NavButton: any;
@@ -10,6 +11,7 @@ interface Props {
 export default function BottomBar({ NavButton }: Props) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
+  const [importVisible, setImportVisible] = useState(false);
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -18,7 +20,7 @@ export default function BottomBar({ NavButton }: Props) {
     closeMenu();
     router.push(path as any);
   };
-  
+
   const getTodayFormatted = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -67,6 +69,13 @@ export default function BottomBar({ NavButton }: Props) {
                 <Text style={styles.menuItemText}>New Calendar</Text>
               </Pressable>
 
+              <Pressable style={styles.menuItem} onPress={() => { closeMenu(); setImportVisible(true); }}>
+                <View style={[styles.iconBg, { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#10464d' }]}>
+                  <Ionicons name="download-outline" size={22} color="#10464d" />
+                </View>
+                <Text style={styles.menuItemText}>Import Calendar</Text>
+              </Pressable>
+
               <Pressable style={styles.closeBtn} onPress={closeMenu}>
                 <Ionicons name="close" size={24} color="#888" />
               </Pressable>
@@ -74,6 +83,7 @@ export default function BottomBar({ NavButton }: Props) {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
     </View>
   );
 }

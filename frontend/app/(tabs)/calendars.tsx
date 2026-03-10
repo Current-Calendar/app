@@ -23,6 +23,7 @@ import { API_CONFIG } from '@/constants/api';
 import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -66,9 +67,7 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
-    const [importDropdownVisible, setImportDropdownVisible] = useState(false);
-    const [iosModalVisible, setIosModalVisible] = useState(false);
-    const [iosUrl, setIosUrl] = useState('');
+    const [importModalVisible, setImportModalVisible] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -320,38 +319,6 @@ export default function CalendarScreen() {
         }
     }
 
-    const handleICS = async () => {
-        try {
-            const result = await importICS();
-            Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
-            await fetchData();
-        } catch {
-            Alert.alert("Error", "No se pudo importar el calendario ICS");
-        }
-    };
-
-    const handleGoogle = async () => {
-        try {
-            const result = await importGoogleCalendar();
-            Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
-            await fetchData();
-        } catch {
-            Alert.alert("Error", "No se pudo importar desde Google Calendar");
-        }
-    };
-
-    const handleIOS = async () => {
-        try {
-            const result = await importIOSCalendar(iosUrl);
-            Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
-            setIosModalVisible(false);
-            setIosUrl('');
-            await fetchData();
-        } catch {
-            Alert.alert("Error", "No se pudo importar desde iOS Calendar");
-        }
-    };
-
     return (
         <View style={styles.screenWrapper}>
             <ScrollView
@@ -390,56 +357,12 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => setImportDropdownVisible(v => !v)}
+                                onPress={() => setImportModalVisible(true)}
                             >
                                 <Ionicons name="download-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>Import Calendar</Text>
                             </TouchableOpacity>
 
-                            {importDropdownVisible && (
-                                <View style={styles.importDropdown}>
-
-                                    <Pressable style={styles.importOption} onPress={() => {
-                                        setImportDropdownVisible(false);
-                                        setIosModalVisible(true);
-                                    }}>
-                                        <View style={[styles.importIconCircle, { backgroundColor: '#d1faff' }]}>
-                                            <Ionicons name="logo-apple" size={18} color="#10464d" />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.importOptionTitle}>iOS</Text>
-                                            <Text style={styles.importOptionDesc}>Apple Calendar</Text>
-                                        </View>
-                                    </Pressable>
-
-                                    <Pressable style={styles.importOption} onPress={() => {
-                                        setImportDropdownVisible(false);
-                                        handleGoogle();
-                                    }}>
-                                        <View style={[styles.importIconCircle, { backgroundColor: '#fde0dd' }]}>
-                                            <MaterialCommunityIcons name="google" size={18} color="#10464d" />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.importOptionTitle}>Google Calendar</Text>
-                                            <Text style={styles.importOptionDesc}>Sincronizar con Google</Text>
-                                        </View>
-                                    </Pressable>
-
-                                    <Pressable style={styles.importOption} onPress={() => {
-                                        setImportDropdownVisible(false);
-                                        handleICS();
-                                    }}>
-                                        <View style={[styles.importIconCircle, { backgroundColor: '#eae0ff' }]}>
-                                            <MaterialCommunityIcons name="file" size={18} color="#10464d" />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.importOptionTitle}>Archivo .ICS</Text>
-                                            <Text style={styles.importOptionDesc}>Subir desde dispositivo</Text>
-                                        </View>
-                                    </Pressable>
-
-                                </View>
-                            )}
                         </View>
                     )}
                 </View>
@@ -503,38 +426,6 @@ export default function CalendarScreen() {
                     }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
-
-                <Modal
-                    transparent
-                    visible={iosModalVisible}
-                    animationType="fade"
-                    onRequestClose={() => setIosModalVisible(false)}
-                >
-                    <View style={styles.modalBackground}>
-                        <View style={styles.modalCard}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalHeaderText}>Importar calendario iOS</Text>
-                            </View>
-                            <View style={styles.modalBody}>
-                                <TextInput
-                                    style={styles.modalInput}
-                                    placeholder="https://..."
-                                    placeholderTextColor="#10464d"
-                                    value={iosUrl}
-                                    onChangeText={setIosUrl}
-                                />
-                                <View style={styles.modalButtons}>
-                                    <Pressable style={styles.cancelButton} onPress={() => setIosModalVisible(false)}>
-                                        <Text style={{ color: '#10464d' }}>Cancelar</Text>
-                                    </Pressable>
-                                    <Pressable style={styles.submitButton} onPress={handleIOS}>
-                                        <Text style={{ color: '#fff' }}>Importar</Text>
-                                    </Pressable>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
             </ScrollView>
 
             {/* DESKTOP: scrim + animated bottom sheet */}
@@ -576,7 +467,7 @@ export default function CalendarScreen() {
                     </View>
                 </Animated.View>
             )}
-            {!selectedDay && optionAnimations.map((anim, index) => {
+            {isDesktop && !selectedDay && optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
                 const fabBottom = Platform.OS === "web" ? 30 : 90;
@@ -602,13 +493,17 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-            {!selectedDay && (
+            {isDesktop && !selectedDay && (
                 <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
                     <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
                         <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
                     </Animated.View>
                 </Pressable>
             )}
+            <ImportCalendarModal
+                visible={importModalVisible}
+                onClose={() => setImportModalVisible(false)}
+            />
         </View>
     );
 }
