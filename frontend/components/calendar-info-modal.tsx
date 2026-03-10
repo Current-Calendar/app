@@ -45,7 +45,7 @@ export function CalendarInfoModal({
 
     const accent = calendar.color;
     const privacy = PRIVACY_LABELS[calendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
-    const origin = ORIGIN_LABELS[calendar.origen] ?? ORIGIN_LABELS.CURRENT;
+    const origin = ORIGIN_LABELS[calendar.origin] ?? ORIGIN_LABELS.CURRENT;
 
     const handleDeletePress = () => {
         if (!onDelete) return;

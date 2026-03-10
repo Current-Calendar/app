@@ -150,13 +150,17 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'email',
             'pronouns',
             'bio',
+            'photo',
+            'total_followers',
+            'total_following',
+            'subscribed_calendars',
         )
         read_only_fields = ('id', 'date_joined')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ['photo', 'email', 'username', 'pronouns', 'link', 'bio']
+        model=User
+        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
 
 
 class CalendarSummarySerializer(serializers.ModelSerializer):

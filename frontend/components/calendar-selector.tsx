@@ -38,7 +38,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
         name: 'All Calendars',
         description: '',
         privacy: 'PUBLIC',
-        origen: 'CURRENT',
+        origin: 'CURRENT',
         creator: '',
         color: '#10464d',
     };

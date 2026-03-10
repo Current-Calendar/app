@@ -81,7 +81,7 @@ export default function CalendarScreen() {
                 name: c.name,
                 description: c.description || '',
                 privacy: c.privacy,
-                origen: c.origen,
+                origin: c.origin,
                 creator: c.creator_username || 'unknown',
                 color: COLORS[index % COLORS.length],
             }));
