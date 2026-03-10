@@ -1243,6 +1243,17 @@ def radar_events(request):
 
 def send_password_reset_email(user, reset_url):
     """Send password reset email to user"""
+    
+    hourly_cache_key = "password_reset_hourly_count"
+    hourly_attempts = cache.get(hourly_cache_key, 0)
+    if hourly_attempts >= 10:
+        raise Exception("HOURLY_LIMIT_REACHED")
+    
+    daily_cache_key = "password_reset_daily_count"
+    daily_attempts = cache.get(daily_cache_key, 0)
+    if daily_attempts >= 100:
+        raise Exception("DAILY_LIMIT_REACHED")
+    
     resend.api_key = settings.RESEND_API_KEY
     
     params = {
@@ -1260,7 +1271,13 @@ def send_password_reset_email(user, reset_url):
     
     try:
         resend.Emails.send(params)
+        cache.set(hourly_cache_key, hourly_attempts + 1, 3600)  # 1 hour = 3600 seconds
+        cache.set(daily_cache_key, daily_attempts + 1, 86400)   # 1 day = 86400 seconds
     except Exception as e:
+        # Check if it's a Resend API limit error
+        error_message = str(e).lower()
+        if "rate limit" in error_message or "quota" in error_message or "limit exceeded" in error_message:
+            raise Exception("RESEND_LIMIT_REACHED")
         print(f"Error sending email: {e}")
         raise
 
@@ -1269,6 +1286,7 @@ def send_password_reset_email(user, reset_url):
 @permission_classes([AllowAny])
 def recover_password(request):
     email = request.data.get('email')
+    source = request.data.get('source') 
     
     if not email:
         return Response(
@@ -1284,9 +1302,19 @@ def recover_password(request):
             'iat': datetime.now()
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        frontend_url = "https://staging.currentcalendar.es"
-        reset_url = f"{frontend_url}/reset-password?token={token}"
-        send_password_reset_email(user, reset_url)
+        reset_url = f"{source}/reset-password?token={token}"
+        
+        try:
+            send_password_reset_email(user, reset_url)
+        except Exception as e:
+            error_str = str(e)
+            if "HOURLY_LIMIT_REACHED" in error_str or "DAILY_LIMIT_REACHED" in error_str or "RESEND_LIMIT_REACHED" in error_str:
+                return Response(
+                    {"error": "We're experiencing high volume of password reset requests. Please contact us directly at support@currentcalendar.es for assistance."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            # For other errors, still raise
+            raise
         
     except Usuario.DoesNotExist:
         pass # don't reveal user doesn't exist
