@@ -115,22 +115,22 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     <View style={profileStyles.profileRow}>
                         <View style={profileStyles.profilePictureContainer}>
                             <Image
-                                source={{ uri: userBeingViewed.foto || 'https://via.placeholder.com/150' }}
+                                source={{ uri: userBeingViewed.photo || 'https://via.placeholder.com/150' }}
                                 style={profileStyles.profilePicture}
                             />
                         </View>
 
                         <View style={profileStyles.statsContainer}>
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-                            <Text style={profileStyles.pronouns}>{userBeingViewed.pronombres || 'they/them'}</Text>
-                            
+                            <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns || 'they/them'}</Text>
+
                             <View style={profileStyles.statsRow}>
                                 <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidores || 0}</Text>
+                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
                                     <Text style={profileStyles.statLabel}>Followers</Text>
                                 </View>
                                 <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_seguidos || 0}</Text>
+                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
                                     <Text style={profileStyles.statLabel}>Following</Text>
                                 </View>
                             </View>
@@ -138,7 +138,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     </View>
 
                     <View style={profileStyles.bioSection}>
-                        <Text style={profileStyles.bio}>{userBeingViewed.biografia}</Text>
+                        <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
                     </View>
 
                     <TouchableOpacity 
