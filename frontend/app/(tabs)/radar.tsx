@@ -11,24 +11,24 @@ import * as Location from "expo-location";
 import apiConfig from "../../constants/api";
 import MapComponent from "../../components/map-component";
 
-const DEFAULT_COORDS = { latitude: 37.3891, longitude: -5.9845 }; // Sevilla
-
 export default function RadarScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingStage, setLoadingStage] = useState("Obteniendo ubicacion...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [usingDefaultLocation, setUsingDefaultLocation] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadRadar = async () => {
       setLoading(true);
+      setLocation(null);
+      setEvents([]);
       setErrorMessage(null);
-      setUsingDefaultLocation(false);
+      setLocationMessage(null);
       setLoadingStage("Obteniendo ubicacion...");
 
       try {
@@ -48,16 +48,16 @@ export default function RadarScreen() {
             lat = position.coords.latitude;
             lon = position.coords.longitude;
           } catch {
-            lat = DEFAULT_COORDS.latitude;
-            lon = DEFAULT_COORDS.longitude;
-            setUsingDefaultLocation(true);
+            throw new Error(
+              "Cargando ubicacion... Si no la tienes activada, activala para ver eventos cerca de ti."
+            );
           }
         } else {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== "granted") {
-            lat = DEFAULT_COORDS.latitude;
-            lon = DEFAULT_COORDS.longitude;
-            setUsingDefaultLocation(true);
+            throw new Error(
+              "Cargando ubicacion... Si no la tienes activada, activala para ver eventos cerca de ti."
+            );
           } else {
             const currentLocation = await Location.getCurrentPositionAsync({});
             lat = currentLocation.coords.latitude;
@@ -93,8 +93,11 @@ export default function RadarScreen() {
               : typeof error === "object" && error !== null && "message" in error
                 ? String((error as { message?: string }).message || "")
                 : "";
-          setErrorMessage(message || "Error cargando Radar.");
-          setEvents([]);
+          if (message.toLowerCase().includes("ubicacion") || message.toLowerCase().includes("location")) {
+            setLocationMessage(message || "Cargando ubicacion...");
+          } else {
+            setErrorMessage(message || "Error cargando Radar.");
+          }
         }
       } finally {
         if (!cancelled) {
@@ -132,43 +135,40 @@ export default function RadarScreen() {
     );
   }
 
+  if (locationMessage || !location) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color="#eb8c85" />
+        <Text style={styles.loadingTitle}>Cargando ubicacion</Text>
+        <Text style={styles.loadingSubtitle}>
+          {locationMessage || "Activa la ubicacion para ver eventos cerca de ti."}
+        </Text>
+        {Platform.OS === "web" ? (
+          <View style={styles.guideBox}>
+            <Text style={styles.guideStep}>1. Pulsa el candado al lado de la URL.</Text>
+            <Text style={styles.guideStep}>2. En Ubicacion, selecciona Permitir.</Text>
+          </View>
+        ) : (
+          <Text style={styles.loadingSubtitle}>
+            Activa la ubicacion desde los ajustes del dispositivo y vuelve a pulsar Reintentar.
+          </Text>
+        )}
+        <Pressable style={styles.retryButton} onPress={() => setReloadKey((k) => k + 1)}>
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {usingDefaultLocation && (
-        <View style={styles.noticeBar}>
-          <Text style={styles.noticeText}>Mostrando radar con ubicacion por defecto.</Text>
-        </View>
-      )}
-      {location ? (
-        <MapComponent location={location} events={events} />
-      ) : (
-        <View style={styles.loadingScreen}>
-          <Text style={styles.loadingSubtitle}>No hay ubicacion disponible.</Text>
-        </View>
-      )}
+      <MapComponent location={location} events={events} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  noticeBar: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    right: 12,
-    zIndex: 5,
-    borderRadius: 10,
-    backgroundColor: "#10464d",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  noticeText: {
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: "600",
-    fontSize: 12,
-  },
   loadingScreen: {
     flex: 1,
     justifyContent: "center",
@@ -205,5 +205,20 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: "#fff",
     fontWeight: "700",
+  },
+  guideBox: {
+    marginTop: 12,
+    width: "100%",
+    maxWidth: 460,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#f5f1d6",
+    borderWidth: 1,
+    borderColor: "#e5dba4",
+  },
+  guideStep: {
+    fontSize: 13,
+    color: "#325a5f",
+    marginBottom: 4,
   },
 });
