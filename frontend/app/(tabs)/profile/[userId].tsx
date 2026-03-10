@@ -15,8 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile'; 
-import API_CONFIG from '../../../constants/api';
-import apiClient from '../../../services/api-client';
+import { useProfileActions } from '@/hooks/use-profile-actions';
 
 const ACCENT_COLORS = ['#A0D842', '#FF8C42', '#42A5F5', '#6C5DD3', '#E96F92'];
 
@@ -73,8 +72,10 @@ const mapCalendarsFromApi = (
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const params = useLocalSearchParams<{ userId?: string | string[] }>();
+  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
   const { user: currentUser, logout } = useAuth();
+  const { getOwnProfile } = useProfileActions();
   
   // Determinamos si es "Mi Perfil"
   const isMe = !userId || userId === String(currentUser?.id);
@@ -108,7 +109,7 @@ const ProfileScreen = () => {
       setProfileError(null);
 
       try {
-        const data: OwnProfileResponse = await apiClient.get('/users/me');
+        const data: OwnProfileResponse = await getOwnProfile();
 
         if (!isMounted) {
           return;
@@ -142,7 +143,7 @@ const ProfileScreen = () => {
       isMounted = false;
       controller.abort();
     };
-  }, [isMe, currentUser?.id, reloadKey]);
+  }, [isMe, currentUser, currentUser?.id, getOwnProfile, reloadKey]);
 
   const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
 

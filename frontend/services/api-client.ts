@@ -2,6 +2,18 @@ import { API_CONFIG } from "@/constants/api";
 import { RegisterData, TokenResponse, User } from "@/types/auth";
 import { createAsyncStorage } from "@react-native-async-storage/async-storage";
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 class ApiClient {
   user: User | null = null;
 
@@ -125,9 +137,11 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `HTTP ${response.status}`
-      );
+      const detail =
+        typeof errorData?.detail === 'string'
+          ? errorData.detail
+          : `HTTP ${response.status}`;
+      throw new ApiError(detail, response.status, errorData);
     }
 
     if (response.status === 204) {

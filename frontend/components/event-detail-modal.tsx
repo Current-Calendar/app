@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
-import { API_CONFIG } from '@/constants/api';
+import { useEventActions } from '@/hooks/use-event-actions';
 
 
 interface EventDetailModalProps {
@@ -20,6 +20,7 @@ interface EventDetailModalProps {
 
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
     const router = useRouter();
+    const { deleteEvent } = useEventActions();
 
     if (!event) return null;
 
@@ -28,19 +29,9 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
     const handleDeleteEvent = async (eventId: string) => {
         try {
-            const response = await fetch(API_CONFIG.endpoints.deleteEvent(eventId), {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                onClose();
-                router.replace('/calendars'); 
-            } else {
-                console.log('Failed to delete event:', response.status);
-            }
+            await deleteEvent(eventId);
+            onClose();
+            router.replace('/calendars');
         }
         catch (error) {
             console.log('Error deleting event:', error);

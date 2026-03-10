@@ -1,23 +1,18 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-
-import {
-    importGoogleCalendar,
-    importICS,
-    importIOSCalendar
-} from "@/services/calendarService";
+import { useCalendarTransfer } from "@/hooks/use-calendar-transfer";
 
 const FONT_FAMILY = "Jost-Medium";
 
 export default function ImportCalendarScreen() {
-    const [loading, setLoading] = useState(false);
+    const { loading, importFromICS, importFromGoogle, importFromIOS } = useCalendarTransfer();
     const [iosModalVisible, setIosModalVisible] = useState(false);
     const [iosUrl, setIosUrl] = useState("");
 
     const handleICS = async () => {
         try {
-            const result = await importICS(1);      //Meter currentUserId
+            const result = await importFromICS(1);      //Meter currentUserId
             Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
         } catch (err) {
             console.error(err);
@@ -27,7 +22,7 @@ export default function ImportCalendarScreen() {
 
     const handleGoogle = async () => {
         try {
-            const result = await importGoogleCalendar();
+            const result = await importFromGoogle();
             Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
         } catch (err) {
             console.error(err);
@@ -37,7 +32,7 @@ export default function ImportCalendarScreen() {
 
     const handleIOS = async () => {
         try {
-            const result = await importIOSCalendar(iosUrl, 1);  //Meter currentUserId
+            const result = await importFromIOS(iosUrl, 1);  //Meter currentUserId
             Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
             setIosModalVisible(false);
             setIosUrl("");

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     View, 
     Text, 
@@ -12,11 +12,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
+import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import CalendarCard from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import { useAuth } from "@/hooks/use-auth";
-import { User } from '../../../types/user';
-import apiClient from '../../../services/api-client';
 
 export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
     const { user: currentUser } = useAuth();
@@ -33,51 +32,12 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
     } = useUserProfile(targetUserId);
 
     //  Estado para los calendarios que sigo de este usuario
-    const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
-    const [followingLoading, setFollowingLoading] = useState(false);
-
-    useEffect(() => {
-        const fetchFollowingCalendars = async () => {
-            if (!userBeingViewed || !currentUser) return;
-
-            if (process.env.NODE_ENV === 'development') {
-                // Mock para desarrollo
-                const mockFollowed = calendars.filter((cal, idx) => idx % 2 === 0);
-                setFollowingCalendars(mockFollowed);
-                return;
-            }
-
-            try {
-                setFollowingLoading(true);
-                const headers: Record<string, string> = {};
-                const authToken = apiClient.getAccessToken();
-                if (authToken) {
-                    headers.Authorization = `Bearer ${authToken}`;
-                }
-
-                const response = await fetch(
-                    `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1/'}users/${userBeingViewed.id}/followed_calendars/`,
-                    {
-                        headers,
-                        credentials: 'include',
-                    }
-                );
-                if (response.ok) {
-                    const data: CalendarItem[] = await response.json();
-                    setFollowingCalendars(data);
-                } else {
-                    setFollowingCalendars([]);
-                }
-            } catch (error) {
-                console.error('Error fetching followed calendars:', error);
-                setFollowingCalendars([]);
-            } finally {
-                setFollowingLoading(false);
-            }
-        };
-
-        fetchFollowingCalendars();
-    }, [userBeingViewed, currentUser, calendars]);
+    const {
+        calendars: followingCalendars,
+        loading: followingLoading,
+    } = useFollowedCalendars(userBeingViewed?.username, {
+        enabled: !!userBeingViewed && !!currentUser,
+    });
 
     // --- MANEJO DE ERRORES Y CARGA ---
     if (!targetUserId) {
@@ -158,6 +118,11 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                 {/* Calendarios que sigo de este usuario */}
                 {followingLoading ? (
                     <ActivityIndicator size="small" color="#262626" />
+                ) : !currentUser ? (
+                    <View style={profileStyles.postsGrid}>
+                        <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>
+                        <Text style={profileStyles.emptyText}>Inicia sesión para ver qué calendarios de este perfil sigues.</Text>
+                    </View>
                 ) : followingCalendars.length > 0 && (
                     <View style={profileStyles.postsGrid}>
                         <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>

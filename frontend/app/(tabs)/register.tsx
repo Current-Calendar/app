@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
-import { API_CONFIG } from "@/constants/api";
+import { useRegister } from "@/hooks/use-register";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -22,6 +22,7 @@ const TEXT = "#10464D";
 export default function SignUpScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { registerUser } = useRegister();
   const { width } = useWindowDimensions();
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -50,45 +51,20 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_CONFIG.endpoints.register, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password,
-          password2,
-        }),
+      await registerUser({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        password2,
       });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        const msg =
-          (data &&
-            (data.message ||
-              data.detail ||
-              data.non_field_errors?.[0] ||
-              data.email?.[0] ||
-              data.username?.[0] ||
-              data.password?.[0] ||
-              data.password2?.[0])) ||
-          "Register failed.";
-        setErrorMsg(String(msg));
-        return;
-      }
 
       setSuccessMsg("Usuario registrado exitosamente");
 
       await login(username.trim(), password);
 
       setTimeout(() => router.push("/"), 400);
-    } catch {
-      setErrorMsg("No connection to API. Check API_BASE / backend running.");
+    } catch (error: any) {
+      setErrorMsg(error?.message ?? "No connection to API. Check API_BASE / backend running.");
     } finally {
       setLoading(false);
     }

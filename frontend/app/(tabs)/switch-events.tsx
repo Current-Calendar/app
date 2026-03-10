@@ -1,9 +1,9 @@
 import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
-import { API_CONFIG } from "@/constants/api";
+import { useCalendars } from "@/hooks/use-calendars";
+import { useEventsList } from "@/hooks/use-events";
 
 /**
  * 🔹 Tipo compartido con backend
@@ -23,59 +23,50 @@ export interface Event {
 }
 
 export default function EventsScreen() {
-  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    calendars: backendCalendars,
+    error: calendarsError,
+  } = useCalendars();
+
+  const {
+    events: backendEvents,
+    loading: loadingEvents,
+    error: eventsError,
+  } = useEventsList();
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [calRes, evRes] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-          fetch(API_CONFIG.endpoints.getEvents),
-        ]);
+    if (calendarsError || eventsError) {
+      console.error("Error fetching events:", calendarsError || eventsError);
+      Alert.alert("Error", "Could not load events.");
+    }
+  }, [calendarsError, eventsError]);
 
-        if (!calRes.ok || !evRes.ok) {
-          throw new Error("Failed to fetch data");
-        }
+  useEffect(() => {
+    // Map calendars for easy lookup
+    const calendarMap: Record<number, any> = {};
+    backendCalendars.forEach((c: any) => {
+      calendarMap[c.id] = c;
+    });
 
-        const calData = await calRes.json();
-        const evData = await evRes.json();
+    const mappedEvents: Event[] = backendEvents.map((e: any) => {
+      const cal = calendarMap[e.calendarios[0]];
+      return {
+        id: String(e.id),
+        title: e.titulo,
+        description: e.descripcion || "",
+        location: e.nombre_lugar || "",
+        date: e.fecha,
+        image: e.foto,
+        username: cal?.creador_username || "unknown",
+        userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
+        calendarId: String(e.calendarios[0] || ""),
+        calendarName: cal?.nombre || "General",
+      };
+    });
 
-        // Map calendars for easy lookup
-        const calendarMap: Record<number, any> = {};
-        calData.forEach((c: any) => {
-          calendarMap[c.id] = c;
-        });
-
-        const mappedEvents: any[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendarios[0]];
-          return {
-            id: String(e.id),
-            title: e.titulo,
-            description: e.descripcion || "",
-            location: e.nombre_lugar || "",
-            date: e.fecha,
-            image: e.foto, // Placeholder for now
-            username: cal?.creador_username || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(e.calendarios[0] || ""),
-            calendarName: cal?.nombre || "General",
-          };
-        });
-
-        setEvents(mappedEvents);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        Alert.alert("Error", "Could not load events.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void fetchData();
-  }, []);
+    setEvents(mappedEvents);
+  }, [backendCalendars, backendEvents]);
 
   const handleOpenEvent = (id: string) => {
     // Conectar con show de events
@@ -94,6 +85,7 @@ export default function EventsScreen() {
     console.log("Save:", id);
   };
 
+  const loading = loadingEvents;
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>

@@ -7,22 +7,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CalendarGrid } from '@/components/calendar-grid';
 import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
 import { EventFilterBar } from '@/components/event-filter-bar';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
-import { API_CONFIG } from '@/constants/api';
-import { downloadCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
-import apiClient from '@/services/api-client';
+import { useCalendars } from '@/hooks/use-calendars';
+import { useEventsList } from '@/hooks/use-events';
+import { useCalendarTransfer } from '@/hooks/use-calendar-transfer';
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -43,6 +43,8 @@ function formatSelectedDay(dateKey: string): string {
 
 export default function CalendarScreen() {
     const { isAuthenticated } = useAuth();
+    const { downloadCalendarFile } = useCalendarTransfer();
+    const { deleteCalendar } = useCalendarActions();
     const today = new Date();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -55,7 +57,6 @@ export default function CalendarScreen() {
     const [month, setMonth] = useState(today.getMonth());
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
     const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
@@ -65,28 +66,41 @@ export default function CalendarScreen() {
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
+    const {
+        calendars: backendCalendars,
+        loading: loadingCalendars,
+        error: calendarsError,
+        refetch: refetchCalendars,
+    } = useCalendars();
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [calData, evData] = await Promise.all([
-                apiClient.get<any[]>('/calendarios/list'),
-                apiClient.get<any[]>('/eventos/list'),
-            ]);
+    const {
+        events: backendEvents,
+        loading: loadingEvents,
+        error: eventsError,
+        refetch: refetchEvents,
+    } = useEventsList();
 
-            const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+    useEffect(() => {
+        if (calendarsError || eventsError) {
+            console.error('Error fetching data:', calendarsError || eventsError);
+            Alert.alert('Error', 'Could not load calendars or events.');
+        }
+    }, [calendarsError, eventsError]);
 
-            const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
-                id: String(c.id),
-                nombre: c.nombre,
-                descripcion: c.descripcion || '',
-                estado: c.estado,
-                origen: c.origen,
-                creador: c.creador_username || 'unknown',
-                color: COLORS[index % COLORS.length],
-            }));
+    useEffect(() => {
+        const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-            const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
+        const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
+            id: String(c.id),
+            nombre: c.nombre,
+            descripcion: c.descripcion || '',
+            estado: c.estado,
+            origen: c.origen,
+            creador: c.creador_username || 'unknown',
+            color: COLORS[index % COLORS.length],
+        }));
+
+        const mappedEvents: CalendarEvent[] = backendEvents.map((e: any) => {
             const calendar = mappedCalendars.find(c => e.calendarios.includes(Number(c.id)));
             return {
                 id: String(e.id),
@@ -97,24 +111,14 @@ export default function CalendarScreen() {
                 fecha: e.fecha,
                 hora: e.hora.substring(0, 5),
                 recurrencia: e.recurrencia,
-                type: 'other', // Default type
+                type: 'other',
                 color: calendar?.color || '#6C63FF',
             };
         });
 
         setCalendars(mappedCalendars);
         setEvents(mappedEvents);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            Alert.alert('Error', 'Could not load calendars or events.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        void fetchData();
-    }, []);
+    }, [backendCalendars, backendEvents]);
 
     const [open, setOpen] = useState(false);
     const rotation = useRef(new Animated.Value(0)).current;
@@ -187,10 +191,9 @@ export default function CalendarScreen() {
 
         setDeletingCalendarId(calendar.id);
         try {
-            await apiClient.delete(`/calendarios/${calendar.id}/eliminar/`);
-            setInfoCalendar(null);       
-            setDeletingCalendarId(null); 
-            await fetchData();
+            await deleteCalendar(calendar.id);
+            setInfoCalendar(null);
+            await Promise.all([refetchCalendars(), refetchEvents()]);
         } catch (e) {
             console.error('Delete error:', e);
             Alert.alert('Delete failed', String(e));
@@ -224,6 +227,7 @@ export default function CalendarScreen() {
         setMonth(now.getMonth());
     };
     // Added loading para esperar a datos
+    const loading = loadingCalendars || loadingEvents;
     if (loading) {
         return (
             <View style={[styles.screenWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -267,10 +271,10 @@ export default function CalendarScreen() {
         }
         try {
             if (Platform.OS === "web") {
-                await downloadCalendar(selectedCalendarId);
+                await downloadCalendarFile(selectedCalendarId);
                 alert("Calendario descargado correctamente");
             } else {
-                const fileUri = await downloadCalendar(selectedCalendarId);
+                const fileUri = await downloadCalendarFile(selectedCalendarId);
                 if (await Sharing.isAvailableAsync() && fileUri) {
                     await Sharing.shareAsync(fileUri);
                 } else {

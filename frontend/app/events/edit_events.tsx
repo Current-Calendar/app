@@ -18,7 +18,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
-import API_CONFIG from "@/constants/api";
+import { useEditEventApi } from "@/hooks/use-edit-event-api";
 
 const BG = "#FBF7EA";
 const TEXT = "#10464D";
@@ -36,6 +36,7 @@ export default function EditEventsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const eventId = params.id;
+  const { loadCalendars: loadCalendarsApi, loadEvent: loadEventApi, updateEvent: updateEventApi } = useEditEventApi();
   
   const { width } = useWindowDimensions();
 
@@ -68,7 +69,6 @@ export default function EditEventsScreen() {
     const initData = async () => {
       console.log("📱 Edit Events Screen Loaded");
       console.log("📥 Event ID from params:", eventId);
-      console.log("🔗 API Base URL:", API_CONFIG.BaseURL);
       
       if (!eventId) {
         console.error("❌ No event ID provided!");
@@ -84,21 +84,13 @@ export default function EditEventsScreen() {
       await loadEventData(loadedCalendars);
     };
     initData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const loadCalendars = async () => {
     try {
       console.log("📋 Loading calendars...");
-      const url = API_CONFIG.endpoints.getCalendars;
-      console.log("📡 Calling:", url);
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to load calendars: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const loadedCalendars = data.calendarios || [];
+      const loadedCalendars = await loadCalendarsApi();
       console.log("✅ Calendars loaded:", loadedCalendars.length);
       setCalendars(loadedCalendars);
       return loadedCalendars;
@@ -119,19 +111,7 @@ export default function EditEventsScreen() {
 
     setLoading(true);
     try {
-      const url = API_CONFIG.endpoints.getEvent(eventId);
-      console.log("🔍 Fetching event from:", url);
-      
-      const response = await fetch(url);
-      console.log("📊 Response status:", response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Error response:", errorText);
-        throw new Error(`Failed to load event: ${response.status}`);
-      }
-      
-      const event = await response.json();
+      const event = await loadEventApi(String(eventId));
       console.log("✅ Event loaded:", JSON.stringify(event, null, 2));
       
       // Set basic fields
@@ -249,24 +229,7 @@ export default function EditEventsScreen() {
 
       console.log("💾 Saving event:", JSON.stringify(updateData, null, 2));
 
-      const url = API_CONFIG.endpoints.editEvent(eventId!);
-      console.log("📡 Calling:", url);
-
-      const response = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
-      });
-
-      console.log("📊 Response status:", response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ Error response:", errorText);
-        throw new Error(`Failed to update event: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await updateEventApi(String(eventId), updateData);
       console.log("✅ Event updated:", result);
 
       Alert.alert("Success", "Event updated successfully");

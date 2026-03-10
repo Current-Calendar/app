@@ -1,44 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 import { useAuth } from "@/hooks/use-auth";
-import { User } from '../types/user';
-import apiClient from '@/services/api-client';
+import apiClient, { ApiError } from '@/services/api-client';
 
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
-
-const deriveDebuggerHost = () => {
-    const hostUri =
-        Constants.expoConfig?.hostUri ??
-        Constants.expoGoConfig?.hostUri ??
-        Constants.manifest2?.extra?.expoGo?.debuggerHost ??
-        Constants.manifest?.debuggerHost;
-
-    if (!hostUri) {
-        return null;
-    }
-
-    return hostUri.split(':')[0];
-};
-
-const buildDevBaseUrl = () => {
-    const debuggerHost = deriveDebuggerHost();
-
-    if (debuggerHost) {
-        return `http://${debuggerHost}:8000/api/v1/`;
-    }
-
-    return Platform.OS === 'android'
-        ? 'http://10.0.2.2:8000/api/v1/'
-        : 'http://localhost:8000/api/v1/';
-};
-
-const ensureTrailingSlash = (value: string) => (value.endsWith('/') ? value : `${value}/`);
-
-const API_BASE = ensureTrailingSlash(
-    process.env.EXPO_PUBLIC_API_URL ?? buildDevBaseUrl()
-);
 
 export type CalendarItem = {
     id: number;
@@ -47,6 +12,32 @@ export type CalendarItem = {
     estado: string;
     portada: string;
     fecha_creacion?: string;
+};
+
+const hasHttpStatus = (error: unknown, statusCode: number) => {
+    if (error instanceof ApiError) {
+        return error.status === statusCode;
+    }
+    if (error instanceof Error) {
+        return error.message.includes(`HTTP ${statusCode}`);
+    }
+    return false;
+};
+
+const toPublicCalendarItems = (items: any[], creatorId?: number): CalendarItem[] => {
+    if (!Array.isArray(items)) return [];
+
+    return items
+        .filter((item) => item?.estado === 'PUBLICO')
+        .filter((item) => (creatorId ? Number(item?.creador_id) === creatorId : true))
+        .map((item) => ({
+            id: Number(item.id),
+            nombre: item.nombre ?? '',
+            descripcion: item.descripcion ?? '',
+            estado: item.estado ?? 'PUBLICO',
+            portada: item.portada ?? '',
+            fecha_creacion: item.fecha_creacion,
+        }));
 };
 
 export const useUserProfile = (userId?: string) => {
@@ -82,8 +73,19 @@ export const useUserProfile = (userId?: string) => {
             return;
         }
 
+        let profileTargetId = userId;
+        try {
+            profileTargetId = decodeURIComponent(userId);
+        } catch {
+            profileTargetId = userId;
+        }
+        profileTargetId = profileTargetId.trim();
+        const normalizedUsername = profileTargetId.toLowerCase();
+
         async function fetchData() {
             setIsLoading(true);
+            setUserNotFound(false);
+            setFollowError(null);
 
             if (USE_MOCK) {
                 await new Promise(r => setTimeout(r, 700));
@@ -113,27 +115,97 @@ export const useUserProfile = (userId?: string) => {
             }
 
             try {
-                const headers: Record<string, string> = { Accept: 'application/json' };
-                const authToken = apiClient.getAccessToken();
-                if (authToken) {
-                    headers['Authorization'] = `Bearer ${authToken}`;
+                let resolvedUserId = profileTargetId;
+                let searchExactMatch: any | null = null;
+
+                if (!/^\d+$/.test(profileTargetId)) {
+                    const candidates = await apiClient.get<any[]>(
+                        `/usuarios?search=${encodeURIComponent(profileTargetId)}`
+                    );
+
+                    const exactMatch = Array.isArray(candidates)
+                        ? candidates.find((candidate) =>
+                            String(candidate?.username ?? '').toLowerCase() === normalizedUsername
+                        )
+                        : undefined;
+
+                    if (!exactMatch?.id) {
+                        setUserBeingViewed(null);
+                        setUserNotFound(true);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    searchExactMatch = exactMatch;
+                    resolvedUserId = String(exactMatch.id);
                 }
 
-                const response = await fetch(`${API_BASE}users/${userId}/`, {
-                    headers,
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
+                try {
+                    const data = await apiClient.get<any>(`/users/${resolvedUserId}/`);
                     setUserBeingViewed(data);
                     setIsFollowing(Boolean(data.is_following));
-                } else {
-                    setUserNotFound(true);
+                    setUserNotFound(false);
+                } catch (error) {
+                    const notAllowed = hasHttpStatus(error, 401) || hasHttpStatus(error, 403);
+
+                    if (!notAllowed) {
+                        throw error;
+                    }
+
+                    const fallbackUser = searchExactMatch ?? (() => {
+                        if (!/^\d+$/.test(profileTargetId)) return null;
+                        return {
+                            id: Number(profileTargetId),
+                            username: '',
+                            pronombres: null,
+                            biografia: null,
+                            foto: null,
+                            total_seguidores: 0,
+                            total_seguidos: 0,
+                        };
+                    })();
+
+                    const fallbackCandidates = fallbackUser
+                        ? [fallbackUser]
+                        : await apiClient.get<any[]>(
+                            `/usuarios?search=${encodeURIComponent(profileTargetId)}`
+                        );
+
+                    const resolvedFallback = Array.isArray(fallbackCandidates)
+                        ? fallbackCandidates.find((candidate) => {
+                            if (/^\d+$/.test(profileTargetId)) {
+                                return Number(candidate?.id) === Number(profileTargetId);
+                            }
+                            return String(candidate?.username ?? '').toLowerCase() === normalizedUsername;
+                        })
+                        : null;
+
+                    if (!resolvedFallback?.id) {
+                        setUserBeingViewed(null);
+                        setUserNotFound(true);
+                        setIsFollowing(false);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    const publicCalendarsRaw = await apiClient.get<any[]>(
+                        `/calendarios/list?estado=PUBLICO`
+                    );
+
+                    setUserBeingViewed({
+                        ...resolvedFallback,
+                        is_following: false,
+                        public_calendars: toPublicCalendarItems(publicCalendarsRaw, Number(resolvedFallback.id)),
+                    });
+                    setIsFollowing(false);
+                    setUserNotFound(false);
+                    setFollowError('Inicia sesión para ver información completa y seguir a este usuario.');
                 }
             } catch (error) {
                 console.error(error);
+                setUserBeingViewed(null);
                 setUserNotFound(true);
+                setIsFollowing(false);
             }
 
             setIsLoading(false);
@@ -146,6 +218,13 @@ export const useUserProfile = (userId?: string) => {
     const handleFollowToggle = async () => {
         if (!userId) return;
 
+        if (!currentUser) {
+            setFollowError('Inicia sesión para seguir a este usuario.');
+            return;
+        }
+
+        const targetId = userBeingViewed?.id ? String(userBeingViewed.id) : userId;
+
         if (USE_MOCK) {
             await mockFollowToggle();
             return;
@@ -156,32 +235,14 @@ export const useUserProfile = (userId?: string) => {
         setIsFollowing(!previousState);
 
         try {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-            };
-            const authToken = apiClient.getAccessToken();
-            if (authToken) {
-                headers['Authorization'] = `Bearer ${authToken}`;
-            }
+            const data = await apiClient.post<{ followed: boolean }>(`/users/${targetId}/follow/`, {});
 
-            const response = await fetch(`${API_BASE}users/${userId}/follow/`, {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
+            if (typeof data?.followed !== 'boolean') {
                 let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
-                if (response.status === 401 || response.status === 403) {
-                    message = 'Necesitas iniciar sesión para seguir a este usuario.';
-                }
                 setFollowError(message);
                 setIsFollowing(previousState);
                 return;
             }
-
-            const data = await response.json();
             setIsFollowing(Boolean(data.followed));
         } catch (error) {
             console.error('Error follow:', error);

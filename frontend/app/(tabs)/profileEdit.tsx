@@ -17,13 +17,13 @@ import { useRouter } from 'expo-router';
 import { User } from '../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
-import { API_CONFIG } from '@/constants/api';
-import apiClient from '@/services/api-client';
+import { useProfileActions } from '@/hooks/use-profile-actions';
 
 
 const EditProfileScreen = () => {
   const router = useRouter();
   const { user: currentUser, setUser: updateUserContext, logout } = useAuth();
+  const { updateOwnProfile, deleteOwnProfile: deleteOwnProfileRequest } = useProfileActions();
 
 
   // State for form fields - initialize with params from navigation
@@ -65,7 +65,7 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const data: User = await apiClient.put('/users/me', {
+      const data: User = await updateOwnProfile({
         pronombres: pronouns,
         biografia: bio,
       });
@@ -94,7 +94,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
-      await apiClient.delete('/users/me');
+      await deleteOwnProfileRequest();
 
       setShowDeleteConfirm(false);
       await logout();

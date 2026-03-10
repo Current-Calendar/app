@@ -4,12 +4,13 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import apiClient from '@/services/api-client';
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
 
 type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
 
 export default function EditScreen() {
   const router = useRouter();
+  const { updateCalendar } = useCalendarActions();
   const params = useLocalSearchParams<{
     id: string;
     nombre: string;
@@ -63,7 +64,7 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      await apiClient.put(`/calendarios/${Number(calendarId)}/editar/`, {
+      await updateCalendar(Number(calendarId), {
         nombre: calendarData.nombre,
         descripcion: calendarData.descripcion,
         estado: selectedPrivacy,
