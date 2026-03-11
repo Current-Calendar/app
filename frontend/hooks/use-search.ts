@@ -27,7 +27,7 @@ export function useUserSearch(query: string, options: UseSearchOptions = {}) {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await apiClient.get<any[]>(`/usuarios?search=${encodeURIComponent(normalizedQuery)}`);
+        const data = await apiClient.get<any[]>(`/users/search/?search=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
         setResults(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -71,7 +71,7 @@ export function useCalendarSearch(query: string, options: UseSearchOptions = {})
 
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await apiClient.get<any[]>(`/calendarios/list?q=${encodeURIComponent(normalizedQuery)}`);
+        const data = await apiClient.get<any[]>(`/calendars/list?q=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
         setResults(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -115,7 +115,7 @@ export function useEventSearch(query: string, options: UseSearchOptions = {}) {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await apiClient.get<any[]>(`/eventos/list?q=${encodeURIComponent(normalizedQuery)}`);
+        const data = await apiClient.get<any[]>(`/events/list?q=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
         setResults(Array.isArray(data) ? data : []);
       } catch (err) {

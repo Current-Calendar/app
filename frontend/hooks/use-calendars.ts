@@ -16,7 +16,7 @@ export function useCalendars(options: UseCalendarsOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.get<any[]>('/calendarios/list');
+      const data = await apiClient.get<any[]>('/calendars/list/');
       setCalendars(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching calendars:', err);

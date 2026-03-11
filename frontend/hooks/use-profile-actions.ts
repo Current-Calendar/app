@@ -9,7 +9,7 @@ export function useProfileActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.get<any>('/users/me');
+      return await apiClient.get<any>('/users/me/');
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -22,7 +22,7 @@ export function useProfileActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.put<any>('/users/me', payload);
+      return await apiClient.put<any>('/users/me/edit/', payload);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -35,7 +35,7 @@ export function useProfileActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.delete<any>('/users/me');
+      return await apiClient.delete<any>('/users/me/delete/');
     } catch (err) {
       setError(err as Error);
       throw err;

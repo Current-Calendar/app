@@ -16,7 +16,7 @@ export function useEventsList(options: UseEventsOptions = {}) {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.get<any[]>('/eventos/list');
+      const data = await apiClient.get<any[]>('/events/list');
       setEvents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching events:', err);

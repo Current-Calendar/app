@@ -77,8 +77,10 @@ const ProfileScreen = () => {
   const { user: currentUser, logout } = useAuth();
   const { getOwnProfile } = useProfileActions();
   
-  // Determinamos si es "Mi Perfil"
-  const isMe = !userId || userId === String(currentUser?.id);
+  // Determinamos si es "Mi Perfil": sin userId, o coincide con el id numérico o el username del usuario actual
+  const isMe = !userId
+    || userId === String(currentUser?.id)
+    || (!!currentUser?.username && userId.toLowerCase() === currentUser.username.toLowerCase());
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [myCalendars, setMyCalendars] = useState<Calendar[]>([]);

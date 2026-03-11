@@ -3,11 +3,22 @@ import React, { useState } from "react";
 import { Image } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import EventDetailsModal from "./event-details-modal";
-import API_CONFIG from "../constants/api";
 import { mapComponentNativeStyles } from "@/styles/ui-styles";
 
-export default function MapComponent({ location, events }) {
-  const [selectedEvent, setSelectedEvent] = useState(null);
+type EventMarker = {
+  id?: string | number;
+  _id?: string | number;
+  latitude?: number | string;
+  longitude?: number | string;
+};
+
+type LocationPoint = {
+  latitude: number;
+  longitude: number;
+};
+
+export default function MapComponent({ location, events }: { location: LocationPoint; events: EventMarker[] }) {
+  const [selectedEvent, setSelectedEvent] = useState<EventMarker | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const initialRegion = {
@@ -17,7 +28,7 @@ export default function MapComponent({ location, events }) {
     longitudeDelta: 0.05,
   };
 
-  const openEventModal = (event) => {
+  const openEventModal = (event: EventMarker) => {
     setSelectedEvent(event);
     setModalOpen(true);
   };
@@ -35,9 +46,9 @@ export default function MapComponent({ location, events }) {
         showsUserLocation={true}
         showsMyLocationButton={true}
       >
-        {events.map((event, index) => {
-          const lat = parseFloat(event.latitud);
-          const lon = parseFloat(event.longitud);
+        {events.map((event: EventMarker, index: number) => {
+          const lat = parseFloat(String(event.latitude));
+          const lon = parseFloat(String(event.longitude));
           if (!isFinite(lat) || !isFinite(lon)) return null;
 
           return (
@@ -72,7 +83,6 @@ export default function MapComponent({ location, events }) {
         visible={modalOpen}
         onClose={closeModal}
         event={selectedEvent}
-        apiBaseUrl={API_CONFIG.baseURL}
       />
     </>
   );

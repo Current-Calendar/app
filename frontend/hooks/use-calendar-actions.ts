@@ -9,7 +9,7 @@ export function useCalendarActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.post<any>('/calendarios', payload);
+      return await apiClient.post<any>('/calendars/create/', payload);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -22,7 +22,7 @@ export function useCalendarActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.put<any>(`/calendarios/${calendarId}/editar/`, payload);
+      return await apiClient.put<any>(`/calendars/${calendarId}/edit/`, payload);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -35,7 +35,7 @@ export function useCalendarActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.delete<any>(`/calendarios/${calendarId}/eliminar/`);
+      return await apiClient.delete<any>(`/calendars/${calendarId}/delete/`);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -48,7 +48,7 @@ export function useCalendarActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.get<any>('/calendarios/mis-calendarios');
+      return await apiClient.get<any>('/calendars/my-calendars/');
     } catch (err) {
       setError(err as Error);
       throw err;

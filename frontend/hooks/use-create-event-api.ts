@@ -2,6 +2,21 @@ import { useCallback, useState } from 'react';
 import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import apiClient from '@/services/api-client';
 
+type EventPayload = Record<string, unknown>;
+
+const toBackendEventPayload = (payload: EventPayload): EventPayload => {
+  const normalized: EventPayload = { ...payload };
+
+  if (normalized.latitude != null || normalized.longitude != null) {
+    normalized.latitud = normalized.latitude;
+    normalized.longitud = normalized.longitude;
+    delete normalized.latitude;
+    delete normalized.longitude;
+  }
+
+  return normalized;
+};
+
 export function useCreateEventApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -24,7 +39,8 @@ export function useCreateEventApi() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.post<any>('/eventos', payload);
+      const normalizedPayload = toBackendEventPayload((payload ?? {}) as EventPayload);
+      return await apiClient.post<any>('/events/create/', normalizedPayload);
     } catch (err) {
       setError(err as Error);
       throw err;

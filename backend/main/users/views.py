@@ -28,7 +28,7 @@ def search_users(request):
         Q(pronouns__icontains=query)
     ).distinct()
     
-    users = UserSerializer(users, many=True, context={'request': request})
+    users = PublicUserSerializer(users, many=True, context={'request': request})
 
     return Response(users.data, status=status.HTTP_200_OK)
 
@@ -75,9 +75,17 @@ def get_user_by_id(request, pk):
         return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     
     user_data = PublicUserSerializer(user, context={'request': request}).data
-    public_calendars = list(user.calendarios_creados.filter(privacy="PUBLIC").values(
-            "id", "name", "description", "cover", "created_at"
-        ))
+    public_calendars = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "created_at": cal.created_at,
+        }
+        for cal in user.created_calendars.filter(privacy="PUBLIC")
+    ]
     user_data["public_calendars"] = public_calendars
     
     return Response(user_data)

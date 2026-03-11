@@ -12,6 +12,7 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useRegister } from "@/hooks/use-register";
+import { ApiError } from "@/services/api-client";
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -35,6 +36,33 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const getRegisterErrorMessage = (error: unknown) => {
+    if (error instanceof ApiError) {
+      const data = error.data as Record<string, unknown> | undefined;
+
+      const topErrors = data?.errors;
+      if (Array.isArray(topErrors) && topErrors.length > 0) {
+        return String(topErrors[0]);
+      }
+
+      const firstFieldWithErrors = Object.entries(data ?? {}).find(
+        ([, value]) => Array.isArray(value) && value.length > 0,
+      );
+      if (firstFieldWithErrors) {
+        const [field, value] = firstFieldWithErrors;
+        return `${field}: ${String((value as unknown[])[0])}`;
+      }
+
+      return error.message;
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "No connection to API. Check API_BASE / backend running.";
+  };
 
   const onSignup = async () => {
     setErrorMsg(null);
@@ -63,8 +91,8 @@ export default function SignUpScreen() {
       await login(username.trim(), password);
 
       setTimeout(() => router.push("/"), 400);
-    } catch (error: any) {
-      setErrorMsg(error?.message ?? "No connection to API. Check API_BASE / backend running.");
+    } catch (error) {
+      setErrorMsg(getRegisterErrorMessage(error));
     } finally {
       setLoading(false);
     }

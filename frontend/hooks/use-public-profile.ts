@@ -28,15 +28,15 @@ const toPublicCalendarItems = (items: any[], creatorId?: number): CalendarItem[]
     if (!Array.isArray(items)) return [];
 
     return items
-        .filter((item) => item?.estado === 'PUBLICO')
-        .filter((item) => (creatorId ? Number(item?.creador_id) === creatorId : true))
+        .filter((item) => !item?.privacy || item?.privacy === 'PUBLIC')
+        .filter((item) => (creatorId ? Number(item?.creator_id) === creatorId : true))
         .map((item) => ({
             id: Number(item.id),
-            nombre: item.nombre ?? '',
-            descripcion: item.descripcion ?? '',
-            estado: item.estado ?? 'PUBLICO',
-            portada: item.portada ?? '',
-            fecha_creacion: item.fecha_creacion,
+            name: item.name ?? '',
+            description: item.description ?? '',
+            privacy: item.privacy ?? 'PUBLIC',
+            cover: item.cover ?? '',
+            created_at: item.created_at,
         }));
 };
 
@@ -120,7 +120,7 @@ export const useUserProfile = (userId?: string) => {
 
                 if (!/^\d+$/.test(profileTargetId)) {
                     const candidates = await apiClient.get<any[]>(
-                        `/usuarios?search=${encodeURIComponent(profileTargetId)}`
+                        `/users/search/?search=${encodeURIComponent(profileTargetId)}`
                     );
 
                     const exactMatch = Array.isArray(candidates)
@@ -142,7 +142,10 @@ export const useUserProfile = (userId?: string) => {
 
                 try {
                     const data = await apiClient.get<any>(`/users/${resolvedUserId}/`);
-                    setUserBeingViewed(data);
+                    setUserBeingViewed({
+                        ...data,
+                        public_calendars: toPublicCalendarItems(data.public_calendars ?? []),
+                    });
                     setIsFollowing(Boolean(data.is_following));
                     setUserNotFound(false);
                 } catch (error) {
@@ -157,18 +160,18 @@ export const useUserProfile = (userId?: string) => {
                         return {
                             id: Number(profileTargetId),
                             username: '',
-                            pronombres: null,
-                            biografia: null,
-                            foto: null,
-                            total_seguidores: 0,
-                            total_seguidos: 0,
+                            pronouns: null,
+                            bio: null,
+                            photo: null,
+                            total_followers: 0,
+                            total_following: 0,
                         };
                     })();
 
                     const fallbackCandidates = fallbackUser
                         ? [fallbackUser]
                         : await apiClient.get<any[]>(
-                            `/usuarios?search=${encodeURIComponent(profileTargetId)}`
+                            `/users/search/?search=${encodeURIComponent(profileTargetId)}`
                         );
 
                     const resolvedFallback = Array.isArray(fallbackCandidates)
@@ -189,7 +192,7 @@ export const useUserProfile = (userId?: string) => {
                     }
 
                     const publicCalendarsRaw = await apiClient.get<any[]>(
-                        `/calendarios/list?estado=PUBLICO`
+                        `/calendars/list?privacy=PUBLIC`
                     );
 
                     setUserBeingViewed({

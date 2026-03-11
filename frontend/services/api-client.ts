@@ -62,13 +62,13 @@ class ApiClient {
 
     await this.setTokens(response.access, response.refresh);
 
-    const user = await apiClient.get<User>('/users/me');
+    const user = await apiClient.get<User>('/users/me/');
     this.user = user;
     await this.storage.setItem('user', JSON.stringify(user));
   }
 
   async register(data: RegisterData): Promise<any> {
-    return await this.post<any>("/auth/registro/", data);
+    return await this.post<any>("/auth/register/", data);
   }
 
   private async refreshAccessToken(): Promise<boolean> {
@@ -113,6 +113,7 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
+    const hadAccessToken = Boolean(this.accessToken);
     if (this.accessToken) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
@@ -122,12 +123,27 @@ class ApiClient {
       headers,
     });
 
-    // If 401, attempt to refresh the token
-    if (response.status === 401 && this.refreshToken) {
-      const refreshed = await this.refreshAccessToken();
+    // If 401, first attempt to refresh the token
+    if (response.status === 401) {
+      let retried = false;
 
-      if (refreshed && this.accessToken) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
+      if (this.refreshToken) {
+        const refreshed = await this.refreshAccessToken();
+
+        if (refreshed && this.accessToken) {
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+          response = await fetch(url, {
+            ...options,
+            headers,
+          });
+          retried = true;
+        }
+      }
+
+      if (!retried && hadAccessToken) {
+        this.user = null;
+        await this.clearTokens();
+        delete headers['Authorization'];
         response = await fetch(url, {
           ...options,
           headers,

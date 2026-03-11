@@ -28,7 +28,7 @@ export function useNearbyEvents(
     setError(null);
     try {
       const data = await apiClient.get<any[]>(
-        `/radar?lat=${coords.latitude}&lon=${coords.longitude}&radio=${radiusKm}`,
+        `/radar/?lat=${coords.latitude}&lon=${coords.longitude}&radio=${radiusKm}`,
       );
       setEvents(Array.isArray(data) ? data : []);
     } catch (err) {

@@ -9,7 +9,7 @@ export function useEventActions() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.delete(`/eventos/${eventId}/delete/`);
+      await apiClient.delete(`/events/${eventId}/delete/`);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -22,7 +22,7 @@ export function useEventActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.get<any>(`/eventos/${eventId}`);
+      return await apiClient.get<any>(`/events/${eventId}/edit/`);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -35,7 +35,7 @@ export function useEventActions() {
     setLoading(true);
     setError(null);
     try {
-      return await apiClient.put<any>(`/eventos/${eventId}`, payload);
+      return await apiClient.put<any>(`/events/${eventId}/edit/`, payload);
     } catch (err) {
       setError(err as Error);
       throw err;
