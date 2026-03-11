@@ -17,6 +17,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import apiClient from '@/services/api-client';
 
 const BG = "#E8E5D8";
@@ -306,14 +307,15 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const router = useRouter();
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate("calendars");
+    else router.replace("/(tabs)/calendars");
   };
 
   const goToRoot = () => {
-    navigation.navigate("calendars");
+    router.replace(`/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`);
   };
 
   const { width } = useWindowDimensions();
@@ -576,7 +578,7 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/events', payload);
+      await apiClient.post<any>('/events/create/', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
