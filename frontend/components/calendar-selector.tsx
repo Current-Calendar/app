@@ -5,11 +5,12 @@ import {
     TouchableOpacity,
     Modal,
     FlatList,
-    StyleSheet,
     Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
+import { AppColors } from '@/styles/tokens';
+import { calendarSelectorStyles } from '@/styles/calendar-styles';
 
 interface CalendarSelectorProps {
     calendars: Calendar[];
@@ -29,7 +30,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
     const [open, setOpen] = useState(false);
 
     const selected = selectedId ? calendars.find((c) => c.id === selectedId) : null;
-    const displayColor = selected?.color ?? '#10464d';
+    const displayColor = selected?.color ?? AppColors.brand;
     const displayName = selected?.name ?? 'All Calendars';
 
     // "All Calendars" pseudo-entry
@@ -38,30 +39,30 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
         name: 'All Calendars',
         description: '',
         privacy: 'PUBLIC',
-        origen: 'CURRENT',
+        origin: 'CURRENT',
         creator: '',
-        color: '#10464d',
+        color: AppColors.brand,
     };
     const options = [allOption, ...calendars];
 
     return (
-        <View style={styles.row}>
+        <View style={calendarSelectorStyles.row}>
             <TouchableOpacity
-                style={[styles.trigger, { borderColor: displayColor }]}
+                style={[calendarSelectorStyles.trigger, { borderColor: displayColor }]}
                 onPress={() => setOpen(true)}
                 activeOpacity={0.7}
             >
-                <View style={[styles.dot, { backgroundColor: displayColor }]} />
-                <Text style={styles.triggerLabel} numberOfLines={1}>
+                <View style={[calendarSelectorStyles.dot, { backgroundColor: displayColor }]} />
+                <Text style={calendarSelectorStyles.triggerLabel} numberOfLines={1}>
                     {displayName}
                 </Text>
                 <Ionicons name="chevron-down" size={14} color="#888" />
             </TouchableOpacity>
 
-            {/* Info button — only visible when a specific calendar is selected */}
+            {/* Info button â€” only visible when a specific calendar is selected */}
             {selected && onInfoPress && (
                 <TouchableOpacity
-                    style={[styles.infoBtn, { borderColor: displayColor }]}
+                    style={[calendarSelectorStyles.infoBtn, { borderColor: displayColor }]}
                     onPress={() => onInfoPress(selected)}
                     activeOpacity={0.7}
                 >
@@ -75,9 +76,9 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                 animationType="fade"
                 onRequestClose={() => setOpen(false)}
             >
-                <Pressable style={styles.overlay} onPress={() => setOpen(false)}>
-                    <View style={styles.dropdown}>
-                        <Text style={styles.dropdownTitle}>Select Calendar</Text>
+                <Pressable style={calendarSelectorStyles.overlay} onPress={() => setOpen(false)}>
+                    <View style={calendarSelectorStyles.dropdown}>
+                        <Text style={calendarSelectorStyles.dropdownTitle}>Select Calendar</Text>
                         <FlatList
                             data={options}
                             keyExtractor={(c) => c.id}
@@ -87,7 +88,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                                 return (
                                     <TouchableOpacity
                                         style={[
-                                            styles.option,
+                                            calendarSelectorStyles.option,
                                             isActive && { backgroundColor: item.color + '18' },
                                         ]}
                                         onPress={() => {
@@ -96,10 +97,10 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                                         }}
                                         activeOpacity={0.7}
                                     >
-                                        <View style={[styles.dot, { backgroundColor: item.color }]} />
+                                        <View style={[calendarSelectorStyles.dot, { backgroundColor: item.color }]} />
                                         <Text
                                             style={[
-                                                styles.optionLabel,
+                                                calendarSelectorStyles.optionLabel,
                                                 isActive && { fontWeight: '700', color: item.color },
                                                 { flex: 1 },
                                             ]}
@@ -122,7 +123,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                                                     onInfoPress(item);
                                                 }}
                                                 hitSlop={10}
-                                                style={{ paddingLeft: 12 }}
+                                                style={calendarSelectorStyles.infoAction}
                                             >
                                                 <Ionicons name="information-circle-outline" size={20} color={item.color} />
                                             </TouchableOpacity>
@@ -137,93 +138,3 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    trigger: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        borderRadius: 25,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        maxWidth: 200,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-    dot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
-    },
-    triggerLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#2D2D2D',
-        flexShrink: 1,
-    },
-    infoBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-    overlay: {
-        flex: 1,
-        backgroundColor: '#00000040',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 24,
-    },
-    dropdown: {
-        width: 280,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        paddingVertical: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 10,
-    },
-    dropdownTitle: {
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-        textTransform: 'uppercase',
-        color: '#888',
-        marginHorizontal: 16,
-        marginBottom: 4,
-        marginTop: 4,
-    },
-    option: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginHorizontal: 4,
-    },
-    optionLabel: {
-        fontSize: 15,
-        color: '#2D2D2D',
-    },
-});

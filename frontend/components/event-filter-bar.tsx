@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EventType } from '@/types/calendar';
+import { AppColors } from '@/styles/tokens';
+import { eventFilterBarStyles } from '@/styles/calendar-styles';
 
 type FilterOption = {
     type: EventType | '__all__';
@@ -32,7 +34,7 @@ export function EventFilterBar({ selected, onChange }: EventFilterBarProps) {
         <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.strip}
+            contentContainerStyle={eventFilterBarStyles.strip}
         >
             {EVENT_TYPE_OPTIONS.map((opt) => {
                 const isActive =
@@ -43,20 +45,20 @@ export function EventFilterBar({ selected, onChange }: EventFilterBarProps) {
                         key={opt.type}
                         onPress={() => onChange(opt.type === '__all__' ? null : (opt.type as EventType))}
                         style={[
-                            styles.chip,
-                            isActive ? styles.chipActive : styles.chipInactive,
+                            eventFilterBarStyles.chip,
+                            isActive ? eventFilterBarStyles.chipActive : eventFilterBarStyles.chipInactive,
                         ]}
                         activeOpacity={0.7}
                     >
                         <Ionicons
                             name={opt.icon}
                             size={14}
-                            color={isActive ? '#fff' : '#10464d'}
+                            color={isActive ? AppColors.surface : AppColors.brand}
                         />
                         <Text
                             style={[
-                                styles.label,
-                                { color: isActive ? '#fff' : '#2D2D2D' },
+                                eventFilterBarStyles.label,
+                                { color: isActive ? AppColors.surface : AppColors.textPrimary },
                             ]}
                         >
                             {opt.label}
@@ -67,41 +69,3 @@ export function EventFilterBar({ selected, onChange }: EventFilterBarProps) {
         </ScrollView>
     );
 }
-
-const styles = StyleSheet.create({
-    strip: {
-        paddingHorizontal: 14,
-        paddingVertical: 4,
-        gap: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    chip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        borderRadius: 20,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    chipActive: {
-        backgroundColor: '#10464d',
-        shadowColor: '#10464d',
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 3,
-    },
-    chipInactive: {
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 1 },
-        elevation: 1,
-    },
-    label: {
-        fontSize: 12,
-        fontWeight: '600',
-    },
-});

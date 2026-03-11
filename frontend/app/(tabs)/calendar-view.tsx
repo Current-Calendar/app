@@ -73,7 +73,7 @@ export default function CalendarViewScreen() {
       if (!response.ok) throw new Error('Failed to load events');
 
       const data = await response.json();
-      // Backend returns array directly, not { eventos: [...] }
+      // Backend returns array directly, not { events: [...] }
       const allEvents = Array.isArray(data) ? data : [];
 
       // Transform backend events: expand by calendar

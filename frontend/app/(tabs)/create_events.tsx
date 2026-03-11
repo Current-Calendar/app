@@ -448,7 +448,7 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    // si el usuario escribe manualmente, invalidamos coords (hasta que elija sugerencia)
+    // si el user escribe manualmente, invalidamos coords (hasta que elija sugerencia)
     setLat(null);
     setLon(null);
 
@@ -500,7 +500,7 @@ export default function CreateEventsScreen() {
       } catch (e: any) {
         if (cancelled) return;
         setSuggestions([]);
-        setPlaceError(e?.message ?? "Error buscando ubicaciones");
+        setPlaceError(e?.message ?? "Error buscando locationes");
       } finally {
         if (!cancelled) setPlaceLoading(false);
       }
@@ -553,7 +553,7 @@ export default function CreateEventsScreen() {
       return;
     }
     if (!selectedCalendar?.id) {
-      setFormError("Selecciona un calendario.");
+      setFormError("Selecciona un calendar.");
       return;
     }
 
@@ -564,7 +564,7 @@ export default function CreateEventsScreen() {
       date: toISODate(date),
       time: toHMS(time),
       calendars: [Number(selectedCalendar.id)],
-      creador_id: 2, // MOCK por ahora
+      creator_id: 2, // MOCK por atime
     };
 
     // Send coords if available (backend expects latitude/longitude)
@@ -580,7 +580,7 @@ export default function CreateEventsScreen() {
 
       setSuccessModalOpen(true);
     } catch (e: any) {
-      setFormError(e?.message ?? "No se pudo crear el evento");
+      setFormError(e?.message ?? "No se pudo crear el event");
     } finally {
       setPublishing(false);
     }
@@ -647,7 +647,7 @@ export default function CreateEventsScreen() {
               </Pressable>
 
               <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /eventos no recibe imagen)
+                (No se envía aún: el endpoint /events no recibe imagen)
               </Text>
             </View>
           </View>
@@ -786,7 +786,7 @@ export default function CreateEventsScreen() {
                     <Text style={styles.modalItemText}>{item.name}</Text>
                   </Pressable>
                 )}
-                ListEmptyComponent={<Text style={styles.helperText}>No hay calendarios. Crea uno primero.</Text>}
+                ListEmptyComponent={<Text style={styles.helperText}>No hay calendars. Crea uno primero.</Text>}
               />
             )}
           </View>
@@ -802,7 +802,7 @@ export default function CreateEventsScreen() {
             </View>
 
             <Text style={styles.successTitle}>¡Listo!</Text>
-            <Text style={styles.successBody}>Evento creado correctamente</Text>
+            <Text style={styles.successBody}>Event creado correctamente</Text>
 
             <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
               <Text style={styles.successBtnText}>OK</Text>

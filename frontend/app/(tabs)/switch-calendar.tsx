@@ -35,7 +35,7 @@ export default function CalendarsScreen() {
           name: c.name,
           description: c.description || '',
           privacy: c.privacy,
-          origen: c.origen,
+          origin: c.origin,
           creator: c.creator_username || 'unknown',
           color: COLORS[index % COLORS.length],
           cover: c.cover || null,
