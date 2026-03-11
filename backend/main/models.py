@@ -27,6 +27,9 @@ class User(AbstractUser):
     def total_subscribed_calendars(self):
         return self.subscribed_calendars.count()
 
+    def is_friend_with(self, other: "User"):
+        return self.following.filter(pk=other.pk).exists() and other.following.filter(pk=self.pk).exists()
+
     def __str__(self):
         return self.username
 

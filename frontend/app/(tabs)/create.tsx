@@ -123,7 +123,7 @@ export default function CreateScreen() {
         formData.append("cover", blob, filename);
       }
 
-      await apiClient.post("/calendars", formData);
+      await apiClient.post("/calendars/create/", formData);
 
       router.replace("/(tabs)/calendars");
     } catch (error) {
@@ -134,15 +134,6 @@ export default function CreateScreen() {
     }
   };
 
-  const handleDraft = async () => {
-    try {
-      // TODO: Save as draft
-      Alert.alert("Success", "Calendar saved as draft");
-      console.log("Calendar saved as draft");
-    } catch (error) {
-      Alert.alert("Error", "Failed to save draft" + error);
-    }
-  };
 
   return (
     <View style={styles.wrapper}>
@@ -309,31 +300,23 @@ export default function CreateScreen() {
             </Text>
           </View>
 
-          {/* ACTION BUTTONS */}
-          <View
-            style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}
-          >
-            <Pressable style={styles.draftButton} onPress={handleDraft}>
-              <Text style={styles.draftButtonText}>Save as Draft</Text>
+          {/* ACTION BUTTON (desktop) */}
+          {isDesktop && (
+            <Pressable
+              style={[
+                styles.publishButton,
+                isLoading && styles.publishButtonDisabled,
+              ]}
+              onPress={handlePublish}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.publishText}>Create Calendar</Text>
+              )}
             </Pressable>
-
-            {isDesktop && (
-              <Pressable
-                style={[
-                  styles.publishButton,
-                  isLoading && styles.publishButtonDisabled,
-                ]}
-                onPress={handlePublish}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.publishText}>Create Calendar</Text>
-                )}
-              </Pressable>
-            )}
-          </View>
+          )}
         </View>
       </ScrollView>
 
@@ -534,28 +517,6 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  buttonGroup: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  buttonGroupDesktop: {
-    justifyContent: "space-between",
-  },
-  draftButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  draftButtonText: {
-    color: "#10464d",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
   publishContainer: {
     position: "absolute",
     bottom: 24,
