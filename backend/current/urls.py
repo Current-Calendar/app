@@ -55,6 +55,7 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/publish/', calendar_views.publish_calendar, name='publish_calendar'),
     path('api/v1/calendars/<int:calendar_id>/delete/', calendar_views.delete_calendar, name='delete_calendar'),
     path('api/v1/calendars/<int:calendar_id>/edit/', calendar_views.edit_calendar, name='edit_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/subscribe/', calendar_views.subscribe_calendar, name='subscribe_calendar'),
     path('api/v1/calendars/create/', calendar_views.create_calendar, name='create_calendar'),
     path('api/v1/calendars/list/', calendar_views.list_calendars, name='list_calendarios'),
     path('api/v1/calendars/my-calendars/', calendar_views.list_my_calendars, name='list_my_calendarios'),

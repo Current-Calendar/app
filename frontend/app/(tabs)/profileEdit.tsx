@@ -68,7 +68,7 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const data: User = await apiClient.put('/users/me', {
+      const data: User = await apiClient.put('/users/me/edit/', {
         pronouns: pronouns,
         bio: bio,
       });
@@ -123,7 +123,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
-      await apiClient.delete('/users/me');
+      await apiClient.delete('/users/me/delete/');
 
       setShowDeleteConfirm(false);
       await logout();

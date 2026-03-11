@@ -56,7 +56,7 @@ class ApiClient {
   }
 
   async register(data: RegisterData): Promise<any> {
-    return await this.post<any>("/auth/registro/", data);
+    return await this.post<any>("/auth/register/", data);
   }
 
   private async refreshAccessToken(): Promise<boolean> {
