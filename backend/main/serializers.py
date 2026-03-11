@@ -166,7 +166,7 @@ class UserSerializer(serializers.ModelSerializer):
 class EditProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['photo', 'pronouns', 'link', 'bio']
+        fields = ['username', 'photo', 'pronouns', 'link', 'bio']
 
 
 class CalendarSummarySerializer(serializers.ModelSerializer):

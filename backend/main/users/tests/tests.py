@@ -66,7 +66,7 @@ class BorrarUsuarioTestCase(APITestCase):
         response = self.client.delete(
             self.url,
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         
 
 class BuscarUsuariosTests(TestCase):
@@ -231,6 +231,6 @@ class EditarUsuarioTestCase(TestCase):
             {"email": self.user.email, "username": "hackeado"},
             format="json"
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.user.refresh_from_db()
         self.assertNotEqual(self.user.username, "hackeado")
