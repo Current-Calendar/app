@@ -311,51 +311,31 @@ export default function CreateScreen() {
 
           {/* ACTION BUTTONS */}
           <View
-            style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}
+            style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
           >
             <Pressable style={styles.draftButton} onPress={handleDraft}>
               <Text style={styles.draftButtonText}>Save as Draft</Text>
             </Pressable>
 
-            {isDesktop && (
-              <Pressable
-                style={[
-                  styles.publishButton,
-                  isLoading && styles.publishButtonDisabled,
-                ]}
-                onPress={handlePublish}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.publishText}>Create Calendar</Text>
-                )}
-              </Pressable>
-            )}
+            <Pressable
+              style={[
+                styles.publishButton,
+                isLoading && styles.publishButtonDisabled,
+              ]}
+              onPress={handlePublish}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.publishText}>Create Calendar</Text>
+              )}
+            </Pressable>
           </View>
         </View>
       </ScrollView>
 
-      {/* PUBLISH BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.publishContainer}>
-          <Pressable
-            style={[
-              styles.publishButton,
-              isLoading && styles.publishButtonDisabled,
-            ]}
-            onPress={handlePublish}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.publishText}>Create Calendar</Text>
-            )}
-          </Pressable>
-        </View>
-      )}
+
     </View>
   );
 }
@@ -556,12 +536,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  publishContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-  },
   publishButton: {
     flex: 1,
     backgroundColor: "#10464d",

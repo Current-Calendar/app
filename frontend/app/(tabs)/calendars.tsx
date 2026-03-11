@@ -49,7 +49,7 @@ export default function CalendarScreen() {
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
 
-    const BOTTOM_BAR_HEIGHT = 60 + 20;
+    const BOTTOM_BAR_HEIGHT = 60 + 25;
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
@@ -456,7 +456,7 @@ export default function CalendarScreen() {
             {optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
-                const fabBottom = Platform.OS === "web" ? 30 : 90;
+                const fabBottom = isDesktop ? 30 : BOTTOM_BAR_HEIGHT;
                 const isCalendar = index === 1;
                 const text = isCalendar ? "Export calendar" : "Download as PNG";
                 const onPress = isCalendar ? exportCalendar : exportPng;
@@ -479,7 +479,7 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
+            <Pressable style={[styles.fab, { bottom: isDesktop ? 30 : BOTTOM_BAR_HEIGHT, },]} onPress={toggleMenu}>
                 <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
                     <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
                 </Animated.View>

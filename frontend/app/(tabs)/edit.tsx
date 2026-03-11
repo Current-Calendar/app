@@ -81,7 +81,7 @@ export default function EditScreen() {
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
+        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop, !isDesktop && { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* FORM CARD */}
@@ -180,27 +180,7 @@ export default function EditScreen() {
             </Text>
           </View>
 
-          {/* DESKTOP BUTTON */}
-          {isDesktop && (
-            <Pressable
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-              onPress={handleEdit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.saveText}>Save Changes</Text>
-              )}
-            </Pressable>
-          )}
-
-        </View>
-      </ScrollView>
-
-      {/* SAVE BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.saveContainer}>
+          {/* SAVE BUTTON */}
           <Pressable
             style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
             onPress={handleEdit}
@@ -212,8 +192,9 @@ export default function EditScreen() {
               <Text style={styles.saveText}>Save Changes</Text>
             )}
           </Pressable>
+
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
@@ -225,7 +206,7 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingBottom: 40,
   },
   containerDesktop: {
     alignItems: "center",
@@ -359,12 +340,6 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  saveContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-  },
   saveButton: {
     flex: 1,
     backgroundColor: "#10464d",
