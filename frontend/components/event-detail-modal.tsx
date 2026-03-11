@@ -1,124 +1,261 @@
-import React from 'react';
+import React from "react";
 import {
-    View,
-    Text,
-    TouchableOpacity,
+  View,
+  Text,
+  Modal,
+  Pressable,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
-import { eventDetailModalStyles } from '@/styles/calendar-styles';
-import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+
+const BG = "#E8E5D8";
+const TEXT = "#10464D";
+const TEAL = "#1F6A6A";
+const RED = "#D64545";
+const RED_DARK = "#B22222";
 
 interface EventDetailModalProps {
-    event: CalendarEvent | null;
-    onClose: () => void;
+  event: CalendarEvent | null;
+  onClose: () => void;
 }
 
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
-    const router = useRouter();
-    const { deleteEvent } = useEventActions();
+  const router = useRouter();
+  const { deleteEvent } = useEventActions();
 
-    if (!event) return null;
-
-    const accent = event.color ?? '#10464d';
+  if (!event) return null;
 
     const handleDeleteEvent = async (eventId: string) => {
         try {
-            await deleteEvent(eventId);
-            onClose();
-            router.replace('/calendars');
+        await deleteEvent(eventId);
+        onClose();
+        router.replace('/calendars');
         }
         catch (error) {
             console.log('Error deleting event:', error);
         }
     };
 
-    return (
-        <BottomSheetModal visible={!!event} onClose={onClose}>
-            <View style={eventDetailModalStyles.titleRow}>
-                <View style={[eventDetailModalStyles.accentBar, { backgroundColor: accent }]} />
-                <View style={eventDetailModalStyles.titleContent}>
-                    <Text style={eventDetailModalStyles.title}>{event.title}</Text>
-                </View>
-                <TouchableOpacity onPress={onClose} hitSlop={12}>
-                    <Ionicons name="close-circle" size={26} color="#bbb" />
-                </TouchableOpacity>
+  return (
+    <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={18} color={TEXT} />
+          </Pressable>
+
+          <View style={styles.content}>
+            <Text style={styles.title}>{event.title}</Text>
+
+            {!!event.place_name && (
+              <DetailRow icon="location-outline" label={event.place_name} />
+            )}
+
+            <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+
+            {!!event.time && (
+              <DetailRow icon="time-outline" label={event.time} />
+            )}
+
+            {!!event.location && (
+              <DetailRow
+                icon="navigate-outline"
+                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
+              />
+            )}
+          </View>
+
+          {!!event.description && (
+            <View style={styles.descWrap}>
+              <Text style={styles.descTitle}>Description:</Text>
+              <Text style={styles.descText}>{event.description}</Text>
             </View>
+          )}
 
-            {event.description ? (
-                <Text style={eventDetailModalStyles.description}>{event.description}</Text>
-            ) : null}
+          <View style={styles.actions}>
+            <Pressable
+              style={styles.editBtn}
+              onPress={() => {
+                onClose();
+                router.push({
+                  pathname: "/edit_events",
+                  params: { id: event.id },
+                });
+              }}
+            >
+              <Ionicons name="pencil" size={16} color="#EAF7F6" />
+              <Text style={styles.editText}>Edit</Text>
+            </Pressable>
 
-            <View style={eventDetailModalStyles.detailsContainer}>
-                <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
-                <DetailRow icon="time-outline" label={event.time} />
-
-                {event.place_name ? (
-                    <DetailRow icon="location-outline" label={event.place_name} />
-                ) : null}
-
-                {event.location && (
-                    <DetailRow
-                        icon="navigate-outline"
-                        label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
-                    />
-                )}
-
-                {event.recurrence && (
-                    <DetailRow icon="repeat-outline" label={event.recurrence} />
-                )}
-            </View>
-
-            <View style={eventDetailModalStyles.actions}>
-                <TouchableOpacity
-                    style={eventDetailModalStyles.editButton}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                        onClose();
-                        router.push({ pathname: '/events/edit_events', params: { id: event.id } });
-                    }}
-                >
-                    <Ionicons name="pencil" size={16} color="#fff" />
-                    <Text style={eventDetailModalStyles.editButtonLabel}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={eventDetailModalStyles.deleteButton}
-                    activeOpacity={0.7}
-                    onPress={() => handleDeleteEvent(event.id)}
-                >
-                    <Ionicons name="trash-outline" size={16} color="#eb8c85" />
-                    <Text style={eventDetailModalStyles.deleteButtonLabel}>Delete</Text>
-                </TouchableOpacity>
-            </View>
-        </BottomSheetModal>
-    );
+            <Pressable
+              style={styles.deleteBtn}
+              onPress={() => handleDeleteEvent(event.id)}
+            >
+              <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.deleteText}>Delete</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 }
 
 function DetailRow({
-    icon,
-    label,
+  icon,
+  label,
 }: {
-    icon: React.ComponentProps<typeof Ionicons>['name'];
-    label: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
 }) {
-    return (
-        <View style={eventDetailModalStyles.detailRow}>
-            <Ionicons name={icon} size={17} color="#888" />
-            <Text style={eventDetailModalStyles.detailLabel}>{label}</Text>
-        </View>
-    );
+  return (
+    <View style={styles.row}>
+      <Ionicons name={icon} size={16} color={TEXT} />
+      <Text style={styles.rowText}>{label}</Text>
+    </View>
+  );
 }
 
 function formatDate(iso: string): string {
-    const [y, m, d] = iso.split('-');
-    const date = new Date(Number(y), Number(m) - 1, Number(d));
-    return date.toLocaleDateString(undefined, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
+  const [y, m, d] = iso.split("-");
+  const date = new Date(Number(y), Number(m) - 1, Number(d));
+
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+  },
+
+  card: {
+    width: "92%",
+    maxWidth: 520,
+    backgroundColor: BG,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: "rgba(16,70,77,0.22)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+
+  closeBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 5,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.75)",
+    borderWidth: 1.5,
+    borderColor: "rgba(16,70,77,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    gap: 10,
+  },
+
+  title: {
+    color: TEXT,
+    fontWeight: "900",
+    fontSize: 22,
+  },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  rowText: {
+    color: TEXT,
+    fontWeight: "800",
+    fontSize: 15,
+  },
+
+  descWrap: {
+    marginTop: 12,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(16,70,77,0.14)",
+  },
+
+  descTitle: {
+    color: TEXT,
+    fontWeight: "900",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+
+  descText: {
+    color: TEXT,
+    fontWeight: "700",
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.9,
+  },
+
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    padding: 16,
+  },
+
+  editBtn: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: TEAL,
+    borderWidth: 2,
+    borderColor: "#0B3D3D",
+  },
+
+  editText: {
+    color: "#EAF7F6",
+    fontWeight: "900",
+  },
+
+  deleteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: RED,
+    borderWidth: 2,
+    borderColor: RED_DARK,
+  },
+
+  deleteText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+});

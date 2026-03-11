@@ -54,8 +54,9 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={eventDetailsModalStyles.overlay}>
-        <View style={eventDetailsModalStyles.card}>
+      <Pressable style={eventDetailsModalStyles.overlay} onPress={onClose}>
+        <Pressable style={eventDetailsModalStyles.card} onPress={() => {}}>
+          {/* Close X */}
           <Pressable onPress={onClose} style={eventDetailsModalStyles.closeBtn} hitSlop={10}>
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
@@ -111,9 +112,9 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
           <Pressable onPress={onClose} style={eventDetailsModalStyles.primaryBtn}>
             <Text style={eventDetailsModalStyles.primaryBtnText}>Cerrar</Text>
           </Pressable>
-        </View>
-      </View>
-    </Modal>
+        </Pressable>
+        </Pressable>
+        </Modal>
   );
 }
 
