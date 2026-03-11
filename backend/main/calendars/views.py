@@ -27,7 +27,7 @@ ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 def publish_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
-    if calendar.creator !=request.user:
+    if calendar.creator != request.user:
         return Response(
             {"errors": ["No tienes permiso para publicar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
@@ -109,8 +109,6 @@ def edit_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated])
 def create_calendar(request):
     data = request.data
-    print("DATA:", request.data)
-    print("FILES:", request.FILES)
 
     name = data.get('name')
 
