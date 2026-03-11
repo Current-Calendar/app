@@ -1,23 +1,51 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
-const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
-const stripLeadingSlashes = (value: string) => value.replace(/^\/+/, '');
+const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
+const stripLeadingSlashes = (value: string) => value.replace(/^\/+/, "");
 
 const normalizedBaseURL = stripTrailingSlashes(API_URL);
 
+const rootBaseURL = normalizedBaseURL.replace(/\/api\/v1$/, "");
+
+
+const buildRootEndpoint = (path: string) => {
+  const normalizedPath = stripLeadingSlashes(path);
+  if (!rootBaseURL) return `/${normalizedPath}`;
+  return `${rootBaseURL}/${normalizedPath}`;
+};
+
 const buildEndpoint = (path: string) => {
   const normalizedPath = stripLeadingSlashes(path);
-  if (!normalizedBaseURL) {
-    return `/${normalizedPath}`;
-  }
+  if (!normalizedBaseURL) return `/${normalizedPath}`;
   return `${normalizedBaseURL}/${normalizedPath}`;
 };
 
 export const API_CONFIG = {
-  baseURL: normalizedBaseURL,
+  rootBaseURL,
+  BaseURL: normalizedBaseURL,
+
   endpoints: {
+    graphql: buildRootEndpoint("graphql/"),
+
+    register: buildEndpoint("auth/register/"),
     mock: buildEndpoint('mock'),
-    deleteCalendar: (calendarId: number) => buildEndpoint(`calendarios/${calendarId}/eliminar/`),
+    getCalendars: buildEndpoint('calendars/list'),
+    getEvents: buildEndpoint('events/list'),
+    deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
+    ownProfile: buildEndpoint('users/me'),
+    searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
+    searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
+    searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
+    nearbyEvents: (lat: number, lon: number, radio: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radius=${radio}`),
+    createCalendar: buildEndpoint('calendars'),
+    editCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/edit/`),
+    createEvent: buildEndpoint('events'),
+    getEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}`),
+    editEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}`),
+    deleteEvent: (eventId: string) => buildEndpoint(`events/${eventId}/delete/`),
+    recoverPassword: buildEndpoint('auth/recover-password/'),
+    setNewPassword: buildEndpoint('auth/set-new-password/'),
+    validateResetToken: buildEndpoint('auth/validate-reset-token/'),
   },
 };
 

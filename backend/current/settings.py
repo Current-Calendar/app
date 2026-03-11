@@ -20,6 +20,9 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
@@ -30,7 +33,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com']
+ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
 
 ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
 
@@ -39,6 +42,9 @@ GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID')
 
 GOOGLE_REDIRECT_URIS = os.getenv('GOOGLE_REDIRECT_URIS')
+
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+RESEND_EMAIL_FROM = os.getenv('RESEND_EMAIL_FROM')
 
 GOOGLE_OAUTH2_CLIENT_CONFIG = {
     "web": {
@@ -65,10 +71,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
     'graphene_django',
     'main',
     'storages',
+    'django.contrib.gis',
 ]
 
 ASGI_APPLICATION = 'current.asgi.application'
@@ -107,7 +115,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-AUTH_USER_MODEL = 'main.Usuario'
+AUTH_USER_MODEL = 'main.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -178,6 +186,10 @@ CACHES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'utils.authentication.CsrfExemptSessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 SIMPLE_JWT = {

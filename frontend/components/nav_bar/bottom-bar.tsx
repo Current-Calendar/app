@@ -1,41 +1,49 @@
-import { View, Pressable, StyleSheet } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import React, { useState } from "react";
+import { View } from "react-native";
+import { useRouter } from "expo-router";
+import { navBottomBarStyles } from "@/styles/ui-styles";
+import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 
 interface Props {
   NavButton: any;
 }
 
 export default function BottomBar({ NavButton }: Props) {
+  const [menuVisible, setMenuVisible] = useState(false);
+  const router = useRouter();
+
+  const handleAddPress = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+
+  const navigateTo = (path: string) => {
+    closeMenu();
+    router.push(path as any);
+  };
+
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   return (
-    <View style={styles.bottomBar}>
+    <View style={navBottomBarStyles.bottomBar}>
       <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
-      <NavButton icon="add-circle" />
+      <NavButton icon="add-circle" onPress={handleAddPress} />
       <NavButton icon="calendar" href="/switch-calendar" />
-      {/*<NavButton icon="compass" />*/}
+      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="compass" href="/radar" />
+
+      <CreateMenuModal
+        visible={menuVisible}
+        onClose={closeMenu}
+        onNewEvent={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
+        onNewCalendar={() => navigateTo("/create")}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  bottomBar: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    height: 60,
-    backgroundColor: "#10464d",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    borderRadius: 35,
-
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-
-    elevation: 8,
-  },
-});

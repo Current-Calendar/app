@@ -1,8 +1,9 @@
-import { View, FlatList, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
+import { API_CONFIG } from "@/constants/api";
 
 /**
  * 🔹 Tipo compartido con backend
@@ -21,70 +22,61 @@ export interface Event {
   calendarName: string;
 }
 
-//Borrar cuando se conecte con backend
-const mockEvents: Event[] = [
-  {
-    id: "1",
-    title: "COAC 2026 Quarter Finals",
-    description:
-      "Join us for an unforgettable evening of gourmet cuisine and fine wines.",
-    location: "Cádiz",
-    date: "February 2nd 2026",
-    image: "https://picsum.photos/600/400?random=1",
-    username: "LaCabra123",
-    userAvatar: "https://i.pravatar.cc/100?img=3",
-    calendarId: "c1",
-    calendarName: "Personal",
-  },
-  {
-    id: "2",
-    title: "Techno Night Festival",
-    description:
-      "Electronic music all night long with international DJs.",
-    location: "Berlin",
-    date: "March 14th 2026",
-    image: "https://picsum.photos/600/400?random=2",
-    username: "ElectroMax",
-    userAvatar: "https://i.pravatar.cc/100?img=5",
-    calendarId: "c2",
-    calendarName: "Work",
-  },
-  {
-    id: "3",
-    title: "Startup Networking Meetup",
-    description:
-      "Connect with founders, developers and investors.",
-    location: "Madrid",
-    date: "April 5th 2026",
-    image: "https://picsum.photos/600/400?random=3",
-    username: "FounderLife",
-    userAvatar: "https://i.pravatar.cc/100?img=8",
-    calendarId: "c2",
-    calendarName: "Work",
-  },
-  {
-    id: "4",
-    title: "Indie Rock Live Concert",
-    description:
-      "An amazing live concert experience you can't miss.",
-    location: "London",
-    date: "May 20th 2026",
-    image: "https://picsum.photos/600/400?random=4",
-    username: "RockSoul",
-    userAvatar: "https://i.pravatar.cc/100?img=12",
-    calendarId: "c3",
-    calendarName: "Family",
-  },
-];
-
 export default function EventsScreen() {
   const router = useRouter();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  /**
-   * 🔹 Luego se sustituirá por useQuery / fetch
-   */
-  const [events] = useState<Event[]>(mockEvents);
-  
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [calRes, evRes] = await Promise.all([
+          fetch(API_CONFIG.endpoints.getCalendars),
+          fetch(API_CONFIG.endpoints.getEvents),
+        ]);
+
+        if (!calRes.ok || !evRes.ok) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const calData = await calRes.json();
+        const evData = await evRes.json();
+
+        // Map calendars for easy lookup
+        const calendarMap: Record<number, any> = {};
+        calData.forEach((c: any) => {
+          calendarMap[Number(c.id)] = c;
+        });
+
+        const mappedEvents: any[] = evData.map((e: any) => {
+          const cal = calendarMap[e.calendars[0]];
+          return {
+            id: String(e.id),
+            title: e.title,
+            description: e.description || "",
+            location: e.place_name || "",
+            date: e.date,
+            image: e.photo, // Placeholder for now
+            username: cal?.creator_username || "unknown",
+            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creator_username || "unknown"),
+            calendarId: String(e.calendars[0] || ""),
+            calendarName: cal?.name || "General",
+          };
+        });
+
+        setEvents(mappedEvents);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        Alert.alert("Error", "Could not load events.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchData();
+  }, []);
+
   const handleOpenEvent = (id: string) => {
     // Conectar con show de events
     //router.push(`/events/${id}`);
@@ -101,6 +93,14 @@ export default function EventsScreen() {
   const handleSave = (id: string) => {
     console.log("Save:", id);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#10464d" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

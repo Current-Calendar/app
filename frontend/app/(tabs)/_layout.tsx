@@ -1,14 +1,12 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Href, Link, Slot } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   Pressable,
-  Image,
+  StyleSheet,
   useWindowDimensions,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Link, Slot, Href } from "expo-router";
 import Sidebar from "../../components/nav_bar/side-bar"
 import BottomBar from "../../components/nav_bar/bottom-bar"
 import TopBar from "../../components/nav_bar/top-bar"
@@ -18,9 +16,9 @@ export default function CustomTabLayout() {
   const isDesktop = width >= 768;
   const [expanded, setExpanded] = useState(false);
 
-  const NavButton = ({ icon, href }: { icon: any; href?: Href }) => {
+  const NavButton = ({ icon, href, onPress }: { icon: any; href?: Href; onPress?: () => void }) => {
     const button = (
-      <Pressable style={styles.navButton}>
+      <Pressable style={styles.navButton} onPress={onPress}>
         <Ionicons name={icon} size={24} color="#ffffff" />
       </Pressable>
     );
@@ -40,17 +38,17 @@ export default function CustomTabLayout() {
       {/* --- WEB SIDEBAR --- */}
       {isDesktop && <Sidebar expanded={expanded} setExpanded={setExpanded} />}
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* --- MAIN CONTENT --- */}
       <View style={styles.content}>
-        {/* TOP BAR (Solo Mobile) */}
+        {/* TOP BAR (Mobile only) */}
         {!isDesktop && (
           <TopBar />
         )}
 
-        {/* Renderiza la pantalla actual */}
+        {/* Renders the current screen */}
         <Slot />
 
-        {/* BOTTOM BAR (Solo Mobile) */}
+        {/* BOTTOM BAR (Mobile only) */}
         {!isDesktop && (
           <BottomBar NavButton={NavButton} />
         )}

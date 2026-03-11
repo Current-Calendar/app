@@ -1,28 +1,28 @@
-import React, { useMemo, useRef, useState } from 'react';
-import {
-    View,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    Text,
-    Animated,
-    useWindowDimensions,
-    Alert,
-} from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CalendarHeader } from '@/components/calendar-header';
-import { CalendarSelector } from '@/components/calendar-selector';
-import { EventFilterBar } from '@/components/event-filter-bar';
 import { CalendarGrid } from '@/components/calendar-grid';
-import { EventDetailModal } from '@/components/event-detail-modal';
+import { CalendarHeader } from '@/components/calendar-header';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
+import { Ionicons } from '@expo/vector-icons';
+import { CalendarSelector } from '@/components/calendar-selector';
+import { EventDetailModal } from '@/components/event-detail-modal';
+import { EventFilterBar } from '@/components/event-filter-bar';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
-import { MOCK_CALENDARS, MOCK_EVENTS } from '@/constants/mock-data';
+
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Sharing from "expo-sharing";
+import { toPng } from "html-to-image";
+import { captureRef } from "react-native-view-shot";
+
 import { API_CONFIG } from '@/constants/api';
+import { downloadCalendar } from '@/services/calendarService';
+import { useAuth } from '@/hooks/use-auth';
+import apiClient from '@/services/api-client';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -42,18 +42,21 @@ function formatSelectedDay(dateKey: string): string {
 }
 
 export default function CalendarScreen() {
+    const { isAuthenticated } = useAuth();
     const today = new Date();
     const router = useRouter();
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
 
-    const BOTTOM_BAR_HEIGHT = 60 + 20; 
+    const BOTTOM_BAR_HEIGHT = 60 + 20;
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
-    const [calendars, setCalendars] = useState<Calendar[]>(MOCK_CALENDARS);
-    const [events, setEvents] = useState<CalendarEvent[]>(MOCK_EVENTS);
+    const [calendars, setCalendars] = useState<Calendar[]>([]);
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+    const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
@@ -63,8 +66,65 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
 
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [calData, evData] = await Promise.all([
+                apiClient.get<any[]>('/calendars/list'),
+                apiClient.get<any[]>('/events/list'),
+            ]);
+
+            const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+
+            const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+                id: String(c.id),
+                name: c.name,
+                description: c.description || '',
+                privacy: c.privacy,
+                origin: c.origin,
+                creator: c.creator_username || 'unknown',
+                color: COLORS[index % COLORS.length],
+            }));
+
+            const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
+            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
+            return {
+                id: String(e.id),
+                calendarId: String(e.calendars[0] || ''),
+                title: e.title,
+                description: e.description || '',
+                place_name: e.place_name || '',
+                date: e.date,
+                time: e.time.substring(0, 5),
+                recurrence: e.recurrence,
+                type: 'other', // Default type
+                color: calendar?.color || '#6C63FF',
+            };
+        });
+
+        setCalendars(mappedCalendars);
+        setEvents(mappedEvents);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert('Error', 'Could not load calendars or events.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void fetchData();
+    }, []);
+
+    const [open, setOpen] = useState(false);
+    const rotation = useRef(new Animated.Value(0)).current;
+    const calendarRef = useRef<View>(null);
     // Animation for the bottom sheet
     const sheetY = useRef(new Animated.Value(120)).current;
+    const optionAnimations = useRef([
+        new Animated.Value(0),
+        new Animated.Value(0),
+    ]).current;
 
     const showSheet = (dateKey: string) => {
         setSelectedDay(dateKey);
@@ -120,30 +180,24 @@ export default function CalendarScreen() {
             return;
         }
 
+        if (!isAuthenticated) {
+            Alert.alert('Unauthorized', 'You must be logged in to delete a calendar.');
+            return;
+        }
+
         setDeletingCalendarId(calendar.id);
         try {
-            const response = await fetch(API_CONFIG.endpoints.deleteCalendar(calendarId), {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            removeCalendarFromState(calendar.id);
-        } catch {
+            await apiClient.delete(`/calendars/${calendar.id}/delete/`);
+            setInfoCalendar(null);       
+            setDeletingCalendarId(null); 
+            await fetchData();
+        } catch (e) {
+            console.error('Delete error:', e);
+            Alert.alert('Delete failed', String(e));
             Alert.alert('Delete failed', 'Could not delete the calendar. Please try again.');
         } finally {
             setDeletingCalendarId(null);
         }
-    };
-
-    const handleDeleteCalendarPress = (calendar: Calendar) => {
-        if (deletingCalendarId) {
-            return;
-        }
-
-        void handleDeleteCalendar(calendar);
     };
 
     const goToPrevMonth = () => {
@@ -169,6 +223,97 @@ export default function CalendarScreen() {
         setYear(now.getFullYear());
         setMonth(now.getMonth());
     };
+    // Show loading indicator while waiting for data
+    if (loading) {
+        return (
+            <View style={[styles.screenWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#10464d" />
+            </View>
+        );
+    }
+
+    const toggleMenu = () => {
+        const isOpening = !open;
+
+        Animated.timing(rotation, {
+            toValue: open ? 0 : 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+
+        const animations = optionAnimations.map((anim, i) =>
+            Animated.timing(anim, {
+                toValue: open ? 0 : 1,
+                duration: 200,
+                delay: i * 50,
+                useNativeDriver: true,
+            })
+        );
+        Animated.stagger(50, isOpening ? animations : animations.reverse()).start(() => {
+            if (!isOpening) setOpen(false);
+        });
+        if (isOpening) setOpen(true);
+    };
+
+    const rotateInterpolate = rotation.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["0deg", "180deg"],
+    });
+
+    const exportCalendar = async () => {
+        if (!selectedCalendarId) {
+            alert("Please select a calendar before exporting");
+            return;
+        }
+        try {
+            if (Platform.OS === "web") {
+                await downloadCalendar(selectedCalendarId);
+                alert("Calendar downloaded successfully");
+            } else {
+                const fileUri = await downloadCalendar(selectedCalendarId);
+                if (await Sharing.isAvailableAsync() && fileUri) {
+                    await Sharing.shareAsync(fileUri);
+                } else {
+                    alert("File saved at: " + fileUri);
+                }
+            }
+        } catch (error) {
+            alert("Could not download the calendar.");
+            console.log(error);
+        }
+    };
+
+    const exportPng = async () => {
+        try {
+            if (Platform.OS === "web") {
+                const node = document.getElementById("calendar-web");
+                if (!node) return;
+
+                const dataUrl = await toPng(node);
+                const link = document.createElement("a");
+                link.href = dataUrl;
+                link.download = "calendar.png";
+                link.click();
+
+            } else {
+                if (!calendarRef.current) return;
+
+                const uri = await captureRef(calendarRef.current, {
+                    format: "png",
+                    quality: 1,
+                });
+
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(uri);
+                } else {
+                    alert("Image saved at: " + uri);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Could not export the calendar as PNG");
+        }
+    }
 
     return (
         <View style={styles.screenWrapper}>
@@ -184,6 +329,28 @@ export default function CalendarScreen() {
                         onChange={setSelectedCalendarId}
                         onInfoPress={setInfoCalendar}
                     />
+
+                    {isDesktop && (
+                        <View style={styles.toolbarButtons}>
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => router.push(`/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
+                            >
+                                <Ionicons name="add" size={18} color="#fff" />
+                                <Text style={styles.primaryBtnText}>New Event</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => router.push('/(tabs)/create')}
+                            >
+                                <Ionicons name="calendar-outline" size={18} color="#10464d" />
+                                <Text style={styles.secondaryBtnText}>New Calendar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.headerBlock}>
@@ -204,7 +371,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -214,21 +381,35 @@ export default function CalendarScreen() {
                         </View>
                     </TouchableOpacity>
                 )}
-
-                <CalendarGrid
-                    year={year}
-                    month={month}
-                    events={filteredEvents}
-                    onEventPress={setActiveEvent}
-                    selectedDay={selectedDay}
-                    onDayPress={handleDayPress}
-                />
-
+                <View style={styles.container}
+                    id="calendar-web"
+                    ref={calendarRef}>
+                    <CalendarGrid
+                        year={year}
+                        month={month}
+                        events={filteredEvents}
+                        onEventPress={setActiveEvent}
+                        selectedDay={selectedDay}
+                        onDayPress={handleDayPress}
+                    />
+                </View>
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
                 <CalendarInfoModal
                     calendar={infoCalendar}
                     onClose={() => setInfoCalendar(null)}
-                    onDelete={handleDeleteCalendarPress}
+                    onDelete={handleDeleteCalendar}
+                    onEdit={(calendar) => {
+                        setInfoCalendar(null);
+                        router.push({
+                            pathname: '/(tabs)/edit',
+                            params: {
+                                id: calendar.id,
+                                name: calendar.name,
+                                description: calendar.description ?? '',
+                                privacy: calendar.privacy,
+                            },
+                        });
+                    }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
                 />
             </ScrollView>
@@ -264,7 +445,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/events/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
@@ -272,6 +453,37 @@ export default function CalendarScreen() {
                     </View>
                 </Animated.View>
             )}
+            {optionAnimations.map((anim, index) => {
+                const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+                const opacity = anim;
+                const fabBottom = Platform.OS === "web" ? 30 : 90;
+                const isCalendar = index === 1;
+                const text = isCalendar ? "Export calendar" : "Download as PNG";
+                const onPress = isCalendar ? exportCalendar : exportPng;
+
+                return (
+                    <Animated.View
+                        key={index}
+                        style={{
+                            position: "absolute",
+                            bottom: fabBottom + 60 + index * 45,
+                            right: 20,
+                            opacity,
+                            transform: [{ translateY }],
+                        }}
+                        pointerEvents={open ? "auto" : "none"}
+                    >
+                        <Pressable style={styles.option} onPress={onPress}>
+                            <Text style={styles.optionText}>{text}</Text>
+                        </Pressable>
+                    </Animated.View>
+                );
+            })}
+            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
+                <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                    <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+                </Animated.View>
+            </Pressable>
         </View>
     );
 }
@@ -295,6 +507,53 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingTop: 16,
         marginBottom: 8,
+        gap: 12,
+        flexWrap: 'wrap',
+    },
+    toolbarButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    primaryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#10464d',
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+    },
+    primaryBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    secondaryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 1,
+    },
+    secondaryBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#10464d',
     },
     headerBlock: {
         marginBottom: 12,
@@ -410,5 +669,73 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
         letterSpacing: 0.2,
+    },
+    fab: {
+        position: 'absolute',
+        right: 20,
+        bottom: 30,
+        width: 55,
+        height: 55,
+        borderRadius: 30,
+        backgroundColor: "#10464d",
+        justifyContent: "center",
+        alignItems: "center",
+        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    menu: {
+        position: "absolute",
+        bottom: 100,
+        right: 20,
+        alignItems: "flex-end",
+    },
+    option: {
+        backgroundColor: "#fffded",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        marginBottom: 10,
+        minWidth: 180,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    optionText: {
+        fontSize: 16,
+        color: "#10464d",
+    },
+    createRow: {
+        marginTop: 8,
+        paddingHorizontal: 16,
+        alignItems: 'flex-end',
+    },
+
+    createBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        borderColor: 'rgba(16,70,77,0.25)',
+        backgroundColor: 'rgba(255,255,255,0.55)',
+    },
+
+    createBtnText: {
+        color: '#10464D',
+        fontWeight: '900',
+        fontSize: 12,
+    },
+    filterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        marginBottom: 20,
     },
 });

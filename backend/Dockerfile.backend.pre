@@ -16,8 +16,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+# rest_framework_simplejwt.token_blacklist requiere tener un `SECRET_KEY` configurado en todo momento,
+# así que usamos el de ejemplo y luego lo borrarmos, si no el collectstatic no funciona.
+COPY .env.dev.example .env
 
 RUN python manage.py collectstatic --noinput
+RUN rm .env
 
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py makemigrations && python manage.py migrate && python manage.py seed_db && python manage.py load_similarities && daphne -b 0.0.0.0 -p 8000 current.asgi:application"]
+EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate && daphne -b 0.0.0.0 -p 8000 current.asgi:application"]
