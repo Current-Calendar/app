@@ -20,11 +20,11 @@ class LoginMutation(graphene.Mutation):
         user = authenticate(username=username, password=password)
 
         if user is None:
-            return cls(success=False, message="Credenciales invalidas.")
-        
+            return cls(success=False, message="Invalid credentials.")
+
         login(info.context, user)
-        
-        return cls(success=True, message="Login exitoso.")
+
+        return cls(success=True, message="Login successful.")
 
 
 class Mutation(graphene.ObjectType):

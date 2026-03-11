@@ -1,6 +1,6 @@
 // ─── Domain Types (mirrors backend/main/models.py) ─────────────────────────
 
-export type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
+export type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
 export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
@@ -8,26 +8,26 @@ export type EventType = 'meeting' | 'task' | 'reminder' | 'holiday' | 'birthday'
 
 export interface Calendar {
     id: string;
-    nombre: string;
-    descripcion: string;
-    portada?: string;       // URL to cover image
-    estado: PrivacyStatus;
-    origen: CalendarOrigin;
-    creador: string;        // username
+    name: string;
+    description: string;
+    cover?: string;         // URL to cover image
+    privacy: PrivacyStatus;
+    origin: CalendarOrigin;
+    creator: string;        // username
     color: string;          // UI-only accent color
 }
 
 export interface CalendarEvent {
     id: string;
     calendarId: string;
-    titulo: string;
-    descripcion: string;
-    nombre_lugar: string;
-    ubicacion?: { latitude: number; longitude: number } | null;
-    fecha: string;          // YYYY-MM-DD
-    hora: string;           // HH:mm
-    foto?: string;          // URL to event image
-    recurrencia?: string | null;
+    title: string;
+    description: string;
+    place_name: string;
+    location?: { latitude: number; longitude: number } | null;
+    date: string;           // YYYY-MM-DD
+    time: string;           // HH:mm
+    photo?: string;         // URL to event image
+    recurrence?: string | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
 }
