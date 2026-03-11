@@ -122,7 +122,7 @@ class ApiClient {
       headers,
     });
 
-    // Si 401, intentar refrescar token
+    // If 401, attempt to refresh the token
     if (response.status === 401 && this.refreshToken) {
       const refreshed = await this.refreshAccessToken();
 

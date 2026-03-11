@@ -15,7 +15,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Cargar sesión guardada al iniciar
+  // Load saved session on startup
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {

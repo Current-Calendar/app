@@ -46,22 +46,22 @@ export default function EventsScreen() {
     // Map calendars for easy lookup
     const calendarMap: Record<number, any> = {};
     backendCalendars.forEach((c: any) => {
-      calendarMap[c.id] = c;
+      calendarMap[Number(c.id)] = c;
     });
 
     const mappedEvents: Event[] = backendEvents.map((e: any) => {
-      const cal = calendarMap[e.calendarios[0]];
+      const cal = calendarMap[e.calendars[0]];
       return {
         id: String(e.id),
-        title: e.titulo,
-        description: e.descripcion || "",
-        location: e.nombre_lugar || "",
-        date: e.fecha,
-        image: e.foto,
-        username: cal?.creador_username || "unknown",
-        userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-        calendarId: String(e.calendarios[0] || ""),
-        calendarName: cal?.nombre || "General",
+        title: e.title,
+        description: e.description || "",
+        location: e.place_name || "",
+        date: e.date,
+        image: e.photo,
+        username: cal?.creator_username || "unknown",
+        userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creator_username || "unknown"),
+        calendarId: String(e.calendars[0] || ""),
+        calendarName: cal?.name || "General",
       };
     });
 

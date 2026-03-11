@@ -21,13 +21,13 @@ const ACCENT_COLORS = ['#A0D842', '#FF8C42', '#42A5F5', '#6C5DD3', '#E96F92'];
 
 type OwnProfileCalendarResponse = {
   id: number;
-  nombre: string;
-  descripcion?: string | null;
-  portada?: string | null;
-  estado: Calendar['estado'];
-  origen: Calendar['origen'];
-  creador: string;
-  fecha_creacion: string;
+  name: string;
+  description?: string | null;
+  cover?: string | null;
+  privacy: Calendar['privacy'];
+  origin: Calendar['origin'];
+  creator: string;
+  created_at: string;
 };
 
 type OwnProfileResponse = {
@@ -36,12 +36,12 @@ type OwnProfileResponse = {
   first_name?: string | null;
   last_name?: string | null;
   email: string;
-  pronombres?: string | null;
-  biografia?: string | null;
+  pronouns?: string | null;
+  bio?: string | null;
   link?: string | null;
-  foto?: string | null;
-  total_seguidores: number;
-  total_seguidos: number;
+  photo?: string | null;
+  total_followers: number;
+  total_following: number;
   calendars: OwnProfileCalendarResponse[];
   following_calendars: OwnProfileCalendarResponse[];
 };
@@ -50,9 +50,9 @@ const mapUserFromApi = (payload: OwnProfileResponse): User => ({
   id: payload.id,
   username: payload.username,
   email: payload.email,
-  biografia: payload.biografia ?? undefined,
-  pronombres: payload.pronombres ?? undefined,
-  foto: payload.foto ?? undefined,
+  bio: payload.bio ?? undefined,
+  pronouns: payload.pronouns ?? undefined,
+  photo: payload.photo ?? undefined,
 });
 
 const mapCalendarsFromApi = (
@@ -61,12 +61,12 @@ const mapCalendarsFromApi = (
 ): Calendar[] =>
   items.map((item, index) => ({
     id: String(item.id),
-    nombre: item.nombre,
-    descripcion: item.descripcion ?? '',
-    portada: item.portada ?? undefined,
-    estado: item.estado,
-    origen: item.origen,
-    creador: item.creador,
+    name: item.name,
+    description: item.description ?? '',
+    cover: item.cover ?? undefined,
+    privacy: item.privacy,
+    origin: item.origin,
+    creator: item.creator,
     color: ACCENT_COLORS[(offset + index) % ACCENT_COLORS.length],
   }));
 
@@ -192,7 +192,7 @@ const ProfileScreen = () => {
           <View style={profileStyles.profileRow}>
             <View style={profileStyles.profilePictureContainer}>
               <Image
-                source={shownUser.foto ? { uri: shownUser.foto } : require('../../../assets/images/default-user.jpg')}
+                source={shownUser.photo ? { uri: shownUser.photo } : require('../../../assets/images/default-user.jpg')}
                 style={profileStyles.profilePicture}
               />
             </View>
@@ -202,12 +202,12 @@ const ProfileScreen = () => {
               <Text style={profileStyles.fullname}>
                 {shownUser.username}
               </Text>
-              <Text style={profileStyles.pronouns}>{shownUser.pronombres || ''}</Text>
+              <Text style={profileStyles.pronouns}>{shownUser.pronouns || ''}</Text>
             </View>
           </View>
 
           <View style={profileStyles.bioSection}>
-            <Text style={profileStyles.bio}>{shownUser.biografia || 'Añade una biografía para que otros te conozcan.'}</Text>
+            <Text style={profileStyles.bio}>{shownUser.bio || 'Añade una biografía para que otros te conozcan.'}</Text>
           </View>
 
           <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
@@ -222,12 +222,12 @@ const ProfileScreen = () => {
         <View style={profileStyles.postsGrid}>
           <Text style={profileStyles.gridHeaderText}>My Calendars</Text>
           {myCalendars.map((cal) => (
-            <CalendarCard key={cal.id} calendario={cal} />
+            <CalendarCard key={cal.id} calendar={cal} />
           ))}
 
           <Text style={profileStyles.gridHeaderText}>Following</Text>
           {followingCalendars.map((cal) => (
-            <CalendarCard key={cal.id} calendario={cal} />
+            <CalendarCard key={cal.id} calendar={cal} />
           ))}
         </View>
 

@@ -19,28 +19,28 @@ import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 
-type PrivacyStatus = "PRIVADO" | "AMIGOS" | "PUBLICO";
+type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
 
 interface PublishData {
-  nombre: string;
-  descripcion: string;
-  portada?: string;
-  estado: PrivacyStatus;
-  origen?: CalendarOrigin;
+  name: string;
+  description: string;
+  cover?: string;
+  privacy: PrivacyStatus;
+  origin?: CalendarOrigin;
 }
 export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { createCalendar } = useCalendarActions();
   const [selectedPrivacy, setSelectedPrivacy] =
-    useState<PrivacyStatus>("PRIVADO");
+    useState<PrivacyStatus>("PRIVATE");
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState<PublishData>({
-    nombre: "",
-    descripcion: "",
-    estado: "PRIVADO",
-    origen: "CURRENT",
+    name: "",
+    description: "",
+    privacy: "PRIVATE",
+    origin: "CURRENT",
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -56,19 +56,19 @@ export default function CreateScreen() {
   }[] = [
     {
       label: "Private",
-      value: "PRIVADO",
+      value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
     },
     {
       label: "Friends",
-      value: "AMIGOS",
+      value: "FRIENDS",
       icon: "people-outline",
       description: "Visible to your friends only",
     },
     {
       label: "Public",
-      value: "PUBLICO",
+      value: "PUBLIC",
       icon: "globe-outline",
       description: "Visible to everyone",
     },
@@ -101,7 +101,7 @@ export default function CreateScreen() {
   };
 
   const handlePublish = async () => {
-    if (!calendarData.nombre.trim()) {
+    if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
@@ -112,16 +112,16 @@ export default function CreateScreen() {
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.append("nombre", calendarData.nombre);
-      formData.append("descripcion", calendarData.descripcion);
-      formData.append("estado", selectedPrivacy);
-      formData.append("origen", "CURRENT");
+      formData.append("name", calendarData.name);
+      formData.append("description", calendarData.description);
+      formData.append("privacy", selectedPrivacy);
+      formData.append("origin", "CURRENT");
 
       if (coverImage) {
         const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
         const fetchResponse = await fetch(coverImage.uri);
         const blob = await fetchResponse.blob();
-        formData.append("portada", blob, filename);
+        formData.append("cover", blob, filename);
       }
 
       await createCalendar(formData);
@@ -220,18 +220,18 @@ export default function CreateScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
-              value={calendarData.nombre}
+              value={calendarData.name}
               onChangeText={(text) =>
-                setCalendarData({ ...calendarData, nombre: text })
+                setCalendarData({ ...calendarData, name: text })
               }
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
-              value={calendarData.descripcion}
+              value={calendarData.description}
               onChangeText={(text) =>
-                setCalendarData({ ...calendarData, descripcion: text })
+                setCalendarData({ ...calendarData, description: text })
               }
               multiline
               numberOfLines={3}
@@ -302,9 +302,9 @@ export default function CreateScreen() {
               style={{ marginRight: 12 }}
             />
             <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVADO"
+              {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "AMIGOS"
+                : selectedPrivacy === "FRIENDS"
                   ? "Your friends will receive an invitation to view this calendar."
                   : "Anyone with the link can view this calendar."}
             </Text>

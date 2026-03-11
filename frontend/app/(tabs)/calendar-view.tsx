@@ -59,13 +59,13 @@ export default function CalendarViewScreen() {
             transformed.push({
               id: String(evt.id),
               calendarId: String(calId),
-              titulo: evt.titulo,
-              descripcion: evt.descripcion,
-              nombre_lugar: evt.nombre_lugar,
-              fecha: evt.fecha,
-              hora: evt.hora,
-              recurrencia: evt.recurrencia,
-              foto: evt.foto,
+              title: evt.title,
+              description: evt.description,
+              place_name: evt.place_name,
+              date: evt.date,
+              time: evt.time,
+              recurrence: evt.recurrence,
+              photo: evt.photo,
               color: undefined,
             });
           });
@@ -114,8 +114,8 @@ export default function CalendarViewScreen() {
       ) : (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
-            <Text style={styles.title}>{calendar.nombre}</Text>
-            <Text style={styles.subtitle}>by {calendar.creador?.username || calendar.creador || 'Unknown'}</Text>
+            <Text style={styles.title}>{calendar.name}</Text>
+            <Text style={styles.subtitle}>by {calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
           </View>
 
         <View style={styles.headerBlock}>

@@ -28,7 +28,7 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-type CalendarItem = { id: number | string; nombre: string; imagen_portada?: string };
+type CalendarItem = { id: number | string; name: string; cover?: string };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -115,24 +115,24 @@ export default function EditEventsScreen() {
       console.log("✅ Event loaded:", JSON.stringify(event, null, 2));
       
       // Set basic fields
-      setTitle(event.titulo || "");
-      setDescription(event.descripcion || "");
-      setPlace(event.nombre_lugar || "");
-      
-      console.log("📝 Title:", event.titulo);
-      console.log("📝 Description:", event.descripcion);
-      console.log("📝 Place:", event.nombre_lugar);
-      
+      setTitle(event.title || "");
+      setDescription(event.description || "");
+      setPlace(event.place_name || "");
+
+      console.log("📝 Title:", event.title);
+      console.log("📝 Description:", event.description);
+      console.log("📝 Place:", event.place_name);
+
       // Parse date
-      if (event.fecha) {
-        const [year, month, day] = event.fecha.split('-').map(Number);
+      if (event.date) {
+        const [year, month, day] = event.date.split('-').map(Number);
         const dateObj = new Date(year, month - 1, day);
         setEventDate(dateObj);
         console.log("📅 Date:", dateObj);
-        
+
         // Parse time
-        if (event.hora) {
-          const [hours, minutes] = event.hora.split(':').map(Number);
+        if (event.time) {
+          const [hours, minutes] = event.time.split(':').map(Number);
           const timeObj = new Date(dateObj);
           timeObj.setHours(hours, minutes, 0, 0);
           setTime(timeObj);
@@ -143,8 +143,8 @@ export default function EditEventsScreen() {
       }
       
       // Set calendar
-      if (event.calendarios && event.calendarios.length > 0) {
-        const calendarId = event.calendarios[0];
+      if (event.calendars && event.calendars.length > 0) {
+        const calendarId = event.calendars[0];
         console.log("🗓️ Calendar ID:", calendarId);
         setSelectedCalendarId(calendarId);
       }
@@ -219,12 +219,12 @@ export default function EditEventsScreen() {
       const timeStr = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:00`;
       
       const updateData = {
-        titulo: title,
-        descripcion: description,
-        nombre_lugar: place,
-        fecha: dateStr,
-        hora: timeStr,
-        calendarios: [selectedCalendarId],
+        title: title,
+        description: description,
+        place_name: place,
+        date: dateStr,
+        time: timeStr,
+        calendars: [selectedCalendarId],
       };
 
       console.log("💾 Saving event:", JSON.stringify(updateData, null, 2));
@@ -285,13 +285,13 @@ export default function EditEventsScreen() {
 
               <View style={styles.calendarPreview}>
                 <View style={styles.calendarImgWrap}>
-                  {selectedCalendar?.imagen_portada ? (
-                    <Image source={{ uri: selectedCalendar.imagen_portada }} style={styles.calendarImg} />
+                  {selectedCalendar?.cover ? (
+                    <Image source={{ uri: selectedCalendar.cover }} style={styles.calendarImg} />
                   ) : (
                     <View style={[styles.calendarImgPlaceholder, { backgroundColor: TEAL }]} />
                   )}
                 </View>
-                <Text style={styles.calendarName}>{selectedCalendar?.nombre ?? "Select calendar"}</Text>
+                <Text style={styles.calendarName}>{selectedCalendar?.name ?? "Select calendar"}</Text>
               </View>
             </View>
 
@@ -337,7 +337,7 @@ export default function EditEventsScreen() {
             {/* Calendar placeholder */}
             <View style={styles.calendarCenterWrap}>
               <View style={styles.calendarSquare}>
-                <Text style={styles.calendarSquareText}>calendario</Text>
+                <Text style={styles.calendarSquareText}>calendar</Text>
               </View>
             </View>
 
@@ -375,7 +375,7 @@ export default function EditEventsScreen() {
                     setCalendarModalOpen(false);
                   }}
                 >
-                  <Text style={styles.modalItemText}>{item.nombre}</Text>
+                  <Text style={styles.modalItemText}>{item.name}</Text>
                 </Pressable>
               )}
             />

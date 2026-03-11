@@ -16,7 +16,7 @@ export default function ImportCalendarScreen() {
             Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
         } catch (err) {
             console.error(err);
-            Alert.alert("Error", "No se pudo importar el calendario ICS");
+            Alert.alert("Error", "No se pudo importar el calendar ICS");
         }
     };
 
@@ -48,9 +48,9 @@ export default function ImportCalendarScreen() {
             <View style={styles.card}>
 
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Importar calendario</Text>
+                    <Text style={styles.headerTitle}>Importar calendar</Text>
                     <Text style={styles.headerSubtitle}>
-                        Conecta tu calendario desde otra plataforma
+                        Conecta tu calendar desde otra plataforma
                     </Text>
                 </View>
 
@@ -110,7 +110,7 @@ export default function ImportCalendarScreen() {
                         <View style={styles.modalBackground}>
                             <View style={styles.modalCard}>
                                 <View style={styles.modalHeader}>
-                                    <Text style={styles.modalHeaderText}>Importar calendario iOS</Text>
+                                    <Text style={styles.modalHeaderText}>Importar calendar iOS</Text>
                                 </View>
                                 <View style={styles.modalBody}>
                                     <TextInput

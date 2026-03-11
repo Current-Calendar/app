@@ -92,25 +92,25 @@ export default function CalendarScreen() {
 
         const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
             id: String(c.id),
-            nombre: c.nombre,
-            descripcion: c.descripcion || '',
-            estado: c.estado,
-            origen: c.origen,
-            creador: c.creador_username || 'unknown',
+            name: c.name,
+            description: c.description || '',
+            privacy: c.privacy,
+            origin: c.origin,
+            creator: c.creator_username || 'unknown',
             color: COLORS[index % COLORS.length],
         }));
 
         const mappedEvents: CalendarEvent[] = backendEvents.map((e: any) => {
-            const calendar = mappedCalendars.find(c => e.calendarios.includes(Number(c.id)));
+            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
             return {
                 id: String(e.id),
-                calendarId: String(e.calendarios[0] || ''),
-                titulo: e.titulo,
-                descripcion: e.descripcion || '',
-                nombre_lugar: e.nombre_lugar || '',
-                fecha: e.fecha,
-                hora: e.hora.substring(0, 5),
-                recurrencia: e.recurrencia,
+                calendarId: String(e.calendars[0] || ''),
+                title: e.title,
+                description: e.description || '',
+                place_name: e.place_name || '',
+                date: e.date,
+                time: e.time.substring(0, 5),
+                recurrence: e.recurrence,
                 type: 'other',
                 color: calendar?.color || '#6C63FF',
             };
@@ -264,9 +264,9 @@ export default function CalendarScreen() {
         outputRange: ["0deg", "180deg"],
     });
 
-    const exportarCalendar = async () => {
+    const exportCalendar = async () => {
         if (!selectedCalendarId) {
-            alert("Selecciona un calendario antes de exportar");
+            alert("Please select a calendar before exporting");
             return;
         }
         try {
@@ -278,16 +278,16 @@ export default function CalendarScreen() {
                 if (await Sharing.isAvailableAsync() && fileUri) {
                     await Sharing.shareAsync(fileUri);
                 } else {
-                    alert("Archivo guardado en: " + fileUri);
+                    alert("File saved at: " + fileUri);
                 }
             }
         } catch (error) {
-            alert("No se pudo descargar correctamente el calendario.");
+            alert("Could not download the calendar.");
             console.log(error);
         }
     };
 
-    const exportarPng = async () => {
+    const exportPng = async () => {
         try {
             if (Platform.OS === "web") {
                 const node = document.getElementById("calendar-web");
@@ -310,12 +310,12 @@ export default function CalendarScreen() {
                 if (await Sharing.isAvailableAsync()) {
                     await Sharing.shareAsync(uri);
                 } else {
-                    alert("Imagen guardada en: " + uri);
+                    alert("Image saved at: " + uri);
                 }
             }
         } catch (error) {
             console.error(error);
-            alert("No se pudo exportar el calendario como PNG");
+            alert("Could not export the calendar as PNG");
         }
     }
 
@@ -408,9 +408,9 @@ export default function CalendarScreen() {
                             pathname: '/(tabs)/edit',
                             params: {
                                 id: calendar.id,
-                                nombre: calendar.nombre,
-                                descripcion: calendar.descripcion ?? '',
-                                estado: calendar.estado,
+                                name: calendar.name,
+                                description: calendar.description ?? '',
+                                privacy: calendar.privacy,
                             },
                         });
                     }}
@@ -462,8 +462,8 @@ export default function CalendarScreen() {
                 const opacity = anim;
                 const fabBottom = Platform.OS === "web" ? 30 : 90;
                 const isCalendar = index === 1;
-                const text = isCalendar ? "Exportar calendario" : "Descargar como PNG";
-                const onPress = isCalendar ? exportarCalendar : exportarPng;
+                const text = isCalendar ? "Export calendar" : "Download as PNG";
+                const onPress = isCalendar ? exportCalendar : exportPng;
 
                 return (
                     <Animated.View

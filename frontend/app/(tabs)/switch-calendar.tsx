@@ -28,13 +28,13 @@ export default function CalendarsScreen() {
 
     const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
       id: String(c.id),
-      nombre: c.nombre,
-      descripcion: c.descripcion || '',
-      estado: c.estado,
-      origen: c.origen,
-      creador: c.creador_username || 'unknown',
+      name: c.name,
+      description: c.description || '',
+      privacy: c.privacy,
+      origin: c.origin,
+      creator: c.creator_username || 'unknown',
       color: COLORS[index % COLORS.length],
-      portada: c.portada || null,
+      cover: c.cover || null,
     }));
 
     setCalendars(mappedCalendars);
