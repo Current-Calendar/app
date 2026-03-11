@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import apiClient from '@/services/api-client';
+import { useLocalSearchParams } from "expo-router";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -306,6 +307,7 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { date: dateParam } = useLocalSearchParams();
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) navigation.goBack();
@@ -379,6 +381,12 @@ export default function CreateEventsScreen() {
   const suppressNextSearchRef = useRef(false);
 
   const [date, setDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;

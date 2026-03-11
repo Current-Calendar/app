@@ -27,7 +27,7 @@ import apiClient from '@/services/api-client';
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
 //   GET /events?calendarId= -> EventsResponse
-
+const todayKey = new Date().toISOString().slice(0,10);
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -332,11 +332,15 @@ export default function CalendarScreen() {
 
                     {isDesktop && (
                         <View style={styles.toolbarButtons}>
-                            <TouchableOpacity
-                                style={styles.primaryBtn}
-                                activeOpacity={0.7}
-                                onPress={() => router.push(`/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
-                            >
+
+
+                                <TouchableOpacity
+                                    style={styles.primaryBtn}
+                                    activeOpacity={0.7}
+                                    onPress={() =>
+                                        router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
+                                    }
+                                >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>
                             </TouchableOpacity>
