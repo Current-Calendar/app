@@ -28,7 +28,9 @@ export default function CalendarsScreen() {
 
         const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-        const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+        const publicCalendars = calData.filter((c: any) => c.privacy === "PUBLIC");
+
+        const mappedCalendars: Calendar[] = publicCalendars.map((c: any, index: number) => ({
           id: String(c.id),
           name: c.name,
           description: c.description || '',
