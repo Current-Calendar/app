@@ -40,7 +40,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setUsers(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando usuarios:", error);
+                console.error("Error buscando users:", error);
             }
         };
 
@@ -60,7 +60,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setCalendars(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando calendarios:", error);
+                console.error("Error buscando calendars:", error);
             }
         };
 
@@ -80,7 +80,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setEvents(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando eventos:", error);
+                console.error("Error buscando events:", error);
             }
         };
 
@@ -91,7 +91,7 @@ export default function SearchScreen() {
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
         calendars.forEach((c) => {
-            m[c.id.toString()] = c.nombre;
+            m[c.id.toString()] = c.name;
         });
         return m;
     }, [calendars]);
@@ -176,12 +176,12 @@ export default function SearchScreen() {
                             <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.id)}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: user.foto || 'https://i.pravatar.cc/100' }}
+                                        source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
                                         style={styles.avatar}
                                     />
                                     <View>
                                         <Text style={styles.name}>{user.username}</Text>
-                                        <Text style={styles.bio}>{user.biografia}</Text>
+                                        <Text style={styles.bio}>{user.bio}</Text>
                                     </View>
                                 </View>
 
@@ -207,12 +207,12 @@ export default function SearchScreen() {
                         const cal = item.data as Calendar;
                         return (
                             <View style={styles.calendarCard}>
-                                {cal.portada && (
-                                    <Image source={{ uri: cal.portada }} style={styles.calendarCover} />
+                                {cal.cover && (
+                                    <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName}>{cal.nombre}</Text>
-                                    <Text style={styles.calendarDesc}>{cal.descripcion}</Text>
+                                    <Text style={styles.calendarName}>{cal.name}</Text>
+                                    <Text style={styles.calendarDesc}>{cal.description}</Text>
                                 </View>
                             </View>
                         );
@@ -221,17 +221,17 @@ export default function SearchScreen() {
                     const ev = item.data as CalendarEvent;
                     return (
                         <View style={styles.eventCard}>
-                            <View style={styles.eventRow}> 
-                                {ev.foto && (
-                                    <Image 
-                                        source={{ uri: ev.foto }} 
-                                        style={styles.eventImage} 
+                            <View style={styles.eventRow}>
+                                {ev.photo && (
+                                    <Image
+                                        source={{ uri: ev.photo }}
+                                        style={styles.eventImage}
                                     />
                                 )}
                                 <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle}>{ev.titulo}</Text>
+                                    <Text style={styles.eventTitle}>{ev.title}</Text>
                                     <Text style={styles.eventMeta}>
-                                        {ev.fecha} {ev.hora}
+                                        {ev.date} {ev.time}
                                         {ev.calendarId &&
                                             ` • ${calendarMap[ev.calendarId] || ''}`}
                                     </Text>

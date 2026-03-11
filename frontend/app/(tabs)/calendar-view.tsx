@@ -35,7 +35,7 @@ export default function CalendarViewScreen() {
         const response = await fetch(API_CONFIG.endpoints.getCalendars);
         if (!response.ok) throw new Error('Failed to load calendars');
         const data = await response.json();
-        // Backend returns array directly, not { calendarios: [...] }
+        // Backend returns array directly, not { calendars: [...] }
         const calendars = Array.isArray(data) ? data : [];
         setBackendCalendars(calendars);
       } catch (error) {
@@ -68,24 +68,24 @@ export default function CalendarViewScreen() {
       if (!response.ok) throw new Error('Failed to load events');
       
       const data = await response.json();
-      // Backend returns array directly, not { eventos: [...] }
+      // Backend returns array directly, not { events: [...] }
       const allEvents = Array.isArray(data) ? data : [];
       
       // Transform backend events: expand by calendar
       const transformed: CalendarEvent[] = [];
       allEvents.forEach((evt: any) => {
-        if (evt.calendarios && evt.calendarios.length > 0) {
-          evt.calendarios.forEach((calId: number) => {
+        if (evt.calendars && evt.calendars.length > 0) {
+          evt.calendars.forEach((calId: number) => {
             transformed.push({
               id: String(evt.id),
               calendarId: String(calId),
-              titulo: evt.titulo,
-              descripcion: evt.descripcion,
-              nombre_lugar: evt.nombre_lugar,
-              fecha: evt.fecha,
-              hora: evt.hora,
-              recurrencia: evt.recurrencia,
-              foto: evt.foto,
+              title: evt.title,
+              description: evt.description,
+              place_name: evt.place_name,
+              date: evt.date,
+              time: evt.time,
+              recurrence: evt.recurrence,
+              photo: evt.photo,
               color: undefined,
             });
           });
@@ -158,8 +158,8 @@ export default function CalendarViewScreen() {
       ) : (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
-            <Text style={styles.title}>{calendar.nombre}</Text>
-            <Text style={styles.subtitle}>by {calendar.creador?.username || calendar.creador || 'Unknown'}</Text>
+            <Text style={styles.title}>{calendar.name}</Text>
+            <Text style={styles.subtitle}>by {calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
           </View>
 
         <View style={styles.headerBlock}>

@@ -61,7 +61,7 @@ export default function LoginScreen() {
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
-      setErrorMsg("Usuario o contraseña incorrectos.");
+      setErrorMsg("User o contraseña incorrectos.");
     } finally {
       setLoading(false);
     }

@@ -56,30 +56,30 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
           </Pressable>
 
           <View style={styles.content}>
-            <Text style={styles.title}>{event.titulo}</Text>
+            <Text style={styles.title}>{event.title}</Text>
 
-            {!!event.nombre_lugar && (
-              <DetailRow icon="location-outline" label={event.nombre_lugar} />
+            {!!event.place_name && (
+              <DetailRow icon="location-outline" label={event.place_name} />
             )}
 
-            <DetailRow icon="calendar-outline" label={formatDate(event.fecha)} />
+            <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
 
-            {!!event.hora && (
-              <DetailRow icon="time-outline" label={event.hora} />
+            {!!event.time && (
+              <DetailRow icon="time-outline" label={event.time} />
             )}
 
-            {!!event.ubicacion && (
+            {!!event.location && (
               <DetailRow
                 icon="navigate-outline"
-                label={`${event.ubicacion.latitude.toFixed(4)}, ${event.ubicacion.longitude.toFixed(4)}`}
+                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
               />
             )}
           </View>
 
-          {!!event.descripcion && (
+          {!!event.description && (
             <View style={styles.descWrap}>
               <Text style={styles.descTitle}>Descripción</Text>
-              <Text style={styles.descText}>{event.descripcion}</Text>
+              <Text style={styles.descText}>{event.description}</Text>
             </View>
           )}
 
