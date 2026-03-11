@@ -19,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { useCreateEventApi } from '@/hooks/use-create-event-api';
 import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
+import { useRouter } from "expo-router";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -94,7 +95,7 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
     const firstDowMondayBased = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-    const cells: Array<{ date: Date | null; label: string }> = [];
+    const cells: { date: Date | null; label: string }[] = [];
     for (let i = 0; i < firstDowMondayBased; i++) cells.push({ date: null, label: "" });
     for (let d = 1; d <= daysInMonth; d++)
       cells.push({ date: new Date(viewYear, viewMonth, d), label: String(d) });
@@ -270,14 +271,15 @@ const miniStyles = StyleSheet.create({
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
+  const router = useRouter();
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate("calendars");
+    else router.replace("/(tabs)/calendars");
   };
 
   const goToRoot = () => {
-    navigation.navigate("calendars");
+    router.replace(`/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`);
   };
 
   const { width } = useWindowDimensions();

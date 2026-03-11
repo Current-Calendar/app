@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useCalendarActions } from '@/hooks/use-calendar-actions';
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 
 type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
@@ -16,6 +18,7 @@ export default function EditScreen() {
     name: string;
     description: string;
     privacy: PrivacyStatus;
+    cover: string;
   }>();
 
   const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.privacy ?? 'PRIVATE');
@@ -24,6 +27,11 @@ export default function EditScreen() {
     name: params.name ?? "",
     description: params.description ?? "",
   });
+
+  // Cover image state: existing URL from server, or new local pick
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(params.cover || null);
+  const [newCoverImage, setNewCoverImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
 
   const calendarId = params.id;
 
@@ -51,6 +59,35 @@ export default function EditScreen() {
     },
   ];
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Please allow access to your photo library.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setNewCoverImage(result.assets[0]);
+      setCoverRemoved(false);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setNewCoverImage(null);
+    setExistingCoverUrl(null);
+    setCoverRemoved(true);
+  };
+
+  // Determine what to display as cover
+  const displayCoverUri = newCoverImage?.uri ?? (coverRemoved ? null : existingCoverUrl);
+
   const handleEdit = async () => {
     if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -64,11 +101,25 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      await updateCalendar(Number(calendarId), {
-        name: calendarData.name,
-        description: calendarData.description,
-        privacy: selectedPrivacy,
-      });
+      if (newCoverImage) {
+        const formData = new FormData();
+        formData.append("name", calendarData.name);
+        formData.append("description", calendarData.description);
+        formData.append("privacy", selectedPrivacy);
+
+        const filename = newCoverImage.uri.split("/").pop() ?? "cover.jpg";
+        const fetchResponse = await fetch(newCoverImage.uri);
+        const blob = await fetchResponse.blob();
+        formData.append("cover", blob, filename);
+
+        await updateCalendar(Number(calendarId), formData);
+      } else {
+        await updateCalendar(Number(calendarId), {
+          name: calendarData.name,
+          description: calendarData.description,
+          privacy: selectedPrivacy,
+        });
+      }
 
       router.replace('/(tabs)/calendars');
     } catch (error) {
@@ -97,6 +148,38 @@ export default function EditScreen() {
           >
             Edit Calendar
           </ThemedText>
+
+          {/* COVER IMAGE */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Cover Image</Text>
+
+            {displayCoverUri ? (
+              <View style={styles.coverPreviewContainer}>
+                <Image
+                  source={{ uri: displayCoverUri }}
+                  style={styles.coverPreview}
+                />
+                <Pressable style={styles.coverRemoveButton} onPress={handleRemoveCover}>
+                  <Ionicons name="close-circle" size={26} color="#fff" />
+                </Pressable>
+                <Pressable style={styles.coverChangeButton} onPress={handlePickImage}>
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.coverChangeText}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.coverPickerEmpty} onPress={handlePickImage}>
+                <View style={styles.coverPickerIconWrap}>
+                  <Ionicons name="image-outline" size={28} color="#10464d" />
+                </View>
+                <Text style={styles.coverPickerLabel}>Add a cover image</Text>
+                <Text style={styles.coverPickerSub}>Recommended: 16:9 ratio</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* DIVIDER */}
+          <View style={styles.divider} />
 
           {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
@@ -278,6 +361,72 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e8e8e8",
     marginVertical: 24,
+  },
+
+  // COVER IMAGE
+  coverPreviewContainer: {
+    borderRadius: 12,
+    overflow: "hidden",
+    height: 160,
+    position: "relative",
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  coverRemoveButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 13,
+  },
+  coverChangeButton: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  coverChangeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  coverPickerEmpty: {
+    borderWidth: 1.5,
+    borderColor: "#c8dfe1",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f5fafa",
+    gap: 6,
+  },
+  coverPickerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#e0eff0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  coverPickerLabel: {
+    fontSize: 14,
+    color: "#10464d",
+    fontWeight: "600",
+  },
+  coverPickerSub: {
+    fontSize: 12,
+    color: "#999",
   },
 
   // PRIVACY SECTION

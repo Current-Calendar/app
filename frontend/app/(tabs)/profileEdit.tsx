@@ -18,6 +18,7 @@ import { User } from '../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
 import { useProfileActions } from '@/hooks/use-profile-actions';
+import { API_CONFIG } from '@/constants/api';
 
 
 const EditProfileScreen = () => {
