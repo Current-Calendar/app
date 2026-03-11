@@ -117,7 +117,7 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
 
               {!!description && (
                 <View style={styles.descWrap}>
-                  <Text style={styles.descTitle}>Descripción</Text>
+                  <Text style={styles.descTitle}>Description:</Text>
                   <Text style={styles.descText}>{description}</Text>
                 </View>
               )}
@@ -125,7 +125,7 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
           </ScrollView>
 
           <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Cerrar</Text>
+            <Text style={styles.primaryBtnText}>Close</Text>
           </Pressable>
         </Pressable>
       </Pressable>
