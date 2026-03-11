@@ -6,12 +6,7 @@ import { Platform } from "react-native";
 import apiClient from "./api-client";
 
 const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL!;
-
-const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
-  ? RAW_BACKEND_URL
-  : RAW_BACKEND_URL + '/';
-
-const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
+const API_URL = RAW_BACKEND_URL.endsWith('/') ? RAW_BACKEND_URL : RAW_BACKEND_URL + '/';
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = apiClient.getAccessToken();
@@ -25,7 +20,7 @@ const getCurrentUserId = (): number => {
 };
 
 export const downloadCalendar = async (id: string) => {
-  const url = `${ROOT_BACKEND_URL}api/calendars/${id}/export`;
+  const url = `${API_URL}calendars/${id}/export/`;
 
   try {
     if (Platform.OS === "web") {
@@ -60,7 +55,7 @@ export const downloadCalendar = async (id: string) => {
 
 export async function importIOSCalendar(calendarUrl: string) {
   try {
-    const response = await fetch(`${ROOT_BACKEND_URL}api/calendars/import-ios-calendar`, {
+    const response = await fetch(`${API_URL}calendars/import-ios-calendar/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,8 +87,8 @@ export async function importIOSCalendar(calendarUrl: string) {
 
 export async function importGoogleCalendar() {
   try {
-    const authUrl = `${BACKEND_URL}google-auth`;
-    const importUrl = `${ROOT_BACKEND_URL}api/calendars/import-google-calendar`;
+    const authUrl = `${API_URL}auth/google-auth`;
+    const importUrl = `${API_URL}calendars/import-google-calendar/`;
 
     if (Platform.OS === 'web') {
       window.location.href = authUrl;
@@ -168,8 +163,10 @@ export async function importICS() {
     }
     formData.append('user', String(getCurrentUserId()));
     formData.append('privacy', 'PRIVATE');
-    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${ROOT_BACKEND_URL}api/calendars/import-ics` });
-    const response = await fetch(`${ROOT_BACKEND_URL}api/calendars/import-ics`, {
+
+    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${API_URL}calendars/import-ics/` });
+
+    const response = await fetch(`${API_URL}calendars/import-ics/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: formData,
