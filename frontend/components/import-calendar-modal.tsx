@@ -18,35 +18,35 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
     const handleICS = async () => {
         try {
             const result = await importICS();
-            Alert.alert("ICS importado", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("ICS imported", `${result?.imported_count || 0} events were imported`);
             onClose();
             onSuccess?.();
         } catch {
-            Alert.alert("Error", "No se pudo importar el calendario ICS");
+            Alert.alert("Error", "The ICS calendar could not be imported");
         }
     };
 
     const handleGoogle = async () => {
         try {
             const result = await importGoogleCalendar();
-            Alert.alert("Google Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("Google Calendar", `${result?.imported_count || 0} events were imported`);
             onClose();
             onSuccess?.();
         } catch {
-            Alert.alert("Error", "No se pudo importar desde Google Calendar");
+            Alert.alert("Error", "It could not be imported from Google Calendar");
         }
     };
 
     const handleIOS = async () => {
         try {
             const result = await importIOSCalendar(iosUrl);
-            Alert.alert("iOS Calendar", `Se importaron ${result?.imported_count || 0} eventos`);
+            Alert.alert("iOS Calendar", `${result?.imported_count || 0} events were imported`);
             setIosModalVisible(false);
             setIosUrl('');
             onClose();
             onSuccess?.();
         } catch {
-            Alert.alert("Error", "No se pudo importar desde iOS Calendar");
+            Alert.alert("Error", "It could not be imported from iOS Calendar");
         }
     };
 
@@ -55,7 +55,7 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
             <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
                 <Pressable style={styles.overlay} onPress={onClose}>
                     <View style={styles.card}>
-                        <Text style={styles.title}>Importar calendario</Text>
+                        <Text style={styles.title}>Import calendar</Text>
 
                         <Pressable style={styles.option} onPress={() => { onClose(); setIosModalVisible(true); }}>
                             <View style={[styles.circle, { backgroundColor: '#d1faff' }]}>
@@ -73,7 +73,7 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
                             </View>
                             <View>
                                 <Text style={styles.optionTitle}>Google Calendar</Text>
-                                <Text style={styles.optionDesc}>Sincronizar con Google</Text>
+                                <Text style={styles.optionDesc}>Sync with Google</Text>
                             </View>
                         </Pressable>
 
@@ -82,8 +82,8 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
                                 <MaterialCommunityIcons name="file" size={20} color="#10464d" />
                             </View>
                             <View>
-                                <Text style={styles.optionTitle}>Archivo .ICS</Text>
-                                <Text style={styles.optionDesc}>Subir desde dispositivo</Text>
+                                <Text style={styles.optionTitle}>.ICS File</Text>
+                                <Text style={styles.optionDesc}>Upload from device</Text>
                             </View>
                         </Pressable>
 
@@ -99,22 +99,22 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
                 <View style={styles.iosOverlay}>
                     <View style={styles.iosCard}>
                         <View style={styles.iosHeader}>
-                            <Text style={styles.iosHeaderText}>Importar calendario iOS</Text>
+                            <Text style={styles.iosHeaderText}>Import iOS calendar</Text>
                         </View>
                         <View style={styles.iosBody}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="https://..."
+                                placeholder="webcal://..."
                                 placeholderTextColor="#10464d"
                                 value={iosUrl}
                                 onChangeText={setIosUrl}
                             />
                             <View style={styles.iosButtons}>
                                 <Pressable style={styles.cancelBtn} onPress={() => setIosModalVisible(false)}>
-                                    <Text style={{ color: '#10464d' }}>Cancelar</Text>
+                                    <Text style={{ color: '#10464d' }}>Cancel</Text>
                                 </Pressable>
                                 <Pressable style={styles.submitBtn} onPress={handleIOS}>
-                                    <Text style={{ color: '#fff' }}>Importar</Text>
+                                    <Text style={{ color: '#fff' }}>Import</Text>
                                 </Pressable>
                             </View>
                         </View>
