@@ -69,10 +69,11 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const data: User = await updateOwnProfile({
+      const response = await updateOwnProfile({
         pronouns: pronouns,
         bio: bio,
       });
+      const data: User = (response as any)?.user ?? response;
 
       updateUserContext({
         ...currentUser,

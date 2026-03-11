@@ -54,8 +54,8 @@ export default function CalendarViewScreen() {
 
       const transformed: CalendarEvent[] = [];
       backendEvents.forEach((evt: any) => {
-        if (evt.calendarios && evt.calendarios.length > 0) {
-          evt.calendarios.forEach((calId: number) => {
+        if (evt.calendars && evt.calendars.length > 0) {
+          evt.calendars.forEach((calId: number) => {
             transformed.push({
               id: String(evt.id),
               calendarId: String(calId),

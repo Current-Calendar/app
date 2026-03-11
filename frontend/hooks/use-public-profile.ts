@@ -192,7 +192,7 @@ export const useUserProfile = (userId?: string) => {
                     }
 
                     const publicCalendarsRaw = await apiClient.get<any[]>(
-                        `/calendars/list?privacy=PUBLIC`
+                        `/calendars/list/?privacy=PUBLIC`
                     );
 
                     setUserBeingViewed({
