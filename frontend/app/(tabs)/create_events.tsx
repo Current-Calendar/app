@@ -584,7 +584,7 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/events', payload);
+      await apiClient.post<any>('/events/create/', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {

@@ -163,6 +163,14 @@ export default function CalendarScreen() {
         return list;
     }, [events, selectedCalendarId, selectedEventType]);
 
+    const eventsOfSelectedDay = useMemo(() => {
+    if (!selectedDay) return [];
+
+    return filteredEvents.filter(
+        (event) => event.date?.slice(0,10) === selectedDay
+    );
+    }, [filteredEvents, selectedDay]);
+
     const removeCalendarFromState = (calendarId: string) => {
         setCalendars((current) => current.filter((item) => item.id !== calendarId));
         setEvents((current) => current.filter((event) => event.calendarId !== calendarId));
@@ -438,23 +446,50 @@ export default function CalendarScreen() {
                 >
                     <View style={styles.sheetHandle} />
 
-                    <View style={styles.sheetContent}>
+                        <View style={styles.sheetContent}>
+
                         <View style={styles.sheetTextBlock}>
                             <Text style={styles.sheetLabel}>Add event to</Text>
                             <Text style={styles.sheetDate}>
-                                {selectedDay ? formatSelectedDay(selectedDay) : ''}
+                            {selectedDay ? formatSelectedDay(selectedDay) : ""}
                             </Text>
                         </View>
+
+                        {eventsOfSelectedDay.length > 0 && (
+                            <ScrollView
+                            style={styles.dayEventsList}
+                            contentContainerStyle={{ paddingBottom: 6 }}
+                            >
+                            {eventsOfSelectedDay.map((event) => (
+                                <TouchableOpacity
+                                key={event.id}
+                                style={styles.dayEventItem}
+                                onPress={() => setActiveEvent(event)}
+                                >
+                                <Text style={styles.dayEventTime}>
+                                    {event.time?.slice(0,5)}
+                                </Text>
+
+                                <Text style={styles.dayEventTitle}>
+                                    {event.title}
+                                </Text>
+                                </TouchableOpacity>
+                            ))}
+                            </ScrollView>
+                        )}
 
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() =>
+                            router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
+                            }
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
                         </TouchableOpacity>
-                    </View>
+
+                        </View>
                 </Animated.View>
             )}
             {optionAnimations.map((anim, index) => {
@@ -630,11 +665,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#D0CFC8',
     },
     sheetContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 12,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 10,
     },
     sheetTextBlock: {
         flex: 1,
@@ -741,5 +776,27 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         marginBottom: 20,
+    },
+    dayEventsList: {
+    marginTop: 12,
+    maxHeight: 120,
+    },
+
+    dayEventItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    },
+
+    dayEventTime: {
+    fontWeight: "700",
+    color: "#10464d",
+    fontSize: 13,
+    },
+
+    dayEventTitle: {
+    color: "#10464d",
+    fontSize: 13,
     },
 });
