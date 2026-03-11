@@ -49,7 +49,7 @@ export type CalendarItem = {
     created_at?: string;
 };
 
-export const useUserProfile = (userId?: string) => {
+export const useUserProfile = (username?: string) => {
     const { user: currentUser, isLoading: authLoading } = useAuth();
     const [userBeingViewed, setUserBeingViewed] = useState<any>(null);
     const [isFollowing, setIsFollowing] = useState<boolean>(false);
@@ -69,7 +69,7 @@ export const useUserProfile = (userId?: string) => {
     };
 
     useEffect(() => {
-        if (!userId) {
+        if (!username) {
             setUserBeingViewed(null);
             setIsFollowing(false);
             setUserNotFound(false);
@@ -88,8 +88,8 @@ export const useUserProfile = (userId?: string) => {
             if (USE_MOCK) {
                 await new Promise(r => setTimeout(r, 700));
                 const mockUser = {
-                    id: userId,
-                    username: "john_doe",
+                    id: 1,
+                    username: username,
                     pronouns: "he/him",
                     bio: "I'm a mock user for testing 😄",
                     photo: "https://i.pravatar.cc/300",
@@ -119,7 +119,7 @@ export const useUserProfile = (userId?: string) => {
                     headers['Authorization'] = `Bearer ${authToken}`;
                 }
 
-                const response = await fetch(`${API_BASE}users/${userId}/`, {
+                const response = await fetch(`${API_BASE}users/by-username/${username}/`, {
                     headers,
                     credentials: 'include',
                 });
@@ -140,11 +140,11 @@ export const useUserProfile = (userId?: string) => {
         }
 
         fetchData();
-    }, [userId, authLoading]);
+    }, [username, authLoading]);
 
-    // ----- Follow toggle -----
+    // ----- Follow toggle (usa el ID numérico del usuario visto) -----
     const handleFollowToggle = async () => {
-        if (!userId) return;
+        if (!userBeingViewed?.id) return;
 
         if (USE_MOCK) {
             await mockFollowToggle();
@@ -165,7 +165,7 @@ export const useUserProfile = (userId?: string) => {
                 headers['Authorization'] = `Bearer ${authToken}`;
             }
 
-            const response = await fetch(`${API_BASE}users/${userId}/follow/`, {
+            const response = await fetch(`${API_BASE}users/${userBeingViewed.id}/follow/`, {
                 method: 'POST',
                 headers,
                 credentials: 'include',

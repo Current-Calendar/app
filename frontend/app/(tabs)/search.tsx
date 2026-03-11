@@ -148,8 +148,8 @@ export default function SearchScreen() {
         }
     };
 
-    const handleUserSelect = (id: string) => {
-        router.push(`/profile/${id}`);
+    const handleUserSelect = (username: string) => {
+        router.push(`/profile/${username}`);
     };
 
     return (
@@ -173,7 +173,7 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.id)}>
+                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
                                 <View style={styles.userInfo}>
                                     <Image
                                         source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
