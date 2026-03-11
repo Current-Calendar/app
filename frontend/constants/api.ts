@@ -43,6 +43,9 @@ export const API_CONFIG = {
     getEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}`),
     editEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}`),
     deleteEvent: (eventId: string) => buildEndpoint(`events/${eventId}/delete/`),
+    recoverPassword: buildEndpoint('auth/recover-password/'),
+    setNewPassword: buildEndpoint('auth/set-new-password/'),
+    validateResetToken: buildEndpoint('auth/validate-reset-token/'),
   },
 };
 
