@@ -78,7 +78,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
           {!!event.description && (
             <View style={styles.descWrap}>
-              <Text style={styles.descTitle}>Descripción</Text>
+              <Text style={styles.descTitle}>Description:</Text>
               <Text style={styles.descText}>{event.description}</Text>
             </View>
           )}

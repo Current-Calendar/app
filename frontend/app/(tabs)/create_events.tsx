@@ -576,7 +576,7 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/events', payload);
+      await apiClient.post<any>('/events/create/', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
@@ -801,8 +801,8 @@ export default function CreateEventsScreen() {
               <Ionicons name="checkmark" size={28} color={WHITE} />
             </View>
 
-            <Text style={styles.successTitle}>¡Listo!</Text>
-            <Text style={styles.successBody}>Event creado correctamente</Text>
+            <Text style={styles.successTitle}>Ready!</Text>
+            <Text style={styles.successBody}>Event created successfully</Text>
 
             <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
               <Text style={styles.successBtnText}>OK</Text>

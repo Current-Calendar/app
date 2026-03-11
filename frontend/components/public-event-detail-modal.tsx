@@ -59,13 +59,13 @@ export function PublicEventDetailModal({
 
           {!!event.description && (
             <View style={styles.descWrap}>
-              <Text style={styles.descTitle}>Descripción</Text>
+              <Text style={styles.descTitle}>Description:</Text>
               <Text style={styles.descText}>{event.description}</Text>
             </View>
           )}
 
           <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Cerrar</Text>
+            <Text style={styles.primaryBtnText}>Close</Text>
           </Pressable>
         </Pressable>
       </Pressable>

@@ -28,7 +28,6 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-// ========= NOMINATIM =========
 const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 const NOMINATIM_LIMIT = 6;
 const PLACE_DEBOUNCE_MS = 350;
@@ -54,8 +53,8 @@ const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
-  name: String(raw?.nombre ?? raw?.name ?? raw?.titulo ?? "Calendar"),
-  image: raw?.imagen_portada ?? raw?.image ?? undefined,
+  name: String(raw?.name ?? raw?.nombre ?? raw?.titulo ?? raw?.title ?? "Calendar"),
+  image: raw?.cover ?? raw?.image ?? undefined,
 });
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -249,9 +248,7 @@ export default function EditEventsScreen() {
   const [calError, setCalError] = useState<string | null>(null);
 
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
-    null
-  );
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -307,12 +304,12 @@ export default function EditEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiClient.get<any>("/calendarios/mis-calendarios");
+      const data: any = await apiClient.get<any>("/calendars/my-calendars/");
 
       const list =
         (Array.isArray(data) && data) ||
         (Array.isArray(data?.results) && data.results) ||
-        (Array.isArray(data?.calendarios) && data.calendarios) ||
+        (Array.isArray(data?.calendars) && data.calendars) ||
         (Array.isArray(data?.data) && data.data) ||
         [];
 
@@ -337,34 +334,36 @@ export default function EditEventsScreen() {
     }
 
     try {
-      const event: any = await apiClient.get<any>(`/eventos/${eventId}`);
+      // Requiere backend: GET /api/v1/events/<id>/
+      const event: any = await apiClient.get<any>(`/events/${eventId}/edit/`);
 
-      setTitle(String(event?.titulo ?? ""));
-      setDescription(String(event?.descripcion ?? ""));
-      setPlace(String(event?.nombre_lugar ?? ""));
+      setTitle(String(event?.title ?? ""));
+      setDescription(String(event?.description ?? ""));
+      setPlace(String(event?.place_name ?? ""));
 
-      if (event?.latitud != null) {
-        const parsedLat = Number(event.latitud);
+      if (event?.location?.coordinates?.length >= 2) {
+        const [lonValue, latValue] = event.location.coordinates;
+        const parsedLat = Number(latValue);
+        const parsedLon = Number(lonValue);
         setLat(Number.isFinite(parsedLat) ? parsedLat : null);
-      }
-
-      if (event?.longitud != null) {
-        const parsedLon = Number(event.longitud);
         setLon(Number.isFinite(parsedLon) ? parsedLon : null);
+      } else {
+        setLat(null);
+        setLon(null);
       }
 
-      if (event?.foto) {
-        setCoverUri(String(event.foto));
+      if (event?.photo) {
+        setCoverUri(String(event.photo));
       }
 
-      if (event?.fecha) {
-        const [year, month, day] = String(event.fecha).split("-").map(Number);
+      if (event?.date) {
+        const [year, month, day] = String(event.date).split("-").map(Number);
         const parsedDate = new Date(year, month - 1, day);
         parsedDate.setHours(0, 0, 0, 0);
         setDate(parsedDate);
 
-        if (event?.hora) {
-          const [hh, mm] = String(event.hora).split(":").map(Number);
+        if (event?.time) {
+          const [hh, mm] = String(event.time).split(":").map(Number);
           const parsedTime = new Date(parsedDate);
           parsedTime.setHours(hh || 0, mm || 0, 0, 0);
           setTime(parsedTime);
@@ -373,8 +372,8 @@ export default function EditEventsScreen() {
         }
       }
 
-      if (event?.calendarios?.length > 0) {
-        const selectedId = String(event.calendarios[0]);
+      if (event?.calendars?.length > 0) {
+        const selectedId = String(event.calendars[0]);
         const foundCalendar = availableCalendars.find((c) => c.id === selectedId);
         if (foundCalendar) {
           setSelectedCalendar(foundCalendar);
@@ -561,20 +560,22 @@ export default function EditEventsScreen() {
 
     try {
       const updateData: any = {
-        titulo: title.trim(),
-        descripcion: description.trim(),
-        nombre_lugar: place.trim(),
-        fecha: toISODate(date),
-        hora: toHMS(time),
-        calendarios: [Number(selectedCalendar.id)],
+        title: title.trim(),
+        description: description.trim(),
+        place_name: place.trim(),
+        date: toISODate(date),
+        time: toHMS(time),
+        calendars: [Number(selectedCalendar.id)],
       };
 
       if (lat != null && lon != null) {
-        updateData.latitud = lat;
-        updateData.longitud = lon;
+        updateData.location = {
+          type: "Point",
+          coordinates: [lon, lat],
+        };
       }
 
-      await apiClient.put<any>(`/eventos/${eventId}`, updateData);
+      await apiClient.put<any>(`/events/${eventId}/edit/`, updateData);
 
       setSuccessModalOpen(true);
     } catch (error: any) {
@@ -672,7 +673,7 @@ export default function EditEventsScreen() {
                 </Pressable>
 
                 <Text style={styles.helperText}>
-                  (No se envía aún: el endpoint /eventos no recibe imagen)
+                  (No se envía aún: el endpoint /events/... no recibe imagen en este formulario)
                 </Text>
               </View>
             </View>
@@ -810,7 +811,7 @@ export default function EditEventsScreen() {
                     </Pressable>
                   )}
                   ListEmptyComponent={
-                    <Text style={styles.helperText}>No hay calendarios. Crea uno primero.</Text>
+                    <Text style={styles.helperText}>No calendars. Create one first.</Text>
                   }
                 />
               )}
@@ -825,8 +826,8 @@ export default function EditEventsScreen() {
                 <Ionicons name="checkmark" size={28} color={WHITE} />
               </View>
 
-              <Text style={styles.successTitle}>¡Listo!</Text>
-              <Text style={styles.successBody}>Evento actualizado correctamente</Text>
+              <Text style={styles.successTitle}>Ready!</Text>
+              <Text style={styles.successBody}>Event updated successfully</Text>
 
               <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
                 <Text style={styles.successBtnText}>OK</Text>
