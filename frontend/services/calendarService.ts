@@ -13,7 +13,7 @@ const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
 const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
 
 export const downloadCalendar = async (id: string, token?: string) => {
-  const url = `${ROOT_BACKEND_URL}api/calendars/${id}/export`;
+  const url = `${ROOT_BACKEND_URL}api/v1/calendars/${id}/export/`;
 
   try {
     if (Platform.OS === "web") {
@@ -48,7 +48,7 @@ export const downloadCalendar = async (id: string, token?: string) => {
 
 export async function importIOSCalendar(calendarUrl: string, userId: number) {
   try {
-    const response = await fetch(`${BACKEND_URL}calendars/import-ios-calendar`, {
+    const response = await fetch(`${BACKEND_URL}calendars/import-ios-calendar/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -79,8 +79,8 @@ export async function importIOSCalendar(calendarUrl: string, userId: number) {
 
 export async function importGoogleCalendar() {
   try {
-    const authUrl = `${BACKEND_URL}google-auth`;
-    const importUrl = `${BACKEND_URL}calendars/import-google-calendar`;
+    const authUrl = `${BACKEND_URL}auth/google-auth`;
+    const importUrl = `${BACKEND_URL}calendars/import-google-calendar/`;
 
     if (Platform.OS === 'web') {
       window.location.href = authUrl;
@@ -160,8 +160,8 @@ export async function importICS(userId: number) {
     }
     formData.append('user', String(userId));
     formData.append('privacy', 'PRIVATE');
-    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${ROOT_BACKEND_URL}api/calendars/import-ics` });
-    const response = await fetch(`${ROOT_BACKEND_URL}api/calendars/import-ics`, {
+    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${ROOT_BACKEND_URL}api/v1/calendars/import-ics/` });
+    const response = await fetch(`${ROOT_BACKEND_URL}api/v1/calendars/import-ics/`, {
       method: 'POST',
       body: formData,
     });

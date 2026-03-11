@@ -123,7 +123,7 @@ export default function CreateScreen() {
         formData.append("cover", blob, filename);
       }
 
-      await apiClient.post("/calendars", formData);
+      await apiClient.post("/calendars/create/", formData);
 
       router.replace("/(tabs)/calendars");
     } catch (error) {
@@ -134,15 +134,6 @@ export default function CreateScreen() {
     }
   };
 
-  const handleDraft = async () => {
-    try {
-      // TODO: Save as draft
-      Alert.alert("Success", "Calendar saved as draft");
-      console.log("Calendar saved as draft");
-    } catch (error) {
-      Alert.alert("Error", "Failed to save draft" + error);
-    }
-  };
 
   return (
     <View style={styles.wrapper}>
@@ -313,9 +304,6 @@ export default function CreateScreen() {
           <View
             style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
           >
-            <Pressable style={styles.draftButton} onPress={handleDraft}>
-              <Text style={styles.draftButtonText}>Save as Draft</Text>
-            </Pressable>
 
             <Pressable
               style={[
@@ -520,20 +508,6 @@ const styles = StyleSheet.create({
   },
   buttonGroupDesktop: {
     justifyContent: "space-between",
-  },
-  draftButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  draftButtonText: {
-    color: "#10464d",
-    fontSize: 15,
-    fontWeight: "600",
   },
 
   publishButton: {

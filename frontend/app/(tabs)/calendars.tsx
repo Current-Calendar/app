@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
 
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalendarGrid } from '@/components/calendar-grid';
-import { CalendarHeader } from '@/components/calendar-header';
+import { CalendarHeader, CalendarViewMode } from '@/components/calendar-header';
+import { CalendarWeekGrid } from '@/components/calendar-week-grid';
+import { CalendarYearGrid } from '@/components/calendar-year-grid';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarSelector } from '@/components/calendar-selector';
@@ -45,6 +47,7 @@ export default function CalendarScreen() {
     const { isAuthenticated } = useAuth();
     const today = new Date();
     const router = useRouter();
+    const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
@@ -53,6 +56,8 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+    const [weekDay, setWeekDay] = useState(today.getDate());
+    const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -80,6 +85,7 @@ export default function CalendarScreen() {
                 id: String(c.id),
                 name: c.name,
                 description: c.description || '',
+                cover: c.cover || undefined,
                 privacy: c.privacy,
                 origin: c.origin,
                 creator: c.creator_username || 'unknown',
@@ -115,6 +121,12 @@ export default function CalendarScreen() {
     useEffect(() => {
         void fetchData();
     }, []);
+
+    useEffect(() => {
+        if (params.selectedCalendarId) {
+            setSelectedCalendarId(params.selectedCalendarId);
+        }
+    }, [params.selectedCalendarId]);
 
     const [open, setOpen] = useState(false);
     const rotation = useRef(new Animated.Value(0)).current;
@@ -200,21 +212,39 @@ export default function CalendarScreen() {
         }
     };
 
-    const goToPrevMonth = () => {
-        if (month === 0) {
-            setMonth(11);
+    const goToPrev = () => {
+        if (viewMode === 'week') {
+            const d = new Date(year, month, weekDay - 7);
+            setYear(d.getFullYear());
+            setMonth(d.getMonth());
+            setWeekDay(d.getDate());
+        } else if (viewMode === 'year') {
             setYear((y) => y - 1);
         } else {
-            setMonth((m) => m - 1);
+            if (month === 0) {
+                setMonth(11);
+                setYear((y) => y - 1);
+            } else {
+                setMonth((m) => m - 1);
+            }
         }
     };
 
-    const goToNextMonth = () => {
-        if (month === 11) {
-            setMonth(0);
+    const goToNext = () => {
+        if (viewMode === 'week') {
+            const d = new Date(year, month, weekDay + 7);
+            setYear(d.getFullYear());
+            setMonth(d.getMonth());
+            setWeekDay(d.getDate());
+        } else if (viewMode === 'year') {
             setYear((y) => y + 1);
         } else {
-            setMonth((m) => m + 1);
+            if (month === 11) {
+                setMonth(0);
+                setYear((y) => y + 1);
+            } else {
+                setMonth((m) => m + 1);
+            }
         }
     };
 
@@ -222,6 +252,32 @@ export default function CalendarScreen() {
         const now = new Date();
         setYear(now.getFullYear());
         setMonth(now.getMonth());
+        setWeekDay(now.getDate());
+    };
+
+    const handleViewModeChange = (mode: CalendarViewMode) => {
+        setViewMode(mode);
+        // When switching to week, use current date context
+        if (mode === 'week') {
+            setWeekDay(new Date(year, month, 1).getDate());
+        }
+    };
+
+    const getHeaderLabel = (): string => {
+        if (viewMode === 'year') return String(year);
+        if (viewMode === 'week') {
+            // Show the week range
+            const d = new Date(year, month, weekDay);
+            const dow = d.getDay();
+            const mondayOffset = dow === 0 ? -6 : 1 - dow;
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + mondayOffset);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            const fmtDay = (dt: Date) => `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].substring(0, 3)}`;
+            return `${fmtDay(monday)} – ${fmtDay(sunday)} ${sunday.getFullYear()}`;
+        }
+        return `${MONTH_NAMES[month]} ${year}`;
     };
     // Show loading indicator while waiting for data
     if (loading) {
@@ -355,10 +411,12 @@ export default function CalendarScreen() {
 
                 <View style={styles.headerBlock}>
                     <CalendarHeader
-                        monthLabel={`${MONTH_NAMES[month]} ${year}`}
-                        onPrevMonth={goToPrevMonth}
-                        onNextMonth={goToNextMonth}
+                        monthLabel={getHeaderLabel()}
+                        onPrevMonth={goToPrev}
+                        onNextMonth={goToNext}
                         onTodayPress={goToToday}
+                        viewMode={viewMode}
+                        onViewModeChange={handleViewModeChange}
                     />
                 </View>
 
@@ -384,14 +442,38 @@ export default function CalendarScreen() {
                 <View style={styles.container}
                     id="calendar-web"
                     ref={calendarRef}>
-                    <CalendarGrid
-                        year={year}
-                        month={month}
-                        events={filteredEvents}
-                        onEventPress={setActiveEvent}
-                        selectedDay={selectedDay}
-                        onDayPress={handleDayPress}
-                    />
+                    {viewMode === 'week' && (
+                        <CalendarWeekGrid
+                            year={year}
+                            month={month}
+                            day={weekDay}
+                            events={filteredEvents}
+                            onEventPress={setActiveEvent}
+                            selectedDay={selectedDay}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
+                    {viewMode === 'month' && (
+                        <CalendarGrid
+                            year={year}
+                            month={month}
+                            events={filteredEvents}
+                            onEventPress={setActiveEvent}
+                            selectedDay={selectedDay}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
+                    {viewMode === 'year' && (
+                        <CalendarYearGrid
+                            year={year}
+                            events={filteredEvents}
+                            onMonthPress={(m) => {
+                                setMonth(m);
+                                setViewMode('month');
+                            }}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
                 </View>
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
                 <CalendarInfoModal
@@ -407,6 +489,7 @@ export default function CalendarScreen() {
                                 name: calendar.name,
                                 description: calendar.description ?? '',
                                 privacy: calendar.privacy,
+                                cover: calendar.cover ?? '',
                             },
                         });
                     }}
