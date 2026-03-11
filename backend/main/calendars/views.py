@@ -18,6 +18,9 @@ from django.conf import settings
 from utils.security import get_safe_ip
 from icalendar import Calendar as ICalCalendar
 from urllib.parse import urlparse
+from django.core.cache import cache
+from main.rs.calendars import recommend_calendars
+from main.serializers import CalendarSummarySerializer
 
 REQUEST_TIMEOUT_SECONDS = 5
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -554,3 +557,25 @@ def export_to_ics(request, calendar_id):
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def recommended_calendars(request):
+    try:
+        user_id = request.user.id
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    cache_key = f"recommended_calendars_{user_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
+
+    calendars = recommend_calendars(user, limit=30)
+    serializer = CalendarSummarySerializer(calendars, many=True)
+
+    cache.set(cache_key, serializer.data, 60 * 5)
+
+    return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})

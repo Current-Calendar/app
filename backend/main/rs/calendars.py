@@ -1,11 +1,7 @@
-from main.models import Calendario, Usuario
-from collections import Counter
-import shelve
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
-import re
-from django.contrib.gis.measure import D
-from django.contrib.gis.db.models.functions import AsGeoJSON
+from main.models import Calendar, User
+from main.rs.utils import tokenize, compute_item_similarities
 from django.db.models import Count
+import shelve
 
 SHELF_NAME = 'dataRS_calendars.dat'
 LOCATION_RADIUS_KM = 50
@@ -35,26 +31,15 @@ def get_similar_calendars(calendar_id, top_n=5):
 
 def get_all_calendars_features():
     features = {}
-    calendars = Calendario.objects.prefetch_related(
-        'etiquetas',
-        'suscriptores',
-        'eventos',
-    ).exclude(estado='PRIVADO')
+    calendars = Calendar.objects.prefetch_related(
+        'labels',
+        'subscribers',
+        'events',
+    ).exclude(privacy='PRIVATE')
 
     for calendar in calendars:
         features[calendar.id] = build_feature_set(calendar)
     return features
-
-
-def tokenize(text, n):
-    tokens = re.findall(r'\b[a-z]{4,}\b', text.lower())
-    words = [t for t in tokens if t not in ENGLISH_STOP_WORDS]
-    return most_common(words, n)
-
-
-def most_common(words, n):
-    counter = Counter(words)
-    return [word for word, _ in counter.most_common(n)]
 
 
 def get_location_clusters(calendar):
@@ -64,10 +49,10 @@ def get_location_clusters(calendar):
     redondeando a 1 decimal (~10km de precisión).
     """
     clusters = set()
-    for evento in calendar.eventos.all():
-        if evento.ubicacion:
-            lat = round(evento.ubicacion.y, 1)
-            lon = round(evento.ubicacion.x, 1)
+    for event in calendar.events.all():
+        if event.location:
+            lat = round(event.location.y, 1)
+            lon = round(event.location.x, 1)
             clusters.add(f"Location_{lat}_{lon}")
     return clusters
 
@@ -75,20 +60,20 @@ def get_location_clusters(calendar):
 def build_feature_set(calendar):
     s = set()
 
-    for etiqueta in calendar.etiquetas.all():
-        s.add(f"Label_{etiqueta.id}")
+    for label in calendar.labels.all():
+        s.add(f"Label_{label.id}")
 
-    if calendar.nombre:
-        for token in tokenize(calendar.nombre, 5):
+    if calendar.name:
+        for token in tokenize(calendar.name, 5):
             s.add(f"Name_{token}")
 
-    if calendar.descripcion:
-        for token in tokenize(calendar.descripcion, 15):
+    if calendar.description:
+        for token in tokenize(calendar.description, 15):
             s.add(f"Desc_{token}")
 
-    s.add(f"Creator_{calendar.creador_id}")
+    s.add(f"Creator_{calendar.creator_id}")
 
-    n = calendar.suscriptores.count()
+    n = calendar.subscribers.count()
     if n == 0:
         s.add("Popularity_none")
     elif n < 10:
@@ -104,30 +89,7 @@ def build_feature_set(calendar):
     return s
 
 
-def compute_item_similarities(calendars_features):
-    ret = {}
-    ids = list(calendars_features.keys())
-
-    for i in ids:
-        scores = {}
-        for j in ids:
-            if i == j:
-                continue
-            sim = dice_coefficient(calendars_features[i], calendars_features[j])
-            if sim > 0:
-                scores[j] = sim
-        ret[i] = Counter(scores).most_common(20)
-
-    return ret
-
-
-def dice_coefficient(set1, set2):
-    if not set1 or not set2:
-        return 0.0
-    return 2 * len(set1.intersection(set2)) / (len(set1) + len(set2))
-
-
-def recommend_calendars(user: Usuario, limit=30):
+def recommend_calendars(user: User, limit=30):
     """
     Recomienda calendarios para un usuario basándose en:
     1. Calendarios similares a los que ya sigue (content-based)
@@ -136,7 +98,7 @@ def recommend_calendars(user: Usuario, limit=30):
     
     Excluye calendarios privados y los que el usuario ya sigue.
     """
-    already_following = set(user.calendarios_seguidos.values_list('id', flat=True))
+    already_following = set(user.subscribed_calendars.values_list('id', flat=True))
     recommended_ids = {}
 
     for cal_id in already_following:
@@ -146,22 +108,22 @@ def recommend_calendars(user: Usuario, limit=30):
                 recommended_ids[sim_id] = recommended_ids.get(sim_id, 0) + score
 
 
-    friends_ids = user.seguidos.values_list('id', flat=True)
+    friends_ids = user.following.values_list('id', flat=True)
     friends_calendars = (
-        Calendario.objects
-        .filter(suscriptores__id__in=friends_ids)
+        Calendar.objects
+        .filter(subscribers__id__in=friends_ids)
         .exclude(id__in=already_following)
-        .exclude(estado='PRIVADO')
+        .exclude(privacy='PRIVATE')
         .distinct()
     )
     for cal in friends_calendars:
-        friends_following = cal.suscriptores.filter(id__in=friends_ids).count()
+        friends_following = cal.subscribers.filter(id__in=friends_ids).count()
         recommended_ids[cal.id] = recommended_ids.get(cal.id, 0) + (0.5 * friends_following)
 
     sorted_ids = sorted(recommended_ids, key=recommended_ids.get, reverse=True)
     final_calendars = list(
-        Calendario.objects.filter(id__in=sorted_ids)
-        .prefetch_related('etiquetas', 'suscriptores')
+        Calendar.objects.filter(id__in=sorted_ids)
+        .prefetch_related('labels', 'subscribers')
     )
     id_to_cal = {cal.id: cal for cal in final_calendars}
     final_calendars = [id_to_cal[i] for i in sorted_ids if i in id_to_cal]
@@ -170,10 +132,10 @@ def recommend_calendars(user: Usuario, limit=30):
         ids_to_exclude = already_following | set(recommended_ids.keys())
         needed = limit - len(final_calendars)
         popular = (
-            Calendario.objects
+            Calendar.objects
             .exclude(id__in=ids_to_exclude)
-            .exclude(estado='PRIVADO')
-            .annotate(num_subs=Count('suscriptores'))
+            .exclude(privacy='PRIVATE')
+            .annotate(num_subs=Count('subscribers'))
             .order_by('-num_subs')
         )[:needed]
         final_calendars.extend(list(popular))

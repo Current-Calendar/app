@@ -18,7 +18,6 @@ from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from graphene_django.views import GraphQLView
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from main import views
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
@@ -71,8 +70,8 @@ urlpatterns = [
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
-    path('api/v1/recommendations/calendars/<int:user_id>/', recommended_calendars),
-    path('api/v1/recommendations/events/<int:user_id>/', recommended_events),
+    path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
+    path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
 ]
 
 

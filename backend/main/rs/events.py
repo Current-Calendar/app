@@ -1,10 +1,8 @@
-from main.models import Evento, Usuario, Calendario
-from collections import Counter
 import shelve
-from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
-import re
 from django.db.models import Count
 from django.utils import timezone
+from main.models import User, Calendar, Event
+from main.rs.utils import tokenize, compute_item_similarities
 
 SHELF_NAME = 'dataRS_events.dat'
 
@@ -33,81 +31,47 @@ def get_similar_events(event_id, top_n=5):
 
 def get_all_events_features():
     features = {}
-    events = Evento.objects.prefetch_related(
-        'calendarios',
-        'calendarios__etiquetas',
-        'calendarios__suscriptores',
-    ).select_related('creador')
+    events = Event.objects.prefetch_related(
+        'calendars',
+        'calendars__labels',
+        'calendars__subscribers',
+    ).select_related('creator')
 
     for event in events:
         features[event.id] = build_feature_set(event)
     return features
 
 
-def tokenize(text, n):
-    tokens = re.findall(r'\b[a-z]{4,}\b', text.lower())
-    words = [t for t in tokens if t not in ENGLISH_STOP_WORDS]
-    return most_common(words, n)
-
-
-def most_common(words, n):
-    counter = Counter(words)
-    return [word for word, _ in counter.most_common(n)]
-
-
 def build_feature_set(event):
     s = set()
 
-    if event.titulo:
-        for token in tokenize(event.titulo, 5):
+    if event.title:
+        for token in tokenize(event.title, 5):
             s.add(f"Title_{token}")
 
-    if event.descripcion:
-        for token in tokenize(event.descripcion, 15):
+    if event.description:
+        for token in tokenize(event.description, 15):
             s.add(f"Desc_{token}")
 
-    s.add(f"Creator_{event.creador_id}")
+    s.add(f"Creator_{event.creator_id}")
 
-    if event.ubicacion:
-        lat = round(event.ubicacion.y, 1)
-        lon = round(event.ubicacion.x, 1)
+    if event.location:
+        lat = round(event.location.y, 1)
+        lon = round(event.location.x, 1)
         s.add(f"Location_{lat}_{lon}")
 
-    if event.fecha:
-        s.add(f"Month_{event.fecha.month}")
+    if event.date:
+        s.add(f"Month_{event.date.month}")
 
-    for cal in event.calendarios.all():
+    for cal in event.calendars.all():
         s.add(f"Calendar_{cal.id}")
-        for etiqueta in cal.etiquetas.all():
+        for etiqueta in cal.labels.all():
             s.add(f"Label_{etiqueta.id}")
 
     return s
 
 
-def compute_item_similarities(events_features):
-    ret = {}
-    ids = list(events_features.keys())
-
-    for i in ids:
-        scores = {}
-        for j in ids:
-            if i == j:
-                continue
-            sim = dice_coefficient(events_features[i], events_features[j])
-            if sim > 0:
-                scores[j] = sim
-        ret[i] = Counter(scores).most_common(20)
-
-    return ret
-
-
-def dice_coefficient(set1, set2):
-    if not set1 or not set2:
-        return 0.0
-    return 2 * len(set1.intersection(set2)) / (len(set1) + len(set2))
-
-
-def recommend_events(user: Usuario, limit=30):
+def recommend_events(user: User, limit=30):
     """
     Recomienda eventos para un usuario basándose en:
     1. Eventos similares a los de los calendarios que sigue (content-based)
@@ -115,10 +79,10 @@ def recommend_events(user: Usuario, limit=30):
     3. Eventos próximos populares como fallback
     """
 
-    followed_calendars = user.calendarios_seguidos.prefetch_related('eventos')
+    followed_calendars = user.subscribed_calendars.prefetch_related('events')
     already_seen_event_ids = set(
-        Evento.objects
-            .filter(calendarios__in=followed_calendars)
+        Event.objects
+            .filter(calendars__in=followed_calendars)
             .values_list('id', flat=True)
     )
 
@@ -131,16 +95,16 @@ def recommend_events(user: Usuario, limit=30):
                 recommended_ids[sim_id] = recommended_ids.get(sim_id, 0) + score
 
 
-    friends_ids = user.seguidos.values_list('id', flat=True)
+    friends_ids = user.following.values_list('id', flat=True)
     friends_calendars = (
-        Calendario.objects
-        .filter(suscriptores__id__in=friends_ids)
-        .exclude(estado='PRIVADO')
+        Calendar.objects
+        .filter(subscribers__id__in=friends_ids)
+        .exclude(privacy='PRIVATE')
         .distinct()
     )
     friends_events = (
-        Evento.objects
-        .filter(calendarios__in=friends_calendars)
+        Event.objects
+        .filter(calendars__in=friends_calendars)
         .exclude(id__in=already_seen_event_ids)
         .distinct()
     )
@@ -149,11 +113,11 @@ def recommend_events(user: Usuario, limit=30):
 
     sorted_ids = sorted(recommended_ids, key=recommended_ids.get, reverse=True)
     final_events = list(
-        Evento.objects
+        Event.objects
         .filter(id__in=sorted_ids)
-        .filter(fecha__gte=timezone.now().date())
-        .prefetch_related('calendarios__etiquetas')
-        .select_related('creador')
+        .filter(date__gte=timezone.now().date())
+        .prefetch_related('calendars__labels')
+        .select_related('creator')
     )
     id_to_event = {e.id: e for e in final_events}
     final_events = [id_to_event[i] for i in sorted_ids if i in id_to_event]
@@ -162,11 +126,11 @@ def recommend_events(user: Usuario, limit=30):
         ids_to_exclude = already_seen_event_ids | set(recommended_ids.keys())
         needed = limit - len(final_events)
         popular = (
-            Evento.objects
+            Event.objects
             .exclude(id__in=ids_to_exclude)
-            .filter(fecha__gte=timezone.now().date())
-            .annotate(num_calendarios=Count('calendarios'))
-            .order_by('fecha', '-num_calendarios')
+            .filter(date__gte=timezone.now().date())
+            .annotate(num_calendars=Count('calendars'))
+            .order_by('date', '-num_calendars')
         )[:needed]
         final_events.extend(list(popular))
 
