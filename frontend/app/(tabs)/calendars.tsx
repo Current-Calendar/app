@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, Modal, TextInput } from 'react-native';
 
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalendarGrid } from '@/components/calendar-grid';
-import { CalendarHeader } from '@/components/calendar-header';
+import { CalendarHeader, CalendarViewMode } from '@/components/calendar-header';
+import { CalendarWeekGrid } from '@/components/calendar-week-grid';
+import { CalendarYearGrid } from '@/components/calendar-year-grid';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarSelector } from '@/components/calendar-selector';
@@ -20,9 +22,10 @@ import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
 import { API_CONFIG } from '@/constants/api';
-import { downloadCalendar } from '@/services/calendarService';
+import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -45,6 +48,7 @@ export default function CalendarScreen() {
     const { isAuthenticated } = useAuth();
     const today = new Date();
     const router = useRouter();
+    const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
     const { width } = useWindowDimensions();
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
@@ -53,6 +57,8 @@ export default function CalendarScreen() {
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
+    const [weekDay, setWeekDay] = useState(today.getDate());
+    const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,6 +71,8 @@ export default function CalendarScreen() {
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
+
+    const [importModalVisible, setImportModalVisible] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -80,6 +88,7 @@ export default function CalendarScreen() {
                 id: String(c.id),
                 name: c.name,
                 description: c.description || '',
+                cover: c.cover || undefined,
                 privacy: c.privacy,
                 origin: c.origin,
                 creator: c.creator_username || 'unknown',
@@ -87,23 +96,23 @@ export default function CalendarScreen() {
             }));
 
             const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
-            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
-            return {
-                id: String(e.id),
-                calendarId: String(e.calendars[0] || ''),
-                title: e.title,
-                description: e.description || '',
-                place_name: e.place_name || '',
-                date: e.date,
-                time: e.time.substring(0, 5),
-                recurrence: e.recurrence,
-                type: 'other', // Default type
-                color: calendar?.color || '#6C63FF',
-            };
-        });
+                const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
+                return {
+                    id: String(e.id),
+                    calendarId: String(e.calendars[0] || ''),
+                    title: e.title,
+                    description: e.description || '',
+                    place_name: e.place_name || '',
+                    date: e.date,
+                    time: e.time.substring(0, 5),
+                    recurrence: e.recurrence,
+                    type: 'other', // Default type
+                    color: calendar?.color || '#6C63FF',
+                };
+            });
 
-        setCalendars(mappedCalendars);
-        setEvents(mappedEvents);
+            setCalendars(mappedCalendars);
+            setEvents(mappedEvents);
         } catch (error) {
             console.error('Error fetching data:', error);
             Alert.alert('Error', 'Could not load calendars or events.');
@@ -115,6 +124,12 @@ export default function CalendarScreen() {
     useEffect(() => {
         void fetchData();
     }, []);
+
+    useEffect(() => {
+        if (params.selectedCalendarId) {
+            setSelectedCalendarId(params.selectedCalendarId);
+        }
+    }, [params.selectedCalendarId]);
 
     const [open, setOpen] = useState(false);
     const rotation = useRef(new Animated.Value(0)).current;
@@ -128,6 +143,7 @@ export default function CalendarScreen() {
 
     const showSheet = (dateKey: string) => {
         setSelectedDay(dateKey);
+        if (open) toggleMenu();
         Animated.spring(sheetY, {
             toValue: 0,
             useNativeDriver: true,
@@ -196,8 +212,8 @@ export default function CalendarScreen() {
         setDeletingCalendarId(calendar.id);
         try {
             await apiClient.delete(`/calendars/${calendar.id}/delete/`);
-            setInfoCalendar(null);       
-            setDeletingCalendarId(null); 
+            setInfoCalendar(null);
+            setDeletingCalendarId(null);
             await fetchData();
         } catch (e) {
             console.error('Delete error:', e);
@@ -208,21 +224,39 @@ export default function CalendarScreen() {
         }
     };
 
-    const goToPrevMonth = () => {
-        if (month === 0) {
-            setMonth(11);
+    const goToPrev = () => {
+        if (viewMode === 'week') {
+            const d = new Date(year, month, weekDay - 7);
+            setYear(d.getFullYear());
+            setMonth(d.getMonth());
+            setWeekDay(d.getDate());
+        } else if (viewMode === 'year') {
             setYear((y) => y - 1);
         } else {
-            setMonth((m) => m - 1);
+            if (month === 0) {
+                setMonth(11);
+                setYear((y) => y - 1);
+            } else {
+                setMonth((m) => m - 1);
+            }
         }
     };
 
-    const goToNextMonth = () => {
-        if (month === 11) {
-            setMonth(0);
+    const goToNext = () => {
+        if (viewMode === 'week') {
+            const d = new Date(year, month, weekDay + 7);
+            setYear(d.getFullYear());
+            setMonth(d.getMonth());
+            setWeekDay(d.getDate());
+        } else if (viewMode === 'year') {
             setYear((y) => y + 1);
         } else {
-            setMonth((m) => m + 1);
+            if (month === 11) {
+                setMonth(0);
+                setYear((y) => y + 1);
+            } else {
+                setMonth((m) => m + 1);
+            }
         }
     };
 
@@ -230,6 +264,32 @@ export default function CalendarScreen() {
         const now = new Date();
         setYear(now.getFullYear());
         setMonth(now.getMonth());
+        setWeekDay(now.getDate());
+    };
+
+    const handleViewModeChange = (mode: CalendarViewMode) => {
+        setViewMode(mode);
+        // When switching to week, use current date context
+        if (mode === 'week') {
+            setWeekDay(new Date(year, month, 1).getDate());
+        }
+    };
+
+    const getHeaderLabel = (): string => {
+        if (viewMode === 'year') return String(year);
+        if (viewMode === 'week') {
+            // Show the week range
+            const d = new Date(year, month, weekDay);
+            const dow = d.getDay();
+            const mondayOffset = dow === 0 ? -6 : 1 - dow;
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + mondayOffset);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            const fmtDay = (dt: Date) => `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].substring(0, 3)}`;
+            return `${fmtDay(monday)} – ${fmtDay(sunday)} ${sunday.getFullYear()}`;
+        }
+        return `${MONTH_NAMES[month]} ${year}`;
     };
     // Show loading indicator while waiting for data
     if (loading) {
@@ -361,16 +421,28 @@ export default function CalendarScreen() {
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
                             </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => setImportModalVisible(true)}
+                            >
+                                <Ionicons name="download-outline" size={18} color="#10464d" />
+                                <Text style={styles.secondaryBtnText}>Import Calendar</Text>
+                            </TouchableOpacity>
+
                         </View>
                     )}
                 </View>
 
                 <View style={styles.headerBlock}>
                     <CalendarHeader
-                        monthLabel={`${MONTH_NAMES[month]} ${year}`}
-                        onPrevMonth={goToPrevMonth}
-                        onNextMonth={goToNextMonth}
+                        monthLabel={getHeaderLabel()}
+                        onPrevMonth={goToPrev}
+                        onNextMonth={goToNext}
                         onTodayPress={goToToday}
+                        viewMode={viewMode}
+                        onViewModeChange={handleViewModeChange}
                     />
                 </View>
 
@@ -396,14 +468,38 @@ export default function CalendarScreen() {
                 <View style={styles.container}
                     id="calendar-web"
                     ref={calendarRef}>
-                    <CalendarGrid
-                        year={year}
-                        month={month}
-                        events={filteredEvents}
-                        onEventPress={setActiveEvent}
-                        selectedDay={selectedDay}
-                        onDayPress={handleDayPress}
-                    />
+                    {viewMode === 'week' && (
+                        <CalendarWeekGrid
+                            year={year}
+                            month={month}
+                            day={weekDay}
+                            events={filteredEvents}
+                            onEventPress={setActiveEvent}
+                            selectedDay={selectedDay}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
+                    {viewMode === 'month' && (
+                        <CalendarGrid
+                            year={year}
+                            month={month}
+                            events={filteredEvents}
+                            onEventPress={setActiveEvent}
+                            selectedDay={selectedDay}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
+                    {viewMode === 'year' && (
+                        <CalendarYearGrid
+                            year={year}
+                            events={filteredEvents}
+                            onMonthPress={(m) => {
+                                setMonth(m);
+                                setViewMode('month');
+                            }}
+                            onDayPress={handleDayPress}
+                        />
+                    )}
                 </View>
                 <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
                 <CalendarInfoModal
@@ -419,6 +515,7 @@ export default function CalendarScreen() {
                                 name: calendar.name,
                                 description: calendar.description ?? '',
                                 privacy: calendar.privacy,
+                                cover: calendar.cover ?? '',
                             },
                         });
                     }}
@@ -492,7 +589,7 @@ export default function CalendarScreen() {
                         </View>
                 </Animated.View>
             )}
-            {optionAnimations.map((anim, index) => {
+            {isDesktop && !selectedDay && optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
                 const fabBottom = Platform.OS === "web" ? 30 : 90;
@@ -510,7 +607,7 @@ export default function CalendarScreen() {
                             opacity,
                             transform: [{ translateY }],
                         }}
-                        pointerEvents={open ? "auto" : "none"}
+                        pointerEvents={open && !selectedDay ? "auto" : "none"}
                     >
                         <Pressable style={styles.option} onPress={onPress}>
                             <Text style={styles.optionText}>{text}</Text>
@@ -518,11 +615,18 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
-                <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-                    <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
-                </Animated.View>
-            </Pressable>
+            {isDesktop && !selectedDay && (
+                <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
+                    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                        <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+                    </Animated.View>
+                </Pressable>
+            )}
+            <ImportCalendarModal
+                visible={importModalVisible}
+                onClose={() => setImportModalVisible(false)}
+                onSuccess={fetchData}
+            />
         </View>
     );
 }
@@ -531,10 +635,12 @@ const styles = StyleSheet.create({
     screenWrapper: {
         flex: 1,
         backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     container: {
         flex: 1,
         backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     contentContainer: {
         flexGrow: 1,
@@ -548,11 +654,15 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         gap: 12,
         flexWrap: 'wrap',
+        overflow: 'visible',
+        zIndex: 999,
     },
     toolbarButtons: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        overflow: 'visible',
+        zIndex: 999,
     },
     primaryBtn: {
         flexDirection: 'row',
@@ -798,5 +908,105 @@ const styles = StyleSheet.create({
     dayEventTitle: {
     color: "#10464d",
     fontSize: 13,
+    },
+  
+    importDropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+        padding: 8,
+        zIndex: 999,
+        minWidth: 220,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+    },
+    importOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        padding: 10,
+        borderRadius: 10,
+    },
+    importIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+    },
+    importOptionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#10464d',
+    },
+    importOptionDesc: {
+        fontSize: 12,
+        color: '#10464d',
+        opacity: 0.6,
+    },
+    modalBackground: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    modalCard: {
+        width: '90%',
+        maxWidth: 400,
+        borderRadius: 16,
+        backgroundColor: '#fffded',
+        overflow: 'hidden',
+        elevation: 5,
+    },
+    modalHeader: {
+        backgroundColor: '#10464d',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+    },
+    modalHeaderText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    modalBody: {
+        padding: 20,
+    },
+    modalInput: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#10464d',
+        marginBottom: 16,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#fcfcfc',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#10464d',
+    },
+    submitButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#10464d',
+        borderRadius: 12,
     },
 });

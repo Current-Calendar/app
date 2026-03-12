@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,15 +6,13 @@ import {
   TextInput,
   Pressable,
   Image,
-  ImageBackground,
   Dimensions,
   Platform,
   useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
-import { Link, useRouter } from "expo-router";
-import { useAuth } from "@/hooks/use-auth";
-
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { API_CONFIG } from "@/constants/api";
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -22,126 +20,145 @@ const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
 
+const Otter = require("../assets/images/Mascota.png");
 
-
-const Otter = require("../../assets/images/Mascota.png");
-const Cloud = require("../../assets/images/nube_login.png");
-
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-
-  const { login } = useAuth();
+  const { token } = useLocalSearchParams();
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const onLogin = async () => {
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_CONFIG.endpoints.validateResetToken}?token=${token}`)
+      .then((res) => setTokenValid(res.ok))
+      .catch(() => setTokenValid(false));
+  }, [token]);
+
+  const onSetNewPassword = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const u = username.trim();
-    if (!u || !password) {
-      setErrorMsg("Rellena username y password.");
+    if (!newPassword) {
+      setErrorMsg("Please, enter your new password.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("Passwords do not match.");
       return;
     }
 
     setLoading(true);
 
     try {
-      await login(username, password);
-
-      setSuccessMsg("Login exitoso.");
-      setTimeout(() => router.push("/"), 250);
-    } catch (error) {
-      setErrorMsg("User o contraseña incorrectos.");
+      const response = await fetch(API_CONFIG.endpoints.setNewPassword, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_password: newPassword, token }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setErrorMsg(data.error || "Error setting new password. The link may have expired.");
+        return;
+      }
+      setSuccessMsg("Password updated successfully.");
+      setTimeout(() => router.push("/"), 2000);
+    } catch {
+      setErrorMsg("Error setting new password. The link may have expired.");
     } finally {
       setLoading(false);
     }
   };
+
+  const invalidLinkScreen = (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.hero}>
+          <Image source={Otter} style={styles.otter} resizeMode="contain" />
+        </View>
+        <Text style={styles.title}>Invalid Link</Text>
+        <Text style={styles.errorText}>The password reset link is invalid or missing.</Text>
+        <Pressable
+          style={[styles.btn, { marginTop: 12 }]}
+          onPress={() => router.push("/forgot-password")}
+        >
+          <Text style={styles.btnText}>Request a new password reset</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  if (!token) return invalidLinkScreen;
+
+  if (tokenValid === null) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={TEAL} />
+      </View>
+    );
+  }
+
+  if (!tokenValid) return invalidLinkScreen;
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.hero}>
           <Image source={Otter} style={styles.otter} resizeMode="contain" />
-
-          <ImageBackground source={Cloud} style={styles.cloudImg} resizeMode="contain">
-            <Text style={styles.cloudText}>Welcome Back</Text>
-          </ImageBackground>
         </View>
 
-        <Text style={styles.title}>Log In</Text>
+        <Text style={styles.title}>Set New Password</Text>
 
         <View style={[styles.form, { width: formWidth }]}>
-          <Text style={styles.label}>Username</Text>
+          <Text style={styles.label}>New Password</Text>
           <TextInput
-            value={username}
-            onChangeText={setUsername}
+            value={newPassword}
+            onChangeText={setNewPassword}
             placeholder=""
             placeholderTextColor="#999"
             autoCapitalize="none"
-            style={styles.input}
-          />
-
-          <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            placeholderTextColor="#999"
             secureTextEntry
             style={styles.input}
           />
 
-          <Pressable style={styles.forgot}>
-          <Link href="/forgot-password" asChild>
-            <Pressable>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
-          </Link>
-          </Pressable>
+          <Text style={[styles.label, { marginTop: 14 }]}>Repeat Password</Text>
+          <TextInput
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder=""
+            placeholderTextColor="#999"
+            autoCapitalize="none"
+            secureTextEntry
+            style={styles.input}
+          />
+
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
 
           <Pressable
             style={[styles.btn, loading && { opacity: 0.75 }]}
-            onPress={onLogin}
+            onPress={onSetNewPassword}
             disabled={loading}
           >
-            <View style={styles.btnBubbles} pointerEvents="none">
-              <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
-              <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
-              <View style={[styles.bubbleDot, { bottom: 8, left: 14, width: 10, height: 10 }]} />
-
-              <View style={[styles.bubbleDot, { top: 8, right: 12 }]} />
-              <View style={[styles.bubbleDot, { top: 20, right: 26, width: 6, height: 6 }]} />
-              <View style={[styles.bubbleDot, { bottom: 10, right: 16, width: 10, height: 10 }]} />
-            </View>
 
             {loading ? (
               <ActivityIndicator color="#EAF7F6" />
             ) : (
-              <Text style={styles.btnText}>Login</Text>
+              <Text style={styles.btnText}>Set your new password</Text>
             )}
           </Pressable>
-        </View>
-
-        <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>Don’t have an account?</Text>
-          <Link href="/register" asChild>
-            <Pressable>
-              <Text style={styles.bottomLink}>Sign Up</Text>
-            </Pressable>
-          </Link>
         </View>
 
         <View style={{ height: 18 }} />
@@ -228,7 +245,7 @@ const styles = StyleSheet.create({
   successText: { marginTop: 6, color: TEAL, fontWeight: "900" },
 
   btn: {
-    marginTop: 4,
+    marginTop: 20,
     alignSelf: "center",
     width: 170,
     paddingVertical: 10,

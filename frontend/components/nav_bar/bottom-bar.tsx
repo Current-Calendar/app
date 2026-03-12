@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navBottomBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 
@@ -11,6 +12,7 @@ interface Props {
 export default function BottomBar({ NavButton }: Props) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
+  const [importVisible, setImportVisible] = useState(false);
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -34,7 +36,7 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="search" href="/search" />
       <NavButton icon="add-circle" onPress={handleAddPress} />
       <NavButton icon="calendar" href="/switch-calendar" />
-      <NavButton icon="chatbubble-ellipses" />
+      <NavButton icon="people"  />
       <NavButton icon="compass" href="/radar" />
 
       <CreateMenuModal
@@ -42,8 +44,10 @@ export default function BottomBar({ NavButton }: Props) {
         onClose={closeMenu}
         onNewEvent={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
         onNewCalendar={() => navigateTo("/create")}
+        onImportCalendar={() => { closeMenu(); setImportVisible(true); }}
       />
+
+      <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
     </View>
   );
 }
-
