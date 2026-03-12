@@ -120,9 +120,9 @@ const ProfileScreen = () => {
         setMyCalendars(mapCalendarsFromApi(data.calendars));
         setFollowingCalendars(mapCalendarsFromApi(data.following_calendars));
       } catch (error) {
-        console.error('Error cargando perfil propio:', error);
+        console.error('Error loading your profile:', error);
         if (isMounted) {
-          setProfileError('No hemos podido cargar tu perfil. Intenta de nuevo.');
+          setProfileError('We couldn\'t load your profile. Please check your connection and try again.');
         }
       } finally {
         if (isMounted) {
@@ -152,7 +152,7 @@ const ProfileScreen = () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert('Permiso requerido', 'Se necesita permiso para acceder a la galería.');
+        Alert.alert('Permission required', 'Permission to access the library is required.');
         return;
       }
 
@@ -179,8 +179,8 @@ const ProfileScreen = () => {
         updateUserContext({ ...currentUser, photo: newPhoto });
       }
     } catch (error) {
-      console.error('Error actualizando foto:', error);
-      Alert.alert('Error', 'No se pudo actualizar la foto. Intenta de nuevo.');
+      console.error('Error updating photo:', error);
+      Alert.alert('Error', 'We couldn\'t update the photo. Please try again.');
     } finally {
       setIsUploadingPhoto(false);
     }
