@@ -1,9 +1,10 @@
 import graphene
 from graphene_django import DjangoObjectType
 from django.contrib.gis.db.models import PointField
+from django.db.models import Q
 from graphene_django.converter import convert_django_field
 
-from main.models import Evento, Usuario, Calendario
+from main.models import Event, User, Calendar
 
 
 class CoordinatesType(graphene.ObjectType):
@@ -18,41 +19,63 @@ def convert_point_field_to_coordinates(field, registry=None):
 
 class UserType(DjangoObjectType):
     class Meta:
-        model = Usuario
+        model = User
         fields = [
             "id",
             "username",
             "first_name",
             "last_name",
-            "pronombres",
-            "biografia",
+            "pronouns",
+            "bio",
             "link",
-            "foto",
+            "photo",
+        ]
+
+
+class CalendarType(DjangoObjectType):
+    class Meta:
+        model = Calendar
+        fields = [
+            "id",
+            "origin",
+            "name",
+            "description",
+            "cover",
+            "privacy",
+            "creator",
+            "created_at",
         ]
 
 
 class EventType(DjangoObjectType):
     class Meta:
-        model = Evento
+        model = Event
         fields = [
             "id",
-            "titulo",
-            "descripcion",
-            "nombre_lugar",
-            "ubicacion",
-            "fecha",
-            "hora",
-            "foto",
-            "recurrencia",
-            "creador",
+            "title",
+            "description",
+            "place_name",
+            "location",
+            "date",
+            "time",
+            "photo",
+            "recurrence",
+            "creator",
         ]
 
-    def resolve_ubicacion(self, info):
-        if self.ubicacion:
-            return CoordinatesType(self.ubicacion.x, self.ubicacion.y)
+    def resolve_location(self, info):
+        if self.location:
+            return CoordinatesType(self.location.x, self.location.y)
 
 
 class Query(graphene.ObjectType):
+    all_public_calendars = graphene.List(CalendarType)
+
+    my_calendars = graphene.List(CalendarType)
+
+    # Includes my calendars
+    followed_calendars = graphene.List(CalendarType)
+
     all_events = graphene.List(
         EventType,
         week=graphene.Int(),
@@ -70,6 +93,27 @@ class Query(graphene.ObjectType):
         year=graphene.Int(),
     )
 
+    def resolve_all_public_calendars(self, info):
+        return Calendar.objects.filter(privacy="PUBLIC")
+
+    def resolve_my_calendars(self, info):
+        user = info.context.user
+
+        if not user.is_authenticated:
+            return Calendar.objects.none()
+
+        return Calendar.objects.filter(creator_id=user.pk)
+
+    def resolve_followed_calendars(self, info):
+        user = info.context.user
+
+        if not user.is_authenticated:
+            return Calendar.objects.none()
+
+        return Calendar.objects.filter(
+            Q(creator_id=user.pk) | Q(subscribers__in=[user])
+        )
+
     def resolve_all_events(
         self,
         info,
@@ -77,21 +121,21 @@ class Query(graphene.ObjectType):
         month: int | None = None,
         year: int | None = None,
     ):
-        q = Evento.objects.select_related("creador").all()
+        q = Event.objects.select_related("creator").all()
 
         if week and 1 <= week <= 53:
-            q = q.filter(fecha__week=week)
+            q = q.filter(date__week=week)
         if month and 1 <= month <= 12:
-            q = q.filter(fecha__month=month)
+            q = q.filter(date__month=month)
         if year:
-            q = q.filter(fecha__year=year)
+            q = q.filter(date__year=year)
 
         return q
 
     def resolve_event_by_id(self, info, id):
         try:
-            return Evento.objects.select_related("creador").get(pk=id)
-        except Evento.DoesNotExist:
+            return Event.objects.select_related("creator").get(pk=id)
+        except Event.DoesNotExist:
             return None
 
     def resolve_events_of_user(
@@ -102,13 +146,13 @@ class Query(graphene.ObjectType):
         month: int | None = None,
         year: int | None = None,
     ):
-        q = Evento.objects.filter(creador_id=id)
+        q = Event.objects.filter(creator_id=id)
 
         if week and 1 <= week <= 53:
-            q = q.filter(fecha__week=week)
+            q = q.filter(date__week=week)
         if month and 1 <= month <= 12:
-            q = q.filter(fecha__month=month)
+            q = q.filter(date__month=month)
         if year:
-            q = q.filter(fecha__year=year)
+            q = q.filter(date__year=year)
 
         return q

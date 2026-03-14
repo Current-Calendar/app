@@ -19,27 +19,28 @@ import apiClient from "@/services/api-client";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 
-type PrivacyStatus = "PRIVADO" | "AMIGOS" | "PUBLICO";
+type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
 
 interface PublishData {
-  nombre: string;
-  descripcion: string;
-  portada?: string;
-  estado: PrivacyStatus;
-  origen?: CalendarOrigin;
+  name: string;
+  description: string;
+  cover?: string;
+  privacy: PrivacyStatus;
+  origin?: CalendarOrigin;
 }
 export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [selectedPrivacy, setSelectedPrivacy] =
-    useState<PrivacyStatus>("PRIVADO");
+    useState<PrivacyStatus>("PRIVATE");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [calendarData, setCalendarData] = useState<PublishData>({
-    nombre: "",
-    descripcion: "",
-    estado: "PRIVADO",
-    origen: "CURRENT",
+    name: "",
+    description: "",
+    privacy: "PRIVATE",
+    origin: "CURRENT",
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -55,19 +56,19 @@ export default function CreateScreen() {
   }[] = [
     {
       label: "Private",
-      value: "PRIVADO",
+      value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
     },
     {
       label: "Friends",
-      value: "AMIGOS",
+      value: "FRIENDS",
       icon: "people-outline",
       description: "Visible to your friends only",
     },
     {
       label: "Public",
-      value: "PUBLICO",
+      value: "PUBLIC",
       icon: "globe-outline",
       description: "Visible to everyone",
     },
@@ -100,49 +101,59 @@ export default function CreateScreen() {
   };
 
   const handlePublish = async () => {
-    if (!calendarData.nombre.trim()) {
+    if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
+
     if (!user?.username) {
       Alert.alert("Error", "You must be logged in to create a calendar.");
       return;
     }
+
     setIsLoading(true);
+    setErrorMessage(null);
+
     try {
       const formData = new FormData();
-      formData.append("nombre", calendarData.nombre);
-      formData.append("descripcion", calendarData.descripcion);
-      formData.append("estado", selectedPrivacy);
-      formData.append("origen", "CURRENT");
+
+      formData.append("name", calendarData.name);
+      formData.append("description", calendarData.description);
+      formData.append("privacy", selectedPrivacy);
+      formData.append("origin", "CURRENT");
 
       if (coverImage) {
         const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
-        const fetchResponse = await fetch(coverImage.uri);
-        const blob = await fetchResponse.blob();
-        formData.append("portada", blob, filename);
+        const response = await fetch(coverImage.uri);
+        const blob = await response.blob();
+        formData.append("cover", blob, filename);
       }
 
-      await apiClient.post("/calendarios", formData);
+      await apiClient.post("/calendars/create/", formData);
+
+      Alert.alert("Success", "Calendar created successfully.");
 
       router.replace("/(tabs)/calendars");
-    } catch (error) {
-      Alert.alert("Error", "Failed to publish calendar. Please try again.");
-      console.error("Publish error:", error);
-    } finally {
+
+    } catch (error: any) {
+    console.log("FULL ERROR:", error);
+
+    const message = error?.message || "";
+
+    if (message.includes("400")) {
+      setErrorMessage(
+        "You can only create one private calendar with the basic plan."
+      );
+    } else {
+      setErrorMessage("Failed to publish calendar. Please try again.");
+    }
+
+    console.error("Publish error:", error);
+  } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDraft = async () => {
-    try {
-      // TODO: Save as draft
-      Alert.alert("Success", "Calendar saved as draft");
-      console.log("Calendar saved as draft");
-    } catch (error) {
-      Alert.alert("Error", "Failed to save draft" + error);
-    }
-  };
 
   return (
     <View style={styles.wrapper}>
@@ -219,18 +230,18 @@ export default function CreateScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
-              value={calendarData.nombre}
+              value={calendarData.name}
               onChangeText={(text) =>
-                setCalendarData({ ...calendarData, nombre: text })
+                setCalendarData({ ...calendarData, name: text })
               }
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
-              value={calendarData.descripcion}
+              value={calendarData.description}
               onChangeText={(text) =>
-                setCalendarData({ ...calendarData, descripcion: text })
+                setCalendarData({ ...calendarData, description: text })
               }
               multiline
               numberOfLines={3}
@@ -301,39 +312,54 @@ export default function CreateScreen() {
               style={{ marginRight: 12 }}
             />
             <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVADO"
+              {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "AMIGOS"
+                : selectedPrivacy === "FRIENDS"
+                  ? "Your friends will receive an invitation to view this calendar."
+                  : "Anyone with the link can view this calendar."}
+            </Text>
+          </View>
+          {/* INFO BOX */}
+          <View style={styles.infoBox}>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="#10464d"
+              style={{ marginRight: 12 }}
+            />
+            <Text style={styles.infoText}>
+              {selectedPrivacy === "PRIVATE"
+                ? "Only you can access and modify this calendar."
+                : selectedPrivacy === "FRIENDS"
                   ? "Your friends will receive an invitation to view this calendar."
                   : "Anyone with the link can view this calendar."}
             </Text>
           </View>
 
-          {/* ACTION BUTTONS */}
-          <View
-            style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}
-          >
-            <Pressable style={styles.draftButton} onPress={handleDraft}>
-              <Text style={styles.draftButtonText}>Save as Draft</Text>
-            </Pressable>
+          {/* ERROR MESSAGE */}
+          {errorMessage && (
+            <Text style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          )}
 
-            {isDesktop && (
-              <Pressable
-                style={[
-                  styles.publishButton,
-                  isLoading && styles.publishButtonDisabled,
-                ]}
-                onPress={handlePublish}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.publishText}>Create Calendar</Text>
-                )}
-              </Pressable>
-            )}
-          </View>
+          {/* ACTION BUTTON (desktop) */}
+          {isDesktop && (
+            <Pressable
+              style={[
+                styles.publishButton,
+                isLoading && styles.publishButtonDisabled,
+              ]}
+              onPress={handlePublish}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.publishText}>Create Calendar</Text>
+              )}
+            </Pressable>
+          )}
         </View>
       </ScrollView>
 
@@ -534,28 +560,6 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  buttonGroup: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  buttonGroupDesktop: {
-    justifyContent: "space-between",
-  },
-  draftButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  draftButtonText: {
-    color: "#10464d",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
   publishContainer: {
     position: "absolute",
     bottom: 24,
@@ -647,4 +651,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  errorText: {
+  color: "#d9534f",
+  fontSize: 14,
+  marginBottom: 16,
+  fontWeight: "600",
+  textAlign: "center",
+},
 });

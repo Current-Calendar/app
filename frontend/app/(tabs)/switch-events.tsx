@@ -2,14 +2,9 @@ import { View, FlatList, StyleSheet, ActivityIndicator, Text } from "react-nativ
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
+import EventFeedModal from "@/components/event-feed-modal";
 import { API_CONFIG } from "@/constants/api";
-import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
-import type { CalendarEvent } from "@/types/calendar";
 
-/**
- * 🔹 Tipo compartido con backend
- * Cuando backend conecte, este type debe alinearse con el DTO real
- */
 export interface Event {
   id: string;
   title: string;
@@ -29,7 +24,8 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,20 +48,21 @@ export default function EventsScreen() {
 
         const calendars =
           (Array.isArray(calData) && calData) ||
+          (Array.isArray(calData?.calendars) && calData.calendars) ||
           (Array.isArray(calData?.calendarios) && calData.calendarios) ||
           (Array.isArray(calData?.results) && calData.results) ||
           [];
 
         const eventsList =
           (Array.isArray(evData) && evData) ||
+          (Array.isArray(evData?.events) && evData.events) ||
           (Array.isArray(evData?.eventos) && evData.eventos) ||
           (Array.isArray(evData?.results) && evData.results) ||
           [];
 
-        // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
         calendars.forEach((c: any) => {
-          calendarMap[c.id] = c;
+          calendarMap[Number(c.id)] = c;
         });
 
         const resolveImageUrl = (rawUrl?: string) => {
@@ -75,23 +72,31 @@ export default function EventsScreen() {
           return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
         };
 
-        const mappedEvents: Event[] = eventsList.map((e: any) => {
-          const firstCalendarId = Array.isArray(e.calendarios) ? e.calendarios[0] : undefined;
-          const cal = firstCalendarId ? calendarMap[firstCalendarId] : undefined;
-          return {
-            id: String(e.id),
-            title: e.titulo,
-            description: e.descripcion || "",
-            location: e.nombre_lugar || "",
-            date: e.fecha,
-            time: typeof e.hora === "string" ? e.hora.slice(0, 5) : "",
-            image: resolveImageUrl(e.foto),
-            username: cal?.creador_username || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(firstCalendarId || ""),
-            calendarName: cal?.nombre || "General",
-          };
-        }).filter((evt) => evt.id && evt.title);
+        const mappedEvents: Event[] = eventsList
+          .map((e: any) => {
+            const calendarIds = Array.isArray(e.calendars)
+              ? e.calendars
+              : Array.isArray(e.calendarios)
+                ? e.calendarios
+                : [];
+            const firstCalendarId = calendarIds[0];
+            const cal = firstCalendarId ? calendarMap[firstCalendarId] : undefined;
+
+            return {
+              id: String(e.id),
+              title: e.title || e.titulo || "",
+              description: e.description || e.descripcion || "",
+              location: e.place_name || e.nombre_lugar || "",
+              date: e.date || e.fecha || "",
+              time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+              image: resolveImageUrl(e.photo || e.foto),
+              username: cal?.creator_username || cal?.creador_username || "unknown",
+              userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creator_username || cal?.creador_username || "unknown"),
+              calendarId: String(firstCalendarId || ""),
+              calendarName: cal?.name || cal?.nombre || "General",
+            };
+          })
+          .filter((evt: Event) => evt.id && evt.title);
 
         if (!cancelled) {
           setEvents(mappedEvents);
@@ -100,7 +105,7 @@ export default function EventsScreen() {
         console.error("Error fetching events:", error);
         if (!cancelled) {
           setEvents([]);
-          setErrorMessage("No se pudieron cargar los eventos. Intentalo de nuevo.");
+          setErrorMessage("Could not load events. Please try again.");
         }
       } finally {
         if (!cancelled) {
@@ -117,20 +122,16 @@ export default function EventsScreen() {
   }, [reloadKey]);
 
   const handleOpenEvent = (id: string) => {
-    const selected = events.find((event) => event.id === id);
-    if (!selected) return;
+    const found = events.find((e) => e.id === id);
+    if (!found) return;
 
-    setActiveEvent({
-      id: selected.id,
-      calendarId: selected.calendarId,
-      titulo: selected.title,
-      descripcion: selected.description ?? "",
-      nombre_lugar: selected.location,
-      fecha: selected.date,
-      hora: selected.time,
-      foto: selected.image,
-      color: "#10464d",
-    });
+    setSelectedEvent(found);
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setSelectedEvent(null);
   };
 
   const handleLike = (id: string) => {
@@ -149,7 +150,7 @@ export default function EventsScreen() {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#10464d" />
-        <Text style={styles.loadingText}>Cargando feed...</Text>
+        <Text style={styles.loadingText}>Loading feed...</Text>
       </View>
     );
   }
@@ -157,10 +158,10 @@ export default function EventsScreen() {
   if (errorMessage) {
     return (
       <View style={styles.loadingScreen}>
-        <Text style={styles.errorTitle}>No se pudo cargar el feed</Text>
+        <Text style={styles.errorTitle}>Could not load feed</Text>
         <Text style={styles.loadingText}>{errorMessage}</Text>
         <Text style={styles.retryLink} onPress={() => setReloadKey((k) => k + 1)}>
-          Reintentar
+          Retry
         </Text>
       </View>
     );
@@ -183,14 +184,15 @@ export default function EventsScreen() {
               onSave={handleSave}
             />
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No hay eventos para mostrar.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
 
-        <PublicEventDetailModal
-          event={activeEvent}
-          onClose={() => setActiveEvent(null)}
+        <EventFeedModal
+          visible={modalVisible}
+          onClose={handleCloseModal}
+          event={selectedEvent}
         />
       </View>
     </View>

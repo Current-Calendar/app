@@ -2,12 +2,12 @@ import React, { useMemo, useState } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     LayoutChangeEvent,
     TouchableOpacity,
 } from 'react-native';
 import { CalendarEvent } from '@/types/calendar';
 import { EventPill } from '@/components/event-pill';
+import { calendarGridStyles } from '@/styles/calendar-styles';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -61,7 +61,7 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
     const eventsByDate = useMemo(() => {
         const map: Record<string, CalendarEvent[]> = {};
         for (const ev of events) {
-            (map[ev.fecha] ??= []).push(ev);
+            (map[ev.date] ??= []).push(ev);
         }
         return map;
     }, [events]);
@@ -69,29 +69,29 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
     const todayKey = toKey(new Date());
 
     return (
-        <View style={styles.wrapper} onLayout={handleLayout}>
+        <View style={calendarGridStyles.wrapper} onLayout={handleLayout}>
             {containerWidth > 0 && (
                 <>
-                    <View style={styles.weekRow}>
+                    <View style={calendarGridStyles.weekRow}>
                         {WEEKDAYS.map((d, i) => {
                             const isWeekend = i >= 5;
                             return (
-                                <View key={d} style={[styles.weekCell, { width: cellWidth }]}>
-                                    <Text style={[styles.weekLabel, isWeekend && styles.weekLabelWeekend]}>{d}</Text>
+                                <View key={d} style={[calendarGridStyles.weekCell, { width: cellWidth }]}>
+                                    <Text style={[calendarGridStyles.weekLabel, isWeekend && calendarGridStyles.weekLabelWeekend]}>{d}</Text>
                                 </View>
                             );
                         })}
                     </View>
 
-                    <View style={styles.gridBody}>
+                    <View style={calendarGridStyles.gridBody}>
                         {matrix.map((row, ri) => (
-                            <View key={ri} style={styles.row}>
+                            <View key={ri} style={calendarGridStyles.row}>
                                 {row.map((date, ci) => {
                                     if (!date) {
                                         return (
                                             <View
                                                 key={`blank-${ci}`}
-                                                style={[styles.cell, styles.cellBlank, { width: cellWidth }]}
+                                                style={[calendarGridStyles.cell, calendarGridStyles.cellBlank, { width: cellWidth }]}
                                             />
                                         );
                                     }
@@ -108,25 +108,25 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
                                             activeOpacity={0.75}
                                             onPress={() => onDayPress?.(key)}
                                             style={[
-                                                styles.cell,
+                                                calendarGridStyles.cell,
                                                 { width: cellWidth },
-                                                isToday && styles.cellToday,
-                                                isWeekend && !isToday && styles.cellWeekend,
-                                                isSelected && styles.cellSelected,
+                                                isToday && calendarGridStyles.cellToday,
+                                                isWeekend && !isToday && calendarGridStyles.cellWeekend,
+                                                isSelected && calendarGridStyles.cellSelected,
                                             ]}
                                         >
-                                            <View style={styles.dayHeader}>
+                                            <View style={calendarGridStyles.dayHeader}>
                                                 <View style={[
-                                                    styles.dayBadge,
-                                                    isToday && styles.dayBadgeToday,
-                                                    isSelected && styles.dayBadgeSelected,
+                                                    calendarGridStyles.dayBadge,
+                                                    isToday && calendarGridStyles.dayBadgeToday,
+                                                    isSelected && calendarGridStyles.dayBadgeSelected,
                                                 ]}>
                                                     <Text
                                                         style={[
-                                                            styles.dayNumber,
-                                                            isToday && styles.dayNumberToday,
-                                                            isSelected && styles.dayNumberSelected,
-                                                            isWeekend && !isToday && !isSelected && styles.dayNumberWeekend,
+                                                            calendarGridStyles.dayNumber,
+                                                            isToday && calendarGridStyles.dayNumberToday,
+                                                            isSelected && calendarGridStyles.dayNumberSelected,
+                                                            isWeekend && !isToday && !isSelected && calendarGridStyles.dayNumberWeekend,
                                                         ]}
                                                     >
                                                         {date.getDate()}
@@ -134,12 +134,12 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
                                                 </View>
                                             </View>
 
-                                            <View style={styles.eventsContainer}>
+                                            <View style={calendarGridStyles.eventsContainer}>
                                                 {dayEvents.slice(0, 3).map((ev) => (
                                                     <EventPill key={ev.id} event={ev} onPress={onEventPress} />
                                                 ))}
                                                 {dayEvents.length > 3 && (
-                                                    <Text style={styles.overflow}>+{dayEvents.length - 3} more</Text>
+                                                    <Text style={calendarGridStyles.overflow}>+{dayEvents.length - 3} more</Text>
                                                 )}
                                             </View>
                                         </TouchableOpacity>
@@ -154,116 +154,3 @@ export function CalendarGrid({ year, month, events, onEventPress, selectedDay, o
     );
 }
 
-const styles = StyleSheet.create({
-    wrapper: {
-        flex: 1,
-        backgroundColor: '#fff',
-        marginHorizontal: 10,
-        borderRadius: 16,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 3,
-    },
-    weekRow: {
-        flexDirection: 'row',
-        backgroundColor: '#10464d',
-    },
-    weekCell: {
-        alignItems: 'center',
-        paddingVertical: 8,
-    },
-    weekLabel: {
-        fontSize: 11,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.6,
-        color: '#ffffffCC',
-    },
-    weekLabelWeekend: {
-        color: '#eb8c85',
-    },
-    scroll: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 4,
-    },
-    gridBody: {
-        flex: 1, // Let the body fill the wrapper
-    },
-    row: {
-        flex: 1, // Let rows stretch equally
-        flexDirection: 'row',
-    },
-    cell: {
-        minHeight: 84,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: '#E8E5D8',
-        padding: 3,
-        backgroundColor: '#fff',
-    },
-    cellBlank: {
-        backgroundColor: '#F7F6F2',
-    },
-    cellToday: {
-        backgroundColor: '#10464d08',
-        borderColor: '#10464d40',
-    },
-    cellWeekend: {
-        backgroundColor: '#FAFAF6',
-    },
-    cellSelected: {
-        backgroundColor: '#10464d18',
-        borderColor: '#10464d',
-        borderWidth: 1.5,
-    },
-    dayHeader: {
-        flexDirection: 'row',
-        marginBottom: 1,
-    },
-    dayBadge: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    dayBadgeToday: {
-        backgroundColor: '#10464d',
-    },
-    dayBadgeSelected: {
-        backgroundColor: '#10464d',
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-    },
-    dayNumber: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#2D2D2D',
-    },
-    dayNumberToday: {
-        color: '#fff',
-        fontWeight: '700',
-    },
-    dayNumberSelected: {
-        color: '#fff',
-        fontWeight: '700',
-    },
-    dayNumberWeekend: {
-        color: '#eb8c85',
-    },
-    eventsContainer: {
-        flexShrink: 1,
-    },
-    overflow: {
-        fontSize: 9,
-        fontWeight: '600',
-        marginTop: 2,
-        paddingLeft: 4,
-        color: '#888',
-    },
-});

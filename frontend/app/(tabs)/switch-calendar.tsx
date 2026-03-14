@@ -5,6 +5,7 @@ import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
 import { API_CONFIG } from '@/constants/api';
+import apiClient from '@/services/api-client';
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -30,13 +31,13 @@ export default function CalendarsScreen() {
 
         const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
           id: String(c.id),
-          nombre: c.nombre,
-          descripcion: c.descripcion || '',
-          estado: c.estado,
-          origen: c.origen,
-          creador: c.creador_username || 'unknown',
+          name: c.name,
+          description: c.description || '',
+          privacy: c.privacy,
+          origin: c.origin,
+          creator: c.creator_username || 'unknown',
           color: COLORS[index % COLORS.length],
-          portada: c.portada || null,
+          cover: c.cover || null,
         }));
 
         setCalendars(mappedCalendars);
@@ -55,8 +56,17 @@ export default function CalendarsScreen() {
     router.push(`/calendar-view?calendarId=${id}`);
   };
 
-  const handleSubscribe = (id: string) => {
-    console.log("Subscribe to calendar:", id);
+  const handleSubscribe = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+      Alert.alert(
+        res.subscribed ? "Subscribed" : "Unsubscribed",
+        res.subscribed ? "You are now subscribed to this calendar." : "You have unsubscribed from this calendar."
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not subscribe to this calendar.");
+      console.error("Subscribe error:", error);
+    }
   };
 
   if (loading) {

@@ -15,7 +15,7 @@ export default function RadarScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingStage, setLoadingStage] = useState("Obteniendo ubicacion...");
+  const [loadingStage, setLoadingStage] = useState("Getting your location...");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -29,7 +29,7 @@ export default function RadarScreen() {
       setEvents([]);
       setErrorMessage(null);
       setLocationMessage(null);
-      setLoadingStage("Obteniendo ubicacion...");
+      setLoadingStage("Getting your location...");
 
       try {
         let lat: number;
@@ -49,14 +49,14 @@ export default function RadarScreen() {
             lon = position.coords.longitude;
           } catch {
             throw new Error(
-              "Cargando ubicacion... Si no la tienes activada, activala para ver eventos cerca de ti."
+              "Location is required to show nearby events. Please enable location services and try again."
             );
           }
         } else {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== "granted") {
             throw new Error(
-              "Cargando ubicacion... Si no la tienes activada, activala para ver eventos cerca de ti."
+              "Location permission is required to show nearby events. Please enable location and try again."
             );
           } else {
             const currentLocation = await Location.getCurrentPositionAsync({});
@@ -68,15 +68,16 @@ export default function RadarScreen() {
         if (cancelled) return;
         setLocation({ latitude: lat, longitude: lon });
 
-        setLoadingStage("Buscando eventos cercanos...");
+        setLoadingStage("Searching nearby events...");
         const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, 5));
         if (!response.ok) {
-          throw new Error("No se pudieron cargar los eventos cercanos.");
+          throw new Error("Could not load nearby events.");
         }
 
         const data = await response.json();
         const eventList =
           (Array.isArray(data) && data) ||
+          (Array.isArray(data?.events) && data.events) ||
           (Array.isArray(data?.eventos) && data.eventos) ||
           (Array.isArray(data?.results) && data.results) ||
           [];
@@ -93,10 +94,10 @@ export default function RadarScreen() {
               : typeof error === "object" && error !== null && "message" in error
                 ? String((error as { message?: string }).message || "")
                 : "";
-          if (message.toLowerCase().includes("ubicacion") || message.toLowerCase().includes("location")) {
-            setLocationMessage(message || "Cargando ubicacion...");
+          if (message.toLowerCase().includes("location") || message.toLowerCase().includes("ubicacion")) {
+            setLocationMessage(message || "Getting your location...");
           } else {
-            setErrorMessage(message || "Error cargando Radar.");
+            setErrorMessage(message || "Error loading Radar.");
           }
         }
       } finally {
@@ -126,10 +127,10 @@ export default function RadarScreen() {
   if (errorMessage) {
     return (
       <View style={styles.loadingScreen}>
-        <Text style={styles.errorTitle}>No se pudo cargar Radar</Text>
+        <Text style={styles.errorTitle}>Could not load Radar</Text>
         <Text style={styles.loadingSubtitle}>{errorMessage}</Text>
         <Pressable style={styles.retryButton} onPress={() => setReloadKey((k) => k + 1)}>
-          <Text style={styles.retryButtonText}>Reintentar</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
       </View>
     );
@@ -139,22 +140,22 @@ export default function RadarScreen() {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#eb8c85" />
-        <Text style={styles.loadingTitle}>Cargando ubicacion</Text>
+        <Text style={styles.loadingTitle}>Waiting for location</Text>
         <Text style={styles.loadingSubtitle}>
-          {locationMessage || "Activa la ubicacion para ver eventos cerca de ti."}
+          {locationMessage || "Enable location to see nearby events."}
         </Text>
         {Platform.OS === "web" ? (
           <View style={styles.guideBox}>
-            <Text style={styles.guideStep}>1. Pulsa el candado al lado de la URL.</Text>
-            <Text style={styles.guideStep}>2. En Ubicacion, selecciona Permitir.</Text>
+            <Text style={styles.guideStep}>1. Click the lock icon next to the URL.</Text>
+            <Text style={styles.guideStep}>2. Allow location access for this site.</Text>
           </View>
         ) : (
           <Text style={styles.loadingSubtitle}>
-            Activa la ubicacion desde los ajustes del dispositivo y vuelve a pulsar Reintentar.
+            Enable location in your device settings and tap Retry.
           </Text>
         )}
         <Pressable style={styles.retryButton} onPress={() => setReloadKey((k) => k + 1)}>
-          <Text style={styles.retryButtonText}>Reintentar</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
       </View>
     );

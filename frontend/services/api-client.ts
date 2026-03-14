@@ -56,7 +56,7 @@ class ApiClient {
   }
 
   async register(data: RegisterData): Promise<any> {
-    return await this.post<any>("/auth/registro/", data);
+    return await this.post<any>("/auth/register/", data);
   }
 
   private async refreshAccessToken(): Promise<boolean> {
@@ -110,7 +110,7 @@ class ApiClient {
       headers,
     });
 
-    // Si 401, intentar refrescar token
+    // If 401, attempt to refresh the token
     if (response.status === 401 && this.refreshToken) {
       const refreshed = await this.refreshAccessToken();
 
