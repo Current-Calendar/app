@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -144,8 +145,26 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
+    const message = "Are you sure you want to log out?";
+
+    if (Platform.OS === 'web') {
+        
+      const confirmLogout = window.confirm(message);
+        if (confirmLogout) {
+          performLogout();
+        }
+      } else {
+        
+        Alert.alert("Logout", message, [
+          { text: "Cancel", style: "cancel" },
+          { text: "Yes, exit", style: "destructive", onPress: performLogout },
+        ]);
+      }
+  };
+
+  const performLogout = async () => {
     await logout();
-    router.replace('/(auth)/login' as any);
+    router.replace('/(auth)/login' as any);;
   };
 
   const handleChangePhoto = async () => {
