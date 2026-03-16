@@ -319,22 +319,7 @@ export default function CreateScreen() {
                   : "Anyone with the link can view this calendar."}
             </Text>
           </View>
-          {/* INFO BOX */}
-          <View style={styles.infoBox}>
-            <Ionicons
-              name="information-circle-outline"
-              size={20}
-              color="#10464d"
-              style={{ marginRight: 12 }}
-            />
-            <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVATE"
-                ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                  ? "Your friends will receive an invitation to view this calendar."
-                  : "Anyone with the link can view this calendar."}
-            </Text>
-          </View>
+     
 
           {/* ERROR MESSAGE */}
           {errorMessage && (
