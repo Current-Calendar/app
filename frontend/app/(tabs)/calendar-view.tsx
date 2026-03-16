@@ -35,7 +35,7 @@ export default function CalendarViewScreen() {
         const response = await fetch(API_CONFIG.endpoints.getCalendars);
         if (!response.ok) throw new Error('Failed to load calendars');
         const data = await response.json();
-        // Backend returns array directly, not { calendarios: [...] }
+        // Backend returns array directly, not { calendars: [...] }
         const calendars = Array.isArray(data) ? data : [];
         setBackendCalendars(calendars);
       } catch (error) {
@@ -68,7 +68,7 @@ export default function CalendarViewScreen() {
       if (!response.ok) throw new Error('Failed to load events');
       
       const data = await response.json();
-      // Backend returns array directly, not { eventos: [...] }
+      // Backend returns array directly, not { events: [...] }
       const allEvents = Array.isArray(data) ? data : [];
       
       // Transform backend events: expand by calendar
@@ -120,6 +120,11 @@ export default function CalendarViewScreen() {
     },
     [calendar, backendEvents, loadingEvents]
   );
+
+  const eventsOfSelectedDay = useMemo(() => {
+  if (!selectedDay) return [];
+  return events.filter((event) => event.date?.slice(0,10) === selectedDay);
+  }, [events, selectedDay]);
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -181,6 +186,29 @@ export default function CalendarViewScreen() {
             onDayPress={setSelectedDay}
           />
         </View>
+
+        {selectedDay && (
+          <View style={styles.dayEventsContainer}>
+            <Text style={styles.dayEventsTitle}>
+              {formatSelectedDay(selectedDay)}
+            </Text>
+
+            {eventsOfSelectedDay.length === 0 ? (
+              <Text style={styles.noEventsText}>No events this day</Text>
+            ) : (
+              eventsOfSelectedDay.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.dayEventItem}
+                  onPress={() => setActiveEvent(event)}
+                >
+                  <Text style={styles.dayEventTime}>{event.time}</Text>
+                  <Text style={styles.dayEventTitle}>{event.title}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
 
         <View style={styles.actionsRow}>
           <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
@@ -313,4 +341,42 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
+  dayEventsContainer: {
+  marginTop: 14,
+  paddingHorizontal: 16,
+},
+
+dayEventsTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#10464d",
+  marginBottom: 8,
+},
+
+dayEventItem: {
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  marginBottom: 6,
+  borderWidth: 1,
+  borderColor: "rgba(16,70,77,0.2)",
+},
+
+dayEventTime: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#10464d",
+},
+
+dayEventTitle: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#10464d",
+},
+
+noEventsText: {
+  color: "#5E6E6E",
+  fontSize: 13,
+},
 });

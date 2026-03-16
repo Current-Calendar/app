@@ -40,7 +40,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setUsers(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando usuarios:", error);
+                console.error("Error buscando users:", error);
             }
         };
 
@@ -60,7 +60,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setCalendars(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando calendarios:", error);
+                console.error("Error buscando calendars:", error);
             }
         };
 
@@ -80,7 +80,7 @@ export default function SearchScreen() {
                 const data = await response.json();
                 setEvents(Array.isArray(data) ? data : []);
             } catch (error) {
-                console.error("Error buscando eventos:", error);
+                console.error("Error buscando events:", error);
             }
         };
 
@@ -179,9 +179,11 @@ export default function SearchScreen() {
                                         source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
                                         style={styles.avatar}
                                     />
-                                    <View>
-                                        <Text style={styles.name}>{user.username}</Text>
-                                        <Text style={styles.bio}>{user.bio}</Text>
+                                    <View style={styles.userTextContainer}>
+                                        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
+                                        <Text style={styles.bio} numberOfLines={2} ellipsizeMode="tail">
+                                            {user.bio}
+                                        </Text>
                                     </View>
                                 </View>
 
@@ -211,8 +213,8 @@ export default function SearchScreen() {
                                     <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName}>{cal.name}</Text>
-                                    <Text style={styles.calendarDesc}>{cal.description}</Text>
+                                    <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
+                                    <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
                                 </View>
                             </View>
                         );
@@ -229,8 +231,8 @@ export default function SearchScreen() {
                                     />
                                 )}
                                 <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle}>{ev.title}</Text>
-                                    <Text style={styles.eventMeta}>
+                                    <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
+                                    <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
                                         {ev.date} {ev.time}
                                         {ev.calendarId &&
                                             ` • ${calendarMap[ev.calendarId] || ''}`}
@@ -280,6 +282,12 @@ const styles = StyleSheet.create({
     userInfo: {
         flexDirection: "row",
         alignItems: "center",
+        flex: 1,
+    },
+
+    userTextContainer: {
+        flex: 1,
+        flexShrink: 1,
     },
 
     avatar: {
@@ -345,6 +353,8 @@ const styles = StyleSheet.create({
     },
     eventInfo: {
         flexDirection: "column",
+        flex: 1,
+        flexShrink: 1,
     },
     eventTitle: {
         fontWeight: "bold",

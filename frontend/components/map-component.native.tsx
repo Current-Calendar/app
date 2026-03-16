@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from "react";
-import { StyleSheet, Image } from "react-native";
+
+import React, { useState } from "react";
+import { Image } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import EventDetailsModal from "./event-details-modal";
 import API_CONFIG from "../constants/api";
+import { mapComponentNativeStyles } from "@/styles/ui-styles";
 
 export default function MapComponent({ location, events }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -28,14 +30,14 @@ export default function MapComponent({ location, events }) {
   return (
     <>
       <MapView
-        style={styles.map}
+        style={mapComponentNativeStyles.map}
         initialRegion={initialRegion}
         showsUserLocation={true}
         showsMyLocationButton={true}
       >
         {events.map((event, index) => {
-          const lat = parseFloat(event.latitude);
-          const lon = parseFloat(event.longitude);
+          const lat = parseFloat(event.latitud);
+          const lon = parseFloat(event.longitud);
           if (!isFinite(lat) || !isFinite(lon)) return null;
 
           return (
@@ -47,17 +49,17 @@ export default function MapComponent({ location, events }) {
               }}
               onPress={() => openEventModal(event)}
             >
-              {/* Closest event */}
               {index === 0 ? (
                 <Image
                   source={require("../assets/images/star_marker.png")}
-                  style={styles.starMarker}
+                  style={mapComponentNativeStyles.starMarker}
                   resizeMode="contain"
                 />
               ) : (
                 <Image
                   source={require("../assets/images/marcador_evento.png")}
-                  style={styles.defaultMarker}
+
+                  style={mapComponentNativeStyles.defaultMarker}
                   resizeMode="contain"
                 />
               )}
@@ -75,20 +77,3 @@ export default function MapComponent({ location, events }) {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  map: {
-    width: "100%",
-    height: "100%",
-  },
-
-  defaultMarker: {
-    width: 40,
-    height: 40,
-  },
-
-  starMarker: {
-    width: 32, // slightly smaller star marker
-    height: 32,
-  },
-});

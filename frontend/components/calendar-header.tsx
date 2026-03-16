@@ -1,93 +1,80 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { AppColors } from '@/styles/tokens';
+import { calendarHeaderStyles } from '@/styles/calendar-styles';
+
+export type CalendarViewMode = 'week' | 'month' | 'year';
 
 interface CalendarHeaderProps {
-    /** Display label for the current month/year, e.g. "February 2026" */
+    /** Display label for the current period, e.g. "February 2026" */
     monthLabel: string;
     onPrevMonth: () => void;
     onNextMonth: () => void;
     onTodayPress: () => void;
+    viewMode?: CalendarViewMode;
+    onViewModeChange?: (mode: CalendarViewMode) => void;
 }
+
+const VIEW_OPTIONS: { mode: CalendarViewMode; label: string }[] = [
+    { mode: 'week', label: 'Week' },
+    { mode: 'month', label: 'Month' },
+    { mode: 'year', label: 'Year' },
+];
 
 export function CalendarHeader({
     monthLabel,
     onPrevMonth,
     onNextMonth,
     onTodayPress,
+    viewMode = 'month',
+    onViewModeChange,
 }: CalendarHeaderProps) {
     return (
-        <View style={styles.container}>
-            <TouchableOpacity onPress={onTodayPress} style={styles.todayBtn} activeOpacity={0.7}>
-                <Ionicons name="today-outline" size={15} color="#10464d" />
-                <Text style={styles.todayLabel}>Today</Text>
-            </TouchableOpacity>
-
-            <View style={styles.nav}>
-                <TouchableOpacity onPress={onPrevMonth} hitSlop={12} style={styles.arrowBtn} activeOpacity={0.6}>
-                    <Ionicons name="chevron-back" size={20} color="#10464d" />
+        <View style={calendarHeaderStyles.container}>
+            <View style={calendarHeaderStyles.leftGroup}>
+                <TouchableOpacity onPress={onTodayPress} style={calendarHeaderStyles.todayBtn} activeOpacity={0.7}>
+                    <Ionicons name="today-outline" size={15} color={AppColors.brand} />
+                    <Text style={calendarHeaderStyles.todayLabel}>Today</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.monthLabel}>{monthLabel}</Text>
+                {onViewModeChange && (
+                    <View style={calendarHeaderStyles.viewModeContainer}>
+                        {VIEW_OPTIONS.map((opt) => (
+                            <TouchableOpacity
+                                key={opt.mode}
+                                style={[
+                                    calendarHeaderStyles.viewModeBtn,
+                                    viewMode === opt.mode && calendarHeaderStyles.viewModeBtnActive,
+                                ]}
+                                onPress={() => onViewModeChange(opt.mode)}
+                                activeOpacity={0.7}
+                            >
+                                <Text
+                                    style={[
+                                        calendarHeaderStyles.viewModeLabel,
+                                        viewMode === opt.mode && calendarHeaderStyles.viewModeLabelActive,
+                                    ]}
+                                >
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+            </View>
 
-                <TouchableOpacity onPress={onNextMonth} hitSlop={12} style={styles.arrowBtn} activeOpacity={0.6}>
-                    <Ionicons name="chevron-forward" size={20} color="#10464d" />
+            <View style={calendarHeaderStyles.nav}>
+                <TouchableOpacity onPress={onPrevMonth} hitSlop={12} style={calendarHeaderStyles.arrowBtn} activeOpacity={0.6}>
+                    <Ionicons name="chevron-back" size={20} color={AppColors.brand} />
+                </TouchableOpacity>
+
+                <Text style={calendarHeaderStyles.monthLabel}>{monthLabel}</Text>
+
+                <TouchableOpacity onPress={onNextMonth} hitSlop={12} style={calendarHeaderStyles.arrowBtn} activeOpacity={0.6}>
+                    <Ionicons name="chevron-forward" size={20} color={AppColors.brand} />
                 </TouchableOpacity>
             </View>
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-    },
-    todayBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-    todayLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#10464d',
-    },
-    nav: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    monthLabel: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#2D2D2D',
-        minWidth: 150,
-        textAlign: 'center',
-    },
-    arrowBtn: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-});

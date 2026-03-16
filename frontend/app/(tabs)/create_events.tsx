@@ -17,7 +17,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import apiClient from '@/services/api-client';
+import { useLocalSearchParams } from "expo-router";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -306,14 +308,16 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { date: dateParam } = useLocalSearchParams();
+  const router = useRouter();
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate("calendars");
+    else router.replace("/(tabs)/calendars");
   };
 
   const goToRoot = () => {
-    navigation.navigate("calendars");
+    router.replace(`/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`);
   };
 
   const { width } = useWindowDimensions();
@@ -379,6 +383,12 @@ export default function CreateEventsScreen() {
   const suppressNextSearchRef = useRef(false);
 
   const [date, setDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
@@ -448,7 +458,7 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    // si el usuario escribe manualmente, invalidamos coords (hasta que elija sugerencia)
+    // si el user escribe manualmente, invalidamos coords (hasta que elija sugerencia)
     setLat(null);
     setLon(null);
 
@@ -500,7 +510,7 @@ export default function CreateEventsScreen() {
       } catch (e: any) {
         if (cancelled) return;
         setSuggestions([]);
-        setPlaceError(e?.message ?? "Error buscando ubicaciones");
+        setPlaceError(e?.message ?? "Error buscando locationes");
       } finally {
         if (!cancelled) setPlaceLoading(false);
       }
@@ -553,7 +563,7 @@ export default function CreateEventsScreen() {
       return;
     }
     if (!selectedCalendar?.id) {
-      setFormError("Selecciona un calendario.");
+      setFormError("Selecciona un calendar.");
       return;
     }
 
@@ -564,7 +574,7 @@ export default function CreateEventsScreen() {
       date: toISODate(date),
       time: toHMS(time),
       calendars: [Number(selectedCalendar.id)],
-      creador_id: 2, // MOCK por ahora
+      creator_id: 2, // MOCK por atime
     };
 
     // Send coords if available (backend expects latitude/longitude)
@@ -576,11 +586,11 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/events', payload);
+      await apiClient.post<any>('/events/create/', payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
-      setFormError(e?.message ?? "No se pudo crear el evento");
+      setFormError(e?.message ?? "No se pudo crear el event");
     } finally {
       setPublishing(false);
     }
@@ -647,7 +657,7 @@ export default function CreateEventsScreen() {
               </Pressable>
 
               <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /eventos no recibe imagen)
+                (No se envía aún: el endpoint /events no recibe imagen)
               </Text>
             </View>
           </View>
@@ -786,7 +796,7 @@ export default function CreateEventsScreen() {
                     <Text style={styles.modalItemText}>{item.name}</Text>
                   </Pressable>
                 )}
-                ListEmptyComponent={<Text style={styles.helperText}>No hay calendarios. Crea uno primero.</Text>}
+                ListEmptyComponent={<Text style={styles.helperText}>No hay calendars. Crea uno primero.</Text>}
               />
             )}
           </View>
@@ -801,8 +811,8 @@ export default function CreateEventsScreen() {
               <Ionicons name="checkmark" size={28} color={WHITE} />
             </View>
 
-            <Text style={styles.successTitle}>¡Listo!</Text>
-            <Text style={styles.successBody}>Evento creado correctamente</Text>
+            <Text style={styles.successTitle}>Ready!</Text>
+            <Text style={styles.successBody}>Event created successfully</Text>
 
             <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
               <Text style={styles.successBtnText}>OK</Text>

@@ -12,7 +12,7 @@ export interface Calendar {
     description: string;
     cover?: string;         // URL to cover image
     privacy: PrivacyStatus;
-    origen: CalendarOrigin;
+    origin: CalendarOrigin;
     creator: string;        // username
     color: string;          // UI-only accent color
 }

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Asset } from "expo-asset";
 import API_CONFIG from "../constants/api";
 import EventDetailsModal from "./event-details-modal";
+import { mapComponentWebStyles } from "@/styles/ui-styles";
 
 function formatDate(dateLike: any) {
   const s = String(dateLike ?? "");
@@ -52,7 +53,7 @@ export default function MapComponent({ location, events }: { location: any; even
   const apiBase = String(API_CONFIG.baseURL || "");
   const mediaOrigin = getOriginFromApiBase(apiBase);
 
-  // Default marker icon
+  // ðŸ“ Icono normal
   const defaultIcon = useMemo(() => {
     const markerUri = Asset.fromModule(require("../assets/images/marcador_evento.png")).uri;
     const markerRetinaUri = Asset.fromModule(require("../assets/images/marcador_evento_2x.png")).uri;
@@ -66,7 +67,7 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [L]);
 
-  // Star icon for the closest event
+  // â­ Icono estrella para el evento mÃ¡s cercano
   const starIcon = useMemo(() => {
     const starUri = Asset.fromModule(require("../assets/images/star_marker.png")).uri;
 
@@ -78,7 +79,7 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [L]);
 
-  // User position icon
+  // ðŸ“ Icono posiciÃ³n usuario
   const yourPositionIcon = useMemo(() => {
     const markerUri = Asset.fromModule(require("../assets/images/position_icon.png")).uri;
 
@@ -142,35 +143,35 @@ export default function MapComponent({ location, events }: { location: any; even
         }
       `}</style>
 
-      <MapContainer center={center} zoom={14} style={{ height: "100vh", width: "100%" }}>
+      <MapContainer center={center} zoom={14} style={mapComponentWebStyles.fullScreenMap}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
         <Marker position={center} icon={yourPositionIcon}>
-          <Popup closeButton={false}>You are here</Popup>
+          <Popup closeButton={false}>EstÃ¡s aquÃ­</Popup>
         </Marker>
 
         {events.map((event, index) => {
           const id = String(event?.id ?? "");
-          const lat = Number(event.latitude);
-          const lon = Number(event.longitude);
+          const lat = Number(event.latitud);
+          const lon = Number(event.longitud);
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
-          const title = String(event?.title ?? "Event");
-          const place = String(event?.place_name ?? "");
-          const dateStr = formatDate(event?.date);
-          const timeStr = formatTime(event?.time);
-          const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+          const title = String(event?.titulo ?? "Evento");
+          const place = String(event?.nombre_lugar ?? "");
+          const dateStr = formatDate(event?.fecha);
+          const timeStr = formatTime(event?.hora);
+          const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
-          const imgUrl = buildImageUrl(apiBase, event?.photo);
+          const imgUrl = buildImageUrl(apiBase, event?.foto);
 
           return (
             <Marker
               key={id}
               position={[lat, lon]}
-              icon={index === 0 ? starIcon : defaultIcon} // star for closest event
+              icon={index === 0 ? starIcon : defaultIcon} // â­ aquÃ­ estÃ¡ la magia
               eventHandlers={{
                 mouseover: (e: any) => e?.target?.openPopup(),
                 mouseout: (e: any) => e?.target?.closePopup(),
@@ -193,8 +194,8 @@ export default function MapComponent({ location, events }: { location: any; even
                   <div className="eventBody">
                     <div className="eventTitle">{title}</div>
 
-                    {place && <div className="eventMeta">📍 {place}</div>}
-                    {when && <div className="eventMeta">🗓 {when}</div>}
+                    {place && <div className="eventMeta">ðŸ“ {place}</div>}
+                    {when && <div className="eventMeta">ðŸ—“ {when}</div>}
                   </div>
                 </div>
               </Popup>

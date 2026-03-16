@@ -27,7 +27,7 @@ interface PublishData {
   description: string;
   cover?: string;
   privacy: PrivacyStatus;
-  origen?: CalendarOrigin;
+  origin?: CalendarOrigin;
 }
 export default function CreateScreen() {
   const router = useRouter();
@@ -35,11 +35,12 @@ export default function CreateScreen() {
   const [selectedPrivacy, setSelectedPrivacy] =
     useState<PrivacyStatus>("PRIVATE");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [calendarData, setCalendarData] = useState<PublishData>({
     name: "",
     description: "",
     privacy: "PRIVATE",
-    origen: "CURRENT",
+    origin: "CURRENT",
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -104,45 +105,55 @@ export default function CreateScreen() {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
+
     if (!user?.username) {
       Alert.alert("Error", "You must be logged in to create a calendar.");
       return;
     }
+
     setIsLoading(true);
+    setErrorMessage(null);
+
     try {
       const formData = new FormData();
+
       formData.append("name", calendarData.name);
       formData.append("description", calendarData.description);
       formData.append("privacy", selectedPrivacy);
-      formData.append("origen", "CURRENT");
+      formData.append("origin", "CURRENT");
 
       if (coverImage) {
         const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
-        const fetchResponse = await fetch(coverImage.uri);
-        const blob = await fetchResponse.blob();
+        const response = await fetch(coverImage.uri);
+        const blob = await response.blob();
         formData.append("cover", blob, filename);
       }
 
-      await apiClient.post("/calendars", formData);
+      await apiClient.post("/calendars/create/", formData);
+
+      Alert.alert("Success", "Calendar created successfully.");
 
       router.replace("/(tabs)/calendars");
-    } catch (error) {
-      Alert.alert("Error", "Failed to publish calendar. Please try again.");
-      console.error("Publish error:", error);
-    } finally {
+
+    } catch (error: any) {
+    console.log("FULL ERROR:", error);
+
+    const message = error?.message || "";
+
+    if (message.includes("400")) {
+      setErrorMessage(
+        "You can only create one private calendar with the basic plan."
+      );
+    } else {
+      setErrorMessage("Failed to publish calendar. Please try again.");
+    }
+
+    console.error("Publish error:", error);
+  } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDraft = async () => {
-    try {
-      // TODO: Save as draft
-      Alert.alert("Success", "Calendar saved as draft");
-      console.log("Calendar saved as draft");
-    } catch (error) {
-      Alert.alert("Error", "Failed to save draft" + error);
-    }
-  };
 
   return (
     <View style={styles.wrapper}>
@@ -308,54 +319,39 @@ export default function CreateScreen() {
                   : "Anyone with the link can view this calendar."}
             </Text>
           </View>
+     
+
+          {/* ERROR MESSAGE */}
+          {errorMessage && (
+            <Text style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          )}
 
           {/* ACTION BUTTONS */}
           <View
-            style={[styles.buttonGroup, isDesktop && styles.buttonGroupDesktop]}
+            style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
           >
-            <Pressable style={styles.draftButton} onPress={handleDraft}>
-              <Text style={styles.draftButtonText}>Save as Draft</Text>
-            </Pressable>
 
-            {isDesktop && (
-              <Pressable
-                style={[
-                  styles.publishButton,
-                  isLoading && styles.publishButtonDisabled,
-                ]}
-                onPress={handlePublish}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.publishText}>Create Calendar</Text>
-                )}
-              </Pressable>
-            )}
+            <Pressable
+              style={[
+                styles.publishButton,
+                isLoading && styles.publishButtonDisabled,
+              ]}
+              onPress={handlePublish}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.publishText}>Create Calendar</Text>
+              )}
+            </Pressable>
           </View>
         </View>
       </ScrollView>
 
-      {/* PUBLISH BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.publishContainer}>
-          <Pressable
-            style={[
-              styles.publishButton,
-              isLoading && styles.publishButtonDisabled,
-            ]}
-            onPress={handlePublish}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.publishText}>Create Calendar</Text>
-            )}
-          </Pressable>
-        </View>
-      )}
+
     </View>
   );
 }
@@ -541,27 +537,7 @@ const styles = StyleSheet.create({
   buttonGroupDesktop: {
     justifyContent: "space-between",
   },
-  draftButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  draftButtonText: {
-    color: "#10464d",
-    fontSize: 15,
-    fontWeight: "600",
-  },
 
-  publishContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-  },
   publishButton: {
     flex: 1,
     backgroundColor: "#10464d",
@@ -647,4 +623,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  errorText: {
+  color: "#d9534f",
+  fontSize: 14,
+  marginBottom: 16,
+  fontWeight: "600",
+  textAlign: "center",
+},
 });
