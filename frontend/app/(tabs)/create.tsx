@@ -319,22 +319,7 @@ export default function CreateScreen() {
                   : "Anyone with the link can view this calendar."}
             </Text>
           </View>
-          {/* INFO BOX */}
-          <View style={styles.infoBox}>
-            <Ionicons
-              name="information-circle-outline"
-              size={20}
-              color="#10464d"
-              style={{ marginRight: 12 }}
-            />
-            <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVATE"
-                ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                  ? "Your friends will receive an invitation to view this calendar."
-                  : "Anyone with the link can view this calendar."}
-            </Text>
-          </View>
+     
 
           {/* ERROR MESSAGE */}
           {errorMessage && (
@@ -343,8 +328,11 @@ export default function CreateScreen() {
             </Text>
           )}
 
-          {/* ACTION BUTTON (desktop) */}
-          {isDesktop && (
+          {/* ACTION BUTTONS */}
+          <View
+            style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
+          >
+
             <Pressable
               style={[
                 styles.publishButton,
@@ -359,29 +347,11 @@ export default function CreateScreen() {
                 <Text style={styles.publishText}>Create Calendar</Text>
               )}
             </Pressable>
-          )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* PUBLISH BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.publishContainer}>
-          <Pressable
-            style={[
-              styles.publishButton,
-              isLoading && styles.publishButtonDisabled,
-            ]}
-            onPress={handlePublish}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.publishText}>Create Calendar</Text>
-            )}
-          </Pressable>
-        </View>
-      )}
+
     </View>
   );
 }
@@ -560,12 +530,14 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  publishContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
+  buttonGroup: {
+    flexDirection: "row",
+    gap: 12,
   },
+  buttonGroupDesktop: {
+    justifyContent: "space-between",
+  },
+
   publishButton: {
     flex: 1,
     backgroundColor: "#10464d",
