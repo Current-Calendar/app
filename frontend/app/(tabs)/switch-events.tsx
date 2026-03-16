@@ -21,6 +21,7 @@ export interface Event {
 }
 
 export default function EventsScreen() {
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
