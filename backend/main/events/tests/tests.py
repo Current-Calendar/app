@@ -33,7 +33,7 @@ class EventTests(APITestCase):
 
         request = self.client.delete(f"/api/v1/events/{self.event1.pk}/delete/")
 
-        self.assertEqual(request.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Event.objects.count(), 1)
 
 

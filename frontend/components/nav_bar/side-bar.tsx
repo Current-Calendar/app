@@ -59,7 +59,7 @@ export default function Sidebar() {
   };
 
   const profileLabel = isAuthenticated ? "Profile" : "Login";
-  const profileHref: string = isAuthenticated ? `/profile/${user?.id}` : "/login";
+  const profileHref: string = isAuthenticated ? `/profile/${user?.username}` : "/login";
 
   return (
     <View style={navSideBarStyles.sidebar}>

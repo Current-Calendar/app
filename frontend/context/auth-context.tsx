@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { createContext, useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import apiClient from '@/services/api-client';
 import {
   User,
@@ -14,26 +15,41 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
+
+  const forceLogout = useCallback(() => {
+    setUser(null);
+    setIsAuthenticated(false);
+    router.replace('/(tabs)/login' as any);
+  }, [router]);
 
   // Load saved session on startup
   useEffect(() => {
+    apiClient.setOnAuthFailure(forceLogout);
+
     const bootstrapAsync = async () => {
       try {
         await apiClient.loadTokens();
 
-        if (apiClient.user) {
-          setUser(apiClient.user);
+        if (apiClient.getAccessToken()) {
+          // Validate token against the server — if it fails, clear session
+          const user = await apiClient.get<User>('/users/me/');
+          apiClient.user = user;
+          setUser(user);
           setIsAuthenticated(true);
         }
       } catch (error) {
-        console.error('Error bootstrapping session:', error);
+        // Tokens are stale or invalid — clear them silently
+        await apiClient.clearTokens();
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     bootstrapAsync();
-  }, []);
+  }, [forceLogout]);
 
   const login = useCallback(
     async (username: string, password: string) => {

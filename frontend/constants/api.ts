@@ -32,7 +32,7 @@ export const API_CONFIG = {
     getCalendars: buildEndpoint('calendars/list'),
     getEvents: buildEndpoint('events/list'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
-    ownProfile: buildEndpoint('users/me'),
+    ownProfile: buildEndpoint('users/me/'),
     searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
