@@ -12,6 +12,7 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import { Ionicons } from '@expo/vector-icons';
 
 const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
@@ -30,6 +31,10 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+
+  const[showPassword, setShowPassword] = useState(false);
+  const[showPassword2, setShowPassword2] = useState(false);
+  
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -123,24 +128,48 @@ export default function SignUpScreen() {
           />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={{ position: "relative", justifyContent: "center" }}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder=""
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword} 
+              style={[styles.input, { paddingRight: 40 }]}
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={{ position: "absolute", right: 10 }}
+            >
+              <Ionicons 
+                name={showPassword ? "eye-off" : "eye"} 
+                size={24} 
+                color="#10464D" 
+              />
+            </Pressable>
+          </View>
 
           <Text style={[styles.label, { marginTop: 14 }]}>Confirm Password</Text>
-          <TextInput
-            value={password2}
-            onChangeText={setPassword2}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={{ position: "relative", justifyContent: "center" }}>
+            <TextInput
+              value={password2}
+              onChangeText={setPassword2}
+              placeholder=""
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword2} 
+              style={[styles.input, { paddingRight: 40 }]} 
+            />
+            <Pressable
+              onPress={() => setShowPassword2(!showPassword2)}
+              style={{ position: "absolute", right: 10 }}
+            >
+              <Ionicons 
+                name={showPassword2 ? "eye-off" : "eye"} 
+                size={24} 
+                color="#10464D" 
+              />
+            </Pressable>
+          </View>
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
