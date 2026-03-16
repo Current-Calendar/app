@@ -28,7 +28,7 @@ import { ImportCalendarModal } from '@/components/import-calendar-modal';
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
 //   GET /events?calendarId= -> EventsResponse
-const todayKey = new Date().toISOString().slice(0,10);
+const todayKey = new Date().toISOString().slice(0, 10);
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -75,14 +75,32 @@ export default function CalendarScreen() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [calData, evData] = await Promise.all([
-                apiClient.get<any[]>('/calendars/list'),
+            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData, evData] = await Promise.all([
+                apiClient.get<any[]>('/calendars/my-calendars/'),
+                apiClient.get<any[]>('/calendars/subscribed/'),
+                apiClient.get<any[]>('/calendars/friends-calendars/'),
                 apiClient.get<any[]>('/events/list'),
             ]);
 
             const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-            const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+            const mergedCalendarsMap = new Map<number, any>();
+
+            myCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            subscribedCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            friendsCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            const mergedCalendars = Array.from(mergedCalendarsMap.values());
+
+            const mappedCalendars: Calendar[] = mergedCalendars.map((c: any, index: number) => ({
                 id: String(c.id),
                 name: c.name,
                 description: c.description || '',
@@ -93,21 +111,30 @@ export default function CalendarScreen() {
                 color: COLORS[index % COLORS.length],
             }));
 
-            const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
-                const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
-                return {
-                    id: String(e.id),
-                    calendarId: String(e.calendars[0] || ''),
-                    title: e.title,
-                    description: e.description || '',
-                    place_name: e.place_name || '',
-                    date: e.date,
-                    time: e.time.substring(0, 5),
-                    recurrence: e.recurrence,
-                    type: 'other', // Default type
-                    color: calendar?.color || '#6C63FF',
-                };
-            });
+            const visibleCalendarIds = new Set(mappedCalendars.map((c) => Number(c.id)));
+
+            const mappedEvents: CalendarEvent[] = evData
+                .filter((e: any) =>
+                    e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
+                )
+                .map((e: any) => {
+                    const calendar = mappedCalendars.find((c) =>
+                        e.calendars.includes(Number(c.id))
+                    );
+
+                    return {
+                        id: String(e.id),
+                        calendarId: String(e.calendars[0] || ''),
+                        title: e.title,
+                        description: e.description || '',
+                        place_name: e.place_name || '',
+                        date: e.date,
+                        time: e.time.substring(0, 5),
+                        recurrence: e.recurrence,
+                        type: 'other',
+                        color: calendar?.color || '#6C63FF',
+                    };
+                });
 
             setCalendars(mappedCalendars);
             setEvents(mappedEvents);
@@ -178,11 +205,11 @@ export default function CalendarScreen() {
     }, [events, selectedCalendarId, selectedEventType]);
 
     const eventsOfSelectedDay = useMemo(() => {
-    if (!selectedDay) return [];
+        if (!selectedDay) return [];
 
-    return filteredEvents.filter(
-        (event) => event.date?.slice(0,10) === selectedDay
-    );
+        return filteredEvents.filter(
+            (event) => event.date?.slice(0, 10) === selectedDay
+        );
     }, [filteredEvents, selectedDay]);
 
     const removeCalendarFromState = (calendarId: string) => {
@@ -400,13 +427,13 @@ export default function CalendarScreen() {
                         <View style={styles.toolbarButtons}>
 
 
-                                <TouchableOpacity
-                                    style={styles.primaryBtn}
-                                    activeOpacity={0.7}
-                                    onPress={() =>
-                                        router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
-                                    }
-                                >
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() =>
+                                    router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
+                                }
+                            >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>
                             </TouchableOpacity>
@@ -541,35 +568,35 @@ export default function CalendarScreen() {
                 >
                     <View style={styles.sheetHandle} />
 
-                        <View style={styles.sheetContent}>
+                    <View style={styles.sheetContent}>
 
                         <View style={styles.sheetTextBlock}>
                             <Text style={styles.sheetLabel}>Add event to</Text>
                             <Text style={styles.sheetDate}>
-                            {selectedDay ? formatSelectedDay(selectedDay) : ""}
+                                {selectedDay ? formatSelectedDay(selectedDay) : ""}
                             </Text>
                         </View>
 
                         {eventsOfSelectedDay.length > 0 && (
                             <ScrollView
-                            style={styles.dayEventsList}
-                            contentContainerStyle={{ paddingBottom: 6 }}
+                                style={styles.dayEventsList}
+                                contentContainerStyle={{ paddingBottom: 6 }}
                             >
-                            {eventsOfSelectedDay.map((event) => (
-                                <TouchableOpacity
-                                key={event.id}
-                                style={styles.dayEventItem}
-                                onPress={() => setActiveEvent(event)}
-                                >
-                                <Text style={styles.dayEventTime}>
-                                    {event.time?.slice(0,5)}
-                                </Text>
+                                {eventsOfSelectedDay.map((event) => (
+                                    <TouchableOpacity
+                                        key={event.id}
+                                        style={styles.dayEventItem}
+                                        onPress={() => setActiveEvent(event)}
+                                    >
+                                        <Text style={styles.dayEventTime}>
+                                            {event.time?.slice(0, 5)}
+                                        </Text>
 
-                                <Text style={styles.dayEventTitle}>
-                                    {event.title}
-                                </Text>
-                                </TouchableOpacity>
-                            ))}
+                                        <Text style={styles.dayEventTitle}>
+                                            {event.title}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
                             </ScrollView>
                         )}
 
@@ -577,14 +604,14 @@ export default function CalendarScreen() {
                             style={styles.addButton}
                             activeOpacity={0.85}
                             onPress={() =>
-                            router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
+                                router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
                             }
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
                         </TouchableOpacity>
 
-                        </View>
+                    </View>
                 </Animated.View>
             )}
             {isDesktop && !selectedDay && optionAnimations.map((anim, index) => {
@@ -778,11 +805,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#D0CFC8',
     },
     sheetContent: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    gap: 10,
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        gap: 10,
     },
     sheetTextBlock: {
         flex: 1,
@@ -891,28 +918,28 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     dayEventsList: {
-    marginTop: 12,
-    maxHeight: 120,
+        marginTop: 12,
+        maxHeight: 120,
     },
 
     dayEventItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingVertical: 6,
     },
 
     dayEventTime: {
-    fontWeight: "700",
-    color: "#10464d",
-    fontSize: 13,
+        fontWeight: "700",
+        color: "#10464d",
+        fontSize: 13,
     },
 
     dayEventTitle: {
-    color: "#10464d",
-    fontSize: 13,
+        color: "#10464d",
+        fontSize: 13,
     },
-  
+
     importDropdown: {
         position: 'absolute',
         top: 40,

@@ -27,21 +27,25 @@ export default function CalendarViewScreen() {
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
   const [backendCalendars, setBackendCalendars] = useState<any[]>([]);
-  
+
   // Load calendars from backend
   useEffect(() => {
     const loadCalendars = async () => {
       try {
         const response = await fetch(API_CONFIG.endpoints.getCalendars);
         if (!response.ok) throw new Error('Failed to load calendars');
+
         const data = await response.json();
-        // Backend returns array directly, not { calendars: [...] }
         const calendars = Array.isArray(data) ? data : [];
+
         setBackendCalendars(calendars);
       } catch (error) {
         setBackendCalendars([]);
+      } finally {
+        setLoadingCalendars(false);
       }
     };
+
     loadCalendars();
   }, []);
 
@@ -60,17 +64,18 @@ export default function CalendarViewScreen() {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [backendEvents, setBackendEvents] = useState<CalendarEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingCalendars, setLoadingCalendars] = useState(true);
 
   // Function to load events
   const loadEvents = useCallback(async () => {
     try {
       const response = await fetch(API_CONFIG.endpoints.getEvents);
       if (!response.ok) throw new Error('Failed to load events');
-      
+
       const data = await response.json();
       // Backend returns array directly, not { events: [...] }
       const allEvents = Array.isArray(data) ? data : [];
-      
+
       // Transform backend events: expand by calendar
       const transformed: CalendarEvent[] = [];
       allEvents.forEach((evt: any) => {
@@ -91,7 +96,7 @@ export default function CalendarViewScreen() {
           });
         }
       });
-      
+
       setBackendEvents(transformed);
     } catch (error) {
       setBackendEvents([]);
@@ -152,11 +157,18 @@ export default function CalendarViewScreen() {
 
   return (
     <View style={styles.screenWrapper}>
-      {!calendar ? (
+      {loadingCalendars ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading calendar...</Text>
+        </View>
+      ) : !calendar ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No calendar found</Text>
           <Text style={styles.emptyText}>Please select a calendar to view</Text>
-          <Pressable style={styles.primaryButton} onPress={() => router.push("/switch-calendar")}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => router.push("/switch-calendar")}
+          >
             <Text style={styles.primaryButtonText}>Select Calendar</Text>
           </Pressable>
         </View>
@@ -167,25 +179,25 @@ export default function CalendarViewScreen() {
             <Text style={styles.subtitle}>by {calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
           </View>
 
-        <View style={styles.headerBlock}>
-          <CalendarHeader
-            monthLabel={`${MONTH_NAMES[month]} ${year}`}
-            onPrevMonth={goToPrevMonth}
-            onNextMonth={goToNextMonth}
-            onTodayPress={goToToday}
-          />
-        </View>
+          <View style={styles.headerBlock}>
+            <CalendarHeader
+              monthLabel={`${MONTH_NAMES[month]} ${year}`}
+              onPrevMonth={goToPrevMonth}
+              onNextMonth={goToNextMonth}
+              onTodayPress={goToToday}
+            />
+          </View>
 
-        <View style={styles.gridWrap}>
-          <CalendarGrid
-            year={year}
-            month={month}
-            events={events}
-            onEventPress={setActiveEvent}
-            selectedDay={selectedDay}
-            onDayPress={setSelectedDay}
-          />
-        </View>
+          <View style={styles.gridWrap}>
+            <CalendarGrid
+              year={year}
+              month={month}
+              events={events}
+              onEventPress={setActiveEvent}
+              selectedDay={selectedDay}
+              onDayPress={setSelectedDay}
+            />
+          </View>
 
         {selectedDay && (
           <View style={styles.dayEventsContainer}>

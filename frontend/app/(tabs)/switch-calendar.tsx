@@ -12,13 +12,15 @@ export default function CalendarsScreen() {
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [calRes] = await Promise.all([
+        const [calRes, subscribedData] = await Promise.all([
           fetch(API_CONFIG.endpoints.getCalendars),
+          apiClient.get<any[]>('/calendars/subscribed/'),
         ]);
 
         if (!calRes.ok) {
@@ -29,7 +31,9 @@ export default function CalendarsScreen() {
 
         const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-        const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+        const publicCalendars = calData.filter((c: any) => c.privacy === "PUBLIC");
+
+        const mappedCalendars: Calendar[] = publicCalendars.map((c: any, index: number) => ({
           id: String(c.id),
           name: c.name,
           description: c.description || '',
@@ -41,6 +45,7 @@ export default function CalendarsScreen() {
         }));
 
         setCalendars(mappedCalendars);
+        setSubscribedCalendarIds(subscribedData.map((c: any) => String(c.id)));
       } catch (error) {
         console.error('Error fetching data:', error);
         Alert.alert('Error', 'Could not load calendars or events.');
@@ -106,6 +111,7 @@ export default function CalendarsScreen() {
               calendar={item}
               onPress={handleOpenCalendar}
               onSubscribe={handleSubscribe}
+              isSubscribed={subscribedCalendarIds.includes(item.id)}
             />
           )}
           contentContainerStyle={styles.list}
