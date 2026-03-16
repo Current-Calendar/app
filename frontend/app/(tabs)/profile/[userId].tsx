@@ -129,7 +129,7 @@ const ProfileScreen = () => {
 
         console.error('Error cargando perfil propio:', error);
         if (isMounted) {
-          setProfileError('No hemos podido cargar tu perfil. Intenta de nuevo.');
+          setProfileError('We could not load your profile. Please try again');
         }
       } finally {
         if (isMounted) {
