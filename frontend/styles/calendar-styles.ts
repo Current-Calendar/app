@@ -9,6 +9,13 @@ export const calendarHeaderStyles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 6,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   todayBtn: {
     gap: 5,
@@ -21,6 +28,34 @@ export const calendarHeaderStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: AppColors.brand,
+  },
+  viewModeContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0ec',
+    borderRadius: 8,
+    padding: 2,
+  },
+  viewModeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  viewModeBtnActive: {
+    backgroundColor: AppColors.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  viewModeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: AppColors.textMuted,
+  },
+  viewModeLabelActive: {
+    color: AppColors.brand,
+    fontWeight: '700',
   },
   nav: {
     flexDirection: 'row',

@@ -36,6 +36,9 @@ const EditProfileScreen = () => {
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [showRecoverConfirm, setShowRecoverConfirm] = useState(false);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
 
   const handleChangePhoto = async () => {
   try {
@@ -99,6 +102,32 @@ const EditProfileScreen = () => {
     }
   };
 
+  const recoverPassword = async () => {
+    if (!currentUser?.email) {
+      setRecoverError('No email associated with your account.');
+      return;
+    }
+
+    setIsRecoveringPassword(true);
+    setRecoverError(null);
+    try {
+      const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send password recovery email.');
+      }
+      setShowRecoverConfirm(false);
+      Alert.alert('Success', 'Password recovery email sent. Check your inbox.');
+    } catch (error) {
+      setRecoverError(error instanceof Error ? error.message : 'Could not send recovery email. Please try again.');
+    } finally {
+      setIsRecoveringPassword(false);
+    }
+  };
+
   const deleteOwnProfile = async () => {
     if (!currentUser) {
       setDeleteError('You must be logged in to delete your profile.');
@@ -108,6 +137,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
+      await apiClient.delete('/users/me/delete/');
       await apiClient.delete('/users/me/delete/');
 
       setShowDeleteConfirm(false);
@@ -173,8 +203,25 @@ const EditProfileScreen = () => {
         <View style={styles.dangerSection}>
           <Text style={styles.dangerTitle}>Danger zone</Text>
           <Text style={styles.dangerText}>
-            Deleting your profile permanently removes your account.
+            These actions may have permanent impact on your account.
           </Text>
+          <TouchableOpacity
+            style={[styles.recoverPasswordButton, isRecoveringPassword && styles.recoverPasswordButtonDisabled]}
+            onPress={() => {
+              setRecoverError(null);
+              setShowRecoverConfirm(true);
+            }}
+            disabled={isRecoveringPassword}
+            activeOpacity={0.8}
+          >
+            {isRecoveringPassword ? (
+              <ActivityIndicator size="small" color="#EAF7F6" />
+            ) : (
+              <Text style={styles.recoverPasswordButtonText}>Recover Password</Text>
+            )}
+          </TouchableOpacity>
+          {recoverError ? <Text style={styles.recoverErrorText}>{recoverError}</Text> : null}
+
           <TouchableOpacity
             style={[styles.deleteProfileButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
             onPress={() => {
@@ -194,6 +241,55 @@ const EditProfileScreen = () => {
         </View>
 
       </ScrollView>
+
+      <Modal
+        visible={showRecoverConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isRecoveringPassword) {
+            setShowRecoverConfirm(false);
+          }
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            if (!isRecoveringPassword) {
+              setShowRecoverConfirm(false);
+            }
+          }}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Recover password</Text>
+            <Text style={styles.modalText}>
+              A password recovery email will be sent to {currentUser?.email}. Do you want to continue?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowRecoverConfirm(false)}
+                disabled={isRecoveringPassword}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, isRecoveringPassword && styles.recoverPasswordButtonDisabled]}
+                onPress={() => {
+                  void recoverPassword();
+                }}
+                disabled={isRecoveringPassword}
+              >
+                {isRecoveringPassword ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalConfirmButtonText}>Send</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={showDeleteConfirm}
@@ -372,6 +468,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  recoverPasswordButton: {
+    borderWidth: 1.5,
+    borderColor: '#eb8c85',
+    backgroundColor: '#eb8c8514',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginBottom: 10,
+  },
+  recoverPasswordButtonDisabled: {
+    opacity: 0.7,
+  },
+  recoverPasswordButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B33F37',
+  },
+  recoverErrorText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#B33F37',
+    textAlign: 'center',
+  },
   deleteProfileButton: {
     borderWidth: 1.5,
     borderColor: '#eb8c85',
@@ -452,6 +574,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#B33F37',
   },
   modalDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B33F37',
+  },
+  modalConfirmButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#ffffff',
