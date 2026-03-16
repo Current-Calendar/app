@@ -118,7 +118,7 @@ export default function RadarScreen() {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#eb8c85" />
-        <Text style={styles.loadingTitle}>Preparando Radar</Text>
+        <Text style={styles.loadingTitle}>Preparing Radar</Text>
         <Text style={styles.loadingSubtitle}>{loadingStage}</Text>
       </View>
     );
