@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from django.contrib.gis.db.models import PointField
+from django.db.models import Q
 from graphene_django.converter import convert_django_field
 
 from main.models import Event, User, Calendar
@@ -31,6 +32,21 @@ class UserType(DjangoObjectType):
         ]
 
 
+class CalendarType(DjangoObjectType):
+    class Meta:
+        model = Calendar
+        fields = [
+            "id",
+            "origin",
+            "name",
+            "description",
+            "cover",
+            "privacy",
+            "creator",
+            "created_at",
+        ]
+
+
 class EventType(DjangoObjectType):
     class Meta:
         model = Event
@@ -53,6 +69,13 @@ class EventType(DjangoObjectType):
 
 
 class Query(graphene.ObjectType):
+    all_public_calendars = graphene.List(CalendarType)
+
+    my_calendars = graphene.List(CalendarType)
+
+    # Includes my calendars
+    followed_calendars = graphene.List(CalendarType)
+
     all_events = graphene.List(
         EventType,
         week=graphene.Int(),
@@ -69,6 +92,27 @@ class Query(graphene.ObjectType):
         month=graphene.Int(),
         year=graphene.Int(),
     )
+
+    def resolve_all_public_calendars(self, info):
+        return Calendar.objects.filter(privacy="PUBLIC")
+
+    def resolve_my_calendars(self, info):
+        user = info.context.user
+
+        if not user.is_authenticated:
+            return Calendar.objects.none()
+
+        return Calendar.objects.filter(creator_id=user.pk)
+
+    def resolve_followed_calendars(self, info):
+        user = info.context.user
+
+        if not user.is_authenticated:
+            return Calendar.objects.none()
+
+        return Calendar.objects.filter(
+            Q(creator_id=user.pk) | Q(subscribers__in=[user])
+        )
 
     def resolve_all_events(
         self,
