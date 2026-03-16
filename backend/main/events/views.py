@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 from ..models import Calendar, Event
 from django.contrib.gis.geos import Point
@@ -56,10 +57,16 @@ def create_event(request):
             status=status.HTTP_404_NOT_FOUND,
         )
     for calendar in calendars:
-        if calendar.creator != creator:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != creator:
             return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
-            status=status.HTTP_403_FORBIDDEN
+                status=status.HTTP_403_FORBIDDEN
             )
+        if calendar.privacy == "FRIENDS":
+            is_following_calendar = calendar.subscribers.filter(id=creator.pk).exists()
+            if not is_following_calendar or not calendar.creator.is_friend_with(creator):
+                 return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
     location = None
     lat = data.get("latitud")
@@ -124,7 +131,10 @@ def create_event(request):
 
 
 @api_view(['GET', 'PUT', 'PATCH'])
-def edit_event(request, event_id):
+def edit_event(request: Request, event_id):
+    if request.method != "GET" and not request.user.is_authenticated:
+        return Response(None, status=status.HTTP_401_UNAUTHORIZED)
+
     event = get_object_or_404(Event, id=event_id)
     
     if request.method == 'GET':
@@ -133,6 +143,7 @@ def edit_event(request, event_id):
     
     # Handle PUT: Update event
     data = request.data
+    user = request.user
 
     # Validate required fields are not empty if provided
     if "title" in data and not data["title"]:
@@ -175,7 +186,7 @@ def edit_event(request, event_id):
             )
 
     # Calendars M2M
-    calendars = None
+    calendars = event.calendars.all()
     if "calendars" in data:
         calendar_ids = data["calendars"]
         if not calendar_ids or not isinstance(calendar_ids, list):
@@ -189,6 +200,18 @@ def edit_event(request, event_id):
                 {"errors": ["Algún calendar no existe."]},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+    for calendar in calendars:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != user:
+            return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        if calendar.privacy == "FRIENDS":
+            is_following_calendar = calendar.subscribers.filter(id=user.pk).exists()
+            if not is_following_calendar or not calendar.creator.is_friend_with(user):
+                return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
     try:
         event.full_clean()
@@ -304,12 +327,12 @@ def asign_event_to_calendar(request):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-    if calendar.creator !=request.user:
+    if calendar.creator != request.user:
         return Response(
             {"errors": ["No tienes permiso para modificar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
         )
-    if event.creator !=request.user:
+    if event.creator != request.user:
         return Response(
             {"errors": ["No tienes permiso para usar este event."]},
             status = status.HTTP_403_FORBIDDEN
