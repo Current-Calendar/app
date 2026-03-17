@@ -6,10 +6,11 @@ import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
 import apiClient from '@/services/api-client';
 import { useCalendars } from '@/hooks/use-calendars';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CalendarsScreen() {
   const router = useRouter();
-
+  const { user } = useAuth();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const {
@@ -44,7 +45,13 @@ export default function CalendarsScreen() {
   useEffect(() => {
     const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-    const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
+    const filteredCalendars = backendCalendars.filter((c: any) => {
+      const isPublic = c.privacy === 'PUBLIC';
+      const isNotMine = String(c.creator_id) !== String(user?.id);
+      return isPublic && isNotMine;
+    });
+
+    const mappedCalendars: Calendar[] = filteredCalendars.map((c: any, index: number) => ({
       id: String(c.id),
       name: c.name,
       description: c.description || '',
@@ -56,7 +63,7 @@ export default function CalendarsScreen() {
     }));
 
     setCalendars(mappedCalendars);
-  }, [backendCalendars]);
+  }, [backendCalendars, user]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
@@ -84,7 +91,6 @@ export default function CalendarsScreen() {
       console.error("Subscribe error:", error);
     }
   };
-
   const loading = loadingCalendars;
   if (loading) {
     return (

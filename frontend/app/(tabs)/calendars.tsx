@@ -75,12 +75,8 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
     const [importModalVisible, setImportModalVisible] = useState(false);
-    const {
-        calendars: backendCalendars,
-        loading: loadingCalendars,
-        error: calendarsError,
-        refetch: refetchCalendars,
-    } = useCalendars();
+    const [loadingCalendars, setLoadingCalendars] = useState(true);
+    const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
     const {
         events: backendEvents,
@@ -90,11 +86,57 @@ export default function CalendarScreen() {
     } = useEventsList();
     const fetchData = async () => {
         try {
-            await Promise.all([refetchCalendars(), refetchEvents()]);
+            setLoadingCalendars(true);
+            setCalendarsError(null);
+
+            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData] = await Promise.all([
+                apiClient.get<any[]>('/calendars/my-calendars/'),
+                apiClient.get<any[]>('/calendars/subscribed/'),
+                apiClient.get<any[]>('/calendars/friends-calendars/'),
+            ]);
+
+            const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+
+            const mergedCalendarsMap = new Map<number, any>();
+
+            myCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            subscribedCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            friendsCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            const mergedCalendars = Array.from(mergedCalendarsMap.values());
+
+            const mappedCalendars: Calendar[] = mergedCalendars.map((c: any, index: number) => ({
+                id: String(c.id),
+                name: c.name,
+                description: c.description || '',
+                cover: c.cover || undefined,
+                privacy: c.privacy,
+                origin: c.origin,
+                creator: c.creator_username || 'unknown',
+                color: COLORS[index % COLORS.length],
+            }));
+
+            setCalendars(mappedCalendars);
+
+            await refetchEvents();
         } catch (e) {
-            console.error("Error al refrescar datos:", e);
+            console.error("Error al refrescar calendarios:", e);
+            setCalendarsError(e);
+        } finally {
+            setLoadingCalendars(false);
         }
     };
+    useEffect(() => {
+        void fetchData();
+    }, []);
     useEffect(() => {
         if (calendarsError || eventsError) {
             console.error('Error fetching data:', calendarsError || eventsError);
@@ -103,38 +145,31 @@ export default function CalendarScreen() {
     }, [calendarsError, eventsError]);
 
     useEffect(() => {
-        const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+        const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
 
-        const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
-            id: String(c.id),
-            name: c.name,
-            description: c.description || '',
-            cover: c.cover || undefined,
-            privacy: c.privacy,
-            origin: c.origin,
-            creator: c.creator_username || 'unknown',
-            color: COLORS[index % COLORS.length],
-        }));
+        const mappedEvents: CalendarEvent[] = backendEvents
+            .filter((e: any) =>
+                e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
+            )
+            .map((e: any) => {
+                const calendar = calendars.find(c => e.calendars.includes(Number(c.id)));
 
-        const mappedEvents: CalendarEvent[] = backendEvents.map((e: any) => {
-            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
-            return {
-                id: String(e.id),
-                calendarId: String(e.calendars[0] || ''),
-                title: e.title,
-                description: e.description || '',
-                place_name: e.place_name || '',
-                date: e.date,
-                time: e.time.substring(0, 5),
-                recurrence: e.recurrence,
-                type: 'other',
-                color: calendar?.color || '#6C63FF',
-            };
-        });
+                return {
+                    id: String(e.id),
+                    calendarId: String(e.calendars[0] || ''),
+                    title: e.title,
+                    description: e.description || '',
+                    place_name: e.place_name || '',
+                    date: e.date,
+                    time: e.time.substring(0, 5),
+                    recurrence: e.recurrence,
+                    type: 'other',
+                    color: calendar?.color || '#6C63FF',
+                };
+            });
 
-        setCalendars(mappedCalendars);
         setEvents(mappedEvents);
-    }, [backendCalendars, backendEvents]);
+    }, [backendEvents, calendars]);
 
     useEffect(() => {
         if (params.selectedCalendarId) {
@@ -224,7 +259,7 @@ export default function CalendarScreen() {
         try {
             await deleteCalendar(calendar.id);
             setInfoCalendar(null);
-            await Promise.all([refetchCalendars(), refetchEvents()]);
+            await fetchData();
         } catch (e) {
             console.error('Delete error:', e);
             Alert.alert('Delete failed', String(e));
