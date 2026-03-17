@@ -33,6 +33,8 @@ class UserType(DjangoObjectType):
 
 
 class CalendarType(DjangoObjectType):
+    liked_by_me = graphene.Boolean()
+
     class Meta:
         model = Calendar
         fields = [
@@ -44,7 +46,20 @@ class CalendarType(DjangoObjectType):
             "privacy",
             "creator",
             "created_at",
+            "likes_count",
         ]
+
+    def resolve_liked_by_me(self, info):
+        user = info.context.user
+        if not user.is_authenticated:
+            return False
+        liked_calendar_ids = getattr(info.context, "_liked_calendar_ids", None)
+        if liked_calendar_ids is None:
+            liked_calendar_ids = set(
+                user.calendar_likes.values_list("calendar_id", flat=True)
+            )
+            info.context._liked_calendar_ids = liked_calendar_ids
+        return self.id in liked_calendar_ids
 
 
 class EventType(DjangoObjectType):

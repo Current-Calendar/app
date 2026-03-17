@@ -2,7 +2,7 @@ import json
 
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from main.models import User
+from main.models import User, Calendar, CalendarLike
 from django.urls import reverse
 from django.test import TestCase
 from django.contrib.auth.hashers import check_password, identify_hasher
@@ -67,6 +67,26 @@ class BorrarUsuarioTestCase(APITestCase):
             self.url,
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_borrar_usuario_actualiza_likes_count(self):
+        owner = User.objects.create_user(
+            email="owner@example.com", password="password123", username="owner"
+        )
+        calendar = Calendar.objects.create(
+            name="Calendar with likes",
+            privacy="PUBLIC",
+            creator=owner,
+        )
+        CalendarLike.objects.create(user=self.user, calendar=calendar)
+        calendar.refresh_from_db()
+        self.assertEqual(calendar.likes_count, 1)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        calendar.refresh_from_db()
+        self.assertEqual(calendar.likes_count, 0)
         
 
 class BuscarUsuariosTests(TestCase):
