@@ -1,11 +1,24 @@
-import React, { useMemo, useState } from "react";
-import { StyleSheet, Image } from "react-native";
+
+import React, { useState } from "react";
+import { Image } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import EventDetailsModal from "./event-details-modal";
-import API_CONFIG from "../constants/api";
+import { mapComponentNativeStyles } from "@/styles/ui-styles";
 
-export default function MapComponent({ location, events }) {
-  const [selectedEvent, setSelectedEvent] = useState(null);
+type EventMarker = {
+  id?: string | number;
+  _id?: string | number;
+  latitude?: number | string;
+  longitude?: number | string;
+};
+
+type LocationPoint = {
+  latitude: number;
+  longitude: number;
+};
+
+export default function MapComponent({ location, events }: { location: LocationPoint; events: EventMarker[] }) {
+  const [selectedEvent, setSelectedEvent] = useState<EventMarker | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
   const initialRegion = {
@@ -15,7 +28,7 @@ export default function MapComponent({ location, events }) {
     longitudeDelta: 0.05,
   };
 
-  const openEventModal = (event) => {
+  const openEventModal = (event: EventMarker) => {
     setSelectedEvent(event);
     setModalOpen(true);
   };
@@ -28,14 +41,14 @@ export default function MapComponent({ location, events }) {
   return (
     <>
       <MapView
-        style={styles.map}
+        style={mapComponentNativeStyles.map}
         initialRegion={initialRegion}
         showsUserLocation={true}
         showsMyLocationButton={true}
       >
-        {events.map((event, index) => {
-          const lat = parseFloat(event.latitud);
-          const lon = parseFloat(event.longitud);
+        {events.map((event: EventMarker, index: number) => {
+          const lat = parseFloat(String(event.latitude));
+          const lon = parseFloat(String(event.longitude));
           if (!isFinite(lat) || !isFinite(lon)) return null;
 
           return (
@@ -47,17 +60,17 @@ export default function MapComponent({ location, events }) {
               }}
               onPress={() => openEventModal(event)}
             >
-              {/* ⭐ Evento más cercano */}
               {index === 0 ? (
                 <Image
                   source={require("../assets/images/star_marker.png")}
-                  style={styles.starMarker}
+                  style={mapComponentNativeStyles.starMarker}
                   resizeMode="contain"
                 />
               ) : (
                 <Image
                   source={require("../assets/images/marcador_evento.png")}
-                  style={styles.defaultMarker}
+
+                  style={mapComponentNativeStyles.defaultMarker}
                   resizeMode="contain"
                 />
               )}
@@ -70,25 +83,7 @@ export default function MapComponent({ location, events }) {
         visible={modalOpen}
         onClose={closeModal}
         event={selectedEvent}
-        apiBaseUrl={API_CONFIG.baseURL}
       />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  map: {
-    width: "100%",
-    height: "100%",
-  },
-
-  defaultMarker: {
-    width: 40,
-    height: 40,
-  },
-
-  starMarker: {
-    width: 32, // ⭐ un poco más pequeña como pediste
-    height: 32,
-  },
-});

@@ -7,17 +7,15 @@ import {
     Image,
     Pressable,
     TouchableOpacity,
-    GestureResponderEvent,
 } from "react-native";
 import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import API_CONFIG from '@/constants/api';
+import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL!;
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
 
 export default function SearchScreen() {
@@ -25,73 +23,21 @@ export default function SearchScreen() {
     const router = useRouter();
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
-    const [calendars, setCalendars] = useState<Calendar[]>([]);
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+    const { results: userResults } = useUserSearch(query);
+    const { results: calendars } = useCalendarSearch(query);
+    const { results: events } = useEventSearch(query);
+
+    const { followUser: followUserRequest } = useFollowUserAction();
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            if (!query.trim()) {
-                setUsers([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchUsers(query));
-                const data = await response.json();
-                setUsers(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando usuarios:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchUsers, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
-
-    useEffect(() => {
-        const fetchCalendar = async () => {
-            if (!query.trim()) {
-                setCalendars([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchCalendars(query));
-                const data = await response.json();
-                setCalendars(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando calendarios:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchCalendar, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
-
-    useEffect(() => {
-        const fetchEvents = async () => {
-            if (!query.trim()) {
-                setEvents([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchEvents(query));
-                const data = await response.json();
-                setEvents(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando eventos:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchEvents, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
+        setUsers(userResults);
+    }, [userResults]);
 
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
         calendars.forEach((c) => {
-            m[c.id.toString()] = c.nombre;
+            m[c.id.toString()] = c.name;
         });
         return m;
     }, [calendars]);
@@ -103,7 +49,6 @@ export default function SearchScreen() {
 
     const filtered: SearchResult[] = useMemo(() => {
         if (!query.trim()) return [];
-        const q = query.toLowerCase();
 
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
 
@@ -114,31 +59,24 @@ export default function SearchScreen() {
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events]);
 
-    const followUser = async (id: string) => {
-        setLoadingId(id);
+    const followUser = async (id: string | number) => {
+        const normalizedId = String(id);
+        setLoadingId(normalizedId);
 
         if (USE_MOCK) {
             setUsers(prev =>
-                prev.map(u => u.id === id ? { ...u, followed: !u.followed } : u)
+                prev.map(u => String(u.id) === normalizedId ? { ...u, followed: !u.followed } : u)
             );
             setLoadingId(null);
             return;
         }
 
         try {
-            const response = await fetch(`${API_URL}users/${id}/follow/`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-            });
-
-            if (!response.ok) throw new Error("Follow failed");
-
-            const data = await response.json();
+            const data = await followUserRequest(normalizedId);
 
             setUsers(prev =>
                 prev.map(u =>
-                    u.id === id ? { ...u, followed: data.followed } : u
+                    String(u.id) === normalizedId ? { ...u, followed: data.followed } : u
                 )
             );
         } catch (error) {
@@ -148,8 +86,8 @@ export default function SearchScreen() {
         }
     };
 
-    const handleUserSelect = (id: string) => {
-        router.push(`/profile/${id}`);
+    const handleUserSelect = (username: string) => {
+        router.push(`/profile/${username}`);
     };
 
     return (
@@ -173,15 +111,17 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.id)}>
+                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: user.foto || 'https://i.pravatar.cc/100' }}
+                                        source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
                                         style={styles.avatar}
                                     />
-                                    <View>
-                                        <Text style={styles.name}>{user.username}</Text>
-                                        <Text style={styles.bio}>{user.biografia}</Text>
+                                    <View style={styles.userTextContainer}>
+                                        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
+                                        <Text style={styles.bio} numberOfLines={2} ellipsizeMode="tail">
+                                            {user.bio}
+                                        </Text>
                                     </View>
                                 </View>
 
@@ -196,7 +136,7 @@ export default function SearchScreen() {
                                     }}
                                 >
                                     <Text style={styles.followText}>
-                                        {loadingId === user.id ? "..." : user.followed ? "Following" : "Follow"}
+                                        {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
                                     </Text>
                                 </Pressable>
                             </TouchableOpacity>
@@ -207,12 +147,12 @@ export default function SearchScreen() {
                         const cal = item.data as Calendar;
                         return (
                             <View style={styles.calendarCard}>
-                                {cal.portada && (
-                                    <Image source={{ uri: cal.portada }} style={styles.calendarCover} />
+                                {cal.cover && (
+                                    <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName}>{cal.nombre}</Text>
-                                    <Text style={styles.calendarDesc}>{cal.descripcion}</Text>
+                                    <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
+                                    <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
                                 </View>
                             </View>
                         );
@@ -221,17 +161,17 @@ export default function SearchScreen() {
                     const ev = item.data as CalendarEvent;
                     return (
                         <View style={styles.eventCard}>
-                            <View style={styles.eventRow}> 
-                                {ev.foto && (
-                                    <Image 
-                                        source={{ uri: ev.foto }} 
-                                        style={styles.eventImage} 
+                            <View style={styles.eventRow}>
+                                {ev.photo && (
+                                    <Image
+                                        source={{ uri: ev.photo }}
+                                        style={styles.eventImage}
                                     />
                                 )}
                                 <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle}>{ev.titulo}</Text>
-                                    <Text style={styles.eventMeta}>
-                                        {ev.fecha} {ev.hora}
+                                    <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
+                                    <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
+                                        {ev.date} {ev.time}
                                         {ev.calendarId &&
                                             ` • ${calendarMap[ev.calendarId] || ''}`}
                                     </Text>
@@ -279,6 +219,12 @@ const styles = StyleSheet.create({
     userInfo: {
         flexDirection: "row",
         alignItems: "center",
+        flex: 1,
+    },
+
+    userTextContainer: {
+        flex: 1,
+        flexShrink: 1,
     },
 
     avatar: {
@@ -344,6 +290,8 @@ const styles = StyleSheet.create({
     },
     eventInfo: {
         flexDirection: "column",
+        flex: 1,
+        flexShrink: 1,
     },
     eventTitle: {
         fontWeight: "bold",

@@ -17,24 +17,30 @@ import { useRouter } from 'expo-router';
 import { User } from '../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
+import { useProfileActions } from '@/hooks/use-profile-actions';
 import { API_CONFIG } from '@/constants/api';
-import apiClient from '@/services/api-client';
+import apiClient, { appendPhoto } from '@/services/api-client';
 
 
 const EditProfileScreen = () => {
   const router = useRouter();
   const { user: currentUser, setUser: updateUserContext, logout } = useAuth();
+  const { updateOwnProfile, deleteOwnProfile: deleteOwnProfileRequest } = useProfileActions();
 
 
   // State for form fields - initialize with params from navigation
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
-  const [pronouns, setPronouns] = useState<string>(currentUser?.pronombres || '');
-  const [bio, setBio] = useState<string>(currentUser?.biografia || '');
-  const [photo, setPhoto] = useState<string>(currentUser?.foto || '');
+  const [pronouns, setPronouns] = useState<string>(currentUser?.pronouns || '');
+  const [bio, setBio] = useState<string>(currentUser?.bio || '');
+  const [photo, setPhoto] = useState<string>(currentUser?.photo || '');
+  const [newPhotoAsset, setNewPhotoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const [showRecoverConfirm, setShowRecoverConfirm] = useState(false);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
 
   const handleChangePhoto = async () => {
   try {
@@ -50,8 +56,9 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
     if (!pickerResult.canceled) {
-      // TODO: Upload the selected image to your server and get the URL, then setPhoto(uploadedUrl);
-      setPhoto(pickerResult.assets[0].uri);
+      const asset = pickerResult.assets[0];
+      setNewPhotoAsset(asset);
+      setPhoto(asset.uri);
     }
   } catch (error) {
     console.error('Error picking image:', error);
@@ -65,16 +72,28 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const data: User = await apiClient.put('/users/me', {
-        pronombres: pronouns,
-        biografia: bio,
-      });
+      let responseUser: User;
+
+      if (newPhotoAsset) {
+        const formData = new FormData();
+        formData.append('pronouns', pronouns);
+        formData.append('bio', bio);
+        await appendPhoto(formData, newPhotoAsset);
+        const result = await apiClient.put<{ message: string; user: User }>('/users/me/edit/', formData);
+        responseUser = result.user;
+      } else {
+        const result = await apiClient.put<{ message: string; user: User }>('/users/me/edit/', {
+          pronouns: pronouns,
+          bio: bio,
+        });
+        responseUser = result.user;
+      }
 
       updateUserContext({
         ...currentUser,
-        pronombres: data.pronombres ?? pronouns,
-        biografia: data.biografia ?? bio,
-        foto: photo,
+        pronouns: responseUser.pronouns ?? pronouns,
+        bio: responseUser.bio ?? bio,
+        photo: responseUser.photo ?? currentUser.photo,
       });
 
       Alert.alert('Success', 'Profile updated successfully!');
@@ -82,6 +101,32 @@ const EditProfileScreen = () => {
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Error', 'Could not save profile. Please try again.');
+    }
+  };
+
+  const recoverPassword = async () => {
+    if (!currentUser?.email) {
+      setRecoverError('No email associated with your account.');
+      return;
+    }
+
+    setIsRecoveringPassword(true);
+    setRecoverError(null);
+    try {
+      const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send password recovery email.');
+      }
+      setShowRecoverConfirm(false);
+      Alert.alert('Success', 'Password recovery email sent. Check your inbox.');
+    } catch (error) {
+      setRecoverError(error instanceof Error ? error.message : 'Could not send recovery email. Please try again.');
+    } finally {
+      setIsRecoveringPassword(false);
     }
   };
 
@@ -94,7 +139,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
-      await apiClient.delete('/users/me');
+      await deleteOwnProfileRequest();
 
       setShowDeleteConfirm(false);
       await logout();
@@ -159,8 +204,25 @@ const EditProfileScreen = () => {
         <View style={styles.dangerSection}>
           <Text style={styles.dangerTitle}>Danger zone</Text>
           <Text style={styles.dangerText}>
-            Deleting your profile permanently removes your account.
+            These actions may have permanent impact on your account.
           </Text>
+          <TouchableOpacity
+            style={[styles.recoverPasswordButton, isRecoveringPassword && styles.recoverPasswordButtonDisabled]}
+            onPress={() => {
+              setRecoverError(null);
+              setShowRecoverConfirm(true);
+            }}
+            disabled={isRecoveringPassword}
+            activeOpacity={0.8}
+          >
+            {isRecoveringPassword ? (
+              <ActivityIndicator size="small" color="#EAF7F6" />
+            ) : (
+              <Text style={styles.recoverPasswordButtonText}>Recover Password</Text>
+            )}
+          </TouchableOpacity>
+          {recoverError ? <Text style={styles.recoverErrorText}>{recoverError}</Text> : null}
+
           <TouchableOpacity
             style={[styles.deleteProfileButton, isDeletingProfile && styles.deleteProfileButtonDisabled]}
             onPress={() => {
@@ -180,6 +242,55 @@ const EditProfileScreen = () => {
         </View>
 
       </ScrollView>
+
+      <Modal
+        visible={showRecoverConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isRecoveringPassword) {
+            setShowRecoverConfirm(false);
+          }
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            if (!isRecoveringPassword) {
+              setShowRecoverConfirm(false);
+            }
+          }}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Recover password</Text>
+            <Text style={styles.modalText}>
+              A password recovery email will be sent to {currentUser?.email}. Do you want to continue?
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowRecoverConfirm(false)}
+                disabled={isRecoveringPassword}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirmButton, isRecoveringPassword && styles.recoverPasswordButtonDisabled]}
+                onPress={() => {
+                  void recoverPassword();
+                }}
+                disabled={isRecoveringPassword}
+              >
+                {isRecoveringPassword ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalConfirmButtonText}>Send</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={showDeleteConfirm}
@@ -357,6 +468,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+  recoverPasswordButton: {
+    borderWidth: 1.5,
+    borderColor: '#eb8c85',
+    backgroundColor: '#eb8c8514',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginBottom: 10,
+  },
+  recoverPasswordButtonDisabled: {
+    opacity: 0.7,
+  },
+  recoverPasswordButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B33F37',
+  },
+  recoverErrorText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#B33F37',
+    textAlign: 'center',
+  },
   deleteProfileButton: {
     borderWidth: 1.5,
     borderColor: '#eb8c85',
@@ -437,6 +574,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#B33F37',
   },
   modalDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  modalConfirmButton: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#B33F37',
+  },
+  modalConfirmButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#ffffff',

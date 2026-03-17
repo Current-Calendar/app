@@ -39,17 +39,17 @@ export default function CustomTabLayout() {
       {/* --- WEB SIDEBAR --- */}
       {isDesktop && <Sidebar expanded={expanded} setExpanded={setExpanded} />}
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* --- MAIN CONTENT --- */}
       <View style={styles.content}>
-        {/* TOP BAR (Solo Mobile) */}
+        {/* TOP BAR (Mobile only) */}
         {!isDesktop && (
           <TopBar />
         )}
 
-        {/* Renderiza la pantalla actual */}
+        {/* Renders the current screen */}
         <Slot />
 
-        {/* BOTTOM BAR (Solo Mobile) */}
+        {/* BOTTOM BAR (Mobile only) */}
         {!isDesktop && (
           <BottomBar NavButton={NavButton} />
         )}

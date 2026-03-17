@@ -11,7 +11,9 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
-import { API_CONFIG } from "@/constants/api";
+import { useRegister } from "@/hooks/use-register";
+import { ApiError } from "@/services/api-client";
+import { Ionicons } from '@expo/vector-icons';
 
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -21,6 +23,7 @@ const TEXT = "#10464D";
 export default function SignUpScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { registerUser } = useRegister();
   const { width } = useWindowDimensions();
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -30,9 +33,40 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
 
+  const[showPassword, setShowPassword] = useState(false);
+  const[showPassword2, setShowPassword2] = useState(false);
+  
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const getRegisterErrorMessage = (error: unknown) => {
+    if (error instanceof ApiError) {
+      const data = error.data as Record<string, unknown> | undefined;
+
+      const topErrors = data?.errors;
+      if (Array.isArray(topErrors) && topErrors.length > 0) {
+        return String(topErrors[0]);
+      }
+
+      const firstFieldWithErrors = Object.entries(data ?? {}).find(
+        ([, value]) => Array.isArray(value) && value.length > 0,
+      );
+      if (firstFieldWithErrors) {
+        const [field, value] = firstFieldWithErrors;
+        return `${field}: ${String((value as unknown[])[0])}`;
+      }
+
+      return error.message;
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "No connection to API. Check API_BASE / backend running.";
+  };
 
   const onSignup = async () => {
     setErrorMsg(null);
@@ -49,45 +83,20 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_CONFIG.endpoints.register, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password,
-          password2,
-        }),
+      await registerUser({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        password2,
       });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        const msg =
-          (data &&
-            (data.message ||
-              data.detail ||
-              data.non_field_errors?.[0] ||
-              data.email?.[0] ||
-              data.username?.[0] ||
-              data.password?.[0] ||
-              data.password2?.[0])) ||
-          "Register failed.";
-        setErrorMsg(String(msg));
-        return;
-      }
 
       setSuccessMsg("Usuario registrado exitosamente");
 
       await login(username.trim(), password);
 
       setTimeout(() => router.push("/"), 400);
-    } catch {
-      setErrorMsg("No connection to API. Check API_BASE / backend running.");
+    } catch (error) {
+      setErrorMsg(getRegisterErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -122,24 +131,48 @@ export default function SignUpScreen() {
           />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={{ position: "relative", justifyContent: "center" }}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder=""
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword} 
+              style={[styles.input, { paddingRight: 40 }]}
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={{ position: "absolute", right: 10 }}
+            >
+              <Ionicons 
+                name={showPassword ? "eye-off" : "eye"} 
+                size={24} 
+                color="#10464D" 
+              />
+            </Pressable>
+          </View>
 
           <Text style={[styles.label, { marginTop: 14 }]}>Confirm Password</Text>
-          <TextInput
-            value={password2}
-            onChangeText={setPassword2}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={{ position: "relative", justifyContent: "center" }}>
+            <TextInput
+              value={password2}
+              onChangeText={setPassword2}
+              placeholder=""
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword2} 
+              style={[styles.input, { paddingRight: 40 }]} 
+            />
+            <Pressable
+              onPress={() => setShowPassword2(!showPassword2)}
+              style={{ position: "absolute", right: 10 }}
+            >
+              <Ionicons 
+                name={showPassword2 ? "eye-off" : "eye"} 
+                size={24} 
+                color="#10464D" 
+              />
+            </Pressable>
+          </View>
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}

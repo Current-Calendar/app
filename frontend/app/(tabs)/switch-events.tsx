@@ -1,103 +1,137 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
+import EventFeedModal from "@/components/event-feed-modal";
+import { useCalendars } from "@/hooks/use-calendars";
+import { useEventsList } from "@/hooks/use-events";
 import { API_CONFIG } from "@/constants/api";
 
-/**
- * 🔹 Tipo compartido con backend
- * Cuando backend conecte, este type debe alinearse con el DTO real
- */
 export interface Event {
   id: string;
   title: string;
   description?: string;
   location: string;
   date: string;
+  time: string;
   image: string;
   username: string;
   userAvatar: string;
   calendarId: string;
   calendarName: string;
+  attendees?: {
+    id: string;
+    name: string;
+    respondedAt: string;
+    avatar?: string;
+  }[];
 }
 
 export default function EventsScreen() {
   const router = useRouter();
+
+  // Hooks de datos (HEAD)
+  const { calendars: backendCalendars, error: calendarsError } = useCalendars();
+  const { events: backendEvents, loading: loadingEvents, error: eventsError, refetch } = useEventsList();
+
+  // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
+  // Helper para resolver URLs de imágenes (Lógica de main)
+  const resolveImageUrl = (rawUrl?: string) => {
+    if (!rawUrl) return "https://picsum.photos/seed/event/640/360";
+    if (/^https?:\/\//.test(rawUrl)) return rawUrl;
+    const base = API_CONFIG.rootBaseURL || API_CONFIG.BaseURL;
+    return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
+  };
+
+  // Mapeo y transformación de datos
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [calRes, evRes] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-          fetch(API_CONFIG.endpoints.getEvents),
-        ]);
+    if (backendCalendars.length > 0 || backendEvents.length > 0) {
+      const calendarMap: Record<number, any> = {};
+      backendCalendars.forEach((c: any) => {
+        calendarMap[Number(c.id)] = c;
+      });
 
-        if (!calRes.ok || !evRes.ok) {
-          throw new Error("Failed to fetch data");
-        }
+      const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
+        const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
+        const cal = calendarMap[Number(calId)];
 
-        const calData = await calRes.json();
-        const evData = await evRes.json();
+        return {
+          id: String(e.id),
+          title: e.title || e.titulo || "",
+          description: e.description || e.descripcion || "",
+          location: e.place_name || e.nombre_lugar || "",
+          date: e.date || e.fecha || "",
+          time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+          image: resolveImageUrl(e.photo || e.foto),
+          username: cal?.creator_username || "unknown",
+          userAvatar: `https://i.pravatar.cc/100?u=${cal?.creator_username || "unknown"}`,
+          calendarId: String(calId || ""),
+          calendarName: cal?.name || "General",
+          // Temporary mock attendees for frontend testing.
+          // Backend should replace this with real attendees data per event.
+          attendees: index % 2 === 0
+            ? [
+              {
+                id: "1",
+                name: "Rocío",
+                respondedAt: "2026-03-17T18:42:00Z",
+                avatar: "https://i.pravatar.cc/100?u=rocio",
+              },
+              {
+                id: "2",
+                name: "Lucía",
+                respondedAt: "2026-03-17T19:05:00Z",
+                avatar: "https://i.pravatar.cc/100?u=lucia",
+              },
+            ]
+            : [],
+        };
+      }).filter((evt: Event) => evt.id && evt.title);
 
-        // Map calendars for easy lookup
-        const calendarMap: Record<number, any> = {};
-        calData.forEach((c: any) => {
-          calendarMap[c.id] = c;
-        });
+      setEvents(mappedEvents);
+    }
+  }, [backendCalendars, backendEvents]);
 
-        const mappedEvents: any[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendarios[0]];
-          return {
-            id: String(e.id),
-            title: e.titulo,
-            description: e.descripcion || "",
-            location: e.nombre_lugar || "",
-            date: e.fecha,
-            image: e.foto, // Placeholder for now
-            username: cal?.creador_username || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creador_username || "unknown"),
-            calendarId: String(e.calendarios[0] || ""),
-            calendarName: cal?.nombre || "General",
-          };
-        });
+  // Manejo de errores
+  const errorMessage = calendarsError || eventsError;
 
-        setEvents(mappedEvents);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        Alert.alert("Error", "Could not load events.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void fetchData();
-  }, []);
-
+  // Handlers de UI
   const handleOpenEvent = (id: string) => {
-    // Conectar con show de events
-    //router.push(`/events/${id}`);
+    const found = events.find((e) => e.id === id);
+    if (found) {
+      setSelectedEvent(found);
+      setModalVisible(true);
+    }
   };
 
-  const handleLike = (id: string) => {
-    console.log("Like:", id);
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setSelectedEvent(null);
   };
 
-  const handleComment = (id: string) => {
-    console.log("Comment:", id);
-  };
-
-  const handleSave = (id: string) => {
-    console.log("Save:", id);
-  };
-
-  if (loading) {
+  // Vistas de estado (Loading / Error)
+  if (loadingEvents && events.length === 0) {
     return (
-      <View style={[styles.container, { justifyContent: "center" }]}>
+      <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#10464d" />
+        <Text style={styles.loadingText}>Loading feed...</Text>
+      </View>
+    );
+  }
+
+  if (errorMessage && events.length === 0) {
+    return (
+      <View style={styles.loadingScreen}>
+        <Text style={styles.errorTitle}>Could not load feed</Text>
+        <Text style={styles.loadingText}>{errorMessage.message}</Text>
+        <TouchableOpacity onPress={() => refetch?.()}>
+          <Text style={styles.retryLink}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -105,6 +139,16 @@ export default function EventsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+        {/* Header de Autenticación */}
+        <View style={styles.authHeader}>
+          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
+            <Text style={styles.registerButtonText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
         <EventsSwitch />
 
         <FlatList
@@ -114,31 +158,186 @@ export default function EventsScreen() {
             <EventCard
               event={item}
               onOpen={handleOpenEvent}
-              onLike={handleLike}
-              onComment={handleComment}
-              onSave={handleSave}
+              onLike={(id) => console.log("Like:", id)}
+              onComment={(id) => console.log("Comment:", id)}
+              onSave={(id) => console.log("Save:", id)}
             />
           )}
+          ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+        />
+
+        <EventFeedModal
+          visible={modalVisible}
+          onClose={handleCloseModal}
+          event={selectedEvent}
         />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
+
   container: {
+
     flex: 1,
+
     alignItems: "center",
+
   },
-  inner: {
-    width: "100%",
-    maxWidth: 800,
+
+  loadingScreen: {
+
     flex: 1,
+
+    backgroundColor: "#E8E5D8",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    paddingHorizontal: 24,
+
   },
+
+  loadingText: {
+
+    marginTop: 10,
+
+    color: "#10464d",
+
+    opacity: 0.85,
+
+    textAlign: "center",
+
+    fontWeight: "600",
+
+  },
+
+  errorTitle: {
+
+    color: "#c75146",
+
+    fontWeight: "700",
+
+    fontSize: 18,
+
+    textAlign: "center",
+
+  },
+
+  retryLink: {
+
+    marginTop: 12,
+
+    color: "#10464d",
+
+    fontWeight: "700",
+
+    textDecorationLine: "underline",
+
+  },
+
+  inner: {
+
+    width: "100%",
+
+    maxWidth: 800,
+
+    flex: 1,
+
+  },
+
   list: {
+
     paddingHorizontal: 16,
+
     paddingBottom: 120,
+
   },
+
+
+
+  emptyText: {
+
+    marginTop: 40,
+
+    textAlign: "center",
+
+    color: "#10464d",
+
+    opacity: 0.8,
+
+    fontWeight: "600",
+
+  },
+
+
+
+  authHeader: {
+
+    flexDirection: 'row',
+
+    justifyContent: 'center',
+
+    paddingHorizontal: 16,
+
+    paddingTop: 8,
+
+    gap: 12,
+
+  },
+
+  loginButton: {
+
+    flex: 1,
+
+    borderWidth: 1.5,
+
+    borderColor: '#10464d',
+
+    paddingVertical: 10,
+
+    borderRadius: 8,
+
+    alignItems: 'center',
+
+  },
+
+  loginButtonText: {
+
+    color: '#10464d',
+
+    fontWeight: '600',
+
+    fontSize: 16,
+
+  },
+
+  registerButton: {
+
+    flex: 1,
+
+    backgroundColor: '#10464d',
+
+    paddingVertical: 10,
+
+    borderRadius: 8,
+
+    alignItems: 'center',
+
+  },
+
+  registerButtonText: {
+
+    color: '#FFFFFF',
+
+    fontWeight: '600',
+
+    fontSize: 16,
+
+  },
+
 });

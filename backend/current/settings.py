@@ -43,6 +43,9 @@ GOOGLE_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID')
 
 GOOGLE_REDIRECT_URIS = os.getenv('GOOGLE_REDIRECT_URIS')
 
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+RESEND_EMAIL_FROM = os.getenv('RESEND_EMAIL_FROM')
+
 GOOGLE_OAUTH2_CLIENT_CONFIG = {
     "web": {
         "client_id": GOOGLE_CLIENT_ID,
@@ -112,7 +115,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-AUTH_USER_MODEL = 'main.Usuario'
+AUTH_USER_MODEL = 'main.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -184,8 +187,8 @@ CACHES = {
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'utils.authentication.CsrfExemptSessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'utils.authentication.CsrfExemptSessionAuthentication',
     ],
 }
 

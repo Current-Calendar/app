@@ -55,12 +55,12 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(u, password);
 
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
-      setErrorMsg("Usuario o contraseña incorrectos.");
+      setErrorMsg("User o contraseña incorrectos.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,11 @@ export default function LoginScreen() {
           />
 
           <Pressable style={styles.forgot}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
+          <Link href="/forgot-password" asChild>
+            <Pressable>
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          </Link>
           </Pressable>
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
