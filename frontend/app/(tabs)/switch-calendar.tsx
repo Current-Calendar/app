@@ -72,9 +72,19 @@ export default function CalendarsScreen() {
   const handleSubscribe = async (id: string) => {
     try {
       const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+
+      setSubscribedCalendarIds((prev) => {
+        if (res.subscribed) {
+          return prev.includes(id) ? prev : [...prev, id];
+        }
+        return prev.filter((calendarId) => calendarId !== id);
+      });
+
       Alert.alert(
         res.subscribed ? "Subscribed" : "Unsubscribed",
-        res.subscribed ? "You are now subscribed to this calendar." : "You have unsubscribed from this calendar."
+        res.subscribed
+          ? "You are now subscribed to this calendar."
+          : "You have unsubscribed from this calendar."
       );
     } catch (error) {
       Alert.alert("Error", "Could not subscribe to this calendar.");
