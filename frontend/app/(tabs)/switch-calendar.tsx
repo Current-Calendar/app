@@ -12,7 +12,7 @@ export default function CalendarsScreen() {
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
-   const {
+  const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
@@ -25,12 +25,12 @@ export default function CalendarsScreen() {
     }
   }, [calendarsError]);
 
-useEffect(() => {
+  useEffect(() => {
     const fetchSubscribedCalendars = async () => {
       try {
         const subscribedData = await apiClient.get<any[]>('/calendars/subscribed/');
-        const dataArray = Array.isArray(subscribedData) 
-          ? subscribedData 
+        const dataArray = Array.isArray(subscribedData)
+          ? subscribedData
           : (subscribedData as any)?.data || [];
 
         setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
@@ -40,9 +40,9 @@ useEffect(() => {
     };
 
     void fetchSubscribedCalendars();
-  }, []); 
-    useEffect(() => {
-    const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];    
+  }, []);
+  useEffect(() => {
+    const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
     const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
       id: String(c.id),
@@ -55,7 +55,7 @@ useEffect(() => {
       cover: c.cover || null,
     }));
 
-     setCalendars(mappedCalendars);
+    setCalendars(mappedCalendars);
   }, [backendCalendars]);
 
   const handleOpenCalendar = (id: string) => {
@@ -65,16 +65,27 @@ useEffect(() => {
   const handleSubscribe = async (id: string) => {
     try {
       const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+
+      setSubscribedCalendarIds((prev) => {
+        if (res.subscribed) {
+          return prev.includes(id) ? prev : [...prev, id];
+        }
+        return prev.filter((calendarId) => calendarId !== id);
+      });
+
       Alert.alert(
         res.subscribed ? "Subscribed" : "Unsubscribed",
-        res.subscribed ? "You are now subscribed to this calendar." : "You have unsubscribed from this calendar."
+        res.subscribed
+          ? "You are now subscribed to this calendar."
+          : "You have unsubscribed from this calendar."
       );
     } catch (error) {
       Alert.alert("Error", "Could not subscribe to this calendar.");
       console.error("Subscribe error:", error);
     }
   };
- const loading = loadingCalendars;
+
+  const loading = loadingCalendars;
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
@@ -86,17 +97,17 @@ useEffect(() => {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-         <View style={styles.authHeader}>
-          <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={() => router.push('/login')}
+        <View style={styles.authHeader}>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => router.push('/login')}
           >
             <Text style={styles.loginButtonText}>Log In</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => router.push('/register')}
+            style={styles.registerButton}
+            onPress={() => router.push('/register')}
           >
             <Text style={styles.registerButtonText}>Sign Up</Text>
           </TouchableOpacity>
@@ -138,7 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 120,
   },
-    authHeader: {
+  authHeader: {
     flexDirection: 'row',
     justifyContent: 'center',
     paddingHorizontal: 16,
@@ -153,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  loginButtonText:{
+  loginButtonText: {
     color: '#10464d',
     fontWeight: '600',
     fontSize: 16,
@@ -165,9 +176,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  registerButtonText:{
-    color:'#FFFFFF',
-    fontWeight:'600',
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 16,
   },
 });
