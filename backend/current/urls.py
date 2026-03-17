@@ -24,6 +24,7 @@ from main.calendars import views as calendar_views
 from main.events import views as event_views
 from main.radar import views as radar_views
 from main.auth import views as auth_views
+from main.reports import views as report_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -75,6 +76,7 @@ urlpatterns = [
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
+    path('api/v1/reports/create/', report_views.create_report, name='create_report'),
 ]
 
 

@@ -107,6 +107,38 @@ class Event(models.Model):
         event.add('uid', uid)
         return event
 
+class Report(models.Model):
+    REPORTED_TYPE_CHOICES = [
+        ('USER', 'User'),
+        ('EVENT', 'Event'),
+        ('CALENDAR', 'Calendar'),
+    ]
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    REASON_CHOICES = [
+        ('INAPPROPRIATE_CONTENT', 'Inappropriate Content'),
+        ('SPAM', 'Spam'),
+        ('HARASSMENT', 'Harassment'),
+        ('OTHER', 'Other'),
+    ]
+    id = models.AutoField(primary_key=True)
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports_made')
+    reported_type = models.CharField(max_length=20, choices=REPORTED_TYPE_CHOICES)
+    reported_calendar = models.ForeignKey(Calendar, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Report {self.id} by {self.reporter.username} on {self.reported_type} (Status: {self.status})"
+
+
 class MockElement(models.Model):
     name = models.CharField(max_length=100)
     geo_point = models.PointField()

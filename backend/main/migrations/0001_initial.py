@@ -99,4 +99,20 @@ class Migration(migrations.Migration):
             model_name='calendar',
             constraint=models.UniqueConstraint(condition=models.Q(('privacy', 'PRIVATE')), fields=('creator',), name='unique_private_calendar_per_user'),
         ),
+
+        migrations.CreateModel(
+            name='Report',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('reported_type', models.CharField(choices=[('USER', 'User'), ('EVENT', 'Event'), ('CALENDAR', 'Calendar')], max_length=20)),
+                ('reported_calendar', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='reports', to='main.calendar')),
+                ('reported_event', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='reports', to='main.event')),
+                ('reported_user', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='reports', to=settings.AUTH_USER_MODEL)),
+                ('reason', models.CharField(max_length=30, choices=[('SPAM', 'Spam'), ('INAPPROPRIATE_CONTENT', 'Inappropriate Content'), ('HARASSMENT', 'Harassment'), ('OTHER', 'Other')])),
+                ('description', models.TextField(blank=True)),
+                ('status', models.CharField(choices=[('OPEN', 'Open'), ('IN_PROGRESS', 'In Progress'), ('RESOLVED', 'Resolved')], default='OPEN', max_length=20)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('reporter', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reports_made', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
     ]
