@@ -13,11 +13,18 @@ import { Ionicons } from '@expo/vector-icons';
 // Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
-import CalendarCard from '../../../components/calendar-card';
+import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import { useAuth } from "@/hooks/use-auth";
 
-export default function PublicProfile({ targetUserId }: { targetUserId: string }) {
+const toCalendarData = (item: CalendarItem): CalendarData => ({
+    id: String(item.id),
+    name: item.name,
+    description: item.description,
+    cover: item.cover,
+});
+
+export default function PublicProfile({ targetUsername }: { targetUsername: string }) {
     const { user: currentUser } = useAuth();
     
     //Hook personalizado para manejar toda la lógica de perfil público (datos del user, seguimiento, calendars públicos, etc.)
@@ -29,7 +36,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
         userNotFound,
         followError,
         handleFollowToggle,
-    } = useUserProfile(targetUserId);
+    } = useUserProfile(targetUsername);
 
     //  Estado para los calendarios que sigo de este usuario
     const {
@@ -40,7 +47,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
     });
 
     // --- MANEJO DE ERRORES Y CARGA ---
-    if (!targetUserId) {
+    if (!targetUsername) {
         return (
             <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}> 
                 <Ionicons name="person-circle-outline" size={60} color="#dbdbdb" />
@@ -82,9 +89,15 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
 
                         <View style={profileStyles.statsContainer}>
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-                            <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns || 'they/them'}</Text>
+                            {userBeingViewed.pronouns ? (
+                                <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
+                            ) : null}
 
                             <View style={profileStyles.statsRow}>
+                                <View style={profileStyles.statItem}>
+                                    <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
+                                    <Text style={profileStyles.statLabel}>Calendars</Text>
+                                </View>
                                 <View style={profileStyles.statItem}>
                                     <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
                                     <Text style={profileStyles.statLabel}>Followers</Text>
@@ -129,8 +142,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                         {followingCalendars.map((cal) => (
                             <CalendarCard
                                 key={cal.id}
-                                calendar={cal}
-                                // onPress={() => console.log('Abrir calendar', cal.id)}
+                                calendar={toCalendarData(cal)}
                             />
                         ))}
                     </View>
@@ -142,7 +154,7 @@ export default function PublicProfile({ targetUserId }: { targetUserId: string }
                     
                     {calendars.length > 0 ? (
                         calendars.map((cal: CalendarItem) => (
-                            <CalendarCard key={cal.id} calendar={cal} />
+                            <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />
                         ))
                     ) : (
                         <Text style={profileStyles.emptyText}>No public calendars yet.</Text>

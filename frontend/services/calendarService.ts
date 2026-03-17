@@ -3,21 +3,28 @@ import { File, Paths } from "expo-file-system";
 import * as Linking from "expo-linking";
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from "react-native";
+import apiClient from "./api-client";
 
 const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL!;
+const API_URL = RAW_BACKEND_URL.endsWith('/') ? RAW_BACKEND_URL : RAW_BACKEND_URL + '/';
 
-const BACKEND_URL = RAW_BACKEND_URL.endsWith('/')
-  ? RAW_BACKEND_URL
-  : RAW_BACKEND_URL + '/';
+const getAuthHeaders = (): Record<string, string> => {
+  const token = apiClient.getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
-const ROOT_BACKEND_URL = BACKEND_URL.replace(/api\/v1\/?$/, '');
+const getCurrentUserId = (): number => {
+  const userId = apiClient.user?.id;
+  if (!userId) throw new Error("No hay usuario autenticado");
+  return userId;
+};
 
-export const downloadCalendar = async (id: string, token?: string) => {
-  const url = `${ROOT_BACKEND_URL}api/v1/calendars/${id}/export/`;
+export const downloadCalendar = async (id: string) => {
+  const url = `${API_URL}calendars/${id}/export/`;
 
   try {
     if (Platform.OS === "web") {
-      const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const response = await fetch(url, { headers: getAuthHeaders() });
 
       const text = await response.text();
       const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
@@ -34,7 +41,7 @@ export const downloadCalendar = async (id: string, token?: string) => {
       return;
     } else {
       const file = new File(Paths.document, `calendar-${id}.ics`);
-      const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+      const response = await fetch(url, { headers: getAuthHeaders() });
 
       const arrayBuffer = await response.arrayBuffer();
       await file.write(new Uint8Array(arrayBuffer));
@@ -46,16 +53,17 @@ export const downloadCalendar = async (id: string, token?: string) => {
   }
 };
 
-export async function importIOSCalendar(calendarUrl: string, userId: number) {
+export async function importIOSCalendar(calendarUrl: string) {
   try {
-    const response = await fetch(`${ROOT_BACKEND_URL}api/v1/calendars/import-ios-calendar/`, {
+    const response = await fetch(`${API_URL}calendars/import-ios-calendar/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({
         webcal_url: calendarUrl,
-        user: userId,
+        user: getCurrentUserId(),
         privacy: 'PRIVATE',
       }),
     });
@@ -79,8 +87,8 @@ export async function importIOSCalendar(calendarUrl: string, userId: number) {
 
 export async function importGoogleCalendar() {
   try {
-    const authUrl = `${ROOT_BACKEND_URL}api/v1/auth/google-auth`;
-    const importUrl = `${ROOT_BACKEND_URL}api/v1/calendars/import-google-calendar/`;
+    const authUrl = `${API_URL}auth/google-auth`;
+    const importUrl = `${API_URL}calendars/import-google-calendar/`;
 
     if (Platform.OS === 'web') {
       window.location.href = authUrl;
@@ -88,14 +96,15 @@ export async function importGoogleCalendar() {
     }
 
     const redirectUri = Linking.createURL('/');
-
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type === 'success') {
       const response = await fetch(importUrl, {
         method: 'GET',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
       });
 
       if (!response.ok) {
@@ -118,15 +127,12 @@ export async function importGoogleCalendar() {
   }
 }
 
-export async function importICS(userId: number) {
+export async function importICS() {
   try {
-    if (!userId) throw new Error("UserId is required");
-
     const result = await DocumentPicker.getDocumentAsync({
       type: 'text/calendar',
       copyToCacheDirectory: true,
     });
-    console.log('DocumentPicker result:', result);
 
     if (result.canceled) {
       console.log('User cancelled file selection');
@@ -149,20 +155,20 @@ export async function importICS(userId: number) {
       if (!fileUri || !fileName) throw new Error("ICS file is required on mobile");
     }
 
-    console.log('File selected:', { fileUri, fileName, fileBlob });
-
-
     const formData = new FormData();
     if (Platform.OS === 'web' && fileBlob) {
       formData.append('file', fileBlob, fileName);
     } else {
       formData.append('file', { uri: fileUri, name: fileName, type: 'text/calendar' } as any);
     }
-    formData.append('user', String(userId));
+    formData.append('user', String(getCurrentUserId()));
     formData.append('privacy', 'PRIVATE');
-    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${ROOT_BACKEND_URL}api/v1/calendars/import-ics/` });
-    const response = await fetch(`${ROOT_BACKEND_URL}api/v1/calendars/import-ics/`, {
+
+    console.log('Sending ICS to backend:', { fileUri, fileName, url: `${API_URL}calendars/import-ics/` });
+
+    const response = await fetch(`${API_URL}calendars/import-ics/`, {
       method: 'POST',
+      headers: getAuthHeaders(),
       body: formData,
     });
 

@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link, type Href, useRouter } from "expo-router";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navSideBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 
@@ -10,6 +11,7 @@ export default function Sidebar() {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const [importVisible, setImportVisible] = useState(false);
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -57,7 +59,7 @@ export default function Sidebar() {
   };
 
   const profileLabel = isAuthenticated ? "Profile" : "Login";
-  const profileHref: string = isAuthenticated ? `/profile/${user?.id}` : "/login";
+  const profileHref: string = isAuthenticated ? `/profile/${user?.username}` : "/login";
 
   return (
     <View style={navSideBarStyles.sidebar}>
@@ -83,10 +85,11 @@ export default function Sidebar() {
           onClose={closeMenu}
           onNewEvent={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
           onNewCalendar={() => navigateTo("/create")}
+          onImportCalendar={() => { closeMenu(); setImportVisible(true); }}
         />
-
       </View>
+
+      <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
     </View>
   );
 }
-

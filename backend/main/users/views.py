@@ -1,10 +1,11 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from ..models import User
-from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer
+from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer, EditProfileSerializer
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from ..models import Calendar
 
 
 @api_view(['GET'])
@@ -92,6 +93,47 @@ def get_user_by_id(request, pk):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user_by_username(request, username):
+    """
+    Endpoint to obtain the public profile of a user by their username.
+    GET /api/v1/users/by-username/<username>/
+    """
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    user_data = PublicUserSerializer(user, context={'request': request}).data
+    public_calendars = list(user.created_calendars.filter(privacy="PUBLIC").values(
+        "id", "name", "description", "cover", "created_at"
+    ))
+    user_data["public_calendars"] = public_calendars
+
+    return Response(user_data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_followed_calendars(request, pk):
+    """
+    Returns the public calendars that a user is subscribed to.
+    GET /api/v1/users/<pk>/followed_calendars/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    calendars = list(
+        user.subscribed_calendars.filter(privacy="PUBLIC").values(
+            "id", "name", "description", "cover", "created_at"
+        )
+    )
+    return Response(calendars)
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_own_user(request):
     """
@@ -110,17 +152,18 @@ def edit_profile(request):
     Endpoint to allow users edit their profile
     PATCH /api/v1/users/me/edit/
     """
-    
-    serializer = UserSerializer(
+
+    serializer = EditProfileSerializer(
         request.user,
         data=request.data,
-        partial=True
+        partial=True,
+        context={'request': request},
     )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     serializer.save()
-    
+
     return Response({
         'message': 'Profile updated correctly',
         'user': serializer.data

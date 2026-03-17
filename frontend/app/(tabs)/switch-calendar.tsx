@@ -1,17 +1,18 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
-import { useCalendars } from '@/hooks/use-calendars';
 import apiClient from '@/services/api-client';
+import { useCalendars } from '@/hooks/use-calendars';
 
 export default function CalendarsScreen() {
   const router = useRouter();
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const {
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
+   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
@@ -24,8 +25,24 @@ export default function CalendarsScreen() {
     }
   }, [calendarsError]);
 
-  useEffect(() => {
-    const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+useEffect(() => {
+    const fetchSubscribedCalendars = async () => {
+      try {
+        const subscribedData = await apiClient.get<any[]>('/calendars/subscribed/');
+        const dataArray = Array.isArray(subscribedData) 
+          ? subscribedData 
+          : (subscribedData as any)?.data || [];
+
+        setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
+      } catch (error) {
+        console.error("Error fetching subscribed data:", error);
+      }
+    };
+
+    void fetchSubscribedCalendars();
+  }, []); 
+    useEffect(() => {
+    const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];    
 
     const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
       id: String(c.id),
@@ -38,7 +55,7 @@ export default function CalendarsScreen() {
       cover: c.cover || null,
     }));
 
-    setCalendars(mappedCalendars);
+     setCalendars(mappedCalendars);
   }, [backendCalendars]);
 
   const handleOpenCalendar = (id: string) => {
@@ -57,8 +74,7 @@ export default function CalendarsScreen() {
       console.error("Subscribe error:", error);
     }
   };
-
-  const loading = loadingCalendars;
+ const loading = loadingCalendars;
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
@@ -70,6 +86,22 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+         <View style={styles.authHeader}>
+          <TouchableOpacity 
+          style={styles.loginButton}
+          onPress={() => router.push('/login')}
+          >
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+          style={styles.registerButton}
+          onPress={() => router.push('/register')}
+          >
+            <Text style={styles.registerButtonText}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
         <EventsSwitch />
 
         <FlatList
@@ -80,6 +112,7 @@ export default function CalendarsScreen() {
               calendar={item}
               onPress={handleOpenCalendar}
               onSubscribe={handleSubscribe}
+              isSubscribed={subscribedCalendarIds.includes(item.id)}
             />
           )}
           contentContainerStyle={styles.list}
@@ -104,5 +137,37 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 120,
+  },
+    authHeader: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
+  },
+  loginButton: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loginButtonText:{
+    color: '#10464d',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  registerButton: {
+    flex: 1,
+    backgroundColor: '#10464d',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  registerButtonText:{
+    color:'#FFFFFF',
+    fontWeight:'600',
+    fontSize: 16,
   },
 });

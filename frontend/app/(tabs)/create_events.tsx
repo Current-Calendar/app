@@ -20,6 +20,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useCreateEventApi } from '@/hooks/use-create-event-api';
 import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
 import { useRouter } from "expo-router";
+import apiClient from '@/services/api-client';
+import { useLocalSearchParams } from "expo-router";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -271,6 +273,7 @@ const miniStyles = StyleSheet.create({
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
+  const { date: dateParam } = useLocalSearchParams();
   const router = useRouter();
 
   const goBackOrCalendars = () => {
@@ -350,6 +353,12 @@ export default function CreateEventsScreen() {
   });
 
   const [date, setDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;

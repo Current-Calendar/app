@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
 import { CalendarGrid } from "@/components/calendar-grid";
@@ -40,6 +40,7 @@ export default function CalendarViewScreen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  
   // Load events when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
@@ -77,6 +78,18 @@ export default function CalendarViewScreen() {
     [calendar, backendEvents, loadingEvents]
   );
 
+  const eventsOfSelectedDay = useMemo(() => {
+  if (!selectedDay) return [];
+  return events.filter((event) => event.date?.slice(0,10) === selectedDay);
+  }, [events, selectedDay]);
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatSelectedDay(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
+}
+
   const goToPrevMonth = () => {
     if (month === 0) {
       setMonth(11);
@@ -105,9 +118,16 @@ export default function CalendarViewScreen() {
     <View style={styles.screenWrapper}>
       {!calendar ? (
         <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading calendar...</Text>
+        </View>
+      ) : !calendar ? (
+        <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No calendar found</Text>
           <Text style={styles.emptyText}>Please select a calendar to view</Text>
-          <Pressable style={styles.primaryButton} onPress={() => router.push("/switch-calendar")}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => router.push("/switch-calendar")}
+          >
             <Text style={styles.primaryButtonText}>Select Calendar</Text>
           </Pressable>
         </View>
@@ -118,25 +138,48 @@ export default function CalendarViewScreen() {
             <Text style={styles.subtitle}>by {calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
           </View>
 
-        <View style={styles.headerBlock}>
-          <CalendarHeader
-            monthLabel={`${MONTH_NAMES[month]} ${year}`}
-            onPrevMonth={goToPrevMonth}
-            onNextMonth={goToNextMonth}
-            onTodayPress={goToToday}
-          />
-        </View>
+          <View style={styles.headerBlock}>
+            <CalendarHeader
+              monthLabel={`${MONTH_NAMES[month]} ${year}`}
+              onPrevMonth={goToPrevMonth}
+              onNextMonth={goToNextMonth}
+              onTodayPress={goToToday}
+            />
+          </View>
 
-        <View style={styles.gridWrap}>
-          <CalendarGrid
-            year={year}
-            month={month}
-            events={events}
-            onEventPress={setActiveEvent}
-            selectedDay={selectedDay}
-            onDayPress={setSelectedDay}
-          />
-        </View>
+          <View style={styles.gridWrap}>
+            <CalendarGrid
+              year={year}
+              month={month}
+              events={events}
+              onEventPress={setActiveEvent}
+              selectedDay={selectedDay}
+              onDayPress={setSelectedDay}
+            />
+          </View>
+
+        {selectedDay && (
+          <View style={styles.dayEventsContainer}>
+            <Text style={styles.dayEventsTitle}>
+              {formatSelectedDay(selectedDay)}
+            </Text>
+
+            {eventsOfSelectedDay.length === 0 ? (
+              <Text style={styles.noEventsText}>No events this day</Text>
+            ) : (
+              eventsOfSelectedDay.map((event) => (
+                <TouchableOpacity
+                  key={event.id}
+                  style={styles.dayEventItem}
+                  onPress={() => setActiveEvent(event)}
+                >
+                  <Text style={styles.dayEventTime}>{event.time}</Text>
+                  <Text style={styles.dayEventTitle}>{event.title}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
 
         <View style={styles.actionsRow}>
           <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
@@ -269,4 +312,42 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
+  dayEventsContainer: {
+  marginTop: 14,
+  paddingHorizontal: 16,
+},
+
+dayEventsTitle: {
+  fontSize: 16,
+  fontWeight: "700",
+  color: "#10464d",
+  marginBottom: 8,
+},
+
+dayEventItem: {
+  backgroundColor: "#fff",
+  borderRadius: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  marginBottom: 6,
+  borderWidth: 1,
+  borderColor: "rgba(16,70,77,0.2)",
+},
+
+dayEventTime: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#10464d",
+},
+
+dayEventTitle: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#10464d",
+},
+
+noEventsText: {
+  color: "#5E6E6E",
+  fontSize: 13,
+},
 });

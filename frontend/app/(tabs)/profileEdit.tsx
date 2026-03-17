@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
 import { useProfileActions } from '@/hooks/use-profile-actions';
 import { API_CONFIG } from '@/constants/api';
+import apiClient, { appendPhoto } from '@/services/api-client';
 
 
 const EditProfileScreen = () => {
@@ -33,6 +34,7 @@ const EditProfileScreen = () => {
   const [pronouns, setPronouns] = useState<string>(currentUser?.pronouns || '');
   const [bio, setBio] = useState<string>(currentUser?.bio || '');
   const [photo, setPhoto] = useState<string>(currentUser?.photo || '');
+  const [newPhotoAsset, setNewPhotoAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [isDeletingProfile, setIsDeletingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -54,8 +56,9 @@ const EditProfileScreen = () => {
       quality: 0.8,
     });
     if (!pickerResult.canceled) {
-      // TODO: Upload the selected image to your server and get the URL, then setPhoto(uploadedUrl);
-      setPhoto(pickerResult.assets[0].uri);
+      const asset = pickerResult.assets[0];
+      setNewPhotoAsset(asset);
+      setPhoto(asset.uri);
     }
   } catch (error) {
     console.error('Error picking image:', error);
@@ -69,17 +72,28 @@ const EditProfileScreen = () => {
         Alert.alert('Error', 'No user is currently logged in.');
         return;
       }
-      const response = await updateOwnProfile({
-        pronouns: pronouns,
-        bio: bio,
-      });
-      const data: User = (response as any)?.user ?? response;
+      let responseUser: User;
+
+      if (newPhotoAsset) {
+        const formData = new FormData();
+        formData.append('pronouns', pronouns);
+        formData.append('bio', bio);
+        await appendPhoto(formData, newPhotoAsset);
+        const result = await apiClient.put<{ message: string; user: User }>('/users/me/edit/', formData);
+        responseUser = result.user;
+      } else {
+        const result = await apiClient.put<{ message: string; user: User }>('/users/me/edit/', {
+          pronouns: pronouns,
+          bio: bio,
+        });
+        responseUser = result.user;
+      }
 
       updateUserContext({
         ...currentUser,
-        pronouns: data.pronouns ?? pronouns,
-        bio: data.bio ?? bio,
-        photo: photo,
+        pronouns: responseUser.pronouns ?? pronouns,
+        bio: responseUser.bio ?? bio,
+        photo: responseUser.photo ?? currentUser.photo,
       });
 
       Alert.alert('Success', 'Profile updated successfully!');

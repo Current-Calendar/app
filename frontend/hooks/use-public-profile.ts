@@ -90,8 +90,8 @@ export const useUserProfile = (userId?: string) => {
             if (USE_MOCK) {
                 await new Promise(r => setTimeout(r, 700));
                 const mockUser = {
-                    id: userId,
-                    username: "john_doe",
+                    id: 1,
+                    username: userId,
                     pronouns: "he/him",
                     bio: "I'm a mock user for testing 😄",
                     photo: "https://i.pravatar.cc/300",
@@ -217,9 +217,9 @@ export const useUserProfile = (userId?: string) => {
         fetchData();
     }, [userId, authLoading]);
 
-    // ----- Follow toggle -----
+    // ----- Follow toggle (usa el ID numérico del usuario visto) -----
     const handleFollowToggle = async () => {
-        if (!userId) return;
+        if (!userBeingViewed?.id) return;
 
         if (!currentUser) {
             setFollowError('Inicia sesión para seguir a este usuario.');

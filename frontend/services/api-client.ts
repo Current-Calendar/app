@@ -1,6 +1,30 @@
 import { API_CONFIG } from "@/constants/api";
+import { Platform } from 'react-native';
 import { RegisterData, TokenResponse, User } from "@/types/auth";
 import { createAsyncStorage } from "@react-native-async-storage/async-storage";
+import type { ImagePickerAsset } from 'expo-image-picker';
+
+/**
+ * Appends a photo asset to a FormData in a way that works on both
+ * React Native (uses the {uri,name,type} trick) and web (fetches a real Blob).
+ */
+export async function appendPhoto(
+  formData: FormData,
+  asset: ImagePickerAsset,
+  fieldName = 'photo'
+): Promise<void> {
+  if (Platform.OS === 'web') {
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    formData.append(fieldName, blob, asset.fileName ?? 'photo.jpg');
+  } else {
+    formData.append(fieldName, {
+      uri: asset.uri,
+      name: asset.fileName ?? 'photo.jpg',
+      type: asset.mimeType ?? 'image/jpeg',
+    } as unknown as Blob);
+  }
+}
 
 export class ApiError extends Error {
   status: number;
@@ -19,8 +43,13 @@ class ApiClient {
 
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
+  private onAuthFailure: (() => void) | null = null;
 
   private storage = createAsyncStorage("auth");
+
+  setOnAuthFailure(callback: () => void) {
+    this.onAuthFailure = callback;
+  }
 
   async loadTokens() {
     try {
@@ -93,8 +122,13 @@ class ApiClient {
 
       const data = await response.json();
       this.accessToken = data.access;
-
       await this.storage.setItem('accessToken', data.access);
+
+      if (data.refresh) {
+        this.refreshToken = data.refresh;
+        await this.storage.setItem('refreshToken', data.refresh);
+      }
+
       return true;
     } catch (error) {
       console.error('Error refreshing token:', error);
@@ -148,6 +182,11 @@ class ApiClient {
           ...options,
           headers,
         });
+      } else {
+        // Refresh failed — tokens are dead, force logout
+        await this.clearTokens();
+        this.onAuthFailure?.();
+        throw new Error('Session expired. Please log in again.');
       }
     }
 

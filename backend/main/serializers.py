@@ -163,6 +163,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
 
 
+class EditProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'photo', 'pronouns', 'link', 'bio']
+
+
 class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
 

@@ -17,6 +17,9 @@ class GraphQLTests(GraphQLTestCase):
         self.user2 = User.objects.create_user(
             username="user2", email="user2@example.com", password="user2"
         )
+        self.user3 = User.objects.create_user(
+            username="user3", email="user3@example.com", password="user3"
+        )
 
         self.cal1 = Calendar.objects.create(
             name="Private Calendar",
@@ -29,6 +32,14 @@ class GraphQLTests(GraphQLTestCase):
             privacy="FRIENDS",
             creator=self.user2,
         )
+
+        self.cal3 = Calendar.objects.create(
+            name="Public Calendar",
+            privacy="PUBLIC",
+            creator=self.user1,
+        )
+        self.cal3.subscribers.add(self.user3)
+        self.cal3.save()
 
         self.event1 = Event.objects.create(
             title="Birthday Dinner",
@@ -49,6 +60,163 @@ class GraphQLTests(GraphQLTestCase):
         )
         self.event2.calendars.add(self.cal2)
         self.event2.save()
+
+    def test_all_public_calendars(self) -> None:
+        response = self.query(
+            """
+            {
+                allPublicCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["allPublicCalendars"]), 1)
+        self.assertEqual(
+            data["data"]["allPublicCalendars"][0]["name"], "Public Calendar"
+        )
+
+    def test_my_calendars(self) -> None:
+        self.client.force_login(self.user1)
+
+        response = self.query(
+            """
+            {
+                myCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["myCalendars"]), 2)
+        self.assertEqual(data["data"]["myCalendars"][0]["name"], "Private Calendar")
+        self.assertEqual(data["data"]["myCalendars"][0]["creator"]["username"], "user1")
+        self.assertEqual(data["data"]["myCalendars"][1]["name"], "Public Calendar")
+        self.assertEqual(data["data"]["myCalendars"][1]["creator"]["username"], "user1")
+
+    def test_my_calendars_unauthenticated(self) -> None:
+        response = self.query(
+            """
+            {
+                myCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["myCalendars"]), 0)
+
+    def test_followed_calendars_my_calendars(self) -> None:
+        self.client.force_login(self.user1)
+
+        response = self.query(
+            """
+            {
+                followedCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["followedCalendars"]), 2)
+        self.assertEqual(
+            data["data"]["followedCalendars"][0]["name"], "Public Calendar"
+        )
+        self.assertEqual(
+            data["data"]["followedCalendars"][0]["creator"]["username"], "user1"
+        )
+        self.assertEqual(
+            data["data"]["followedCalendars"][1]["name"], "Private Calendar"
+        )
+        self.assertEqual(
+            data["data"]["followedCalendars"][1]["creator"]["username"], "user1"
+        )
+
+    def test_followed_calendars(self) -> None:
+        self.client.force_login(self.user3)
+
+        response = self.query(
+            """
+            {
+                followedCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["followedCalendars"]), 1)
+        self.assertEqual(
+            data["data"]["followedCalendars"][0]["name"], "Public Calendar"
+        )
+        self.assertEqual(
+            data["data"]["followedCalendars"][0]["creator"]["username"], "user1"
+        )
+
+    def test_followed_calendars_unauthenticated(self) -> None:
+        response = self.query(
+            """
+            {
+                followedCalendars {
+                    id
+                    name
+                    creator {
+                        username
+                    }
+                }
+            }
+            """,
+        )
+
+        self.assertResponseNoErrors(response)
+
+        data = response.json()
+
+        self.assertEqual(len(data["data"]["followedCalendars"]), 0)
 
     def test_all_events(self) -> None:
         response = self.query(
