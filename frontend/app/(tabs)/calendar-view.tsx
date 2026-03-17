@@ -197,7 +197,6 @@ function formatSelectedDay(dateKey: string): string {
 const styles = StyleSheet.create({
   screenWrapper: {
     flex: 1,
-    backgroundColor: "#FFFDED",
   },
   emptyContainer: {
     flex: 1,
@@ -230,7 +229,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: "#FFFDED",
   },
   contentContainer: {
     flexGrow: 1,

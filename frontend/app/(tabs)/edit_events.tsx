@@ -20,7 +20,6 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import apiClient from "@/services/api-client";
 
-const BG = "#E8E5D8";
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -1036,7 +1035,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1},
 
   iconBtn: { padding: 6 },
 
@@ -1325,7 +1324,6 @@ const styles = StyleSheet.create({
   successCard: {
     width: "92%",
     maxWidth: 420,
-    backgroundColor: BG,
     borderRadius: 18,
     padding: 16,
     borderWidth: 2,

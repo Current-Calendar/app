@@ -184,8 +184,6 @@ export const styles = StyleSheet.create({
 
     flex: 1,
 
-    backgroundColor: "#E8E5D8",
-
     alignItems: "center",
 
   },

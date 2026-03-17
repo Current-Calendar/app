@@ -11,7 +11,7 @@ const tintColorDark = '#fff';
 export const Colors = {
   light: {
     text: '#11181C',
-    background: '#fff',
+    background: '#FFFDED',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
@@ -51,3 +51,6 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// Shared app background so screens inherit a single layout color.
+export const APP_BACKGROUND = Colors.light.background;

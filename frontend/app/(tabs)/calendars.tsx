@@ -685,12 +685,10 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
     screenWrapper: {
         flex: 1,
-        backgroundColor: '#FFFDED',
         overflow: 'visible',
     },
     container: {
         flex: 1,
-        backgroundColor: '#FFFDED',
         overflow: 'visible',
     },
     contentContainer: {

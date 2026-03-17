@@ -15,7 +15,6 @@ import { useRegister } from "@/hooks/use-register";
 import { ApiError } from "@/services/api-client";
 import { Ionicons } from '@expo/vector-icons';
 
-const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
@@ -212,7 +211,7 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
   content: { flex: 1, alignItems: "center", paddingHorizontal: 22, paddingTop: 52 },
   title: { fontSize: 34, color: TEXT, fontWeight: "800", marginBottom: 18 },
 
