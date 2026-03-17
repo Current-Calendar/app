@@ -4,58 +4,59 @@ import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
-import { API_CONFIG } from '@/constants/api';
 import apiClient from '@/services/api-client';
+import { useCalendars } from '@/hooks/use-calendars';
 
 export default function CalendarsScreen() {
   const router = useRouter();
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const [loading, setLoading] = useState(true);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
+   const {
+    calendars: backendCalendars,
+    loading: loadingCalendars,
+    error: calendarsError,
+  } = useCalendars();
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    if (calendarsError) {
+      console.error('Error fetching data:', calendarsError);
+      Alert.alert('Error', 'Could not load calendars or events.');
+    }
+  }, [calendarsError]);
+
+useEffect(() => {
+    const fetchSubscribedCalendars = async () => {
       try {
-        const [calRes, subscribedData] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-          apiClient.get<any[]>('/calendars/subscribed/'),
-        ]);
+        const subscribedData = await apiClient.get<any[]>('/calendars/subscribed/');
+        const dataArray = Array.isArray(subscribedData) 
+          ? subscribedData 
+          : (subscribedData as any)?.data || [];
 
-        if (!calRes.ok) {
-          throw new Error('Failed to fetch calendars data');
-        }
-
-        const calData = await calRes.json();
-
-        const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
-
-        const publicCalendars = calData.filter((c: any) => c.privacy === "PUBLIC");
-
-        const mappedCalendars: Calendar[] = publicCalendars.map((c: any, index: number) => ({
-          id: String(c.id),
-          name: c.name,
-          description: c.description || '',
-          privacy: c.privacy,
-          origin: c.origin,
-          creator: c.creator_username || 'unknown',
-          color: COLORS[index % COLORS.length],
-          cover: c.cover || null,
-        }));
-
-        setCalendars(mappedCalendars);
-        setSubscribedCalendarIds(subscribedData.map((c: any) => String(c.id)));
+        setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
       } catch (error) {
-        console.error('Error fetching data:', error);
-        Alert.alert('Error', 'Could not load calendars or events.');
-      } finally {
-        setLoading(false);
+        console.error("Error fetching subscribed data:", error);
       }
     };
 
-    void fetchData();
-  }, []);
+    void fetchSubscribedCalendars();
+  }, []); 
+    useEffect(() => {
+    const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];    
+
+    const mappedCalendars: Calendar[] = backendCalendars.map((c: any, index: number) => ({
+      id: String(c.id),
+      name: c.name,
+      description: c.description || '',
+      privacy: c.privacy,
+      origin: c.origin,
+      creator: c.creator_username || 'unknown',
+      color: COLORS[index % COLORS.length],
+      cover: c.cover || null,
+    }));
+
+     setCalendars(mappedCalendars);
+  }, [backendCalendars]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
@@ -73,7 +74,7 @@ export default function CalendarsScreen() {
       console.error("Subscribe error:", error);
     }
   };
-
+ const loading = loadingCalendars;
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>

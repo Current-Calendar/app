@@ -10,6 +10,7 @@ import React, { useState, useEffect } from "react";
 import * as Location from "expo-location";
 import apiConfig from "../../constants/api";
 import MapComponent from "../../components/map-component";
+import { useNearbyEvents, Coordinates } from "@/hooks/use-nearby-events";
 
 export default function RadarScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);

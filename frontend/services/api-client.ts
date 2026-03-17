@@ -26,6 +26,18 @@ export async function appendPhoto(
   }
 }
 
+export class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(message: string, status: number, data: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
 class ApiClient {
   user: User | null = null;
 
@@ -135,6 +147,7 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
+    const hadAccessToken = Boolean(this.accessToken);
     if (this.accessToken) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
@@ -144,12 +157,27 @@ class ApiClient {
       headers,
     });
 
-    // If 401, attempt to refresh the token
-    if (response.status === 401 && this.refreshToken) {
-      const refreshed = await this.refreshAccessToken();
+    // If 401, first attempt to refresh the token
+    if (response.status === 401) {
+      let retried = false;
 
-      if (refreshed && this.accessToken) {
-        headers['Authorization'] = `Bearer ${this.accessToken}`;
+      if (this.refreshToken) {
+        const refreshed = await this.refreshAccessToken();
+
+        if (refreshed && this.accessToken) {
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+          response = await fetch(url, {
+            ...options,
+            headers,
+          });
+          retried = true;
+        }
+      }
+
+      if (!retried && hadAccessToken) {
+        this.user = null;
+        await this.clearTokens();
+        delete headers['Authorization'];
         response = await fetch(url, {
           ...options,
           headers,
@@ -164,9 +192,11 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.detail || `HTTP ${response.status}`
-      );
+      const detail =
+        typeof errorData?.detail === 'string'
+          ? errorData.detail
+          : `HTTP ${response.status}`;
+      throw new ApiError(detail, response.status, errorData);
     }
 
     if (response.status === 204) {

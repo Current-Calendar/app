@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     View, 
     Text, 
@@ -12,17 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
+import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import { useAuth } from "@/hooks/use-auth";
-import { User } from '../../../types/user';
-import apiClient from '../../../services/api-client';
 
 const toCalendarData = (item: CalendarItem): CalendarData => ({
     id: String(item.id),
-    nombre: item.name,
-    descripcion: item.description,
-    portada: item.cover,
+    name: item.name,
+    description: item.description,
+    cover: item.cover,
 });
 
 export default function PublicProfile({ targetUsername }: { targetUsername: string }) {
@@ -39,52 +38,13 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
         handleFollowToggle,
     } = useUserProfile(targetUsername);
 
-    //  Estado para los calendars que sigo de este user
-    const [followingCalendars, setFollowingCalendars] = useState<CalendarItem[]>([]);
-    const [followingLoading, setFollowingLoading] = useState(false);
-
-    useEffect(() => {
-        const fetchFollowingCalendars = async () => {
-            if (!userBeingViewed || !currentUser) return;
-
-            if (process.env.NODE_ENV === 'development') {
-                // Mock para desarrollo
-                const mockFollowed = calendars.filter((cal, idx) => idx % 2 === 0);
-                setFollowingCalendars(mockFollowed);
-                return;
-            }
-
-            try {
-                setFollowingLoading(true);
-                const headers: Record<string, string> = {};
-                const authToken = apiClient.getAccessToken();
-                if (authToken) {
-                    headers.Authorization = `Bearer ${authToken}`;
-                }
-
-                const response = await fetch(
-                    `${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1/'}users/${userBeingViewed.id}/followed_calendars/`,
-                    {
-                        headers,
-                        credentials: 'include',
-                    }
-                );
-                if (response.ok) {
-                    const data: CalendarItem[] = await response.json();
-                    setFollowingCalendars(data);
-                } else {
-                    setFollowingCalendars([]);
-                }
-            } catch (error) {
-                console.error('Error fetching followed calendars:', error);
-                setFollowingCalendars([]);
-            } finally {
-                setFollowingLoading(false);
-            }
-        };
-
-        fetchFollowingCalendars();
-    }, [userBeingViewed, currentUser, calendars]);
+    //  Estado para los calendarios que sigo de este usuario
+    const {
+        calendars: followingCalendars,
+        loading: followingLoading,
+    } = useFollowedCalendars(userBeingViewed?.username, {
+        enabled: !!userBeingViewed && !!currentUser,
+    });
 
     // --- MANEJO DE ERRORES Y CARGA ---
     if (!targetUsername) {
@@ -171,6 +131,11 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                 {/* Calendars que sigo de este user */}
                 {followingLoading ? (
                     <ActivityIndicator size="small" color="#262626" />
+                ) : !currentUser ? (
+                    <View style={profileStyles.postsGrid}>
+                        <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>
+                        <Text style={profileStyles.emptyText}>Inicia sesión para ver qué calendarios de este perfil sigues.</Text>
+                    </View>
                 ) : followingCalendars.length > 0 && (
                     <View style={profileStyles.postsGrid}>
                         <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>

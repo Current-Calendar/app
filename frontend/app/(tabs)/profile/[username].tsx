@@ -17,7 +17,8 @@ import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile';
-import apiClient, { appendPhoto } from '../../../services/api-client';
+import apiClient, { appendPhoto } from '../../../services/api-client';  
+import { useProfileActions } from '@/hooks/use-profile-actions';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -64,15 +65,16 @@ const mapUserFromApi = (payload: OwnProfileResponse): User => ({
 const mapCalendarsFromApi = (items: OwnProfileCalendarResponse[]): CalendarData[] =>
   items.map((item) => ({
     id: String(item.id),
-    nombre: item.name,
-    descripcion: item.description ?? undefined,
-    portada: item.cover ?? undefined,
-    estado: item.privacy,
+    name: item.name,
+    description: item.description ?? undefined,
+    cover: item.cover ?? undefined,
+    privacy: item.privacy,
   }));
 
 const ProfileScreen = () => {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
+  
   const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
 
   // Determinamos si es "Mi Perfil"

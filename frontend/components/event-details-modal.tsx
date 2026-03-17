@@ -46,15 +46,11 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
   const username = String(event?.creator_username ?? event?.creator?.username ?? "").trim();
   const description = String(event?.description ?? "").trim();
 
-  const dateStr = formatDate(event?.fecha);
-  const timeStr = formatTime(event?.hora);
+  const dateStr = formatDate(event?.date);
+  const timeStr = formatTime(event?.time);
   const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
   const distanceKm = formatDistanceKm(event?.distance_km);
-
-  if (__DEV__) {
-    console.log("EVENT PHOTO:", event?.photo);
-  }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -65,14 +61,12 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
 
-          {event.foto ? (
+          {event.photo ? (
             <View style={eventDetailsModalStyles.coverWrap}>
               <Image
-                source={{ uri: event.foto }}
+                source={{ uri: event.photo }}
                 style={eventDetailsModalStyles.cover}
                 resizeMode="cover"
-                onError={(e) => console.log("IMG ERROR:", event.photo, e?.nativeEvent)}
-                onLoad={() => console.log("IMG OK:", event.photo)}
               />
             </View>
           ) : null}

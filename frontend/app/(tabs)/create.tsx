@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
-import apiClient from "@/services/api-client";
+import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 
@@ -32,6 +32,7 @@ interface PublishData {
 export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { createCalendar } = useCalendarActions();
   const [selectedPrivacy, setSelectedPrivacy] =
     useState<PrivacyStatus>("PRIVATE");
   const [isLoading, setIsLoading] = useState(false);
@@ -129,7 +130,7 @@ export default function CreateScreen() {
         formData.append("cover", blob, filename);
       }
 
-      await apiClient.post("/calendars/create/", formData);
+      await createCalendar(formData);
 
       Alert.alert("Success", "Calendar created successfully.");
 

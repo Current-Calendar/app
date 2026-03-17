@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
@@ -6,48 +6,26 @@ import { CalendarGrid } from "@/components/calendar-grid";
 import { CalendarHeader } from "@/components/calendar-header";
 import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
-import API_CONFIG from "@/constants/api";
+import { useCalendars } from "@/hooks/use-calendars";
+import { useEventsList } from "@/hooks/use-events";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-function formatSelectedDay(dateKey: string): string {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
-}
-
 export default function CalendarViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ calendarId?: string | string[] }>();
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
-  const [backendCalendars, setBackendCalendars] = useState<any[]>([]);
+  const { calendars: backendCalendars } = useCalendars();
 
-  // Load calendars from backend
-  useEffect(() => {
-    const loadCalendars = async () => {
-      try {
-        const response = await fetch(API_CONFIG.endpoints.getCalendars);
-        if (!response.ok) throw new Error('Failed to load calendars');
-
-        const data = await response.json();
-        const calendars = Array.isArray(data) ? data : [];
-
-        setBackendCalendars(calendars);
-      } catch (error) {
-        setBackendCalendars([]);
-      } finally {
-        setLoadingCalendars(false);
-      }
-    };
-
-    loadCalendars();
-  }, []);
+  const {
+    events: backendEvents,
+    loading: loadingEvents,
+    refetch: refetchEvents,
+  } = useEventsList();
 
   const calendar = useMemo(
     () => {
@@ -62,23 +40,21 @@ export default function CalendarViewScreen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
-  const [backendEvents, setBackendEvents] = useState<CalendarEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(true);
-  const [loadingCalendars, setLoadingCalendars] = useState(true);
+  
+  // Load events when screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchEvents();
+    }, [refetchEvents])
+  );
 
-  // Function to load events
-  const loadEvents = useCallback(async () => {
-    try {
-      const response = await fetch(API_CONFIG.endpoints.getEvents);
-      if (!response.ok) throw new Error('Failed to load events');
+  // Transform and filter events by selected calendar
+  const events = useMemo(
+    () => {
+      if (loadingEvents || !calendar) return [];
 
-      const data = await response.json();
-      // Backend returns array directly, not { events: [...] }
-      const allEvents = Array.isArray(data) ? data : [];
-
-      // Transform backend events: expand by calendar
       const transformed: CalendarEvent[] = [];
-      allEvents.forEach((evt: any) => {
+      backendEvents.forEach((evt: any) => {
         if (evt.calendars && evt.calendars.length > 0) {
           evt.calendars.forEach((calId: number) => {
             transformed.push({
@@ -97,31 +73,7 @@ export default function CalendarViewScreen() {
         }
       });
 
-      setBackendEvents(transformed);
-    } catch (error) {
-      setBackendEvents([]);
-    } finally {
-      setLoadingEvents(false);
-    }
-  }, []);
-
-  // Load events when screen gains focus
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [loadEvents])
-  );
-
-  // Also load on initial mount
-  useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
-
-  // Filter events by selected calendar
-  const events = useMemo(
-    () => {
-      if (loadingEvents || !calendar) return [];
-      return backendEvents.filter((event) => String(event.calendarId) === String(calendar.id));
+      return transformed.filter((event) => String(event.calendarId) === String(calendar.id));
     },
     [calendar, backendEvents, loadingEvents]
   );
@@ -130,6 +82,13 @@ export default function CalendarViewScreen() {
   if (!selectedDay) return [];
   return events.filter((event) => event.date?.slice(0,10) === selectedDay);
   }, [events, selectedDay]);
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function formatSelectedDay(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
+}
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -157,7 +116,7 @@ export default function CalendarViewScreen() {
 
   return (
     <View style={styles.screenWrapper}>
-      {loadingCalendars ? (
+      {!calendar ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Loading calendar...</Text>
         </View>

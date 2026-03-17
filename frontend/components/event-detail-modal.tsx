@@ -5,11 +5,11 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { CalendarEvent } from "@/types/calendar";
-import { useRouter } from "expo-router";
-import { API_CONFIG } from "@/constants/api";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { CalendarEvent } from '@/types/calendar';
+import { useRouter } from 'expo-router';
+import { useEventActions } from '@/hooks/use-event-actions';
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -24,28 +24,20 @@ interface EventDetailModalProps {
 
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   const router = useRouter();
+  const { deleteEvent } = useEventActions();
 
   if (!event) return null;
 
-  const handleDeleteEvent = async (eventId: string) => {
-    try {
-      const response = await fetch(API_CONFIG.endpoints.deleteEvent(eventId), {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
+    const handleDeleteEvent = async (eventId: string) => {
+        try {
+        await deleteEvent(eventId);
         onClose();
-        router.replace("/calendars");
-      } else {
-        console.log("Failed to delete event:", response.status);
-      }
-    } catch (error) {
-      console.log("Error deleting event:", error);
-    }
-  };
+        router.replace('/calendars');
+        }
+        catch (error) {
+            console.log('Error deleting event:', error);
+        }
+    };
 
   return (
     <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>

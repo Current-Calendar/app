@@ -4,14 +4,15 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import apiClient from '@/services/api-client';
 
 type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
+  const { updateCalendar } = useCalendarActions();
   const params = useLocalSearchParams<{
     id: string;
     name: string;
@@ -101,7 +102,6 @@ export default function EditScreen() {
     setIsLoading(true);
     try {
       if (newCoverImage) {
-        // Use FormData when uploading a new cover image
         const formData = new FormData();
         formData.append("name", calendarData.name);
         formData.append("description", calendarData.description);
@@ -112,9 +112,9 @@ export default function EditScreen() {
         const blob = await fetchResponse.blob();
         formData.append("cover", blob, filename);
 
-        await apiClient.put(`/calendars/${Number(calendarId)}/edit/`, formData);
+        await updateCalendar(Number(calendarId), formData);
       } else {
-        await apiClient.put(`/calendars/${Number(calendarId)}/edit/`, {
+        await updateCalendar(Number(calendarId), {
           name: calendarData.name,
           description: calendarData.description,
           privacy: selectedPrivacy,

@@ -56,7 +56,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(u, password);
 
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);

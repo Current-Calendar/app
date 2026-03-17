@@ -29,7 +29,7 @@ export const API_CONFIG = {
 
     register: buildEndpoint("auth/register/"),
     mock: buildEndpoint('mock'),
-    getCalendars: buildEndpoint('calendars/list'),
+    getCalendars: buildEndpoint('calendars/list/'),
     getEvents: buildEndpoint('events/list'),
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
     ownProfile: buildEndpoint('users/me/'),

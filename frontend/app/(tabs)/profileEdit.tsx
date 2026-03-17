@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { User } from '../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import * as ImagePicker from 'expo-image-picker';
+import { useProfileActions } from '@/hooks/use-profile-actions';
 import { API_CONFIG } from '@/constants/api';
 import apiClient, { appendPhoto } from '@/services/api-client';
 
@@ -24,6 +25,7 @@ import apiClient, { appendPhoto } from '@/services/api-client';
 const EditProfileScreen = () => {
   const router = useRouter();
   const { user: currentUser, setUser: updateUserContext, logout } = useAuth();
+  const { updateOwnProfile, deleteOwnProfile: deleteOwnProfileRequest } = useProfileActions();
 
 
   // State for form fields - initialize with params from navigation
@@ -137,8 +139,7 @@ const EditProfileScreen = () => {
     setIsDeletingProfile(true);
     setDeleteError(null);
     try {
-      await apiClient.delete('/users/me/delete/');
-      await apiClient.delete('/users/me/delete/');
+      await deleteOwnProfileRequest();
 
       setShowDeleteConfirm(false);
       await logout();

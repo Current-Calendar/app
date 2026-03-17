@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
-import { API_CONFIG } from "@/constants/api";
+import { useRegister } from "@/hooks/use-register";
+import { ApiError } from "@/services/api-client";
 import { Ionicons } from '@expo/vector-icons';
 
 const BG = "#E8E5D8";
@@ -23,6 +24,7 @@ const TEXT = "#10464D";
 export default function SignUpScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { registerUser } = useRegister();
   const { width } = useWindowDimensions();
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -40,6 +42,33 @@ export default function SignUpScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const getRegisterErrorMessage = (error: unknown) => {
+    if (error instanceof ApiError) {
+      const data = error.data as Record<string, unknown> | undefined;
+
+      const topErrors = data?.errors;
+      if (Array.isArray(topErrors) && topErrors.length > 0) {
+        return String(topErrors[0]);
+      }
+
+      const firstFieldWithErrors = Object.entries(data ?? {}).find(
+        ([, value]) => Array.isArray(value) && value.length > 0,
+      );
+      if (firstFieldWithErrors) {
+        const [field, value] = firstFieldWithErrors;
+        return `${field}: ${String((value as unknown[])[0])}`;
+      }
+
+      return error.message;
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "No connection to API. Check API_BASE / backend running.";
+  };
+
   const onSignup = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -55,45 +84,20 @@ export default function SignUpScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(API_CONFIG.endpoints.register, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password,
-          password2,
-        }),
+      await registerUser({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        password2,
       });
 
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        const msg =
-          (data &&
-            (data.message ||
-              data.detail ||
-              data.non_field_errors?.[0] ||
-              data.email?.[0] ||
-              data.username?.[0] ||
-              data.password?.[0] ||
-              data.password2?.[0])) ||
-          "Register failed.";
-        setErrorMsg(String(msg));
-        return;
-      }
-
-      setSuccessMsg("User registrado exitosamente");
+      setSuccessMsg("Usuario registrado exitosamente");
 
       await login(username.trim(), password);
 
       setTimeout(() => router.push("/"), 400);
-    } catch {
-      setErrorMsg("No connection to API. Check API_BASE / backend running.");
+    } catch (error) {
+      setErrorMsg(getRegisterErrorMessage(error));
     } finally {
       setLoading(false);
     }
