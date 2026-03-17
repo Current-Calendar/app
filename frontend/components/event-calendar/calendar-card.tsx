@@ -78,8 +78,11 @@ export default function CalendarCard({
             style={[
               eventCalendarCalendarCardStyles.subscribeBtn,
               isSubscribed && eventCalendarCalendarCardStyles.subscribedBtn,
-            ]} 
-            onPress={() => onSubscribe(calendar.id)}
+            ]}
+            onPress={(e) => {
+              e.stopPropagation();
+              onSubscribe(calendar.id);
+            }}
           >
             <Ionicons
               name={isSubscribed ? "checkmark-circle" : "add-circle"}
