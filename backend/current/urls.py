@@ -22,6 +22,7 @@ from main import views
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
+from main.comments import views as comment_views
 from main.radar import views as radar_views
 from main.auth import views as auth_views
 from django.urls import path, include
@@ -74,6 +75,9 @@ urlpatterns = [
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
+    path('api/v1/comments/', comment_views.comments_collection, name='comments_collection'),
+    path('api/v1/comments/<int:comment_id>/replies/', comment_views.list_replies, name='list_replies'),
+    path('api/v1/comments/<int:comment_id>/delete/', comment_views.delete_comment, name='delete_comment'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
 ]
 
