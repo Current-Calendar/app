@@ -20,11 +20,17 @@ export interface Event {
   userAvatar: string;
   calendarId: string;
   calendarName: string;
+  attendees?: {
+    id: string;
+    name: string;
+    respondedAt: string;
+    avatar?: string;
+  }[];
 }
 
 export default function EventsScreen() {
   const router = useRouter();
-  
+
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
   const { events: backendEvents, loading: loadingEvents, error: eventsError, refetch } = useEventsList();
@@ -50,7 +56,7 @@ export default function EventsScreen() {
         calendarMap[Number(c.id)] = c;
       });
 
-      const mappedEvents: Event[] = backendEvents.map((e: any) => {
+      const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
         const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
         const cal = calendarMap[Number(calId)];
 
@@ -66,6 +72,24 @@ export default function EventsScreen() {
           userAvatar: `https://i.pravatar.cc/100?u=${cal?.creator_username || "unknown"}`,
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
+          // Temporary mock attendees for frontend testing.
+          // Backend should replace this with real attendees data per event.
+          attendees: index % 2 === 0
+            ? [
+              {
+                id: "1",
+                name: "Rocío",
+                respondedAt: "2026-03-17T18:42:00Z",
+                avatar: "https://i.pravatar.cc/100?u=rocio",
+              },
+              {
+                id: "2",
+                name: "Lucía",
+                respondedAt: "2026-03-17T19:05:00Z",
+                avatar: "https://i.pravatar.cc/100?u=lucia",
+              },
+            ]
+            : [],
         };
       }).filter((evt: Event) => evt.id && evt.title);
 
@@ -284,7 +308,7 @@ export const styles = StyleSheet.create({
 
   },
 
-  loginButtonText:{
+  loginButtonText: {
 
     color: '#10464d',
 
@@ -308,11 +332,11 @@ export const styles = StyleSheet.create({
 
   },
 
-  registerButtonText:{
+  registerButtonText: {
 
-    color:'#FFFFFF',
+    color: '#FFFFFF',
 
-    fontWeight:'600',
+    fontWeight: '600',
 
     fontSize: 16,
 
