@@ -19,6 +19,8 @@ import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile';
 import apiClient, { appendPhoto } from '../../../services/api-client';  
 import { useProfileActions } from '@/hooks/use-profile-actions';
+import FollowListModal from '../../../components/follow-list-modal';
+import { useUserFollows } from '@/hooks/use-user-follows';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -88,6 +90,11 @@ const ProfileScreen = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
+  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
+    shownUser?.id,
+    Boolean(shownUser)
+  );
 
   useEffect(() => {
     if (!isMe) {
@@ -140,6 +147,10 @@ const ProfileScreen = () => {
   }, [isMe, currentUser, reloadKey]);
 
   const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
+  const openFollowList = (type: 'followers' | 'following') => {
+    setActiveFollowList(type);
+    reloadFollows();
+  };
 
   const handleEditProfile = () => {
     if (!currentUser) return;
@@ -272,14 +283,14 @@ const ProfileScreen = () => {
                   <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
                   <Text style={profileStyles.statLabel}>Calendars</Text>
                 </View>
-                <View style={profileStyles.statItem}>
+                <TouchableOpacity style={profileStyles.statItem} onPress={() => openFollowList('followers')}>
                   <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
-                  <Text style={profileStyles.statLabel}>Followers</Text>
-                </View>
-                <View style={profileStyles.statItem}>
+                  <Text style={profileStyles.statLabel}>seguidores</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={profileStyles.statItem} onPress={() => openFollowList('following')}>
                   <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
-                  <Text style={profileStyles.statLabel}>Following</Text>
-                </View>
+                  <Text style={profileStyles.statLabel}>seguidos</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -318,6 +329,13 @@ const ProfileScreen = () => {
         </View>
 
       </ScrollView>
+      <FollowListModal
+        visible={Boolean(activeFollowList)}
+        title={activeFollowList === 'followers' ? 'Seguidores' : 'Seguidos'}
+        users={activeFollowList === 'followers' ? followers : following}
+        loading={followsLoading}
+        onClose={() => setActiveFollowList(null)}
+      />
     </SafeAreaView>
   );
 };

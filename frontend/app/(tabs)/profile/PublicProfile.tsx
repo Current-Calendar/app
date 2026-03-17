@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View, 
     Text, 
@@ -13,7 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 // Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
+import { useUserFollows } from '@/hooks/use-user-follows';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
+import FollowListModal from '../../../components/follow-list-modal';
 import profileStyles from './profileStyles';
 import { useAuth } from "@/hooks/use-auth";
 
@@ -26,6 +28,7 @@ const toCalendarData = (item: CalendarItem): CalendarData => ({
 
 export default function PublicProfile({ targetUsername }: { targetUsername: string }) {
     const { user: currentUser } = useAuth();
+    const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
     
     //Hook personalizado para manejar toda la lógica de perfil público (datos del user, seguimiento, calendars públicos, etc.)
     const {
@@ -45,6 +48,22 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
     } = useFollowedCalendars(userBeingViewed?.username, {
         enabled: !!userBeingViewed && !!currentUser,
     });
+    const {
+        followers,
+        following,
+        loading: followsLoading,
+        reload: reloadFollows,
+    } = useUserFollows(userBeingViewed?.id, Boolean(userBeingViewed));
+
+    const openFollowList = (type: 'followers' | 'following') => {
+        setActiveFollowList(type);
+        reloadFollows();
+    };
+
+    const handleFollowPress = async () => {
+        await handleFollowToggle();
+        reloadFollows();
+    };
 
     // --- MANEJO DE ERRORES Y CARGA ---
     if (!targetUsername) {
@@ -94,21 +113,21 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                             ) : null}
 
                             <View style={profileStyles.statsRow}>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Calendars</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Followers</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Following</Text>
-                                </View>
-                            </View>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
+                            <Text style={profileStyles.statLabel}>Calendars</Text>
                         </View>
+                        <TouchableOpacity style={profileStyles.statItem} onPress={() => openFollowList('followers')}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
+                            <Text style={profileStyles.statLabel}>seguidores</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={profileStyles.statItem} onPress={() => openFollowList('following')}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
+                            <Text style={profileStyles.statLabel}>seguidos</Text>
+                        </TouchableOpacity>
                     </View>
+                </View>
+            </View>
 
                     <View style={profileStyles.bioSection}>
                         <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
@@ -116,7 +135,7 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
 
                     <TouchableOpacity 
                         style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]} 
-                        onPress={handleFollowToggle}
+                        onPress={handleFollowPress}
                     >
                         <Text style={[profileStyles.actionButtonText, isFollowing && profileStyles.actionButtonTextAlt]}>
                             {isFollowing ? 'Following' : 'Follow'}
@@ -162,6 +181,13 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                 </View>
 
             </ScrollView>
+            <FollowListModal
+                visible={Boolean(activeFollowList)}
+                title={activeFollowList === 'followers' ? 'Seguidores' : 'Seguidos'}
+                users={activeFollowList === 'followers' ? followers : following}
+                loading={followsLoading}
+                onClose={() => setActiveFollowList(null)}
+            />
         </SafeAreaView>
     );
 }
