@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendar, Event, User
+from main.models import Calendar, Event, User, Notification
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -261,6 +261,13 @@ def subscribe_calendar(request, calendar_id):
         return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
     else:
         user.subscribed_calendars.add(calendar)
+        Notification.objects.create(
+            recipient=calendar.creator,
+            sender=user,
+            type= 'CALENDAR_FOLLOW',
+            message=f"{user.username} has subscribed to '{calendar.name}'.",
+            related_calendar=calendar
+        )
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
 
 

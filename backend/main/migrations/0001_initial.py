@@ -99,4 +99,20 @@ class Migration(migrations.Migration):
             model_name='calendar',
             constraint=models.UniqueConstraint(condition=models.Q(('privacy', 'PRIVATE')), fields=('creator',), name='unique_private_calendar_per_user'),
         ),
+
+        migrations.CreateModel(
+            name='Notification',
+            fields=[
+                ('id', models.AutoField(primary_key=True, serialize=False)),
+                ('type', models.CharField(choices=[('NEW_FOLLOWER', 'New Follower'), ('CALENDAR_FOLLOW', 'Calendar Follow'), ('EVENT_SAVED', 'Event Saved'), ('EVENT_LIKED', 'Event Liked'), ('EVENT_COMMENT', 'Event Comment')], max_length=20)),
+                ('message', models.TextField()),
+                ('is_read', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('related_calendar', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='main.calendar')),
+                ('related_event', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='main.event')),
+                ('sender', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='sent_notifications', to=settings.AUTH_USER_MODEL)),
+                ('recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+
     ]
