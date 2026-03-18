@@ -46,6 +46,8 @@ export const API_CONFIG = {
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+    recommendedEvents: buildEndpoint(`/recommendations/events/`),
+    recommendedCalendars: buildEndpoint(`/recommendations/calendars/`),
   },
 };
 

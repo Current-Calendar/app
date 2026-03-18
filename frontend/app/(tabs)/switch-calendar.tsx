@@ -4,28 +4,23 @@ import { useRouter } from "expo-router";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import { Calendar } from "@/types/calendar";
-import { API_CONFIG } from '@/constants/api';
 import apiClient from '@/services/api-client';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CalendarsScreen() {
   const router = useRouter();
+  const { isLoading: authLoading } = useAuth();
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [calRes] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-        ]);
-
-        if (!calRes.ok) {
-          throw new Error('Failed to fetch calendars data');
-        }
-
-        const calData = await calRes.json();
+        const calData = await apiClient.get<any[]>("/recommendations/calendars/");
 
         const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
@@ -50,7 +45,7 @@ export default function CalendarsScreen() {
     };
 
     void fetchData();
-  }, []);
+  }, [authLoading]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);

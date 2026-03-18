@@ -1,9 +1,9 @@
 import { View, FlatList, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
-import { API_CONFIG } from "@/constants/api";
+import apiClient from "@/services/api-client";
+import { useAuth } from "@/hooks/use-auth";
 
 /**
  * 🔹 Tipo compartido con backend
@@ -23,25 +23,20 @@ export interface Event {
 }
 
 export default function EventsScreen() {
-  const router = useRouter();
+  const { isLoading: authLoading } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return;
+
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [calRes, evRes] = await Promise.all([
-          fetch(API_CONFIG.endpoints.getCalendars),
-          fetch(API_CONFIG.endpoints.getEvents),
+        const [calData, evData] = await Promise.all([
+          apiClient.get<any[]>("/recommendations/calendars/"),
+          apiClient.get<any[]>("/recommendations/events/"),
         ]);
-
-        if (!calRes.ok || !evRes.ok) {
-          throw new Error("Failed to fetch data");
-        }
-
-        const calData = await calRes.json();
-        const evData = await evRes.json();
 
         // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
@@ -49,7 +44,7 @@ export default function EventsScreen() {
           calendarMap[Number(c.id)] = c;
         });
 
-        const mappedEvents: any[] = evData.map((e: any) => {
+        const mappedEvents: Event[] = evData.map((e: any) => {
           const cal = calendarMap[e.calendars[0]];
           return {
             id: String(e.id),
@@ -75,7 +70,7 @@ export default function EventsScreen() {
     };
 
     void fetchData();
-  }, []);
+  }, [authLoading]);
 
   const handleOpenEvent = (id: string) => {
     // Conectar con show de events
