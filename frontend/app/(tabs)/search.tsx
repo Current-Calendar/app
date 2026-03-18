@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     },
 
     userCard: {
-        backgroundColor: "#F2F2F2",
+        backgroundColor: "#ffffff",
         borderRadius: 12,
         padding: 12,
         marginBottom: 12,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     },
 
     calendarCard: {
-        backgroundColor: "#F2F2F2",
+        backgroundColor: "#ffffff",
         borderRadius: 12,
         marginBottom: 12,
         overflow: "hidden",
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     },
 
     eventCard: {
-        backgroundColor: "#F2F2F2",
+        backgroundColor: "#ffffff",
         borderRadius: 12,
         padding: 12,
         marginBottom: 12,
