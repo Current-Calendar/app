@@ -9,7 +9,7 @@ export default function TopBar() {
   const { isAuthenticated } = useAuth();
   const {user}=useAuth();
   const goProfileOrLogin = () => {
-    router.push((isAuthenticated ? `/profile/${user?.id}` : "/login") as Href);
+    router.push((isAuthenticated ? `/profile/${user?.username}` : "/login") as Href);
   };
 
   return (

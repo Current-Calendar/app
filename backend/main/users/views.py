@@ -177,7 +177,13 @@ def get_own_user(request):
     GET /api/v1/users/me/
     """
     
-    serializer = OwnProfileSerializer(request.user, context={"request": request})
+    liked_calendar_ids = set(
+        request.user.calendar_likes.values_list("calendar_id", flat=True)
+    )
+    serializer = OwnProfileSerializer(
+        request.user,
+        context={"request": request, "liked_calendar_ids": liked_calendar_ids},
+    )
     return Response(serializer.data)
 
 

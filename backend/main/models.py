@@ -54,6 +54,7 @@ class Calendar(models.Model):
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
+    likes_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints = [
@@ -68,8 +69,26 @@ class Calendar(models.Model):
     def num_subscribers(self):
         return self.subscribers.count()
 
+    @property
+    def num_likes(self):
+        return self.likes_count
+
     def __str__(self):
         return f"{self.name} ({self.get_origin_display()})"
+
+
+class CalendarLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='calendar_likes')
+    calendar = models.ForeignKey(Calendar, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'calendar'], name='unique_calendar_like_per_user')
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} -> {self.calendar_id}"
 
 class Event(models.Model):
     title = models.CharField(max_length=150)

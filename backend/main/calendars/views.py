@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendar, Event, User
+from main.models import Calendar, Event, User, CalendarLike
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -175,10 +175,32 @@ def create_calendar(request):
             "privacy": calendar.privacy,
             "creator_id": calendar.creator_id,
             "created_at": calendar.created_at,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": False,
             "cover": request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
         },
         status=status.HTTP_201_CREATED,
     )
+
+
+def _get_liked_calendar_ids(user, queryset):
+    if not user.is_authenticated:
+        return set()
+    return set(
+        CalendarLike.objects.filter(user=user, calendar__in=queryset)
+        .values_list("calendar_id", flat=True)
+    )
+
+
+def _can_like_calendar(user, calendar: Calendar) -> bool:
+    if calendar.creator == user:
+        return True
+    if calendar.privacy == "PUBLIC":
+        return True
+    if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
+        return True
+    return False
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -190,6 +212,8 @@ def list_subscribed_calendars(request):
     """
     queryset = request.user.subscribed_calendars.select_related('creator').order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -200,6 +224,8 @@ def list_subscribed_calendars(request):
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
             "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
             "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset
@@ -227,6 +253,8 @@ def list_friends_calendars(request):
         privacy='FRIENDS'
     ).order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -237,6 +265,8 @@ def list_friends_calendars(request):
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
             "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
             "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset
@@ -262,6 +292,42 @@ def subscribe_calendar(request, calendar_id):
     else:
         user.subscribed_calendars.add(calendar)
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_like_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+
+    with transaction.atomic():
+        like = CalendarLike.objects.filter(user=user, calendar=calendar).first()
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            if not _can_like_calendar(user, calendar):
+                return Response(
+                    {"errors": ["No tienes permiso para dar me gusta a este calendar."]},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            try:
+                CalendarLike.objects.create(user=user, calendar=calendar)
+            except IntegrityError:
+                pass
+            liked = True
+
+    calendar.refresh_from_db(fields=['likes_count'])
+    return Response(
+        {
+            "calendar_id": calendar_id,
+            "liked": liked,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": liked,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])
@@ -293,6 +359,8 @@ def list_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -303,6 +371,8 @@ def list_calendars(request):
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
             "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
             "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset
@@ -341,6 +411,8 @@ def list_my_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -351,6 +423,8 @@ def list_my_calendars(request):
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
             "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
             "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
         }
         for cal in queryset

@@ -172,6 +172,7 @@ class EditProfileSerializer(serializers.ModelSerializer):
 
 class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
+    liked_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = Calendar
@@ -184,8 +185,19 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
             "origin",
             "creator",
             "created_at",
+            "likes_count",
+            "liked_by_me",
         )
         read_only_fields = ("id", "created_at")
+
+    def get_liked_by_me(self, obj):
+        request = self.context.get('request')
+        liked_calendar_ids = self.context.get('liked_calendar_ids')
+        if liked_calendar_ids is not None:
+            return obj.id in liked_calendar_ids
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(user_id=request.user.id).exists()
+        return False
 
 
 class OwnProfileSerializer(serializers.ModelSerializer):
