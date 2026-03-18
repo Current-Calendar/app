@@ -124,7 +124,6 @@ class Report(models.Model):
         ('HARASSMENT', 'Harassment'),
         ('OTHER', 'Other'),
     ]
-    id = models.AutoField(primary_key=True)
     reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports_made')
     reported_type = models.CharField(max_length=20, choices=REPORTED_TYPE_CHOICES)
     reported_calendar = models.ForeignKey(Calendar, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')

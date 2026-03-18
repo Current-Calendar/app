@@ -278,8 +278,6 @@ class ReportSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         reported_type = attrs.get('reported_type', getattr(self.instance, 'reported_type', None))
         reported_user = attrs.get('reported_user', getattr(self.instance, 'reported_user', None))
-        reported_event = attrs.get('reported_event', getattr(self.instance, 'reported_event', None))
-        reported_calendar = attrs.get('reported_calendar', getattr(self.instance, 'reported_calendar', None))
 
         request = self.context.get('request')
         user = request.user if request else None
