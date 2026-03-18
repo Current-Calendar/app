@@ -112,7 +112,6 @@ class Event(models.Model):
         return event
 
 class Notification(models.Model):
-    id = models.AutoField(primary_key=True)
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     TYPE_CHOICES = [
         ('NEW_FOLLOWER', 'New Follower'),
