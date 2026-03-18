@@ -8,6 +8,8 @@ import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
+import InviteUserModal from "@/components/InviteUserModal";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -26,6 +28,9 @@ export default function CalendarViewScreen() {
     loading: loadingEvents,
     refetch: refetchEvents,
   } = useEventsList();
+
+  const { user } = useAuth();
+  const [inviteVisible, setInviteVisible] = useState(false);
 
   const calendar = useMemo(
     () => {
@@ -77,6 +82,11 @@ export default function CalendarViewScreen() {
     },
     [calendar, backendEvents, loadingEvents]
   );
+
+  // Check if current user is the owner of the calendar
+  const isOwner = useMemo(() => {
+    return calendar && user && (calendar.creator_username === user.username );
+  }, [calendar, user]);
 
   const eventsOfSelectedDay = useMemo(() => {
   if (!selectedDay) return [];
@@ -182,6 +192,11 @@ function formatSelectedDay(dateKey: string): string {
         )}
 
         <View style={styles.actionsRow}>
+          {isOwner && (
+            <Pressable style={styles.inviteButton} onPress={() => setInviteVisible(true)}>
+              <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
+            </Pressable>
+          )}
           <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
             <Text style={styles.secondaryButtonText}>Back to calendars</Text>
           </Pressable>
@@ -190,6 +205,14 @@ function formatSelectedDay(dateKey: string): string {
       )}
 
       {calendar && <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />}
+      {calendar && isOwner && (
+        <InviteUserModal
+          visible={inviteVisible}
+          onClose={() => setInviteVisible(false)}
+          itemId={String(calendar.id)}
+          type="calendar"
+        />
+      )}
     </View>
   );
 }
@@ -295,10 +318,21 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     marginTop: 14,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 12,
   },
   secondaryButton: {
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#10464d",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  inviteButton: {
+    backgroundColor: "#EAF7F6",
     borderWidth: 1,
     borderColor: "#10464d",
     borderRadius: 10,

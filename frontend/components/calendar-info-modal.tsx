@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -7,11 +7,14 @@ import {
     Platform,
     TouchableOpacity,
     Image,
+    StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+import { useAuth } from '@/hooks/use-auth';
+import InviteUserModal from '@/components/InviteUserModal';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
     PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
@@ -40,11 +43,15 @@ export function CalendarInfoModal({
     onEdit,
     isDeleting = false,
 }: CalendarInfoModalProps) {
+    const { user } = useAuth();
+    const [inviteVisible, setInviteVisible] = useState(false);
+
     if (!calendar) return null;
 
     const accent = calendar.color;
     const privacy = PRIVACY_LABELS[calendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
     const origin = ORIGIN_LABELS[calendar.origin] ?? ORIGIN_LABELS.CURRENT;
+    const isOwner = user && calendar.creator === user.username;
 
     const handleDeletePress = () => {
         if (!onDelete) return;
@@ -71,6 +78,7 @@ export function CalendarInfoModal({
     };
 
     return (
+        <>
         <BottomSheetModal visible={!!calendar} onClose={onClose}>
             <View style={calendarInfoModalStyles.header}>
                 <View style={[calendarInfoModalStyles.colorBadge, { backgroundColor: accent }]} />
@@ -113,6 +121,23 @@ export function CalendarInfoModal({
             </View>
 
             <View style={calendarInfoModalStyles.actions}>
+                {isOwner && (
+                    <TouchableOpacity
+                        style={calendarInfoModalStyles.inviteButton}
+                        onPress={() => setInviteVisible(true)}
+                        activeOpacity={0.75}
+                    >
+                        <Ionicons name="person-add-outline" size={16} color="#10464d" />
+                        <Text 
+                            style={calendarInfoModalStyles.inviteButtonLabel}
+                            numberOfLines={1} 
+                            adjustsFontSizeToFit
+                        >
+                            Invite to calendar
+                        </Text>
+                    </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                     style={calendarInfoModalStyles.editButton}
                     onPress={() => onEdit?.(calendar)}
@@ -141,6 +166,15 @@ export function CalendarInfoModal({
                 )}
             </View>
         </BottomSheetModal>
+
+        {isOwner && (
+            <InviteUserModal
+                visible={inviteVisible}
+                onClose={() => setInviteVisible(false)}
+                itemId={String(calendar.id)}
+                type="calendar"
+            />
+        )}
+        </>
     );
 }
-

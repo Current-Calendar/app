@@ -704,6 +704,24 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#B33F37',
   },
+  inviteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    backgroundColor: '#EAF7F6',
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  inviteButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10464d',
+  }
 });
 
 export const eventDetailModalStyles = StyleSheet.create({
