@@ -278,6 +278,8 @@ class ReportSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         reported_type = attrs.get('reported_type', getattr(self.instance, 'reported_type', None))
         reported_user = attrs.get('reported_user', getattr(self.instance, 'reported_user', None))
+        reported_event = attrs.get('reported_event', getattr(self.instance, 'reported_event', None))
+        reported_calendar = attrs.get('reported_calendar', getattr(self.instance, 'reported_calendar', None))
 
         request = self.context.get('request')
         user = request.user if request else None
@@ -298,6 +300,12 @@ class ReportSerializer(serializers.ModelSerializer):
 
         if reported_type not in expected_fields:
             raise serializers.ValidationError({"reported_type": "Invalid reported type."})
+        
+        if reported_calendar and reported_calendar.privacy == 'PRIVATE':
+            raise serializers.ValidationError({"reported_calendar": "Cannot report a private calendar."})
+        
+        if reported_event and reported_event.calendars.filter(privacy='PRIVATE').exists():
+            raise serializers.ValidationError({"reported_event": "Cannot report an event that belongs to a private calendar."})
 
         expected_field = expected_fields[reported_type]
         

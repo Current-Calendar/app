@@ -145,3 +145,43 @@ class ReportCreationTests(APITestCase):
         }
         response = self.client.post(ENDPOINT, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_report_private_calendar(self):
+        private_calendar = Calendar.objects.create(
+            name="Private Calendar",
+            creator=self.user1,
+            privacy='PRIVATE'
+        )
+        self.client.login(username='user2', password='user2')
+        data = {
+            'reported_type': 'CALENDAR',
+            'reported_calendar': private_calendar.id,
+            'reason': 'INAPPROPRIATE_CONTENT'
+        }
+        response = self.client.post(ENDPOINT, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertRaisesMessage(response, "Cannot report a private calendar.")
+    
+    def test_report_event_in_private_calendar(self):
+        private_calendar = Calendar.objects.create(
+            name="Private Calendar",
+            creator=self.user1,
+            privacy='PRIVATE'
+        )
+        private_event = Event.objects.create(
+            title="Private Event",
+            date=date.today(),
+            time=time(12, 0),
+            creator=self.user1
+        )
+        private_event.calendars.add(private_calendar)
+
+        self.client.login(username='user2', password='user2')
+        data = {
+            'reported_type': 'EVENT',
+            'reported_event': private_event.id,
+            'reason': 'INAPPROPRIATE_CONTENT'
+        }
+        response = self.client.post(ENDPOINT, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertRaisesMessage(response, "Cannot report an event that belongs to a private calendar.")
