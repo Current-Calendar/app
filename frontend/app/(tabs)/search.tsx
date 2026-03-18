@@ -158,12 +158,18 @@ export default function SearchScreen() {
                                             </View>
                                             <Text style={[styles.calendarName, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
                                         </View>
-                                        <View style={styles.creatorBadge}>
+                                        <TouchableOpacity 
+                                            style={styles.creatorBadge}
+                                            onPress={() => {
+                                                const uname = (cal as any).creator_username || cal.creator;
+                                                if (uname) router.push(`/profile/${uname}`);
+                                            }}
+                                        >
                                             <Ionicons name="person" size={10} color="#fff" />
                                             <Text style={styles.creatorText} numberOfLines={1} ellipsizeMode="tail">
                                                 {(cal as any).creator_username || cal.creator}
                                             </Text>
-                                        </View>
+                                        </TouchableOpacity>
                                     </View>
                                     <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
                                 </View>
@@ -182,12 +188,18 @@ export default function SearchScreen() {
                                         </View>
                                         <Text style={[styles.eventTitle, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
                                     </View>
-                                    <View style={styles.creatorBadge}>
+                                    <TouchableOpacity 
+                                        style={styles.creatorBadge}
+                                        onPress={() => {
+                                            const uname = (ev as any).creator_username || (ev as any).creator || calendarMap[ev.calendarId];
+                                            if (uname && uname !== 'Unknown') router.push(`/profile/${uname}`);
+                                        }}
+                                    >
                                         <Ionicons name="person" size={10} color="#fff" />
                                         <Text style={styles.creatorText} numberOfLines={1} ellipsizeMode="tail">
                                             {(ev as any).creator_username || (ev as any).creator || calendarMap[ev.calendarId] || 'Unknown'}
                                         </Text>
-                                    </View>
+                                    </TouchableOpacity>
                                 </View>
                                 <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
                                     {ev.date} {ev.time}
