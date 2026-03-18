@@ -113,15 +113,42 @@ def edit_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated])
 def create_calendar(request):
     data = request.data
+    creator = request.user
 
     name = data.get('name')
+    if isinstance(name, str):
+        name = name.strip()
+    description = data.get('description', '')
 
-    if not name:
+    if not name or not isinstance(name, str) or name.strip() == "":
         return Response(
-            {"errors": ["El campo 'name' es obligatorio."]},
+            {"errors": ["El campo 'name' es obligatorio y no puede estar vacío."]},
             status = status.HTTP_400_BAD_REQUEST
         )
-    creator = request.user
+    
+    if description and not isinstance(description, str):
+        return Response(
+            {"errors": ["El campo 'description' debe ser texto."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    privacy = data.get('privacy', 'PRIVATE')
+    valid_privacy = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+
+    if privacy not in valid_privacy:
+        return Response(
+            {"errors": [f"El valor de 'privacy' no es válido. Valores permitidos: {', '.join(sorted(valid_privacy))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    origin = data.get('origin', 'CURRENT')
+    valid_origin = {choice[0] for choice in Calendar.ORIGIN_CHOICES}
+
+    if origin not in valid_origin:
+        return Response(
+            {"errors": [f"El valor de 'origin' no es válido. Valores permitidos: {', '.join(sorted(valid_origin))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     calendar = Calendar(
         creator=creator,

@@ -291,7 +291,7 @@ def list_events_from_calendar(request):
     Query parameters:
         calendarId (int) -- filter by calendar ID
     """
-    queryset = Event.objects.all()
+    queryset = Event.objects.all().order_by('-created_at')
     calendar_id = request.GET.get('calendarId')
 
     if calendar_id:

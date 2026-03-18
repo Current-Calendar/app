@@ -131,7 +131,7 @@ class CrearCalendarTests(APITestCase):
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El campo 'name' es obligatorio.", response.json()["errors"])
+        self.assertIn("El campo 'name' es obligatorio y no puede estar vacío.", response.json()["errors"])
 
     # ------------------------------------------------------------------
     # Casos de error — restricción de unicidad PRIVADO
@@ -228,7 +228,56 @@ class CrearCalendarTests(APITestCase):
 
         response = self.client.get(CALENDAR_ENDPOINT_CREATE)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
+    #mas casos
+    def test_error_name_solo_espacios(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("no puede estar vacío", response.json()["errors"][0])
+
+    def test_error_description_no_es_string(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar válido",
+            "description": 123
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.json()["errors"][0])
+
+    def test_error_privacy_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "privacy": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("privacy", response.json()["errors"][0])
+
+    def test_error_origin_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "origin": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("origin", response.json()["errors"][0])
+
+    def test_name_se_trimea_correctamente(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   Calendar limpio   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "Calendar limpio")
+            
 
 class EliminarCalendarTestCase(APITestCase):
     def setUp(self):
@@ -624,3 +673,4 @@ class PublishCalendarTests(APITestCase):
 
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
