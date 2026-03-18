@@ -137,20 +137,22 @@ export default function CreateScreen() {
       router.replace("/(tabs)/calendars");
 
     } catch (error: any) {
-    console.log("FULL ERROR:", error);
+      console.log("FULL ERROR:", error);
 
-    const message = error?.message || "";
+      const backendErrors = error?.data?.errors;
+      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
+        setErrorMessage(String(backendErrors[0]));
+      } else {
+        const message = error?.message || "";
+        setErrorMessage(
+          message && !message.includes("HTTP")
+            ? message
+            : "Failed to publish calendar. Please try again."
+        );
+      }
 
-    if (message.includes("400")) {
-      setErrorMessage(
-        "You can only create one private calendar with the basic plan."
-      );
-    } else {
-      setErrorMessage("Failed to publish calendar. Please try again.");
-    }
-
-    console.error("Publish error:", error);
-  } finally {
+      console.error("Publish error:", error);
+    } finally {
       setIsLoading(false);
     }
   };

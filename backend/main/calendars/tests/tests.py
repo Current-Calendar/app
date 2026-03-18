@@ -134,11 +134,11 @@ class CrearCalendarTests(APITestCase):
         self.assertIn("El campo 'name' es obligatorio.", response.json()["errors"])
 
     # ------------------------------------------------------------------
-    # Casos de error — restricción de unicidad PRIVADO
+    # Casos exitosos adicionales
     # ------------------------------------------------------------------
 
-    def test_error_segundo_calendario_privado_mismo_user(self):
-        """Devuelve 400 si el user intenta crear un segundo calendar PRIVADO."""
+    def test_segundo_calendario_privado_mismo_user_exitoso(self):
+        """Permite crear más de un calendar PRIVADO para el mismo user."""
         self.client.force_authenticate(self.user)
 
         # Primer calendar privado (OK)
@@ -155,8 +155,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El usuario ya tiene un calendario privado.", response.json()["errors"])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["privacy"], "PRIVATE")
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
