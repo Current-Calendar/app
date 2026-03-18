@@ -809,3 +809,151 @@ class EditEventTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+
+class RSVPEventTests(APITestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(
+            username='user_rsvp1', email='rsvp1@test.com', password='pass123'
+        )
+        self.user2 = User.objects.create_user(
+            username='user_rsvp2', email='rsvp2@test.com', password='pass123'
+        )
+        self.event = Event.objects.create(
+            title='RSVP Test Event',
+            date=date(2026, 4, 15),
+            time=time(18, 0),
+            creator=self.user1
+        )
+    
+    def test_rsvp_no_auth(self):
+        """Sin auth → 401."""
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_rsvp_event_not_found(self):
+        """Evento inexistente → 404."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            '/api/v1/events/999999/rsvp/',
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_rsvp_missing_status(self):
+        """Sin status → 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_rsvp_invalid_status(self):
+        """Status inválido → 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'INVALID'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_rsvp_pending_rejected(self):
+        """PENDING rechazado → 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'PENDING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_rsvp_create_assisting(self):
+        """Crear ASSISTING → 200 + respondedAt ISO."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        self.assertIn('respondedAt', response.data)
+        # Valida ISO 8601
+        from datetime import datetime
+        datetime.fromisoformat(response.data['respondedAt'].replace('Z', '+00:00'))
+    
+    def test_rsvp_create_not_assisting(self):
+        """Crear NOT_ASSISTING → 200."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'NOT_ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'NOT_ASSISTING')
+    
+    def test_rsvp_update_existing(self):
+        """Actualizar existente sin duplicar."""
+        from main.models import EventAttendance
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            f'/api/v1/events/{self.event.pk}/rsvp/',
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        # Verifica que no duplicó
+        self.assertEqual(
+            EventAttendance.objects.filter(user=self.user1, event=self.event).count(),
+            1
+        )
+    
+    def test_event_detail_attendees_only_assisting(self):
+        """GET evento → attendees solo ASSISTING."""
+        from main.models import EventAttendance
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        EventAttendance.objects.create(
+            user=self.user2,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        response = self.client.get(f'/api/v1/events/{self.event.pk}/edit/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['attendees']), 1)
+        self.assertEqual(response.data['attendees'][0]['name'], 'user_rsvp1')
+    
+    def test_attendee_responded_at_iso(self):
+        """respondedAt siempre ISO 8601."""
+        from main.models import EventAttendance
+        att = EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        response = self.client.get(f'/api/v1/events/{self.event.pk}/edit/')
+        self.assertIn('attendees', response.data)
+        self.assertGreater(len(response.data['attendees']), 0)
+        respondedAt = response.data['attendees'][0]['respondedAt']
+        # Valida ISO 8601 con Z
+        self.assertTrue(respondedAt.endswith('Z') or '+' in respondedAt)
+        from datetime import datetime
+        datetime.fromisoformat(respondedAt.replace('Z', '+00:00'))
