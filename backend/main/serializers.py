@@ -1,11 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event
-
-from .models import Calendar, Notification
-
+from .models import Calendar, Notification, Report
 User = get_user_model()
 
 
@@ -284,3 +283,60 @@ class NotificationSerializer(serializers.ModelSerializer):
         return attrs
 
     
+class ReportSerializer(serializers.ModelSerializer):
+    reporter_username = serializers.CharField(source='reporter.username', read_only=True)
+
+    class Meta:
+        model = Report
+        fields = [
+            'id', 'reporter', 'reporter_username', 'reported_type', 
+            'reported_calendar', 'reported_event', 'reported_user', 'reason', 
+            'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'reporter', 'status', 'created_at']
+
+    def validate(self, attrs):
+        reported_type = attrs.get('reported_type', getattr(self.instance, 'reported_type', None))
+        reported_user = attrs.get('reported_user', getattr(self.instance, 'reported_user', None))
+        reported_event = attrs.get('reported_event', getattr(self.instance, 'reported_event', None))
+        reported_calendar = attrs.get('reported_calendar', getattr(self.instance, 'reported_calendar', None))
+
+        request = self.context.get('request')
+        user = request.user if request else None
+
+        if not reported_type:
+            raise serializers.ValidationError({"reported_type": "This field is required."})
+        
+        expected_fields = {
+            'USER': 'reported_user',
+            'EVENT': 'reported_event',
+            'CALENDAR': 'reported_calendar'
+        }
+
+        expected_reasons = ['SPAM', 'INAPPROPRIATE_CONTENT', 'HARASSMENT', 'OTHER']
+        reason = attrs.get('reason', getattr(self.instance, 'reason', None))
+        if reason not in expected_reasons:
+            raise serializers.ValidationError({"reason": "Invalid reason for reporting."})
+
+        if reported_type not in expected_fields:
+            raise serializers.ValidationError({"reported_type": "Invalid reported type."})
+        
+        if reported_calendar and reported_calendar.privacy == 'PRIVATE':
+            raise serializers.ValidationError({"reported_calendar": "Cannot report a private calendar."})
+        
+        if reported_event and reported_event.calendars.filter(privacy='PRIVATE').exists():
+            raise serializers.ValidationError({"reported_event": "Cannot report an event that belongs to a private calendar."})
+
+        expected_field = expected_fields[reported_type]
+        
+        if not attrs.get(expected_field):
+             raise serializers.ValidationError({expected_field: f"This field is required when reporting a {reported_type.lower()}."})
+
+        for key in expected_fields.values():
+            if key != expected_field and attrs.get(key) is not None:
+                raise serializers.ValidationError({key: f"Cannot set {key.replace('reported_', '')} when reporting a {reported_type.lower()}."})
+
+        if reported_type == 'USER' and user and reported_user == user:
+            raise serializers.ValidationError({"reported_user": "You cannot report yourself."})
+        
+        return attrs
