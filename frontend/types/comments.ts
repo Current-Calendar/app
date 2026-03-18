@@ -8,6 +8,7 @@ export interface CommentItem {
   replies_count: number;
   created_at: string;
   parent_preview: any;
+  author_avatar: string | null;
 }
 
 export interface CommentsResponse {

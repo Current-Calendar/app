@@ -133,6 +133,7 @@ class ParentPreviewSerializer(serializers.Serializer):
 class CommentSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source="author.username", read_only=True)
     parent_preview = serializers.SerializerMethodField()
+    author_avatar = serializers.SerializerMethodField()
     target_type = serializers.SerializerMethodField()
     target_id = serializers.SerializerMethodField()
 
@@ -144,6 +145,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "target_id",
             "author",
             "author_username",
+            "author_avatar",
             "body",
             "parent",
             "root",
@@ -152,6 +154,14 @@ class CommentSerializer(serializers.ModelSerializer):
             "updated_at",
             "parent_preview",
         ]
+
+    def get_author_avatar(self, obj):
+        request = self.context.get("request")
+        if obj.author.photo:
+            if request:
+                return request.build_absolute_uri(obj.author.photo.url)
+            return obj.author.photo.url
+        return None
 
     def get_parent_preview(self, obj):
         if not obj.parent:
@@ -212,13 +222,17 @@ def get_comments(request):
     next_cursor = _build_cursor(rows[-1]) if has_more and rows else None
 
     return Response(
-        {
-            "results": CommentSerializer(rows, many=True).data,
-            "next_cursor": next_cursor,
-            "has_more": has_more,
-        },
-        status=status.HTTP_200_OK,
-    )
+    {
+        "results": CommentSerializer(
+            rows,
+            many=True,
+            context={"request": request}
+        ).data,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+    },
+    status=status.HTTP_200_OK,
+)
 
 
 def create_comment(request):
@@ -265,7 +279,10 @@ def create_comment(request):
             Comment.objects.filter(id=parent.root_id).update(replies_count=F("replies_count") + 1)
 
     comment = Comment.objects.select_related("author", "parent__author").get(pk=comment.id)
-    return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+    return Response(
+    CommentSerializer(comment, context={"request": request}).data,
+    status=status.HTTP_201_CREATED
+)
 
 
 @api_view(["GET", "POST"])
@@ -308,13 +325,17 @@ def list_replies(request, comment_id):
     next_cursor = _build_cursor(rows[-1]) if has_more and rows else None
 
     return Response(
-        {
-            "results": CommentSerializer(rows, many=True).data,
-            "next_cursor": next_cursor,
-            "has_more": has_more,
-        },
-        status=status.HTTP_200_OK,
-    )
+    {
+        "results": CommentSerializer(
+            rows,
+            many=True,
+            context={"request": request}
+        ).data,
+        "next_cursor": next_cursor,
+        "has_more": has_more,
+    },
+    status=status.HTTP_200_OK,
+)
 
 
 @api_view(["DELETE"])

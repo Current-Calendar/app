@@ -74,6 +74,9 @@ export default function CommentsModal({
     [comments]
   );
 
+  const getAvatarUrl = (username?: string) =>
+    `https://i.pravatar.cc/100?u=${username || "user"}`;
+
   const loadComments = async () => {
     if (!event?.id) return;
 
@@ -250,11 +253,20 @@ export default function CommentsModal({
           ) : null}
 
           <View style={styles.commentTopRow}>
-            <View style={styles.commentTextWrap}>
-              <Text style={styles.commentText}>
-                <Text style={styles.username}>{reply.author_username} </Text>
-                {reply.body}
-              </Text>
+            <View style={styles.commentLeft}>
+              <Image
+                source={{
+                uri: reply.author_avatar || getAvatarUrl(reply.author_username),
+                }}
+                style={styles.commentAvatar}
+              />
+
+              <View style={styles.commentTextWrap}>
+                <Text style={styles.commentText}>
+                  <Text style={styles.username}>{reply.author_username} </Text>
+                  {reply.body}
+                </Text>
+              </View>
             </View>
 
             <View style={styles.actionsWrap}>
@@ -301,11 +313,20 @@ export default function CommentsModal({
     return (
       <View style={styles.comment}>
         <View style={styles.commentTopRow}>
-          <View style={styles.commentTextWrap}>
-            <Text style={styles.commentText}>
-              <Text style={styles.username}>{item.author_username} </Text>
-              {item.body}
-            </Text>
+          <View style={styles.commentLeft}>
+            <Image
+              source={{
+                uri: item.author_avatar || getAvatarUrl(item.author_username),
+                }}
+              style={styles.commentAvatar}
+            />
+
+            <View style={styles.commentTextWrap}>
+              <Text style={styles.commentText}>
+                <Text style={styles.username}>{item.author_username} </Text>
+                {item.body}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.actionsWrap}>
@@ -346,7 +367,7 @@ export default function CommentsModal({
               <Text style={styles.viewRepliesText}>
                 {repliesOpen
                   ? "Ocultar respuestas"
-                  : `Ver ${
+                  : `Ver ${item.replies_count} ${
                       item.replies_count === 1 ? "respuesta" : "respuestas"
                     }`}
               </Text>
@@ -585,6 +606,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
+  commentLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#DDD",
+    marginTop: 2,
+  },
+
   commentTextWrap: {
     flex: 1,
     paddingRight: 4,
@@ -646,6 +682,7 @@ const styles = StyleSheet.create({
 
   commentBottomRow: {
     marginTop: 5,
+    marginLeft: 42,
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
