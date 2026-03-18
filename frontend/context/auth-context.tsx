@@ -20,7 +20,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const forceLogout = useCallback(() => {
     setUser(null);
     setIsAuthenticated(false);
-    router.replace('/(tabs)/login' as any);
+    router.replace('/login' as any);
   }, [router]);
 
   // Load saved session on startup
