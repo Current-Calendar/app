@@ -151,7 +151,20 @@ export default function SearchScreen() {
                                     <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                                            <View style={styles.iconBadge}>
+                                                <Ionicons name="calendar" size={20} color="#10464d" />
+                                            </View>
+                                            <Text style={[styles.calendarName, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
+                                        </View>
+                                        <View style={styles.creatorBadge}>
+                                            <Ionicons name="person" size={10} color="#fff" />
+                                            <Text style={styles.creatorText} numberOfLines={1} ellipsizeMode="tail">
+                                                {(cal as any).creator_username || cal.creator}
+                                            </Text>
+                                        </View>
+                                    </View>
                                     <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
                                 </View>
                             </View>
@@ -161,21 +174,26 @@ export default function SearchScreen() {
                     const ev = item.data as CalendarEvent;
                     return (
                         <View style={styles.eventCard}>
-                            <View style={styles.eventRow}>
-                                {ev.photo && (
-                                    <Image
-                                        source={{ uri: ev.photo }}
-                                        style={styles.eventImage}
-                                    />
-                                )}
-                                <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
-                                    <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
-                                        {ev.date} {ev.time}
-                                        {ev.calendarId &&
-                                            ` • ${calendarMap[ev.calendarId] || ''}`}
-                                    </Text>
+                            <View style={styles.eventInfo}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+                                        <View style={styles.iconBadge}>
+                                            <Ionicons name="time" size={20} color="#10464d" />
+                                        </View>
+                                        <Text style={[styles.eventTitle, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
+                                    </View>
+                                    <View style={styles.creatorBadge}>
+                                        <Ionicons name="person" size={10} color="#fff" />
+                                        <Text style={styles.creatorText} numberOfLines={1} ellipsizeMode="tail">
+                                            {(ev as any).creator_username || (ev as any).creator || calendarMap[ev.calendarId] || 'Unknown'}
+                                        </Text>
+                                    </View>
                                 </View>
+                                <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
+                                    {ev.date} {ev.time}
+                                    {ev.calendarId &&
+                                        ` • ${calendarMap[ev.calendarId] || ''}`}
+                                </Text>
                             </View>
                         </View>
                     );
@@ -311,5 +329,29 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 8,
         marginRight: 12,
+    },
+    creatorBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#eb8c85',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 4,
+        maxWidth: 120,
+    },
+    creatorText: {
+        fontSize: 10,
+        color: '#fff',
+        fontWeight: '600',
+    },
+    iconBadge: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#e6eced',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10,
     },
 });
