@@ -7,6 +7,9 @@ import EventFeedModal from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
 import { API_CONFIG } from "@/constants/api";
+import { useAuth } from "@/hooks/use-auth";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
 
 export interface Event {
   id: string;
@@ -39,6 +42,8 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -141,12 +146,22 @@ export default function EventsScreen() {
       <View style={styles.inner}>
         {/* Header de Autenticación */}
         <View style={styles.authHeader}>
-          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
+          {!isAuthenticated ? (
+            <>
+              <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
+                <Text style={styles.loginButtonText}>Log In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
+                <Text style={styles.registerButtonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.userHeader}>
+              <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+                <Ionicons name="notifications-outline" size={24} color="#10464d" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <EventsSwitch />
@@ -172,6 +187,11 @@ export default function EventsScreen() {
           visible={modalVisible}
           onClose={handleCloseModal}
           event={selectedEvent}
+        />
+
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
         />
       </View>
     </View>
