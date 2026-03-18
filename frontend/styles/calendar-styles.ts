@@ -454,6 +454,20 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
+  likeBtn: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 16,
+    marginLeft: 8,
+  },
+  likeBtnIcon: {
+    color: 'lightcoral'
+  },
+  likeBtnText: {
+    fontSize: 16,
+    fontWeight: '100',
+    alignSelf: 'center'
+  },
   subscribeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
