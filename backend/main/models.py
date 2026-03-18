@@ -1,10 +1,17 @@
 import datetime
+import os
+import uuid
 
 from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.utils import timezone
+
+
+def calendar_cover_path(instance, filename):
+    ext = os.path.splitext(filename)[1] or '.jpg'
+    return f'calendar_covers/{uuid.uuid4()}{ext}'
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -50,7 +57,7 @@ class Calendar(models.Model):
     external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    cover = models.FileField(upload_to='calendar_covers/', null=True, blank=True)
+    cover = models.FileField(upload_to=calendar_cover_path, null=True, blank=True)
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
