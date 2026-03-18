@@ -41,25 +41,61 @@ def follow_or_unfollow_user(request, pk):
     Endpoint to follow or unfollow another user
     POST /api/v1/users/<pk>/follow/
     """
-    
+    if request.user.pk == pk:
+        return Response({"error": "You cannot follow yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         user_to_follow = User.objects.get(pk=pk)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     user = request.user
-    
+
     if user.following.filter(pk=user_to_follow.pk).exists():
         user.following.remove(user_to_follow)
         followed = False
     else:
         user.following.add(user_to_follow)
         followed = True
-        
+
     return Response({
         "user_id": user_to_follow.pk,
         "followed": followed
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_followers(request, pk):
+    """
+    Returns the list of users who follow the user with the given pk.
+    GET /api/v1/users/<pk>/followers/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    followers = user.followers_set.all()
+    serializer = PublicUserSerializer(followers, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_following(request, pk):
+    """
+    Returns the list of users that the user with the given pk is following.
+    GET /api/v1/users/<pk>/following/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    following = user.following.all()
+    serializer = PublicUserSerializer(following, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
