@@ -127,7 +127,7 @@ class Query(graphene.ObjectType):
 
         return Calendar.objects.filter(
             Q(creator_id=user.pk) | Q(subscribers__in=[user])
-        )
+        ).distinct().order_by("-created_at", "-id")
 
     def resolve_all_events(
         self,
