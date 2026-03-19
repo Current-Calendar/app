@@ -1,14 +1,15 @@
 import React from 'react';
 import {
-    View, 
-    Text, 
-    Image, 
-    ScrollView, 
-    TouchableOpacity, 
+    View,
+    Text,
+    Image,
+    ScrollView,
+    TouchableOpacity,
     ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 // Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
@@ -26,7 +27,8 @@ const toCalendarData = (item: CalendarItem): CalendarData => ({
 
 export default function PublicProfile({ targetUsername }: { targetUsername: string }) {
     const { user: currentUser } = useAuth();
-    
+    const router = useRouter();
+
     //Hook personalizado para manejar toda la lógica de perfil público (datos del user, seguimiento, calendars públicos, etc.)
     const {
         userBeingViewed,
@@ -49,7 +51,7 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
     // --- MANEJO DE ERRORES Y CARGA ---
     if (!targetUsername) {
         return (
-            <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}> 
+            <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
                 <Ionicons name="person-circle-outline" size={60} color="#dbdbdb" />
                 <Text style={profileStyles.errorText}>Selecciona un user.</Text>
             </SafeAreaView>
@@ -114,15 +116,25 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                         <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
                     </View>
 
-                    <TouchableOpacity 
-                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]} 
+                    <TouchableOpacity
+                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]}
                         onPress={handleFollowToggle}
                     >
                         <Text style={[profileStyles.actionButtonText, isFollowing && profileStyles.actionButtonTextAlt]}>
                             {isFollowing ? 'Following' : 'Follow'}
                         </Text>
                     </TouchableOpacity>
-
+                    <TouchableOpacity
+                        style={[profileStyles.actionButton, { backgroundColor: '#fff', borderColor: '#e53935', borderWidth: 1, marginTop: 10 }]}
+                        onPress={() =>
+                            router.push({
+                                pathname: '/report',
+                                params: { resourceType: 'USER', resourceId: userBeingViewed.id },
+                            })
+                        }
+                    >
+                        <Text style={[profileStyles.actionButtonText, { color: '#e53935' }]}>Report User</Text>
+                    </TouchableOpacity>
                     {followError ? (
                         <Text style={profileStyles.errorText}>{followError}</Text>
                     ) : null}
@@ -151,7 +163,7 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                 {/*Renderizado de calendars públicos */}
                 <View style={profileStyles.postsGrid}>
                     <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Public Calendars`}</Text>
-                    
+
                     {calendars.length > 0 ? (
                         calendars.map((cal: CalendarItem) => (
                             <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />

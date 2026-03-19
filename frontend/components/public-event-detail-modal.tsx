@@ -12,60 +12,123 @@ import { CalendarEvent } from "@/types/calendar";
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
+const RED = "#E53935";
 
 interface PublicEventDetailModalProps {
   event: CalendarEvent | null;
   onClose: () => void;
+  onReport?: () => void;
 }
 
 export function PublicEventDetailModal({
   event,
   onClose,
+  onReport,
 }: PublicEventDetailModalProps) {
   if (!event) return null;
 
   return (
-    <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => {}}>
-          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
-            <Ionicons name="close" size={18} color={TEXT} />
+    <Modal
+      visible={!!event}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={styles.overlay}
+        onPress={onClose}
+      >
+        <Pressable
+          style={styles.card}
+          onPress={() => {}}
+        >
+          <Pressable
+            style={styles.closeBtn}
+            onPress={onClose}
+            hitSlop={10}
+          >
+            <Ionicons
+              name="close"
+              size={18}
+              color={TEXT}
+            />
           </Pressable>
 
-          <View style={styles.content}>
-            <Text style={styles.title}>{event.title}</Text>
+          <View
+            style={styles.content}
+          >
+            <Text
+              style={styles.title}
+            >
+              {event.title}
+            </Text>
 
             {!!event.place_name && (
-              <DetailRow icon="location-outline" label={event.place_name} />
+              <DetailRow
+                icon="location-outline"
+                label={event.place_name}
+              />
             )}
 
-            <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+            <DetailRow
+              icon="calendar-outline"
+              label={formatDate(event.date)}
+            />
 
             {!!event.time && (
-              <DetailRow icon="time-outline" label={event.time} />
-            )}
-
-            {!!event.location && (
               <DetailRow
-                icon="navigate-outline"
-                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
+                icon="time-outline"
+                label={event.time}
               />
             )}
 
             {!!event.recurrence && (
-              <DetailRow icon="repeat-outline" label={event.recurrence} />
+              <DetailRow
+                icon="repeat-outline"
+                label={event.recurrence}
+              />
+            )}
+
+            {onReport && (
+              <Pressable
+                style={styles.reportBtn}
+                onPress={onReport}
+              >
+                <Text
+                  style={styles.reportBtnText}
+                >
+                  Report Event
+                </Text>
+              </Pressable>
             )}
           </View>
 
           {!!event.description && (
-            <View style={styles.descWrap}>
-              <Text style={styles.descTitle}>Description:</Text>
-              <Text style={styles.descText}>{event.description}</Text>
+            <View
+              style={styles.descWrap}
+            >
+              <Text
+                style={styles.descTitle}
+              >
+                Description:
+              </Text>
+              <Text
+                style={styles.descText}
+              >
+                {event.description}
+              </Text>
             </View>
           )}
 
-          <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Close</Text>
+          <Pressable
+            onPress={onClose}
+            style={styles.primaryBtn}
+          >
+            <Text
+              style={styles.primaryBtnText}
+            >
+              Close
+            </Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -81,9 +144,19 @@ function DetailRow({
   label: string;
 }) {
   return (
-    <View style={styles.row}>
-      <Ionicons name={icon} size={16} color={TEXT} />
-      <Text style={styles.rowText}>{label}</Text>
+    <View
+      style={styles.row}
+    >
+      <Ionicons
+        name={icon}
+        size={16}
+        color={TEXT}
+      />
+      <Text
+        style={styles.rowText}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -118,8 +191,12 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.22,
     shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
     elevation: 8,
+    paddingBottom: 16,
   },
   closeBtn: {
     position: "absolute",
@@ -186,11 +263,28 @@ const styles = StyleSheet.create({
     backgroundColor: TEAL,
     borderWidth: 2,
     borderColor: "#0B3D3D",
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryBtnText: {
     color: "#EAF7F6",
     fontWeight: "900",
     fontSize: 16,
+    textAlign: "center",
+  },
+  reportBtn: {
+    marginTop: 12,
+    marginHorizontal: 0,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: RED,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reportBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
     textAlign: "center",
   },
 });
