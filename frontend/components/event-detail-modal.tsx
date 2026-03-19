@@ -5,11 +5,12 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-} from 'react-native';
+} from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
+import CommentsModal from "./comments-modal";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -30,9 +31,11 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
+  const [commentsVisible, setCommentsVisible] = useState(false);
 
   useEffect(() => {
     setAttendanceMenuOpen(false);
+    setCommentsVisible(false);
   }, [event]);
 
   if (!event) return null;
@@ -70,104 +73,134 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
     }
   };
 
+  const handleOpenComments = () => {
+    setCommentsVisible(true);
+  };
+
+  const handleCloseComments = () => {
+    setCommentsVisible(false);
+  };
+
   return (
-    <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.card} onPress={() => { }}>
-          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
-            <Ionicons name="close" size={18} color={TEXT} />
-          </Pressable>
+    <>
+      <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
+        <Pressable style={styles.overlay} onPress={onClose}>
+          <Pressable style={styles.card} onPress={() => {}}>
+            <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={18} color={TEXT} />
+            </Pressable>
 
-          <View style={styles.content}>
-            <Text style={styles.title}>{event.title}</Text>
+            <View style={styles.content}>
+              <Text style={styles.title}>{event.title}</Text>
 
-            {!!event.place_name && (
-              <DetailRow icon="location-outline" label={event.place_name} />
-            )}
+              {!!event.place_name && (
+                <DetailRow icon="location-outline" label={event.place_name} />
+              )}
 
-            <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+              <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
 
-            {!!event.time && (
-              <DetailRow icon="time-outline" label={event.time} />
-            )}
+              {!!event.time && (
+                <DetailRow icon="time-outline" label={event.time} />
+              )}
 
-            {!!event.location && (
-              <DetailRow
-                icon="navigate-outline"
-                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
-              />
-            )}
-
-            <View style={styles.attendanceSection}>
-              <Text style={styles.attendanceLabel}>Attendance</Text>
-
-              <Pressable
-                style={styles.attendanceButton}
-                onPress={() => setAttendanceMenuOpen((prev) => !prev)}
-              >
-                <Text style={styles.attendanceButtonText}>
-                  {getAttendanceLabel(currentAttendance)}
-                </Text>
-                <Ionicons
-                  name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={TEXT}
+              {!!event.location && (
+                <DetailRow
+                  icon="navigate-outline"
+                  label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                 />
+              )}
+
+              <View style={styles.attendanceSection}>
+                <Text style={styles.attendanceLabel}>Attendance</Text>
+
+                <Pressable
+                  style={styles.attendanceButton}
+                  onPress={() => setAttendanceMenuOpen((prev) => !prev)}
+                >
+                  <Text style={styles.attendanceButtonText}>
+                    {getAttendanceLabel(currentAttendance)}
+                  </Text>
+                  <Ionicons
+                    name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    color={TEXT}
+                  />
+                </Pressable>
+
+                {attendanceMenuOpen && (
+                  <View style={styles.dropdown}>
+                    <Pressable
+                      style={styles.dropdownItem}
+                      onPress={() => handleAttendanceChange("attending")}
+                    >
+                      <Text style={styles.dropdownItemText}>I will attend</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.dropdownItem}
+                      onPress={() => handleAttendanceChange("not_attending")}
+                    >
+                      <Text style={styles.dropdownItemText}>I will not attend</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {!!event.description && (
+              <View style={styles.descWrap}>
+                <Text style={styles.descTitle}>Description:</Text>
+                <Text style={styles.descText}>{event.description}</Text>
+              </View>
+            )}
+
+            <View style={styles.actions}>
+              <Pressable
+                style={styles.commentBtn}
+                onPress={handleOpenComments}
+              >
+                <Ionicons name="chatbubble-outline" size={16} color={TEXT} />
+                <Text style={styles.commentText}>Comments</Text>
               </Pressable>
 
-              {attendanceMenuOpen && (
-                <View style={styles.dropdown}>
-                  <Pressable
-                    style={styles.dropdownItem}
-                    onPress={() => handleAttendanceChange("attending")}
-                  >
-                    <Text style={styles.dropdownItemText}>I will attend</Text>
-                  </Pressable>
+              <Pressable
+                style={styles.editBtn}
+                onPress={() => {
+                  onClose();
+                  router.push({
+                    pathname: "/edit_events",
+                    params: { id: event.id },
+                  });
+                }}
+              >
+                <Ionicons name="pencil" size={16} color="#EAF7F6" />
+                <Text style={styles.editText}>Edit</Text>
+              </Pressable>
 
-                  <Pressable
-                    style={styles.dropdownItem}
-                    onPress={() => handleAttendanceChange("not_attending")}
-                  >
-                    <Text style={styles.dropdownItemText}>I will not attend</Text>
-                  </Pressable>
-                </View>
-              )}
+              <Pressable
+                style={styles.deleteBtn}
+                onPress={() => handleDeleteEvent(event.id)}
+              >
+                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.deleteText}>Delete</Text>
+              </Pressable>
             </View>
-          </View>
-
-          {!!event.description && (
-            <View style={styles.descWrap}>
-              <Text style={styles.descTitle}>Description:</Text>
-              <Text style={styles.descText}>{event.description}</Text>
-            </View>
-          )}
-
-          <View style={styles.actions}>
-            <Pressable
-              style={styles.editBtn}
-              onPress={() => {
-                onClose();
-                router.push({
-                  pathname: "/edit_events",
-                  params: { id: event.id },
-                });
-              }}
-            >
-              <Ionicons name="pencil" size={16} color="#EAF7F6" />
-              <Text style={styles.editText}>Edit</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.deleteBtn}
-              onPress={() => handleDeleteEvent(event.id)}
-            >
-              <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.deleteText}>Delete</Text>
-            </Pressable>
-          </View>
+          </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
+
+      <CommentsModal
+        visible={commentsVisible}
+        onClose={handleCloseComments}
+        event={{
+          id: event.id,
+          title: event.title,
+          image: (event as any).photo || (event as any).image || "",
+          username: "",
+          userAvatar: "",
+        }}
+      />
+    </>
   );
 }
 
@@ -209,7 +242,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: "92%",
-    maxWidth: 520,
+    maxWidth: 640,
     backgroundColor: BG,
     borderRadius: 18,
     borderWidth: 2,
@@ -341,6 +374,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     padding: 16,
+  },
+
+  commentBtn: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "rgba(16,70,77,0.22)",
+  },
+
+  commentText: {
+    color: TEXT,
+    fontWeight: "900",
   },
 
   editBtn: {

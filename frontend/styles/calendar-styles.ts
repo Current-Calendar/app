@@ -227,6 +227,19 @@ export const calendarCardStyles = StyleSheet.create({
     flexDirection: 'row',
     padding: 12,
   },
+  commentButton: {
+  marginTop: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  alignSelf: 'flex-start',
+  },
+
+  commentText: {
+    marginLeft: 6,
+    color: '#10464d',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   cardImage: {
     width: 100,
     height: 100,
