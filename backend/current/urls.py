@@ -24,6 +24,7 @@ from main.calendars import views as calendar_views
 from main.events import views as event_views
 from main.radar import views as radar_views
 from main.auth import views as auth_views
+from main.notifications import views as notification_views
 from main.reports import views as report_views
 from django.urls import path, include
 from django.contrib import admin
@@ -78,6 +79,9 @@ urlpatterns = [
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
+    path('api/v1/notifications/', notification_views.get_notifications, name='get_notifications'),
+    path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
+    path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
 ]
 
