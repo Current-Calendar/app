@@ -36,6 +36,10 @@ class User(AbstractUser):
 
     def is_friend_with(self, other: "User"):
         return self.following.filter(pk=other.pk).exists() and other.following.filter(pk=self.pk).exists()
+    
+    @property
+    def unread_count_for_user(self):
+        return Notification.objects.filter(recipient=self, is_read=False).count()
 
     def __str__(self):
         return self.username
@@ -113,6 +117,57 @@ class Event(models.Model):
         uid = self.external_id or f"event-{self.pk}@current"
         event.add('uid', uid)
         return event
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    TYPE_CHOICES = [
+        ('NEW_FOLLOWER', 'New Follower'),
+        ('CALENDAR_FOLLOW', 'Calendar Follow'),
+        ('EVENT_SAVED', 'Event Saved'),
+        ('EVENT_LIKED', 'Event Liked'),
+        ('EVENT_COMMENT', 'Event Comment'),
+    ]
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    related_calendar = models.ForeignKey(Calendar, null=True, blank=True, on_delete=models.CASCADE)
+    related_event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='sent_notifications')
+
+    def __str__(self):
+        return f"Notification for {self.recipient.username} - {self.type}"
+    
+class Report(models.Model):
+    REPORTED_TYPE_CHOICES = [
+        ('USER', 'User'),
+        ('EVENT', 'Event'),
+        ('CALENDAR', 'Calendar'),
+    ]
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    REASON_CHOICES = [
+        ('INAPPROPRIATE_CONTENT', 'Inappropriate Content'),
+        ('SPAM', 'Spam'),
+        ('HARASSMENT', 'Harassment'),
+        ('OTHER', 'Other'),
+    ]
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports_made')
+    reported_type = models.CharField(max_length=20, choices=REPORTED_TYPE_CHOICES)
+    reported_calendar = models.ForeignKey(Calendar, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Report {self.id} by {self.reporter.username} on {self.reported_type} (Status: {self.status})"
+
 
 class MockElement(models.Model):
     name = models.CharField(max_length=100)
