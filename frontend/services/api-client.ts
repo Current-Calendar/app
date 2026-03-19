@@ -217,6 +217,14 @@ class ApiClient {
     });
   }
 
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    const isFormData = data instanceof FormData;
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? (isFormData ? data as BodyInit : JSON.stringify(data)) : undefined,
+    });
+  }
+
   async put<T>(endpoint: string, data?: unknown): Promise<T> {
     const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
