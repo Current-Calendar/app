@@ -34,102 +34,47 @@ export function PublicEventDetailModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable
-        style={styles.overlay}
-        onPress={onClose}
-      >
-        <Pressable
-          style={styles.card}
-          onPress={() => {}}
-        >
-          <Pressable
-            style={styles.closeBtn}
-            onPress={onClose}
-            hitSlop={10}
-          >
-            <Ionicons
-              name="close"
-              size={18}
-              color={TEXT}
-            />
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
+            <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
 
-          <View
-            style={styles.content}
-          >
-            <Text
-              style={styles.title}
-            >
-              {event.title}
-            </Text>
+          <View style={styles.content}>
+            <Text style={styles.title}>{event.title}</Text>
 
             {!!event.place_name && (
-              <DetailRow
-                icon="location-outline"
-                label={event.place_name}
-              />
+              <DetailRow icon="location-outline" label={event.place_name} />
             )}
 
-            <DetailRow
-              icon="calendar-outline"
-              label={formatDate(event.date)}
-            />
+            <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
 
             {!!event.time && (
-              <DetailRow
-                icon="time-outline"
-                label={event.time}
-              />
+              <DetailRow icon="time-outline" label={event.time} />
             )}
 
             {!!event.recurrence && (
-              <DetailRow
-                icon="repeat-outline"
-                label={event.recurrence}
-              />
-            )}
-
-            {onReport && (
-              <Pressable
-                style={styles.reportBtn}
-                onPress={onReport}
-              >
-                <Text
-                  style={styles.reportBtnText}
-                >
-                  Report Event
-                </Text>
-              </Pressable>
+              <DetailRow icon="repeat-outline" label={event.recurrence} />
             )}
           </View>
 
           {!!event.description && (
-            <View
-              style={styles.descWrap}
-            >
-              <Text
-                style={styles.descTitle}
-              >
-                Description:
-              </Text>
-              <Text
-                style={styles.descText}
-              >
-                {event.description}
-              </Text>
+            <View style={styles.descWrap}>
+              <Text style={styles.descTitle}>Description:</Text>
+              <Text style={styles.descText}>{event.description}</Text>
             </View>
           )}
 
-          <Pressable
-            onPress={onClose}
-            style={styles.primaryBtn}
-          >
-            <Text
-              style={styles.primaryBtnText}
-            >
-              Close
-            </Text>
-          </Pressable>
+          <View style={styles.actions}>
+            {onReport && (
+              <Pressable style={styles.reportBtn} onPress={onReport}>
+                <Text style={styles.reportBtnText}>Report Event</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={onClose} style={styles.primaryBtn}>
+              <Text style={styles.primaryBtnText}>Close</Text>
+            </Pressable>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -144,19 +89,9 @@ function DetailRow({
   label: string;
 }) {
   return (
-    <View
-      style={styles.row}
-    >
-      <Ionicons
-        name={icon}
-        size={16}
-        color={TEXT}
-      />
-      <Text
-        style={styles.rowText}
-      >
-        {label}
-      </Text>
+    <View style={styles.row}>
+      <Ionicons name={icon} size={16} color={TEXT} />
+      <Text style={styles.rowText}>{label}</Text>
     </View>
   );
 }
@@ -191,10 +126,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.22,
     shadowRadius: 16,
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
     paddingBottom: 16,
   },
@@ -254,10 +186,26 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     opacity: 0.9,
   },
-  primaryBtn: {
+  actions: {
     marginHorizontal: 16,
     marginTop: 16,
-    marginBottom: 14,
+    gap: 8,
+  },
+  reportBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: RED,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reportBtnText: {
+    color: RED,
+    fontWeight: "700",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  primaryBtn: {
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: TEAL,
@@ -270,21 +218,6 @@ const styles = StyleSheet.create({
     color: "#EAF7F6",
     fontWeight: "900",
     fontSize: 16,
-    textAlign: "center",
-  },
-  reportBtn: {
-    marginTop: 12,
-    marginHorizontal: 0,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: RED,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  reportBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
     textAlign: "center",
   },
 });

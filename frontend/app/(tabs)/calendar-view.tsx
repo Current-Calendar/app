@@ -33,10 +33,9 @@ export default function CalendarViewScreen() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
 
-  const [reportModalVisible, setReportModalVisible] = useState(false);
-  const [reportTarget, setReportTarget] = useState<{ id: string; type: 'CALENDAR' | 'EVENT' } | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
 
-  // Load events when screen gains focus
   useFocusEffect(
     React.useCallback(() => { refetchEvents(); }, [refetchEvents])
   );
@@ -81,6 +80,11 @@ export default function CalendarViewScreen() {
   const goToNextMonth = () => { setMonth((m) => (m === 11 ? 0 : m + 1)); setYear((y) => (month === 11 ? y + 1 : y)); };
   const goToToday = () => { const now = new Date(); setYear(now.getFullYear()); setMonth(now.getMonth()); };
 
+  const openReport = (id: number, type: 'CALENDAR' | 'EVENT', label?: string) => {
+    setReportTarget({ id, type, label });
+    setReportOpen(true);
+  };
+
   return (
     <View style={styles.screenWrapper}>
       {!calendar ? (
@@ -90,12 +94,11 @@ export default function CalendarViewScreen() {
       ) : (
         <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
 
-          {/* Calendar Header */}
           <View style={styles.topRow}>
             <Text style={styles.title}>{calendar.name}</Text>
             <Pressable
               style={styles.reportBtn}
-              onPress={() => { setReportTarget({ id: String(calendar.id), type: 'CALENDAR' }); setReportModalVisible(true); }}
+              onPress={() => openReport(calendar.id, 'CALENDAR', calendar.name)}
             >
               <Text style={styles.reportBtnText}>Report</Text>
             </Pressable>
@@ -144,21 +147,21 @@ export default function CalendarViewScreen() {
             </Pressable>
           </View>
 
-          {/* Modals */}
           {calendar && activeEvent && (
             <PublicEventDetailModal
               event={activeEvent}
               onClose={() => setActiveEvent(null)}
-              onReport={() => { setReportTarget({ id: activeEvent.id, type: 'EVENT' }); setReportModalVisible(true); }}
+              onReport={() => openReport(Number(activeEvent.id), 'EVENT', activeEvent.title)}
             />
           )}
 
-          {reportModalVisible && reportTarget && (
+          {reportOpen && reportTarget && (
             <ReportModal
-              visible={reportModalVisible}
-              resourceId={reportTarget.id}
-              resourceType={reportTarget.type}
-              onClose={() => setReportModalVisible(false)}
+              open={reportOpen}
+              onClose={() => setReportOpen(false)}
+              reportedType={reportTarget.type}
+              reportedId={reportTarget.id}
+              reportedLabel={reportTarget.label}
             />
           )}
 

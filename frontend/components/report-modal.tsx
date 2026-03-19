@@ -1,175 +1,204 @@
-import React, { useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   Modal,
-  View,
+  Pressable,
+  ScrollView,
   Text,
-  TouchableOpacity,
   TextInput,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { useReports, ReportReason } from "@/hooks/use-reports";
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useReport, ReportedType, ReportReason } from '@/hooks/use-reports';
+import { reportStyles as styles } from '@/styles/report-styles';
 
-const REASONS: { label: string; value: ReportReason }[] = [
-  { label: "Inappropriate content", value: "INAPPROPRIATE_CONTENT" },
-  { label: "Spam", value: "SPAM" },
-  { label: "Abusive behavior", value: "ABUSIVE_BEHAVIOR" },
-  { label: "Other", value: "OTHER" },
-];
-
-type Props = {
-  visible: boolean;
-  resourceId: string;
-  resourceType: "CALENDAR" | "EVENT";
+interface ReportModalProps {
+  open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
+  reportedType: ReportedType;
+  reportedId: number;
+  reportedLabel?: string;
+}
+
+const REASON_LABELS: Record<ReportReason, string> = {
+  INAPPROPRIATE_CONTENT: 'Inappropriate content',
+  SPAM: 'Spam',
+  HARASSMENT: 'Harassment',
+  OTHER: 'Other',
 };
 
-export function ReportModal({ visible, resourceId, resourceType, onClose }: Props) {
-  const { submitReport, loading } = useReports();
-  const [reason, setReason] = useState<ReportReason | null>(null);
-  const [description, setDescription] = useState("");
+const TYPE_LABELS: Record<ReportedType, string> = {
+  USER: 'user',
+  EVENT: 'event',
+  CALENDAR: 'calendar',
+};
+
+export function ReportModal({
+  open,
+  onClose,
+  onSuccess,
+  reportedType,
+  reportedId,
+  reportedLabel,
+}: ReportModalProps) {
+  const { loading, submitReport, getRemainingCooldown, canReport } = useReport();
+
+  const [reason, setReason] = useState<ReportReason | ''>('');
+  const [description, setDescription] = useState('');
+  const [cooldownMsg, setCooldownMsg] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setReason('');
+    setDescription('');
+    setFieldError(null);
+    setSubmitted(false);
+
+    const remaining = getRemainingCooldown(reportedType, reportedId);
+    if (remaining > 0) {
+      const minutes = Math.ceil(remaining / 60_000);
+      setCooldownMsg(
+        `You have already reported this ${TYPE_LABELS[reportedType]} recently. You can report it again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`
+      );
+    } else {
+      setCooldownMsg(null);
+    }
+  }, [open, reportedType, reportedId, getRemainingCooldown]);
 
   const handleSubmit = async () => {
-    if (!reason) return;
+    if (!reason) {
+      setFieldError('Please select a reason.');
+      return;
+    }
+    if (!reportedType || !reportedId) {
+      setFieldError('Missing report target. Please try again.');
+      return;
+    }
+    setFieldError(null);
+
+    const id = Number(reportedId);
+    const payload: Parameters<typeof submitReport>[0] = {
+      reported_type: reportedType,
+      reason: reason as ReportReason,
+      description: description.trim() || undefined,
+      ...(reportedType === 'USER' && { reported_user: id }),
+      ...(reportedType === 'EVENT' && { reported_event: id }),
+      ...(reportedType === 'CALENDAR' && { reported_calendar: id }),
+    };
 
     try {
-      await submitReport({
-        resource_type: resourceType,
-        resource_id: Number(resourceId),
-        reason,
-        description,
-      });
-
-      Alert.alert(
-        "Report submitted",
-        "Thank you. Our team will review this report.",
-        [{ text: "OK", onPress: onClose }]
-      );
-    } catch {
-      Alert.alert("Error", "Could not submit report.");
+      await submitReport(payload);
+      setSubmitted(true);
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 2500);
+    } catch (err: any) {
+      setFieldError(err?.message ?? 'Something went wrong. Please try again.');
     }
   };
 
+  const isCoolingDown = !canReport(reportedType, reportedId);
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Report {resourceType.toLowerCase()}</Text>
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
 
-          {REASONS.map((r) => (
-            <TouchableOpacity
-              key={r.value}
-              onPress={() => setReason(r.value)}
-              style={[
-                styles.reasonOption,
-                reason === r.value && styles.reasonOptionSelected,
-              ]}
+          {submitted ? (
+            <View style={styles.successContainer}>
+              <View style={styles.successIconWrapper}>
+                <Text style={styles.successIcon}>✓</Text>
+              </View>
+              <Text style={styles.successTitle}>Report submitted!</Text>
+              <Text style={styles.successBody}>
+                Thank you for helping us keep the community safe. We will review
+                your report as soon as possible.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text style={styles.reasonLabel}>{r.label}</Text>
-            </TouchableOpacity>
-          ))}
+              <Text style={styles.title}>
+                Report {TYPE_LABELS[reportedType]}
+                {reportedLabel ? ` · ${reportedLabel}` : ''}
+              </Text>
 
-          {reason === "OTHER" && (
-            <TextInput
-              placeholder="Describe the issue"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              style={styles.descriptionInput}
-            />
+              {isCoolingDown && cooldownMsg ? (
+                <View style={styles.noticeBox}>
+                  <Text style={styles.noticeIcon}>⏳</Text>
+                  <Text style={styles.noticeText}>{cooldownMsg}</Text>
+                </View>
+              ) : (
+                <>
+                  {(Object.keys(REASON_LABELS) as ReportReason[]).map((r) => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[
+                        styles.reasonOption,
+                        reason === r && styles.reasonOptionSelected,
+                      ]}
+                      onPress={() => setReason(r)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.reasonLabel}>{REASON_LABELS[r]}</Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  <TextInput
+                    style={styles.descriptionInput}
+                    placeholder="Additional description (optional)…"
+                    placeholderTextColor="#10464D80"
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    maxLength={500}
+                    textAlignVertical="top"
+                  />
+                  <Text style={styles.charCount}>{description.length}/500</Text>
+
+                  {fieldError && (
+                    <Text style={styles.errorText}>⚠ {fieldError}</Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={[
+                      styles.submitBtn,
+                      (loading || !reason) && styles.submitBtnDisabled,
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={loading || !reason}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.submitBtnText}>
+                      {loading ? 'Sending…' : 'Submit report'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={onClose}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
           )}
 
-          <TouchableOpacity
-            onPress={handleSubmit}
-            disabled={!reason || loading}
-            style={styles.submitBtn}
-          >
-            <Text style={styles.submitBtnText}>Submit Report</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  card: {
-    width: "90%",
-    maxWidth: 440,
-    backgroundColor: "#f7f6f2",
-    borderRadius: 16,
-    padding: 20,
-    gap: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#10464D",
-    marginBottom: 12,
-  },
-  reasonOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "rgba(16,70,77,0.15)",
-    marginBottom: 10,
-  },
-  reasonOptionSelected: {
-    backgroundColor: "#10464d15",
-  },
-  reasonLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#10464D",
-  },
-  descriptionInput: {
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    minHeight: 80,
-    fontSize: 14,
-    color: "#10464D",
-    marginBottom: 12,
-  },
-  submitBtn: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: "#10464D",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  submitBtnText: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#fff",
-  },
-  cancelBtn: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#10464D",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cancelBtnText: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: "#10464D",
-  },
-});
