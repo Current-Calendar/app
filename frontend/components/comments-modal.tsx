@@ -48,6 +48,7 @@ export default function CommentsModal({
   const [loadingRepliesByRoot, setLoadingRepliesByRoot] = useState<Record<number, boolean>>({});
 
   const currentUserId = apiClient.user?.id ? Number(apiClient.user.id) : null;
+  const hasImage = !!event?.image && String(event.image).trim() !== "";
 
   useEffect(() => {
     if (visible && event) {
@@ -256,7 +257,7 @@ export default function CommentsModal({
             <View style={styles.commentLeft}>
               <Image
                 source={{
-                uri: reply.author_avatar || getAvatarUrl(reply.author_username),
+                  uri: reply.author_avatar || getAvatarUrl(reply.author_username),
                 }}
                 style={styles.commentAvatar}
               />
@@ -317,7 +318,7 @@ export default function CommentsModal({
             <Image
               source={{
                 uri: item.author_avatar || getAvatarUrl(item.author_username),
-                }}
+              }}
               style={styles.commentAvatar}
             />
 
@@ -367,7 +368,7 @@ export default function CommentsModal({
               <Text style={styles.viewRepliesText}>
                 {repliesOpen
                   ? "Hide Replies"
-                  : `View ${
+                  : `View ${item.replies_count} ${
                       item.replies_count === 1 ? "Reply" : "Replies"
                     }`}
               </Text>
@@ -396,17 +397,33 @@ export default function CommentsModal({
     <>
       <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
         <Pressable style={styles.overlay} onPress={() => setOpenMenuId(null)}>
-          <Pressable style={styles.container} onPress={() => setOpenMenuId(null)}>
+          <Pressable
+            style={[
+              styles.container,
+              !hasImage && styles.containerNoImage,
+            ]}
+            onPress={() => setOpenMenuId(null)}
+          >
             <Pressable onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeText}>✕</Text>
             </Pressable>
 
-            <Image source={{ uri: event?.image }} style={styles.image} />
+            {hasImage && (
+              <Image
+                source={{ uri: event.image }}
+                style={styles.image}
+              />
+            )}
 
-            <View style={styles.right}>
+            <View
+              style={[
+                styles.right,
+                !hasImage && styles.rightNoImage,
+              ]}
+            >
               <View style={styles.header}>
                 <Text style={styles.title} numberOfLines={2}>
-                  {event?.title}
+                  {event?.title || "Comments"}
                 </Text>
                 <View style={styles.divider} />
               </View>
@@ -530,6 +547,13 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  containerNoImage: {
+    width: "56%",
+    minWidth: 420,
+    maxWidth: 700,
+    height: "75%",
+  },
+
   closeBtn: {
     position: "absolute",
     top: 14,
@@ -559,6 +583,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     justifyContent: "space-between",
     backgroundColor: BG,
+  },
+
+  rightNoImage: {
+    width: "100%",
   },
 
   header: {
