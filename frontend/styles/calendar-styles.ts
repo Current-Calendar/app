@@ -452,7 +452,7 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
   },
   subscribeBtn: {
     flexDirection: 'row',
@@ -464,6 +464,18 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   subscribedBtn: {
     backgroundColor: "#9E9E9E",
+  },
+  commentBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 10,
+  paddingHorizontal: 2,
+  },
+
+  commentBtnText: {
+    color: "#10464d",
+    fontWeight: "600",
+    fontSize: 14,
   },
   btnIcon: {
     marginRight: 4,

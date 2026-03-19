@@ -28,11 +28,12 @@ const WHITE = "#FFFFFF";
 const BORDER = "#EAEAEA";
 const MUTED = "#7A7468";
 const DANGER = "#C75146";
+const FALLBACK_IMAGE = "https://picsum.photos/seed/calendar-comments/800/800";
 
-export default function CommentsModal({
+export default function CommentsModalC({
   visible,
   onClose,
-  event,
+  calendar,
 }: any) {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [text, setText] = useState("");
@@ -50,7 +51,7 @@ export default function CommentsModal({
   const currentUserId = apiClient.user?.id ? Number(apiClient.user.id) : null;
 
   useEffect(() => {
-    if (visible && event) {
+    if (visible && calendar) {
       loadComments();
     }
 
@@ -67,7 +68,7 @@ export default function CommentsModal({
       setRepliesByRoot({});
       setLoadingRepliesByRoot({});
     }
-  }, [visible, event]);
+  }, [visible, calendar]);
 
   const rootComments = useMemo(
     () => comments.filter((c) => c.parent == null),
@@ -78,13 +79,13 @@ export default function CommentsModal({
     `https://i.pravatar.cc/100?u=${username || "user"}`;
 
   const loadComments = async () => {
-    if (!event?.id) return;
+    if (!calendar?.id) return;
 
     try {
       setLoading(true);
       const res = await getComments({
-        targetType: "EVENT",
-        targetId: Number(event.id),
+        targetType: "CALENDAR",
+        targetId: Number(calendar.id),
       });
       setComments(res.results || []);
     } catch (e) {
@@ -133,14 +134,14 @@ export default function CommentsModal({
   };
 
   const handleSubmit = async () => {
-    if (!text.trim() || !event?.id || sending) return;
+    if (!text.trim() || !calendar?.id || sending) return;
 
     try {
       setSending(true);
 
       await createComment({
-        targetType: "EVENT",
-        targetId: Number(event.id),
+        targetType: "CALENDAR",
+        targetId: Number(calendar.id),
         body: text.trim(),
         parentId: replyTo?.id,
       });
@@ -256,7 +257,7 @@ export default function CommentsModal({
             <View style={styles.commentLeft}>
               <Image
                 source={{
-                uri: reply.author_avatar || getAvatarUrl(reply.author_username),
+                  uri: reply.author_avatar || getAvatarUrl(reply.author_username),
                 }}
                 style={styles.commentAvatar}
               />
@@ -286,7 +287,7 @@ export default function CommentsModal({
                     onPress={() => askDeleteComment(reply.id)}
                     style={styles.menuItem}
                   >
-                    <Text style={styles.menuDeleteText}>Delete Comment</Text>
+                    <Text style={styles.menuDeleteText}>Delete comment</Text>
                   </Pressable>
                 </View>
               )}
@@ -317,7 +318,7 @@ export default function CommentsModal({
             <Image
               source={{
                 uri: item.author_avatar || getAvatarUrl(item.author_username),
-                }}
+              }}
               style={styles.commentAvatar}
             />
 
@@ -346,7 +347,7 @@ export default function CommentsModal({
                   onPress={() => askDeleteComment(item.id)}
                   style={styles.menuItem}
                 >
-                  <Text style={styles.menuDeleteText}>Delete Comment</Text>
+                  <Text style={styles.menuDeleteText}>Delete comment</Text>
                 </Pressable>
               </View>
             )}
@@ -366,9 +367,9 @@ export default function CommentsModal({
             >
               <Text style={styles.viewRepliesText}>
                 {repliesOpen
-                  ? "Hide Replies"
+                  ? "Hide replies"
                   : `View ${
-                      item.replies_count === 1 ? "Reply" : "Replies"
+                      item.replies_count === 1 ? "reply" : "replies"
                     }`}
               </Text>
             </Pressable>
@@ -401,12 +402,24 @@ export default function CommentsModal({
               <Text style={styles.closeText}>✕</Text>
             </Pressable>
 
-            <Image source={{ uri: event?.image }} style={styles.image} />
+            {calendar?.cover ? (
+            <Image
+                source={{ uri: calendar.cover }}
+                style={styles.image}
+            />
+            ) : (
+            <View
+                style={[
+                styles.image,
+                { backgroundColor: calendar?.color || "#ccc" },
+                ]}
+            />
+            )}
 
             <View style={styles.right}>
               <View style={styles.header}>
                 <Text style={styles.title} numberOfLines={2}>
-                  {event?.title}
+                  {calendar?.name || "Comments"}
                 </Text>
                 <View style={styles.divider} />
               </View>

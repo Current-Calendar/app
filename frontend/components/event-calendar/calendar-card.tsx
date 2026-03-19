@@ -7,6 +7,7 @@ interface CalendarCardProps {
   calendar: Calendar;
   onPress: (id: string) => void;
   onSubscribe: (id: string) => void;
+  onComment: (id: string) => void;
   isSubscribed?: boolean;
 }
 
@@ -14,6 +15,7 @@ export default function CalendarCard({
   calendar,
   onPress,
   onSubscribe,
+  onComment,
   isSubscribed = false,
 }: CalendarCardProps) {
   const privacyIcon: Record<string, any> = {
@@ -74,6 +76,24 @@ export default function CalendarCard({
         </Text>
 
         <View style={eventCalendarCalendarCardStyles.footer}>
+          <Pressable
+            style={eventCalendarCalendarCardStyles.commentBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onComment(calendar.id);
+            }}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={18}
+              color="#10464d"
+              style={eventCalendarCalendarCardStyles.btnIcon}
+            />
+            <Text style={eventCalendarCalendarCardStyles.commentBtnText}>
+              Comment
+            </Text>
+          </Pressable>
+
           <Pressable
             style={[
               eventCalendarCalendarCardStyles.subscribeBtn,

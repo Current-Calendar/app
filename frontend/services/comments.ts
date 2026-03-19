@@ -1,9 +1,6 @@
 import apiClient from "./api-client";
 import { CommentsResponse } from "@/types/comments";
 
-/**
- * 🔹 Obtener comentarios (roots)
- */
 export const getComments = async ({
   targetType,
   targetId,
@@ -18,9 +15,6 @@ export const getComments = async ({
   return apiClient.get<CommentsResponse>(url);
 };
 
-/**
- * 🔹 Obtener replies de un comentario root
- */
 export const getReplies = async ({
   rootId,
   cursor,
@@ -33,9 +27,6 @@ export const getReplies = async ({
   return apiClient.get<CommentsResponse>(url);
 };
 
-/**
- * 🔹 Crear comentario (root o reply)
- */
 export const createComment = async ({
   targetType,
   targetId,
@@ -55,9 +46,6 @@ export const createComment = async ({
   });
 };
 
-/**
- * 🔹 Borrar comentario
- */
 export const deleteComment = async (commentId: number) => {
   return apiClient.delete(`/comments/${commentId}/delete/`);
 };
