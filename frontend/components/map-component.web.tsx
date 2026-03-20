@@ -51,7 +51,7 @@ export default function MapComponent({ location, events }: { location: any; even
     return require("react-leaflet");
   }, [isBrowser]);
 
-  const L = useMemo(() => {
+  const leaflet = useMemo(() => {
     if (!isBrowser) return null;
     return require("leaflet");
   }, [isBrowser]);
@@ -65,7 +65,7 @@ export default function MapComponent({ location, events }: { location: any; even
 
   // ðŸ“ Icono normal
   const defaultIcon = useMemo(() => {
-    if (!L) return null;
+    if (!leaflet) return null;
     const markerUri = Asset.fromModule(require("../assets/images/marcador_evento.png")).uri;
     const markerRetinaUri = Asset.fromModule(require("../assets/images/marcador_evento_2x.png")).uri;
 
@@ -80,7 +80,7 @@ export default function MapComponent({ location, events }: { location: any; even
 
   // â­ Icono estrella para el evento mÃ¡s cercano
   const starIcon = useMemo(() => {
-    if (!L) return null;
+    if (!leaflet) return null;
     const starUri = Asset.fromModule(require("../assets/images/star_marker.png")).uri;
 
     return new leaflet.Icon({
@@ -93,7 +93,7 @@ export default function MapComponent({ location, events }: { location: any; even
 
   // ðŸ“ Icono posiciÃ³n usuario
   const yourPositionIcon = useMemo(() => {
-    if (!L) return null;
+    if (!leaflet) return null;
     const markerUri = Asset.fromModule(require("../assets/images/position_icon.png")).uri;
 
     return new leaflet.Icon({
@@ -116,7 +116,7 @@ export default function MapComponent({ location, events }: { location: any; even
     setSelectedEvent(null);
   };
 
-  if (!isBrowser || !leafletReact || !L || !defaultIcon || !starIcon || !yourPositionIcon) {
+  if (!isBrowser || !leafletReact || !leaflet || !defaultIcon || !starIcon || !yourPositionIcon) {
     return null;
   }
 

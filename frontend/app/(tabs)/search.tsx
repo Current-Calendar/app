@@ -237,7 +237,7 @@ export default function SearchScreen() {
                                                 styles.highlightText
                                             )}
                                             {descriptionMatches && !titleMatches && (
-                                                <Text style={styles.matchTag}>Coincide en descripción</Text>
+                                                <Text style={styles.matchTag}>Matches description</Text>
                                             )}
                                         </View>
                                     )}
@@ -278,7 +278,7 @@ export default function SearchScreen() {
                                                 styles.highlightText
                                             )}
                                             {eventDescriptionMatches && !eventTitleMatches && (
-                                                <Text style={styles.matchTag}>Coincide en descripción</Text>
+                                                <Text style={styles.matchTag}>Matches description</Text>
                                             )}
                                         </View>
                                     )}
