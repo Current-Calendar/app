@@ -809,6 +809,7 @@ class EditEventTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+<<<<<<< feature/rsvp-back
         
 
 # ── Test Constants ──
@@ -990,3 +991,39 @@ class RSVPEventTests(APITestCase):
         self.assertGreater(len(response.data['attendees']), 0)
         responded_at = response.data['attendees'][0]['respondedAt']
         self._validate_iso_datetime(responded_at)
+=======
+
+class CreateEventDuplicateTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="eventuser",
+            email="event@test.com",
+            password="pass123"
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Mi calendario",
+            privacy="PUBLIC",
+            creator=self.user
+        )
+
+        self.client.force_authenticate(self.user)
+
+        self.payload = {
+            "title": "Evento test",
+            "date": "2025-01-01",
+            "time": "10:00:00",
+            "calendars": [self.calendar.id]
+        }
+
+    def test_no_permite_eventos_duplicados_misma_fecha_y_hora(self):
+
+        response1 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Ya tienes un evento creado para esa fecha y hora.", response2.json()["errors"])
+>>>>>>> main

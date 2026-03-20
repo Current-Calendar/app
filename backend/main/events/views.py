@@ -42,6 +42,16 @@ def create_event(request):
             {"errors": ["El campo 'time' es obligatorio."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    if Event.objects.filter(
+        creator=creator,
+        date=date,
+        time=time
+    ).exists():
+        return Response(
+            {"errors": ["Ya tienes un evento creado para esa fecha y hora."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if not calendars_ids or not isinstance(calendars_ids, list):
         return Response(
@@ -281,7 +291,7 @@ def list_events_from_calendar(request):
     Query parameters:
         calendarId (int) -- filter by calendar ID
     """
-    queryset = Event.objects.all()
+    queryset = Event.objects.all().order_by('-created_at')
     calendar_id = request.GET.get('calendarId')
 
     if calendar_id:
