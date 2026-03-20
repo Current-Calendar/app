@@ -4,7 +4,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("main", "0002_report"),
+        ("main", "0004_calendar_cover"),
     ]
 
     operations = [
