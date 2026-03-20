@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
-from main.models import User, Calendar
+from main.models import User, Calendar, CalendarLike
 
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
@@ -131,14 +131,14 @@ class CrearCalendarTests(APITestCase):
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El campo 'name' es obligatorio.", response.json()["errors"])
+        self.assertIn("El campo 'name' es obligatorio y no puede estar vacío.", response.json()["errors"])
 
     # ------------------------------------------------------------------
-    # Casos de error — restricción de unicidad PRIVADO
+    # Casos exitosos adicionales
     # ------------------------------------------------------------------
 
-    def test_error_segundo_calendario_privado_mismo_user(self):
-        """Devuelve 400 si el user intenta crear un segundo calendar PRIVADO."""
+    def test_segundo_calendario_privado_mismo_user_exitoso(self):
+        """Permite crear más de un calendar PRIVADO para el mismo user."""
         self.client.force_authenticate(self.user)
 
         # Primer calendar privado (OK)
@@ -155,8 +155,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El usuario ya tiene un calendario privado.", response.json()["errors"])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["privacy"], "PRIVATE")
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
@@ -228,7 +228,56 @@ class CrearCalendarTests(APITestCase):
 
         response = self.client.get(CALENDAR_ENDPOINT_CREATE)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
+    #mas casos
+    def test_error_name_solo_espacios(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("no puede estar vacío", response.json()["errors"][0])
+
+    def test_error_description_no_es_string(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar válido",
+            "description": 123
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.json()["errors"][0])
+
+    def test_error_privacy_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "privacy": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("privacy", response.json()["errors"][0])
+
+    def test_error_origin_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "origin": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("origin", response.json()["errors"][0])
+
+    def test_name_se_trimea_correctamente(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   Calendar limpio   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "Calendar limpio")
+            
 
 class EliminarCalendarTestCase(APITestCase):
     def setUp(self):
@@ -624,3 +673,224 @@ class PublishCalendarTests(APITestCase):
 
         response = self.client.post(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class CalendarLikesTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner_like",
+            email="owner_like@example.com",
+            password="pass1234",
+        )
+        self.liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass1234",
+        )
+        self.calendar = Calendar.objects.create(
+            name="Public calendar",
+            privacy="PUBLIC",
+            creator=self.owner,
+        )
+
+    def test_like_toggle_updates_counter(self):
+        self.client.force_authenticate(user=self.liker)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 1)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 0)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 0)
+
+    def test_like_is_auto_removed_after_losing_access(self):
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+
+        self.calendar.privacy = "PRIVATE"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.client.force_authenticate(user=self.liker)
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 0)
+        self.assertFalse(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+
+    def test_list_calendars_includes_like_state(self):
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+
+        self.client.force_authenticate(user=self.liker)
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item = next(cal for cal in response.json() if cal["id"] == self.calendar.id)
+        self.assertTrue(item["liked_by_me"])
+        self.assertEqual(item["likes_count"], 1)
+
+    def test_privacy_change_to_private_cleans_non_creator_likes(self):
+        another_user = User.objects.create_user(
+            username="another_liker",
+            email="another_liker@example.com",
+            password="pass1234",
+        )
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+        CalendarLike.objects.create(user=another_user, calendar=self.calendar)
+        CalendarLike.objects.create(user=self.owner, calendar=self.calendar)
+
+        self.calendar.privacy = "PRIVATE"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.owner, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=another_user, calendar=self.calendar).exists()
+        )
+
+    def test_privacy_change_to_friends_keeps_only_mutual_friends(self):
+        mutual_friend = User.objects.create_user(
+            username="mutual_friend",
+            email="mutual_friend@example.com",
+            password="pass1234",
+        )
+        outsider = User.objects.create_user(
+            username="outsider",
+            email="outsider@example.com",
+            password="pass1234",
+        )
+        self.owner.following.add(mutual_friend)
+        mutual_friend.following.add(self.owner)
+
+        CalendarLike.objects.create(user=mutual_friend, calendar=self.calendar)
+        CalendarLike.objects.create(user=outsider, calendar=self.calendar)
+        CalendarLike.objects.create(user=self.owner, calendar=self.calendar)
+
+        self.calendar.privacy = "FRIENDS"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 2)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=mutual_friend, calendar=self.calendar).exists()
+        )
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.owner, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=outsider, calendar=self.calendar).exists()
+        )
+SHARE_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/share/"
+SHARE_HTML_ENDPOINT = "/share/calendar/{}/"
+
+class GetCalendarShareInfoTests(APITestCase):
+    """Tests for GET /api/v1/calendars/<id>/share/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="shareuser",
+            email="share@example.com",
+            password="sharepass123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="otherpass123",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="Public Cal",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Private Cal",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+
+    def test_get_share_info_authenticated(self):
+        """Returns share info for an accessible calendar."""
+        self.client.force_authenticate(self.user)
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['calendar_id'], self.public_calendar.id)
+        self.assertEqual(data['name'], 'Public Cal')
+        self.assertIn('share_url', data)
+        self.assertIn('deep_link', data)
+        self.assertIn(f'/share/calendar/{self.public_calendar.id}/', data['share_url'])
+        self.assertIn(f'calendarId={self.public_calendar.id}', data['deep_link'])
+
+    def test_get_share_info_unauthenticated(self):
+        """Unauthenticated users cannot access share info."""
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_share_info_nonexistent_calendar(self):
+        """Returns 404 for a nonexistent calendar."""
+        self.client.force_authenticate(self.user)
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(99999))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ShareCalendarHtmlTests(TestCase):
+    """Tests for GET /share/calendar/<id>/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="htmluser",
+            email="html@example.com",
+            password="htmlpass123",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="My Public Calendar",
+            description="A great calendar",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Private Cal",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+
+    def test_share_html_public_calendar(self):
+        """Returns HTML with OG tags for a public calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('text/html', response['Content-Type'])
+        content = response.content.decode()
+        self.assertIn('My Public Calendar', content)
+        self.assertIn('og:title', content)
+        self.assertIn('htmluser', content)
+
+    def test_share_html_private_calendar_returns_403(self):
+        """Returns 403 for a private calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(self.private_calendar.id))
+        self.assertEqual(response.status_code, 403)
+
+    def test_share_html_nonexistent_calendar(self):
+        """Returns 404 for a nonexistent calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
+        self.assertEqual(response.status_code, 404)

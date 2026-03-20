@@ -19,8 +19,8 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function CalendarsScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const hasSession = isAuthenticated || Boolean(user);
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
@@ -74,6 +74,8 @@ export default function CalendarsScreen() {
       creator: c.creator_username || "unknown",
       color: COLORS[index % COLORS.length],
       cover: c.cover || null,
+      likes_count: c.likes_count,
+      liked_by_me : c.liked_by_me || false
     }));
 
     setCalendars(mappedCalendars);
@@ -82,6 +84,29 @@ export default function CalendarsScreen() {
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
   };
+  
+  const handleLike = async (id: string) => {
+    try {
+    const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
+    setCalendars((prev) =>
+      prev.map((calendar) => {
+        if (calendar.id === id) {
+          return {
+            ...calendar,
+            liked_by_me: res.liked,
+            likes_count: res.liked 
+              ? calendar.likes_count + 1 
+              : calendar.likes_count - 1,
+          };
+        }
+        return calendar;
+      })
+    );
+  } catch (error) {
+    Alert.alert("Error", "Could not like this calendar.");
+    console.error("Like error:", error);
+  }
+};
 
   const handleOpenCalendarComments = (id: string) => {
     const found = calendars.find((c) => c.id === id);
@@ -130,21 +155,29 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        <View style={styles.authHeader}>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => router.push("/login")}
-          >
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
+        {!authLoading && !hasSession && (
+          <View style={styles.authHeader}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/login');
+              }}
+            >
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.registerButton}
-            onPress={() => router.push("/register")}
-          >
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/register');
+              }}
+            >
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
@@ -155,6 +188,7 @@ export default function CalendarsScreen() {
             <CalendarCard
               calendar={item}
               onPress={handleOpenCalendar}
+              onLike={handleLike}
               onSubscribe={handleSubscribe}
               onComment={handleOpenCalendarComments}
               isSubscribed={subscribedCalendarIds.includes(item.id)}

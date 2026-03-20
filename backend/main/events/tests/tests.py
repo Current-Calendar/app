@@ -1,8 +1,8 @@
 import datetime
-from datetime import date, time
+from datetime import date, time, datetime as dt
 from rest_framework.test import APITestCase
 from rest_framework import status
-from main.models import User, Calendar, Event
+from main.models import User, Calendar, Event, EventAttendance
 
 ENDPOINT_EVENTOS = "/api/v1/events/"
 EDIT_EVENT_ENDPOINT = "/api/v1/events/{}/edit/"
@@ -808,4 +808,218 @@ class EditEventTests(APITestCase):
             {"title": "No permitido"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)        
+
+# ── Test Constants ──
+TEST_PASSWORD = 'testpass123'
+TEST_USERNAME_1 = 'user_rsvp1'
+TEST_USERNAME_2 = 'user_rsvp2'
+TEST_EMAIL_1 = 'rsvp1@test.com'
+TEST_EMAIL_2 = 'rsvp2@test.com'
+EVENT_TITLE = 'RSVP Test Event'
+EVENT_DATE = date(2026, 4, 15)
+EVENT_TIME = time(18, 0)
+RSVP_ENDPOINT_TEMPLATE = '/api/v1/events/{}/rsvp/'
+EVENT_DETAIL_ENDPOINT_TEMPLATE = '/api/v1/events/{}/edit/'
+NONEXISTENT_EVENT_ID = 999999
+
+
+class RSVPEventTests(APITestCase):
+    """Tests para endpoint RSVP de eventos."""
+
+    def setUp(self):
+        """Crear usuarios y evento para tests."""
+        self.user1 = User.objects.create_user(
+            username=TEST_USERNAME_1,
+            email=TEST_EMAIL_1,
+            password=TEST_PASSWORD
+        )
+        self.user2 = User.objects.create_user(
+            username=TEST_USERNAME_2,
+            email=TEST_EMAIL_2,
+            password=TEST_PASSWORD
+        )
+        self.event = Event.objects.create(
+            title=EVENT_TITLE,
+            date=EVENT_DATE,
+            time=EVENT_TIME,
+            creator=self.user1
+        )
+
+    @staticmethod
+    def _validate_iso_datetime(datetime_str):
+        """Validar que una cadena sea ISO 8601 válido.
+
+        Args:
+            datetime_str: String en formato ISO 8601.
+
+        Raises:
+            AssertionError: Si el formato no es ISO 8601 válido.
+        """
+        try:
+            normalized = datetime_str.replace('Z', '+00:00')
+            dt.fromisoformat(normalized)
+        except ValueError as exc:
+            raise AssertionError(f"Formato ISO 8601 inválido: {datetime_str}") from exc
+
+    def test_rsvp_no_auth(self):
+        """Test: RSVP sin autenticación retorna 401."""
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_rsvp_event_not_found(self):
+        """Test: RSVP a evento inexistente retorna 404."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(NONEXISTENT_EVENT_ID),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rsvp_missing_status(self):
+        """Test: RSVP sin status retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_invalid_status(self):
+        """Test: RSVP con status inválido retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'INVALID'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_pending_rejected(self):
+        """Test: RSVP con status PENDING retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'PENDING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_create_assisting(self):
+        """Test: Crear RSVP ASSISTING retorna 200 con respondedAt ISO."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        self.assertIn('respondedAt', response.data)
+        self._validate_iso_datetime(response.data['respondedAt'])
+
+    def test_rsvp_create_not_assisting(self):
+        """Test: Crear RSVP NOT_ASSISTING retorna 200."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'NOT_ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'NOT_ASSISTING')
+
+    def test_rsvp_update_existing(self):
+        """Test: Actualizar RSVP existente no duplica registros."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        count = EventAttendance.objects.filter(
+            user=self.user1,
+            event=self.event
+        ).count()
+        self.assertEqual(count, 1)
+
+    def test_event_detail_attendees_only_assisting(self):
+        """Test: GET evento expone solo attendees con status ASSISTING."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        EventAttendance.objects.create(
+            user=self.user2,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        response = self.client.get(
+            EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['attendees']), 1)
+        self.assertEqual(response.data['attendees'][0]['name'], TEST_USERNAME_1)
+
+    def test_attendee_responded_at_iso(self):
+        """Test: respondedAt en attendees siempre es ISO 8601."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        response = self.client.get(
+            EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
+        )
+        self.assertIn('attendees', response.data)
+        self.assertGreater(len(response.data['attendees']), 0)
+        responded_at = response.data['attendees'][0]['respondedAt']
+        self._validate_iso_datetime(responded_at)
+
+class CreateEventDuplicateTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="eventuser",
+            email="event@test.com",
+            password="pass123"
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Mi calendario",
+            privacy="PUBLIC",
+            creator=self.user
+        )
+
+        self.client.force_authenticate(self.user)
+
+        self.payload = {
+            "title": "Evento test",
+            "date": "2025-01-01",
+            "time": "10:00:00",
+            "calendars": [self.calendar.id]
+        }
+
+    def test_no_permite_eventos_duplicados_misma_fecha_y_hora(self):
+
+        response1 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Ya tienes un evento creado para esa fecha y hora.", response2.json()["errors"])

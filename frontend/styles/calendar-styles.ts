@@ -467,6 +467,20 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  likeBtn: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 16,
+    marginLeft: 8,
+  },
+  likeBtnIcon: {
+    color: 'lightcoral'
+  },
+  likeBtnText: {
+    fontSize: 16,
+    fontWeight: '100',
+    alignSelf: 'center'
+  },
   subscribeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -728,6 +742,24 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#B33F37',
+  },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  shareButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10464d',
   },
 });
 

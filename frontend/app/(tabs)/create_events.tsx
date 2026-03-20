@@ -664,14 +664,24 @@ export default function CreateEventsScreen() {
               <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
             </View>
 
-            <Pressable
-              style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
-              onPress={publish}
-              disabled={publishing}
-            >
-              {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
-            </Pressable>
+            <View style={{ flexDirection: "row", justifyContent: "center",alignItems: "center", gap: 12, marginTop: 14 }}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={goBackOrCalendars}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
+                onPress={publish}
+                disabled={publishing}
+              >
+                {publishing
+                  ? <ActivityIndicator color="#EAF7F6" />
+                  : <Text style={styles.publishText}>Publish</Text>}
+              </Pressable>
 
+            </View>
             <View style={{ height: 40 }} />
           </View>
         </View>
@@ -953,19 +963,13 @@ const styles = StyleSheet.create({
   calendarCenterWrap: { marginTop: 12, alignItems: "center", justifyContent: "center" },
 
   publishBtn: {
-    marginTop: 14,
-    alignSelf: "center",
-    width: 170,
+    flex: 1,
     paddingVertical: 12,
     borderRadius: 18,
     backgroundColor: TEAL,
     borderWidth: 2,
     borderColor: "#0B3D3D",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    alignItems: "center",
   },
   publishBtnDisabled: { opacity: 0.65 },
   publishText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900", fontSize: 16 },
@@ -1143,5 +1147,17 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
-  },
+  },cancelBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 18,
+  backgroundColor: "#fff",
+  borderWidth: 2,
+  borderColor: "#10464D",
+  alignItems: "center",
+},cancelText: {
+  color: "#10464D",
+  fontWeight: "900",
+  fontSize: 16,
+},
 });
