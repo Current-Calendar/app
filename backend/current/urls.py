@@ -79,6 +79,7 @@ urlpatterns = [
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
 ]
 
 

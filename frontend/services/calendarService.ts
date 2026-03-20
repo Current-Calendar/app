@@ -7,7 +7,6 @@ import apiClient from "./api-client";
 
 const RAW_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL!;
 const API_URL = RAW_BACKEND_URL.endsWith('/') ? RAW_BACKEND_URL : RAW_BACKEND_URL + '/';
-
 const getAuthHeaders = (): Record<string, string> => {
   const token = apiClient.getAccessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
