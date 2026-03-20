@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from ..models import User
+from ..models import Notification, User
 from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer, EditProfileSerializer
 from rest_framework import status
 from django.db.models import Q
@@ -57,6 +57,14 @@ def follow_or_unfollow_user(request, pk):
     else:
         user.following.add(user_to_follow)
         followed = True
+
+    if followed:
+        Notification.objects.create(
+            recipient=user_to_follow,
+            sender=user,
+            type='NEW_FOLLOWER',
+            message=f"{user.username} has started following you."
+        )
 
     return Response({
         "user_id": user_to_follow.pk,

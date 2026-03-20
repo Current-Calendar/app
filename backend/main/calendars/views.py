@@ -1,4 +1,5 @@
 import datetime
+import html as html_lib
 import requests
 import socket
 import ipaddress
@@ -8,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendar, Event, User
+from main.models import Calendar, Event, User, Notification
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -133,15 +134,11 @@ def create_calendar(request):
         cover=request.FILES.get('cover')
     )
 
-    CONSTRAINT_PRIVADO = "unique_private_calendar_per_user"
-
     try:
         calendar.full_clean()
         with transaction.atomic():
             calendar.save()
     except ValidationError as exc:
-        # full_clean() / validate_constraints() puede lanzar ValidationError
-        # cuando se viola el UniqueConstraint condicional (privacy=PRIVADO).
         raw_messages = []
         if hasattr(exc, "message_dict"):
             for field_errors in exc.message_dict.values():
@@ -149,19 +146,13 @@ def create_calendar(request):
         if not raw_messages and getattr(exc, "messages", None):
             raw_messages.extend(exc.messages)
 
-        if any(CONSTRAINT_PRIVADO in str(m) for m in raw_messages):
-            return Response(
-                {"errors": ["El usuario ya tiene un calendario privado."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         return Response(
             {"errors": raw_messages or ["Datos inválidos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
     except IntegrityError:
         return Response(
-            {"errors": ["El usuario ya tiene un calendario privado."]},
+            {"errors": ["No se pudo crear el calendario por una restricción de datos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -261,6 +252,13 @@ def subscribe_calendar(request, calendar_id):
         return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
     else:
         user.subscribed_calendars.add(calendar)
+        Notification.objects.create(
+            recipient=calendar.creator,
+            sender=user,
+            type= 'CALENDAR_FOLLOW',
+            message=f"{user.username} has subscribed to '{calendar.name}'.",
+            related_calendar=calendar
+        )
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
 
 
@@ -592,6 +590,111 @@ def ics_import(request):
         event.calendars.add(calendar)
 
     return Response({"message": "Archivo ICS importado exitosamente"}, headers={"Access-Control-Allow-Origin": "*"})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_calendar_share_info(request, calendar_id):
+    """Returns shareable link info for a calendar."""
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    share_url = request.build_absolute_uri(f'/share/calendar/{calendar_id}/')
+    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+
+    return Response({
+        'calendar_id': calendar.id,
+        'name': calendar.name,
+        'description': calendar.description,
+        'cover': request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+        'privacy': calendar.privacy,
+        'creator_username': calendar.creator.username,
+        'share_url': share_url,
+        'deep_link': deep_link,
+    })
+
+
+def share_calendar_html(request, calendar_id):
+    """Serve an HTML page with Open Graph meta tags for rich link previews."""
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    if calendar.privacy == 'PRIVATE':
+        return HttpResponse(
+            "<h1>This calendar is private</h1>",
+            status=403,
+            content_type='text/html'
+        )
+
+    _default_og_image = (
+        getattr(settings, 'SHARE_OG_IMAGE_FALLBACK', None)
+        or request.build_absolute_uri('/static/images/og-default.png')
+    )
+    if calendar.cover:
+        raw_cover_url = request.build_absolute_uri(calendar.cover.url)
+        is_local = raw_cover_url.startswith('http://localhost') or raw_cover_url.startswith('http://127.')
+        # visual_cover: always show the real photo in the page
+        visual_cover_url = raw_cover_url
+        # og_cover: use fallback when local (WhatsApp/Telegram can't reach localhost)
+        og_cover_url = raw_cover_url if not is_local else _default_og_image
+    else:
+        visual_cover_url = ''
+        og_cover_url = _default_og_image
+    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    page_url = request.build_absolute_uri()
+
+    safe_name = html_lib.escape(calendar.name)
+    safe_desc = html_lib.escape(calendar.description or 'View this calendar on Current Calendar')
+    safe_creator = html_lib.escape(calendar.creator.username)
+    safe_visual_cover = html_lib.escape(visual_cover_url)
+    safe_og_cover = html_lib.escape(og_cover_url)
+    safe_deep_link = html_lib.escape(deep_link)
+    safe_page_url = html_lib.escape(page_url)
+
+    cover_html = f'<img class="cover" src="{safe_visual_cover}" alt="{safe_name}">' if visual_cover_url else '<div class="cover-placeholder">📅</div>'
+    desc_html = f'<p class="description">{safe_desc}</p>' if calendar.description else ''
+    og_image_html = f'<meta property="og:image" content="{safe_og_cover}"><meta name="twitter:image" content="{safe_og_cover}">'
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe_name} · Current Calendar</title>
+  <meta property="og:title" content="{safe_name}">
+  <meta property="og:description" content="{safe_desc}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{safe_page_url}">
+  {og_image_html}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{safe_name}">
+  <meta name="twitter:description" content="{safe_desc}">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f4; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }}
+    .card {{ background: #fff; border-radius: 16px; overflow: hidden; max-width: 440px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }}
+    .cover {{ width: 100%; height: 220px; object-fit: cover; background: #10464d; display: block; }}
+    .cover-placeholder {{ width: 100%; height: 180px; background: linear-gradient(135deg, #10464d, #1a7a80); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 48px; }}
+    .body {{ padding: 24px; }}
+    h1 {{ font-size: 22px; font-weight: 800; color: #10464d; margin-bottom: 6px; }}
+    .creator {{ font-size: 14px; color: #888; margin-bottom: 12px; }}
+    .description {{ font-size: 15px; color: #555; line-height: 1.5; margin-bottom: 20px; }}
+    .btn {{ display: block; text-align: center; background: #10464d; color: #fff; text-decoration: none; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; }}
+    .btn:hover {{ background: #0d3a40; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    {cover_html}
+    <div class="body">
+      <h1>{safe_name}</h1>
+      <p class="creator">by @{safe_creator}</p>
+      {desc_html}
+      <a class="btn" href="{safe_deep_link}">Open in Current Calendar</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return HttpResponse(html_content, content_type='text/html; charset=utf-8')
 
 
 @api_view(['GET'])
