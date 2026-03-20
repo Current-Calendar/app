@@ -134,15 +134,11 @@ def create_calendar(request):
         cover=request.FILES.get('cover')
     )
 
-    CONSTRAINT_PRIVADO = "unique_private_calendar_per_user"
-
     try:
         calendar.full_clean()
         with transaction.atomic():
             calendar.save()
     except ValidationError as exc:
-        # full_clean() / validate_constraints() puede lanzar ValidationError
-        # cuando se viola el UniqueConstraint condicional (privacy=PRIVADO).
         raw_messages = []
         if hasattr(exc, "message_dict"):
             for field_errors in exc.message_dict.values():
@@ -150,19 +146,13 @@ def create_calendar(request):
         if not raw_messages and getattr(exc, "messages", None):
             raw_messages.extend(exc.messages)
 
-        if any(CONSTRAINT_PRIVADO in str(m) for m in raw_messages):
-            return Response(
-                {"errors": ["El usuario ya tiene un calendario privado."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         return Response(
             {"errors": raw_messages or ["Datos inválidos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
     except IntegrityError:
         return Response(
-            {"errors": ["El usuario ya tiene un calendario privado."]},
+            {"errors": ["No se pudo crear el calendario por una restricción de datos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

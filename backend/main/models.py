@@ -5,7 +5,6 @@ import uuid
 from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
-from django.db.models import Q
 from django.utils import timezone
 
 
@@ -65,15 +64,6 @@ class Calendar(models.Model):
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['creator'],
-                condition=Q(privacy='PRIVATE'),
-                name='unique_private_calendar_per_user'
-            )
-        ]
 
     @property
     def num_subscribers(self):
