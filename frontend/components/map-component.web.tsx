@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Asset } from "expo-asset";
 import API_CONFIG from "../constants/api";
 import EventDetailsModal from "./event-details-modal";
@@ -41,20 +41,31 @@ function buildImageUrl(apiBaseUrl: string, foto: any) {
 }
 
 export default function MapComponent({ location, events }: { location: any; events: any[] }) {
-  if (typeof window === "undefined") return null;
-
-  const { MapContainer, TileLayer, Marker, Popup } = require("react-leaflet");
-  const L = require("leaflet");
-  require("./leaflet-fix.css");
+  const isBrowser = typeof window !== "undefined";
 
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const leafletReact = useMemo(() => {
+    if (!isBrowser) return null;
+    return require("react-leaflet");
+  }, [isBrowser]);
+
+  const L = useMemo(() => {
+    if (!isBrowser) return null;
+    return require("leaflet");
+  }, [isBrowser]);
+
+  useEffect(() => {
+    if (!isBrowser) return;
+    require("./leaflet-fix.css");
+  }, [isBrowser]);
+
   const apiBase = String(API_CONFIG.BaseURL || "");
-  const mediaOrigin = getOriginFromApiBase(apiBase);
 
   // ðŸ“ Icono normal
   const defaultIcon = useMemo(() => {
+    if (!L) return null;
     const markerUri = Asset.fromModule(require("../assets/images/marcador_evento.png")).uri;
     const markerRetinaUri = Asset.fromModule(require("../assets/images/marcador_evento_2x.png")).uri;
 
@@ -69,6 +80,7 @@ export default function MapComponent({ location, events }: { location: any; even
 
   // â­ Icono estrella para el evento mÃ¡s cercano
   const starIcon = useMemo(() => {
+    if (!L) return null;
     const starUri = Asset.fromModule(require("../assets/images/star_marker.png")).uri;
 
     return new L.Icon({
@@ -81,6 +93,7 @@ export default function MapComponent({ location, events }: { location: any; even
 
   // ðŸ“ Icono posiciÃ³n usuario
   const yourPositionIcon = useMemo(() => {
+    if (!L) return null;
     const markerUri = Asset.fromModule(require("../assets/images/position_icon.png")).uri;
 
     return new L.Icon({
@@ -102,6 +115,12 @@ export default function MapComponent({ location, events }: { location: any; even
     setModalOpen(false);
     setSelectedEvent(null);
   };
+
+  if (!isBrowser || !leafletReact || !L || !defaultIcon || !starIcon || !yourPositionIcon) {
+    return null;
+  }
+
+  const { MapContainer, TileLayer, Marker, Popup } = leafletReact;
 
   return (
     <>

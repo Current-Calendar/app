@@ -1,11 +1,12 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
 
 export interface Event {
@@ -30,6 +31,8 @@ export interface Event {
 
 export default function EventsScreen() {
   const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const hasSession = isAuthenticated || Boolean(user);
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
@@ -140,14 +143,28 @@ export default function EventsScreen() {
     <View style={styles.container}>
       <View style={styles.inner}>
         {/* Header de Autenticación */}
-        <View style={styles.authHeader}>
-          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+        {!authLoading && !hasSession && (
+          <View style={styles.authHeader}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/login');
+              }}
+            >
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/register');
+              }}
+            >
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
