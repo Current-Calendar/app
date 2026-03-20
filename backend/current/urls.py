@@ -75,6 +75,7 @@ urlpatterns = [
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
+    path('api/v1/events/<int:event_id>/rsvp/', event_views.rsvp_event, name='rsvp_event'),
     path('api/v1/events/list', event_views.list_events, name='list_events'),
     path('api/v1/events/list/<int:calendar_id>', event_views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
