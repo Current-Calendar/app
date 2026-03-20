@@ -808,9 +808,7 @@ class EditEventTests(APITestCase):
             {"title": "No permitido"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-<<<<<<< feature/rsvp-back
-        
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)        
 
 # ── Test Constants ──
 TEST_PASSWORD = 'testpass123'
@@ -991,7 +989,6 @@ class RSVPEventTests(APITestCase):
         self.assertGreater(len(response.data['attendees']), 0)
         responded_at = response.data['attendees'][0]['respondedAt']
         self._validate_iso_datetime(responded_at)
-=======
 
 class CreateEventDuplicateTests(APITestCase):
 
@@ -1026,4 +1023,3 @@ class CreateEventDuplicateTests(APITestCase):
 
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Ya tienes un evento creado para esa fecha y hora.", response2.json()["errors"])
->>>>>>> main

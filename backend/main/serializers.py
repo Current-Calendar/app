@@ -3,15 +3,9 @@ from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-<<<<<<< feature/rsvp-back
 from main.models import Event, EventAttendance
 
-from .models import Calendar, Report
-
-=======
-from main.models import Event
 from .models import Calendar, Notification, Report
->>>>>>> main
 User = get_user_model()
 
 
