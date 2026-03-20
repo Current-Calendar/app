@@ -47,6 +47,9 @@ export const API_CONFIG = {
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+    comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
+    commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
+    deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
   },
 };
 

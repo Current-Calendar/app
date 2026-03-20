@@ -6,6 +6,7 @@ from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.db.models import Q
 
 
 def calendar_cover_path(instance, filename):
@@ -127,6 +128,85 @@ class Event(models.Model):
         event.add('uid', uid)
         return event
 
+
+class Comment(models.Model):
+    TARGET_EVENT = "EVENT"
+    TARGET_CALENDAR = "CALENDAR"
+    TARGET_TYPE_CHOICES = [
+        (TARGET_EVENT, "Event"),
+        (TARGET_CALENDAR, "Calendar"),
+    ]
+
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
+    body = models.TextField(max_length=500)
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        null=True,
+        blank=True,
+    )
+    calendar = models.ForeignKey(
+        Calendar,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        null=True,
+        blank=True,
+    )
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="children",
+        null=True,
+        blank=True,
+    )
+    root = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="thread_comments",
+        null=True,
+        blank=True,
+    )
+    replies_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(event__isnull=False) & Q(calendar__isnull=True))
+                    | (Q(event__isnull=True) & Q(calendar__isnull=False))
+                ),
+                name="comment_exactly_one_target",
+            ),
+            models.CheckConstraint(
+                check=~Q(parent=models.F("id")),
+                name="comment_parent_not_self",
+            ),
+            models.CheckConstraint(
+                check=~Q(root=models.F("id")) | Q(parent__isnull=True),
+                name="comment_root_self_only_for_roots",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["event", "-created_at", "-id"], name="comment_event_feed_idx"),
+            models.Index(fields=["calendar", "-created_at", "-id"], name="comment_calendar_feed_idx"),
+            models.Index(fields=["root", "created_at", "id"], name="comment_root_thread_idx"),
+            models.Index(fields=["parent", "created_at", "id"], name="comment_parent_thread_idx"),
+            models.Index(fields=["author", "-created_at", "-id"], name="comment_author_idx"),
+        ]
+
+    @property
+    def target_type(self):
+        return self.TARGET_EVENT if self.event_id else self.TARGET_CALENDAR
+
+    @property
+    def target_id(self):
+        return self.event_id or self.calendar_id
+
+    def __str__(self):
+        return f"Comment {self.pk} by {self.author_id}"
 class Notification(models.Model):
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     TYPE_CHOICES = [

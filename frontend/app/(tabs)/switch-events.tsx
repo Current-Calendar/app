@@ -6,6 +6,7 @@ import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
+import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
 
@@ -42,6 +43,7 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -176,7 +178,13 @@ export default function EventsScreen() {
               event={item}
               onOpen={handleOpenEvent}
               onLike={(id) => console.log("Like:", id)}
-              onComment={(id) => console.log("Comment:", id)}
+              onComment={(id) => {
+              const found = events.find((e) => e.id === id);
+              if (found) {
+                setSelectedEvent(found);
+                setCommentsModalVisible(true);
+              }
+            }}
               onSave={(id) => console.log("Save:", id)}
             />
           )}
@@ -190,6 +198,11 @@ export default function EventsScreen() {
           onClose={handleCloseModal}
           event={selectedEvent}
         />
+        <CommentsModal
+        visible={commentsModalVisible}
+        onClose={() => setCommentsModalVisible(false)}
+        event={selectedEvent}
+      />
       </View>
     </View>
   );
