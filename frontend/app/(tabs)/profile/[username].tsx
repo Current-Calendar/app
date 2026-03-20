@@ -166,7 +166,7 @@ const ProfileScreen = () => {
 
   const performLogout = async () => {
     await logout();
-    router.replace('/login' as any);;
+    router.replace('/login' as any);
   };
 
   const handleChangePhoto = async () => {

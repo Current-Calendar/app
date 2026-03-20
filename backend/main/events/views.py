@@ -42,6 +42,16 @@ def create_event(request):
             {"errors": ["El campo 'time' es obligatorio."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    if Event.objects.filter(
+        creator=creator,
+        date=date,
+        time=time
+    ).exists():
+        return Response(
+            {"errors": ["Ya tienes un evento creado para esa fecha y hora."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if not calendars_ids or not isinstance(calendars_ids, list):
         return Response(
@@ -281,7 +291,7 @@ def list_events_from_calendar(request):
     Query parameters:
         calendarId (int) -- filter by calendar ID
     """
-    queryset = Event.objects.all()
+    queryset = Event.objects.all().order_by('-created_at')
     calendar_id = request.GET.get('calendarId')
 
     if calendar_id:
@@ -413,3 +423,34 @@ def delete_event(request, event_id):
 
     event.delete()
     return Response({"message": "Event eliminado correctamente"}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def rsvp_event(request, event_id):
+    from ..models import EventAttendance
+    
+    event = get_object_or_404(Event, id=event_id)
+    status_value = request.data.get('status')
+    valid_statuses = ['ASSISTING', 'NOT_ASSISTING']
+    if not status_value or status_value not in valid_statuses:
+        return Response(
+            {"error": f"Status must be one of: {valid_statuses}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    #get_or_create + update
+    attendance, _ = EventAttendance.objects.get_or_create(
+        user=request.user,
+        event=event,
+    )
+    attendance.status = status_value
+    attendance.save()
+    
+    # Convertir a ISO 8601 con Z (UTC)
+    responded_at_iso = attendance.updated_at.isoformat()
+    if '+00:00' in responded_at_iso:
+        responded_at_iso = responded_at_iso.replace('+00:00', 'Z')
+    
+    return Response({
+        'status': attendance.status,
+        'respondedAt': responded_at_iso,
+    }, status=status.HTTP_200_OK)

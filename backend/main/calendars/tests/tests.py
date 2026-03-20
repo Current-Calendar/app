@@ -131,14 +131,14 @@ class CrearCalendarTests(APITestCase):
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El campo 'name' es obligatorio.", response.json()["errors"])
+        self.assertIn("El campo 'name' es obligatorio y no puede estar vacío.", response.json()["errors"])
 
     # ------------------------------------------------------------------
-    # Casos de error — restricción de unicidad PRIVADO
+    # Casos exitosos adicionales
     # ------------------------------------------------------------------
 
-    def test_error_segundo_calendario_privado_mismo_user(self):
-        """Devuelve 400 si el user intenta crear un segundo calendar PRIVADO."""
+    def test_segundo_calendario_privado_mismo_user_exitoso(self):
+        """Permite crear más de un calendar PRIVADO para el mismo user."""
         self.client.force_authenticate(self.user)
 
         # Primer calendar privado (OK)
@@ -155,8 +155,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("El usuario ya tiene un calendario privado.", response.json()["errors"])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["privacy"], "PRIVATE")
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
@@ -228,7 +228,56 @@ class CrearCalendarTests(APITestCase):
 
         response = self.client.get(CALENDAR_ENDPOINT_CREATE)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
+    #mas casos
+    def test_error_name_solo_espacios(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("no puede estar vacío", response.json()["errors"][0])
+
+    def test_error_description_no_es_string(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar válido",
+            "description": 123
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.json()["errors"][0])
+
+    def test_error_privacy_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "privacy": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("privacy", response.json()["errors"][0])
+
+    def test_error_origin_valor_no_permitido(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar test",
+            "origin": "INVALIDO"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("origin", response.json()["errors"][0])
+
+    def test_name_se_trimea_correctamente(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "   Calendar limpio   "
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "Calendar limpio")
+            
 
 class EliminarCalendarTestCase(APITestCase):
     def setUp(self):
@@ -752,3 +801,96 @@ class CalendarLikesTests(APITestCase):
         self.assertFalse(
             CalendarLike.objects.filter(user=outsider, calendar=self.calendar).exists()
         )
+SHARE_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/share/"
+SHARE_HTML_ENDPOINT = "/share/calendar/{}/"
+
+class GetCalendarShareInfoTests(APITestCase):
+    """Tests for GET /api/v1/calendars/<id>/share/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="shareuser",
+            email="share@example.com",
+            password="sharepass123",
+        )
+        self.other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="otherpass123",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="Public Cal",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Private Cal",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+
+    def test_get_share_info_authenticated(self):
+        """Returns share info for an accessible calendar."""
+        self.client.force_authenticate(self.user)
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertEqual(data['calendar_id'], self.public_calendar.id)
+        self.assertEqual(data['name'], 'Public Cal')
+        self.assertIn('share_url', data)
+        self.assertIn('deep_link', data)
+        self.assertIn(f'/share/calendar/{self.public_calendar.id}/', data['share_url'])
+        self.assertIn(f'calendarId={self.public_calendar.id}', data['deep_link'])
+
+    def test_get_share_info_unauthenticated(self):
+        """Unauthenticated users cannot access share info."""
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_share_info_nonexistent_calendar(self):
+        """Returns 404 for a nonexistent calendar."""
+        self.client.force_authenticate(self.user)
+        response = self.client.get(SHARE_CALENDAR_ENDPOINT.format(99999))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class ShareCalendarHtmlTests(TestCase):
+    """Tests for GET /share/calendar/<id>/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="htmluser",
+            email="html@example.com",
+            password="htmlpass123",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="My Public Calendar",
+            description="A great calendar",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Private Cal",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+
+    def test_share_html_public_calendar(self):
+        """Returns HTML with OG tags for a public calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(self.public_calendar.id))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('text/html', response['Content-Type'])
+        content = response.content.decode()
+        self.assertIn('My Public Calendar', content)
+        self.assertIn('og:title', content)
+        self.assertIn('htmluser', content)
+
+    def test_share_html_private_calendar_returns_403(self):
+        """Returns 403 for a private calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(self.private_calendar.id))
+        self.assertEqual(response.status_code, 403)
+
+    def test_share_html_nonexistent_calendar(self):
+        """Returns 404 for a nonexistent calendar."""
+        response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
+        self.assertEqual(response.status_code, 404)
