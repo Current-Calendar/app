@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
-from main.models import User, Calendar
+from main.models import User, Calendar, CalendarLike
 
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
@@ -675,6 +675,132 @@ class PublishCalendarTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+class CalendarLikesTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner_like",
+            email="owner_like@example.com",
+            password="pass1234",
+        )
+        self.liker = User.objects.create_user(
+            username="liker",
+            email="liker@example.com",
+            password="pass1234",
+        )
+        self.calendar = Calendar.objects.create(
+            name="Public calendar",
+            privacy="PUBLIC",
+            creator=self.owner,
+        )
+
+    def test_like_toggle_updates_counter(self):
+        self.client.force_authenticate(user=self.liker)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 1)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 0)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 0)
+
+    def test_like_is_auto_removed_after_losing_access(self):
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+
+        self.calendar.privacy = "PRIVATE"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.client.force_authenticate(user=self.liker)
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/like/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 0)
+        self.assertFalse(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+
+    def test_list_calendars_includes_like_state(self):
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+
+        self.client.force_authenticate(user=self.liker)
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        item = next(cal for cal in response.json() if cal["id"] == self.calendar.id)
+        self.assertTrue(item["liked_by_me"])
+        self.assertEqual(item["likes_count"], 1)
+
+    def test_privacy_change_to_private_cleans_non_creator_likes(self):
+        another_user = User.objects.create_user(
+            username="another_liker",
+            email="another_liker@example.com",
+            password="pass1234",
+        )
+        CalendarLike.objects.create(user=self.liker, calendar=self.calendar)
+        CalendarLike.objects.create(user=another_user, calendar=self.calendar)
+        CalendarLike.objects.create(user=self.owner, calendar=self.calendar)
+
+        self.calendar.privacy = "PRIVATE"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 1)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.owner, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=self.liker, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=another_user, calendar=self.calendar).exists()
+        )
+
+    def test_privacy_change_to_friends_keeps_only_mutual_friends(self):
+        mutual_friend = User.objects.create_user(
+            username="mutual_friend",
+            email="mutual_friend@example.com",
+            password="pass1234",
+        )
+        outsider = User.objects.create_user(
+            username="outsider",
+            email="outsider@example.com",
+            password="pass1234",
+        )
+        self.owner.following.add(mutual_friend)
+        mutual_friend.following.add(self.owner)
+
+        CalendarLike.objects.create(user=mutual_friend, calendar=self.calendar)
+        CalendarLike.objects.create(user=outsider, calendar=self.calendar)
+        CalendarLike.objects.create(user=self.owner, calendar=self.calendar)
+
+        self.calendar.privacy = "FRIENDS"
+        self.calendar.save(update_fields=["privacy"])
+
+        self.calendar.refresh_from_db()
+        self.assertEqual(self.calendar.likes_count, 2)
+        self.assertTrue(
+            CalendarLike.objects.filter(user=mutual_friend, calendar=self.calendar).exists()
+        )
+        self.assertTrue(
+            CalendarLike.objects.filter(user=self.owner, calendar=self.calendar).exists()
+        )
+        self.assertFalse(
+            CalendarLike.objects.filter(user=outsider, calendar=self.calendar).exists()
+        )
 SHARE_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/share/"
 SHARE_HTML_ENDPOINT = "/share/calendar/{}/"
 

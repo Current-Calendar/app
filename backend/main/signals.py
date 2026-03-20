@@ -1,0 +1,58 @@
+from django.db.models import F
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
+
+from main.models import Calendar, CalendarLike
+
+
+@receiver(post_save, sender=CalendarLike)
+def increment_calendar_likes_count(sender, instance, created, **kwargs):
+    if not created:
+        return
+    Calendar.objects.filter(pk=instance.calendar_id).update(
+        likes_count=F("likes_count") + 1
+    )
+
+
+@receiver(post_delete, sender=CalendarLike)
+def decrement_calendar_likes_count(sender, instance, **kwargs):
+    Calendar.objects.filter(pk=instance.calendar_id, likes_count__gt=0).update(
+        likes_count=F("likes_count") - 1
+    )
+
+
+@receiver(pre_save, sender=Calendar)
+def capture_previous_privacy(sender, instance, update_fields=None, **kwargs):
+    if not instance.pk:
+        instance._previous_privacy = None
+        return
+
+    if update_fields is not None and "privacy" not in update_fields:
+        instance._previous_privacy = instance.privacy
+        return
+
+    instance._previous_privacy = (
+        Calendar.objects.filter(pk=instance.pk).values_list("privacy", flat=True).first()
+    )
+
+
+@receiver(post_save, sender=Calendar)
+def cleanup_likes_on_privacy_change(sender, instance, created, **kwargs):
+    if created:
+        return
+
+    previous_privacy = getattr(instance, "_previous_privacy", None)
+    if previous_privacy == instance.privacy:
+        return
+
+    likes_qs = CalendarLike.objects.filter(calendar=instance).exclude(user=instance.creator)
+
+    if instance.privacy == "PRIVATE":
+        likes_qs.delete()
+        return
+
+    if instance.privacy == "FRIENDS":
+        likes_qs.exclude(
+            user__following=instance.creator,
+            user__followers_set=instance.creator,
+        ).distinct().delete()

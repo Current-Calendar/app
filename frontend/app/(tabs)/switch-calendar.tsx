@@ -61,6 +61,8 @@ export default function CalendarsScreen() {
       creator: c.creator_username || 'unknown',
       color: COLORS[index % COLORS.length],
       cover: c.cover || null,
+      likes_count: c.likes_count,
+      liked_by_me : c.liked_by_me || false
     }));
 
     setCalendars(mappedCalendars);
@@ -69,6 +71,29 @@ export default function CalendarsScreen() {
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
   };
+  
+  const handleLike = async (id: string) => {
+    try {
+    const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
+    setCalendars((prev) =>
+      prev.map((calendar) => {
+        if (calendar.id === id) {
+          return {
+            ...calendar,
+            liked_by_me: res.liked,
+            likes_count: res.liked 
+              ? calendar.likes_count + 1 
+              : calendar.likes_count - 1,
+          };
+        }
+        return calendar;
+      })
+    );
+  } catch (error) {
+    Alert.alert("Error", "Could not like this calendar.");
+    console.error("Like error:", error);
+  }
+};
 
   const handleSubscribe = async (id: string) => {
     try {
@@ -137,6 +162,7 @@ export default function CalendarsScreen() {
             <CalendarCard
               calendar={item}
               onPress={handleOpenCalendar}
+              onLike={handleLike}
               onSubscribe={handleSubscribe}
               isSubscribed={subscribedCalendarIds.includes(item.id)}
             />
