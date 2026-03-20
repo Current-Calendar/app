@@ -90,6 +90,14 @@ export default function SearchScreen() {
         router.push(`/profile/${username}`);
     };
 
+    const handleCalendarSelect = (calendarId: string | number) => {
+        router.push(`/calendar-view?calendarId=${calendarId}`);
+    };
+
+    const handleEventSelect = (calendarId: string | number) => {
+        router.push(`/calendar-view?calendarId=${calendarId}`);
+    };
+
     return (
         <View style={styles.container}>
             {/* SEARCH BAR */}
@@ -146,7 +154,7 @@ export default function SearchScreen() {
                     if (item.type === 'calendar') {
                         const cal = item.data as Calendar;
                         return (
-                            <View style={styles.calendarCard}>
+                            <TouchableOpacity style={styles.calendarCard} onPress={() => handleCalendarSelect(cal.id)}>
                                 {cal.cover && (
                                     <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
@@ -154,13 +162,13 @@ export default function SearchScreen() {
                                     <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
                                     <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }
 
                     const ev = item.data as CalendarEvent;
                     return (
-                        <View style={styles.eventCard}>
+                        <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev.calendarId)}>
                             <View style={styles.eventRow}>
                                 {ev.photo && (
                                     <Image
@@ -177,7 +185,7 @@ export default function SearchScreen() {
                                     </Text>
                                 </View>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     );
                 }}
             />
