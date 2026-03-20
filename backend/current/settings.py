@@ -33,9 +33,14 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
+ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
+
+# Trust HTTPS from reverse proxies (tunnel, Render, etc.)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
+
+SHARE_OG_IMAGE_FALLBACK = os.getenv('SHARE_OG_IMAGE_FALLBACK', '')
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
@@ -241,8 +246,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

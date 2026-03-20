@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+import { ShareCalendarModal } from '@/components/share-calendar-modal';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
     PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
@@ -30,6 +31,7 @@ interface CalendarInfoModalProps {
     onClose: () => void;
     onDelete?: (calendar: Calendar) => Promise<void> | void;
     onEdit?: (calendar: Calendar) => void;
+    onShare?: (calendar: Calendar) => void;
     isDeleting?: boolean;
 }
 
@@ -40,6 +42,8 @@ export function CalendarInfoModal({
     onEdit,
     isDeleting = false,
 }: CalendarInfoModalProps) {
+    const [showShare, setShowShare] = useState(false);
+
     if (!calendar) return null;
 
     const accent = calendar.color;
@@ -122,6 +126,17 @@ export function CalendarInfoModal({
                     <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
                 </TouchableOpacity>
 
+                {calendar.privacy !== 'PRIVATE' && (
+                    <TouchableOpacity
+                        style={calendarInfoModalStyles.shareButton}
+                        onPress={() => setShowShare(true)}
+                        activeOpacity={0.75}
+                    >
+                        <Ionicons name="share-social-outline" size={16} color="#10464d" />
+                        <Text style={calendarInfoModalStyles.shareButtonLabel}>Share</Text>
+                    </TouchableOpacity>
+                )}
+
                 {onDelete && (
                     <TouchableOpacity
                         style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
@@ -140,6 +155,11 @@ export function CalendarInfoModal({
                     </TouchableOpacity>
                 )}
             </View>
+
+            <ShareCalendarModal
+                calendar={showShare ? calendar : null}
+                onClose={() => setShowShare(false)}
+            />
         </BottomSheetModal>
     );
 }

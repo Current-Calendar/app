@@ -4,9 +4,7 @@ from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event
-
-from .models import Calendar, Report
-
+from .models import Calendar, Notification, Report
 User = get_user_model()
 
 
@@ -263,6 +261,28 @@ class EventSerializer(serializers.ModelSerializer):
     def get_calendars(self, obj):
         return list(obj.calendars.values_list('id', flat=True))
 
+class NotificationSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True, default=None)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'recipient', 'sender', 'sender_username', 'type', 
+            'message', 'is_read', 'created_at', 'related_calendar', 'related_event'
+        ]
+        read_only_fields = [
+            'id', 'recipient', 'sender', 'type', 'message', 
+            'created_at', 'related_calendar', 'related_event'
+        ]
+
+    def validate(self, attrs):
+        if self.instance and len(attrs) > 1:
+            for field in attrs.keys():
+                if field != 'is_read':
+                    raise serializers.ValidationError(f"Modification of the '{field}' field is strictly prohibited.")
+        return attrs
+
+    
 class ReportSerializer(serializers.ModelSerializer):
     reporter_username = serializers.CharField(source='reporter.username', read_only=True)
 

@@ -31,6 +31,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Set Up Python
       uses: actions/setup-python@v4
@@ -66,4 +68,40 @@ jobs:
         GOOGLE_PROJECT_ID: 'tu-project-id-de-google'
         PYTHONPATH: .
       run: |
-        python manage.py test
+        coverage run manage.py test 
+
+    - name: Generate summary report
+      if: success() && github.ref == 'refs/heads/main'
+      working-directory: ./backend
+      run: |
+        coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+    - name: Generate HTML report
+      if: success() && github.ref == 'refs/heads/main'
+      working-directory: ./backend
+      run: |
+        coverage html
+
+    - name: Save HTML report as artifact
+      if: success() && github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: django-coverage-report
+        path: backend/htmlcov/
+        retention-days: 14
+
+    - name: Generate XML report for SonarQube
+      if: success() && github.ref == 'refs/heads/main'
+      working-directory: ./backend
+      run: |
+        coverage xml
+
+    - name: SonarQube Scan
+      if: success() && github.ref == 'refs/heads/main'
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dproject.settings=sonar-project-actions.properties
