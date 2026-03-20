@@ -78,15 +78,6 @@ export default function CalendarCard({
         </Text>
 
         <View style={eventCalendarCalendarCardStyles.footer}>
-          <Text style={eventCalendarCalendarCardStyles.likeBtnText}>{calendar.likes_count}</Text>
-          <Pressable 
-            style={eventCalendarCalendarCardStyles.likeBtn} 
-            onPress={(e) => {
-              e.stopPropagation();
-              onLike(calendar.id);
-            }}>
-            <Ionicons name={calendar.liked_by_me? "heart" : 'heart-outline'} size={30} style={eventCalendarCalendarCardStyles.likeBtnIcon}/>
-          </Pressable>
           <Pressable
             style={eventCalendarCalendarCardStyles.commentBtn}
             onPress={(e) => {
@@ -103,6 +94,21 @@ export default function CalendarCard({
             <Text style={eventCalendarCalendarCardStyles.commentBtnText}>
               Comment
             </Text>
+          </Pressable>
+
+          <Pressable
+            style={eventCalendarCalendarCardStyles.likeBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onLike(calendar.id);
+            }}
+          >
+            <Text style={eventCalendarCalendarCardStyles.likeBtnText}>{calendar.likes_count}</Text>
+            <Ionicons
+              name={calendar.liked_by_me ? "heart" : "heart-outline"}
+              size={30}
+              style={eventCalendarCalendarCardStyles.likeBtnIcon}
+            />
           </Pressable>
 
           <Pressable

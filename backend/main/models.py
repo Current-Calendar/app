@@ -6,6 +6,7 @@ from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.db.models import Q
 
 
 def calendar_cover_path(instance, filename):

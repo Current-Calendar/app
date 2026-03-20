@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0003_comment_threads'),
+        ('main', '0009_comment_threads'),
     ]
 
     operations = [

@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("main", "0002_calendar_likes"),
+        ("main", "0008_calendar_likes"),
     ]
 
     operations = [
