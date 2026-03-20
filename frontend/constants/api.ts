@@ -47,6 +47,13 @@ export const API_CONFIG = {
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+    chatHistory: (eventId: number | string) => buildEndpoint(`events/${eventId}/chat/`),
+    chatWs: (eventId: number | string) => {
+      const wsBase = rootBaseURL.replace(/^https?/, (protocol) =>
+        protocol === 'https' ? 'wss' : 'ws'
+      );
+      return `${wsBase}/ws/chat/${eventId}/`;
+    },
   },
 };
 
