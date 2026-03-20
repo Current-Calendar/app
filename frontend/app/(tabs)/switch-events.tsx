@@ -7,6 +7,7 @@ import EventFeedModal from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
 import { API_CONFIG } from "@/constants/api";
+import { useAuth } from "@/hooks/use-auth";
 
 export interface Event {
   id: string;
@@ -30,6 +31,8 @@ export interface Event {
 
 export default function EventsScreen() {
   const router = useRouter();
+
+  const {user} = useAuth();
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
@@ -140,14 +143,16 @@ export default function EventsScreen() {
     <View style={styles.container}>
       <View style={styles.inner}>
         {/* Header de Autenticación */}
-        <View style={styles.authHeader}>
-          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+        {!user && (
+          <View style={styles.authHeader}>
+            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 

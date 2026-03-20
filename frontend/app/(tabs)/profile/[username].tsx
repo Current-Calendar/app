@@ -19,6 +19,8 @@ import profileStyles from './profileStyles';
 import PublicProfile from './PublicProfile';
 import apiClient, { appendPhoto } from '../../../services/api-client';  
 import { useProfileActions } from '@/hooks/use-profile-actions';
+import LogoutModal from '../../../components/logout-modal';
+
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -76,6 +78,12 @@ const ProfileScreen = () => {
   const { username } = useLocalSearchParams<{ username: string }>();
   
   const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const performLogout = async () => {
+    setShowLogoutModal(false); 
+    await logout();            
+    router.replace('/login'); 
+  };
 
   // Determinamos si es "Mi Perfil"
   const isMe = !username || username === currentUser?.username;
@@ -88,7 +96,7 @@ const ProfileScreen = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
+ 
   useEffect(() => {
     if (!isMe) {
       setShownUser(null);
@@ -146,28 +154,10 @@ const ProfileScreen = () => {
     router.push('/(tabs)/profileEdit' as any);
   };
 
-  const handleLogout = async () => {
-    const message = "Are you sure you want to log out?";
-
-    if (Platform.OS === 'web') {
-        
-      const confirmLogout = window.confirm(message);
-        if (confirmLogout) {
-          performLogout();
-        }
-      } else {
-        
-        Alert.alert("Logout", message, [
-          { text: "Cancel", style: "cancel" },
-          { text: "Yes, exit", style: "destructive", onPress: performLogout },
-        ]);
-      }
+  const handleLogout = () => {
+    setShowLogoutModal(true); 
   };
 
-  const performLogout = async () => {
-    await logout();
-    router.replace('/(auth)/login' as any);;
-  };
 
   const handleChangePhoto = async () => {
     try {
@@ -318,6 +308,14 @@ const ProfileScreen = () => {
         </View>
 
       </ScrollView>
+
+      {/* AQUÍ INVOCAMOS TU NUEVO MODAL DE LEGO */}
+      <LogoutModal 
+        visible={showLogoutModal} 
+        onClose={() => setShowLogoutModal(false)} 
+        onConfirm={performLogout} 
+      />
+
     </SafeAreaView>
   );
 };
