@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0001_initial'),
+        ('main', '0007_alter_eventattendance_unique_together_and_more'),
     ]
 
     operations = [

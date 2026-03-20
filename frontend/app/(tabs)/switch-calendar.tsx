@@ -61,7 +61,7 @@ export default function CalendarsScreen() {
       creator: c.creator_username || 'unknown',
       color: COLORS[index % COLORS.length],
       cover: c.cover || null,
-      likes_count: c.likes_count || 12,
+      likes_count: c.likes_count,
       liked_by_me : c.liked_by_me || false
     }));
 
