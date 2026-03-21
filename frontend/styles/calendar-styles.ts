@@ -453,9 +453,33 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     gap: 6,
+    alignItems: 'center',
   },
   badge: {
     marginLeft: 8,
+  },
+  privacyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  privacyBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  originBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DFDFE4',
+    backgroundColor: '#F4F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   description: {
     fontSize: 13,
