@@ -361,7 +361,7 @@ def list_friends_calendars(request):
         following=user
     ).values_list('id', flat=True)
 
-    queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners').filter(
+    queryset = Calendar.objects.select_related('creator').filter(
         creator_id__in=mutual_friend_ids,
         privacy='FRIENDS'
     ).order_by('-created_at')
@@ -383,6 +383,43 @@ def list_friends_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_co_owned_calendars(request):
+    """
+    List calendars where the authenticated user is a co-owner.
+
+    GET /api/v1/calendars/co_owners/
+    """
+    user = request.user
+
+    queryset = Calendar.objects.select_related('creator').filter(
+        co_owners=user
+    ).order_by('-created_at')
+
+    liked_ids = _get_liked_calendar_ids(user, queryset)
+
+    results = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
+            "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover)
         }
         for cal in queryset
     ]
@@ -415,6 +452,31 @@ def subscribe_calendar(request, calendar_id):
         )
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def subscribe_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+
+    if calendar.creator == user:
+        return Response(
+            {'error': 'No puedes suscribirte a tu propio calendario.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.subscribed_calendars.filter(id=calendar_id).exists():
+        user.subscribed_calendars.remove(calendar)
+        return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
+    else:
+        user.subscribed_calendars.add(calendar)
+        Notification.objects.create(
+            recipient=calendar.creator,
+            sender=user,
+            type= 'CALENDAR_FOLLOW',
+            message=f"{user.username} has subscribed to '{calendar.name}'.",
+            related_calendar=calendar
+        )
+        return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -463,7 +525,7 @@ def list_calendars(request):
         q       (str)  -- case-insensitive substring match on calendar name
         privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
     """
-    queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners').all()
+    queryset = Calendar.objects.select_related('creator').all()
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -496,8 +558,7 @@ def list_calendars(request):
             "created_at": cal.created_at,
             "likes_count": cal.likes_count,
             "liked_by_me": cal.id in liked_ids,
-            "cover": get_signed_url(request, cal.cover),
-            "co_owners": _serialize_co_owners(cal),
+            "cover": get_signed_url(request, cal.cover)
         }
         for cal in queryset
     ]

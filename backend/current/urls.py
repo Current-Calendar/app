@@ -69,6 +69,7 @@ urlpatterns = [
     path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
     path('api/v1/calendars/friends-calendars/', calendar_views.list_friends_calendars, name='list_friends_calendars'),
     path('api/v1/calendars/my-calendars/', calendar_views.list_my_calendars, name='list_my_calendarios'),
+    path('api/v1/calendars/co_owned/', calendar_views.list_co_owned_calendars, name='list_co_owned_calendars'),
     path('api/v1/calendars/import-google-calendar/', calendar_views.import_google_calendar, name='import_google_calendar'),
     path('api/v1/calendars/import-ios-calendar/', calendar_views.iOS_calendar_import, name='import_ios_calendar'),
     path('api/v1/calendars/import-ics/', calendar_views.ics_import, name='import_ics_calendar'),
