@@ -27,6 +27,7 @@ from main.radar import views as radar_views
 from main.auth import views as auth_views
 from main.notifications import views as notification_views
 from main.reports import views as report_views
+from main.labels import views as label_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -83,6 +84,14 @@ urlpatterns = [
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
+    path('api/v1/labels/', label_views.list_labels, name='list_labels'),
+    path('api/v1/labels/default/', label_views.list_default_labels, name='list_default_labels'),
+    path('api/v1/calendars/<int:calendar_id>/labels/add/', label_views.add_label_to_calendar, name='add_label_to_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/labels/remove/<int:label_id>/', label_views.remove_label_from_calendar, name='remove_label_from_calendar'),
+    path('api/v1/calendars/filter-by-label/', label_views.filter_calendars_by_label, name='filter_calendars_by_label'),
+    path('api/v1/events/<int:event_id>/labels/add/', label_views.add_label_to_event, name='add_label_to_event'),
+    path('api/v1/events/<int:event_id>/labels/remove/<int:label_id>/', label_views.remove_label_from_event, name='remove_label_from_event'),
+    path('api/v1/events/filter-by-label/', label_views.filter_events_by_label, name='filter_events_by_label'),
     path('api/v1/comments/', comment_views.comments_collection, name='comments_collection'),
     path('api/v1/comments/<int:comment_id>/replies/', comment_views.list_replies, name='list_replies'),
     path('api/v1/comments/<int:comment_id>/delete/', comment_views.delete_comment, name='delete_comment'),

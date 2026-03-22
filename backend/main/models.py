@@ -44,6 +44,17 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+class Label(models.Model):
+    """Etiquetas predeterminadas para eventos y calendarios."""
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#000000')
+    icon = models.CharField(max_length=50, blank=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 class Calendar(models.Model):
     PRIVACY_CHOICES = [
         ('PRIVATE', 'Private'),
@@ -66,6 +77,7 @@ class Calendar(models.Model):
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
     likes_count = models.PositiveIntegerField(default=0)
+    labels = models.ManyToManyField(Label, blank=True, related_name='calendars')
 
     @property
     def num_subscribers(self):
@@ -92,6 +104,7 @@ class CalendarLike(models.Model):
     def __str__(self):
         return f"{self.user_id} -> {self.calendar_id}"
 
+
 class Event(models.Model):
     title = models.CharField(max_length=150)
     description = models.TextField(blank=True)
@@ -105,6 +118,7 @@ class Event(models.Model):
     calendars = models.ManyToManyField(Calendar, related_name='events')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
     created_at = models.DateTimeField(default=timezone.now)
+    labels = models.ManyToManyField(Label, blank=True, related_name='events')
 
     def __str__(self):
         return f"{self.title} - {self.date}"
