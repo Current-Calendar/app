@@ -1,7 +1,7 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
-from main.models import User, Calendar, CalendarLike
+from main.models import User, Calendar, CalendarLike, Notification
 
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
@@ -894,3 +894,91 @@ class ShareCalendarHtmlTests(TestCase):
         """Returns 404 for a nonexistent calendar."""
         response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
         self.assertEqual(response.status_code, 404)
+
+class InviteCalendarTests(APITestCase):
+    def setUp(self) -> None:
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="user1"
+        )
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="user2"
+        )
+        self.user3 = User.objects.create_user(
+            username="user3", email="user3@example.com", password="user3"
+        )
+        self.user1.following.add(self.user3)
+        self.user3.following.add(self.user1)
+
+        self.cal1 = Calendar.objects.create(
+            name="Public Calendar",
+            privacy="PUBLIC",
+            creator=self.user1,
+        )
+        self.cal2 = Calendar.objects.create(
+            name="Public Calendar",
+            privacy="PRIVATE",
+            creator=self.user1,
+        )
+        self.cal3 = Calendar.objects.create(
+            name="Friends Calendar",
+            privacy="FRIENDS",
+            creator=self.user1,
+        )
+
+
+    def test_invite_unauthenticated(self):
+        request = self.client.post(f"/api/v1/calendars/{self.cal1.pk}/invite/")
+
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/calendars/{self.cal1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(Notification.objects.filter(recipient=self.user2, type="CALENDAR_INVITE", related_calendar=self.cal1, sender=self.user1).exists())
+
+    def test_invite_yourself(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/calendars/{self.cal1.pk}/invite/", {
+            "user": self.user1.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user1, type="CALENDAR_INVITE", related_calendar=self.cal1, sender=self.user1).exists())
+
+    def test_invite_private(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/calendars/{self.cal2.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user2, type="CALENDAR_INVITE", related_calendar=self.cal2, sender=self.user1).exists())
+
+    def test_invite_friend(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/calendars/{self.cal3.pk}/invite/", {
+            "user": self.user3.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(Notification.objects.filter(recipient=self.user3, type="CALENDAR_INVITE", related_calendar=self.cal3, sender=self.user1).exists())
+    
+    def test_invite_friend_not_friend(self):
+        self.user1.following.remove(self.user3)
+
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/calendars/{self.cal3.pk}/invite/", {
+            "user": self.user3.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user3, type="CALENDAR_INVITE", related_calendar=self.cal3, sender=self.user1).exists())

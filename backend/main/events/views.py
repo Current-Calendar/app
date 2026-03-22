@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
-from ..models import Calendar, Event
+from ..models import Calendar, Event, Notification, EventAttendance, User
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -493,3 +493,30 @@ def rsvp_event(request, event_id):
         'status': attendance.status,
         'respondedAt': responded_at_iso,
     }, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def invite_event(request: Request, event_id: int):
+    event = get_object_or_404(Event, pk=event_id)
+    user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
+
+    if request.user == user_to_invite:
+        return Response(
+            {"error": "Cannot invite yourself"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if event.creator != request.user:
+        return Response(
+            {"error": "Only the event creator send invitations"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    Notification.objects.create(
+        recipient=user_to_invite,
+        type="EVENT_INVITE",
+        related_event=event,
+        sender=request.user,
+    )
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

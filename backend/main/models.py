@@ -215,6 +215,8 @@ class Notification(models.Model):
         ('EVENT_SAVED', 'Event Saved'),
         ('EVENT_LIKED', 'Event Liked'),
         ('EVENT_COMMENT', 'Event Comment'),
+        ('EVENT_INVITE', 'Event Invite'),
+        ('CALENDAR_INVITE', 'Calendar Invite'),
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     message = models.TextField()

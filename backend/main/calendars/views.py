@@ -6,6 +6,7 @@ import ipaddress
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -834,3 +835,37 @@ def export_to_ics(request, calendar_id):
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def invite_calendar(request: Request, calendar_id: int) -> Response:
+    calendar = get_object_or_404(Calendar, pk=calendar_id)
+    user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
+
+    if request.user == user_to_invite:
+        return Response(
+            {"error": "Cannot invite yourself"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if calendar.privacy == "PRIVATE":
+        return Response(
+            {"error": "Cannot invite to a private calendar"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    elif calendar.privacy == "FRIENDS":
+        if not request.user.is_friend_with(user_to_invite):
+            return Response(
+                {"error": "Cannot invite non-friend to friends calendar"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+    Notification.objects.create(
+        recipient=user_to_invite,
+        type="CALENDAR_INVITE",
+        related_calendar=calendar,
+        sender=request.user,
+    )
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

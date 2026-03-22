@@ -2,7 +2,7 @@ import datetime
 from datetime import date, time
 from rest_framework.test import APITestCase
 from rest_framework import status
-from main.models import User, Notification, Calendar, Event
+from main.models import User, Notification, Calendar, Event, EventAttendance
 
 ENDPOINT_NOTIFICATIONS = '/api/v1/notifications/'
 ENDPOINT_MARK_AS_READ = '/api/v1/notifications/{id}/read/'
@@ -87,3 +87,114 @@ class NotificationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
+class InvitationNotificationTests(APITestCase):
+    def setUp(self) -> None:
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="user1"
+        )
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="user2"
+        )
+        self.user3 = User.objects.create_user(
+            username="user3", email="user3@example.com", password="user3"
+        )
+
+        self.cal1 = Calendar.objects.create(
+            name="Private Calendar",
+            privacy="PRIVATE",
+            creator=self.user1,
+        )
+
+        self.cal2 = Calendar.objects.create(
+            name="Friends Calendar",
+            privacy="PUBLIC",
+            creator=self.user2,
+        )
+
+        self.cal3 = Calendar.objects.create(
+            name="Public Calendar",
+            privacy="PUBLIC",
+            creator=self.user1,
+        )
+
+        self.event1 = Event.objects.create(
+            title="Birthday Dinner",
+            description="See you at the usual restaurant.",
+            date=date(2026, 3, 20),
+            time=time(21, 00),
+            creator=self.user1,
+        )
+        self.event1.calendars.add(self.cal3)
+        self.event1.save()
+
+        self.notification = Notification.objects.create(
+            recipient=self.user2,
+            sender=self.user2,
+            type='EVENT_INVITE',
+            related_event=self.event1,
+        )
+        self.notification2 = Notification.objects.create(
+            recipient=self.user3,
+            sender=self.user2,
+            type='CALENDAR_INVITE',
+            related_calendar=self.cal2,
+        )
+
+    def test_accept_unauthenticated(self):
+        request = self.client.post(f"/api/v1/notifications/{self.notification.pk}/")
+
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_accept_not_recipient(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification.pk}/")
+
+        self.assertEqual(request.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_accept_event(self):
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification.pk}/")
+
+        self.assertEqual(request.status_code, status.HTTP_200_OK)
+        self.assertTrue(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="ASSISTING").exists())
+
+    def test_decline_event(self):
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification.pk}/", {
+            "status": "DECLINE"
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_200_OK)
+        self.assertTrue(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="NOT_ASSISTING").exists())
+
+    def test_wrong_status(self):
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification.pk}/", {
+            "status": "MAYBE"
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="MAYBE").exists())
+
+    def test_accept_calendar(self):
+        self.client.force_authenticate(self.user3)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification2.pk}/")
+
+        self.assertEqual(request.status_code, status.HTTP_200_OK)
+        self.assertTrue(Calendar.objects.filter(subscribers__id=self.user3.pk).exists())
+
+    def test_decline_calendar(self):
+        self.client.force_authenticate(self.user3)
+
+        request = self.client.post(f"/api/v1/notifications/{self.notification2.pk}/", {
+            "status": "DECLINE"
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_200_OK)
+        self.assertFalse(Calendar.objects.filter(subscribers__id=self.user3.pk).exists())
+    
