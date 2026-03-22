@@ -40,6 +40,15 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   }, [event]);
 
   if (!event) return null;
+  const eventImageRaw =
+    typeof (event as any).photo === "string" && (event as any).photo.trim().length > 0
+      ? (event as any).photo.trim()
+      : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
+        ? (event as any).image.trim()
+        : "";
+  const eventImageSource = eventImageRaw
+    ? { uri: eventImageRaw }
+    : require("@/assets/images/nube_login.png");
 
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
 
@@ -91,13 +100,11 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
 
-            {event.photo && (
-              <Image
-                source={{ uri: event.photo }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            )}
+            <Image
+              source={eventImageSource}
+              style={styles.image}
+              resizeMode="cover"
+            />
 
             <View style={styles.content}>
               <Text style={styles.title}>{event.title}</Text>

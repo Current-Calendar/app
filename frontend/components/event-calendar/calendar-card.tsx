@@ -32,24 +32,20 @@ export default function CalendarCard({
     APPLE: "logo-apple",
   };
 
+  const hasCalendarCover =
+    typeof calendar.cover === "string" && calendar.cover.trim().length > 0;
+  const calendarCoverSource = hasCalendarCover
+    ? { uri: calendar.cover!.trim() }
+    : require("@/assets/images/icon.png");
+
   return (
     <Pressable
       style={eventCalendarCalendarCardStyles.card}
       onPress={() => onPress(calendar.id)}
     >
-      {calendar.cover && (
-        <Image
-          source={{ uri: calendar.cover }}
-          style={eventCalendarCalendarCardStyles.cover}
-        />
-      )}
-
-      <View
-        style={[
-          eventCalendarCalendarCardStyles.coverFallback,
-          !calendar.cover && eventCalendarCalendarCardStyles.coverFallbackShown,
-          { backgroundColor: calendar.color },
-        ]}
+      <Image
+        source={calendarCoverSource}
+        style={eventCalendarCalendarCardStyles.cover}
       />
 
       <View style={eventCalendarCalendarCardStyles.content}>

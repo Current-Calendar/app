@@ -49,6 +49,11 @@ export function CalendarInfoModal({
     const accent = calendar.color;
     const privacy = PRIVACY_LABELS[calendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
     const origin = ORIGIN_LABELS[calendar.origin] ?? ORIGIN_LABELS.CURRENT;
+    const hasCalendarCover =
+        typeof calendar.cover === 'string' && calendar.cover.trim().length > 0;
+    const calendarCoverSource = hasCalendarCover
+        ? { uri: calendar.cover.trim() }
+        : require('@/assets/images/icon.png');
 
     const handleDeletePress = () => {
         if (!onDelete) return;
@@ -87,13 +92,11 @@ export function CalendarInfoModal({
                 </TouchableOpacity>
             </View>
 
-            {calendar.cover ? (
-                <Image
-                    source={{ uri: calendar.cover }}
-                    style={calendarInfoModalStyles.coverImage}
-                    resizeMode="cover"
-                />
-            ) : null}
+            <Image
+                source={calendarCoverSource}
+                style={calendarInfoModalStyles.coverImage}
+                resizeMode="cover"
+            />
 
             {calendar.description ? (
                 <Text style={calendarInfoModalStyles.description}>{calendar.description}</Text>

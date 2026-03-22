@@ -36,6 +36,11 @@ export default function EventCard({
   );
 
   const imageHeight = imageWidth * 0.7;
+  const hasEventImage =
+    typeof event.image === "string" && event.image.trim().length > 0;
+  const eventImageSource = hasEventImage
+    ? { uri: event.image.trim() }
+    : require("@/assets/images/nube_login.png");
 
   return (
     <View style={eventCalendarEventCardStyles.card}>
@@ -58,7 +63,7 @@ export default function EventCard({
             { width: imageWidth, height: imageHeight },
           ]}
         >
-          <Image source={{ uri: event.image }} style={eventCalendarEventCardStyles.image} />
+          <Image source={eventImageSource} style={eventCalendarEventCardStyles.image} />
         </View>
 
         <View style={eventCalendarEventCardStyles.content}>
