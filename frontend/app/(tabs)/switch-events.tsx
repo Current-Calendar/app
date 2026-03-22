@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
@@ -41,6 +41,7 @@ export default function EventsScreen() {
 
   // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
+  const [savedEventIds, setSavedEventIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
@@ -123,6 +124,22 @@ export default function EventsScreen() {
     setSelectedEvent(null);
   };
 
+  const handleSaveEvent = (eventId: string) => {
+    if (!hasSession) {
+      Alert.alert("Login required", "Please log in to save events.");
+      return;
+    }
+
+    let justSaved = false;
+    setSavedEventIds((prev) => {
+      const alreadySaved = prev.includes(eventId);
+      justSaved = !alreadySaved;
+      return alreadySaved ? prev.filter((id) => id !== eventId) : [...prev, eventId];
+    });
+
+    Alert.alert(justSaved ? "Saved" : "Removed", justSaved ? "Event saved to your list." : "Event removed from your saved list.");
+  };
+
   // Vistas de estado (Loading / Error)
   if (loadingEvents && events.length === 0) {
     return (
@@ -189,7 +206,8 @@ export default function EventsScreen() {
                 setCommentsModalVisible(true);
               }
             }}
-              onSave={(id) => console.log("Save:", id)}
+              onSave={handleSaveEvent}
+              isSaved={savedEventIds.includes(item.id)}
             />
           )}
           ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}

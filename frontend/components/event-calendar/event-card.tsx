@@ -15,6 +15,7 @@ interface Props {
   onLike: (id: string) => void;
   onComment: (id: string) => void;
   onSave: (id: string) => void;
+  isSaved?: boolean;
 }
 
 export default function EventCard({
@@ -23,6 +24,7 @@ export default function EventCard({
   onLike,
   onComment,
   onSave,
+  isSaved = false,
 }: Props) {
   const { width } = useWindowDimensions();
 
@@ -105,9 +107,9 @@ export default function EventCard({
         </Pressable>
 
         <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onSave(event.id)}>
-          <Ionicons name="bookmark-outline" size={18} />
+          <Ionicons name={isSaved ? "bookmark" : "bookmark-outline"} size={18} />
           {!isSmallScreen && (
-            <Text style={eventCalendarEventCardStyles.actionText}>Save</Text>
+            <Text style={eventCalendarEventCardStyles.actionText}>{isSaved ? "Saved" : "Save"}</Text>
           )}
         </Pressable>
       </View>
