@@ -573,6 +573,27 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
   },
+  labelRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  labelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#10464d',
+  },
+  labelBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   actions: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -12,6 +12,8 @@ import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
+import { useEventLabels } from "@/hooks/use-event-labels";
+import { LabelChip } from "./label-chip";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -29,11 +31,11 @@ interface EventDetailModalProps {
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
+  const { getLabelsForEvent, labelIdFromType, getLabelObjects } = useEventLabels();
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
-
   useEffect(() => {
     setAttendanceMenuOpen(false);
     setCommentsVisible(false);
@@ -82,6 +84,13 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
     setCommentsVisible(false);
   };
 
+  const assignedIds = event ? getLabelsForEvent(event.id) : [];
+  const typeLabelId = labelIdFromType(event?.type ?? null);
+  const activeLabelIds = Array.from(
+    new Set([...(typeLabelId ? [typeLabelId] : []), ...(event?.labels ?? assignedIds ?? [])])
+  );
+  const activeLabelObjects = getLabelObjects(activeLabelIds);
+
   return (
     <>
       <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
@@ -101,6 +110,20 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
             <View style={styles.content}>
               <Text style={styles.title}>{event.title}</Text>
+
+              <View style={styles.labelsSection}>
+                <Text style={styles.sectionHeading}>Labels</Text>
+
+                <View style={styles.labelChips}>
+                  {activeLabelObjects.length > 0 ? (
+                    activeLabelObjects.map((label) => (
+                      <LabelChip key={label.id} label={label} compact selected />
+                    ))
+                  ) : (
+                    <Text style={styles.helperText}>This event has no labels yet.</Text>
+                  )}
+                </View>
+              </View>
 
               {!!event.place_name && (
                 <DetailRow icon="location-outline" label={event.place_name} />
@@ -209,6 +232,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
           userAvatar: "",
         }}
       />
+
     </>
   );
 }
@@ -290,6 +314,14 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 22,
   },
+
+  labelsSection: {
+    marginTop: 4,
+    gap: 6,
+  },
+  sectionHeading: { color: TEXT, fontWeight: "800", fontSize: 14 },
+  labelChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  helperText: { color: TEXT, opacity: 0.7, fontWeight: "700" },
 
   row: {
     flexDirection: "row",

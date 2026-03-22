@@ -9,6 +9,9 @@ import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import { LabelFilterBar } from "@/components/label-filter-bar";
+import { useEventLabels } from "@/hooks/use-event-labels";
+import { EventLabel, EventType } from "@/types/calendar";
 
 export interface Event {
   id: string;
@@ -22,6 +25,9 @@ export interface Event {
   userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
+  type?: EventType;
+  labels?: string[];
+  labelObjects?: EventLabel[];
   attendees?: {
     id: string;
     name: string;
@@ -34,6 +40,14 @@ export default function EventsScreen() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
+  const {
+    labels: labelCatalog,
+    customLabels,
+    assignments: labelAssignments,
+    getLabelsForEvent,
+    getLabelObjects,
+    labelIdFromType,
+  } = useEventLabels();
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
@@ -44,6 +58,13 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedLabelId && !labelCatalog.find((l) => l.id === selectedLabelId)) {
+      setSelectedLabelId(null);
+    }
+  }, [labelCatalog, selectedLabelId]);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -64,6 +85,14 @@ export default function EventsScreen() {
       const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
         const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
         const cal = calendarMap[Number(calId)];
+        const type = (e.type || e.tipo || 'other') as EventType;
+        const typeLabelId = labelIdFromType(type);
+        const manualLabels = getLabelsForEvent(String(e.id));
+        const labelIds = Array.from(new Set([
+          ...(typeLabelId ? [typeLabelId] : []),
+          ...(manualLabels ?? []),
+        ]));
+        const labelObjects = getLabelObjects(labelIds);
 
         return {
           id: String(e.id),
@@ -81,6 +110,9 @@ export default function EventsScreen() {
               : require("../../assets/images/default-user.jpg")),
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
+          type,
+          labels: labelIds,
+          labelObjects,
           // Temporary mock attendees for frontend testing.
           // Backend should replace this with real attendees data per event.
           attendees: index % 2 === 0
@@ -104,7 +136,7 @@ export default function EventsScreen() {
 
       setEvents(mappedEvents);
     }
-  }, [backendCalendars, backendEvents]);
+  }, [backendCalendars, backendEvents, labelAssignments, getLabelsForEvent, getLabelObjects, labelIdFromType]);
 
   // Manejo de errores
   const errorMessage = calendarsError || eventsError;
@@ -145,6 +177,10 @@ export default function EventsScreen() {
     );
   }
 
+  const visibleEvents = selectedLabelId
+    ? events.filter((evt) => evt.labels?.includes(selectedLabelId))
+    : events;
+
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
@@ -174,8 +210,16 @@ export default function EventsScreen() {
 
         <EventsSwitch />
 
+        <View style={styles.filtersRow}>
+          <LabelFilterBar
+            labels={labelCatalog}
+            selected={selectedLabelId}
+            onChange={setSelectedLabelId}
+          />
+        </View>
+
         <FlatList
-          data={events}
+          data={visibleEvents}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <EventCard
@@ -282,6 +326,10 @@ export const styles = StyleSheet.create({
 
     flex: 1,
 
+  },
+  filtersRow: {
+    marginHorizontal: 16,
+    marginBottom: 10,
   },
 
   list: {

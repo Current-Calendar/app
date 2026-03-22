@@ -6,6 +6,13 @@ export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
 export type EventType = 'meeting' | 'task' | 'reminder' | 'holiday' | 'birthday' | 'other';
 
+export type EventLabel = {
+    id: string;
+    name: string;
+    color: string;
+    isDefault?: boolean;
+};
+
 export interface Calendar {
     id: string;
     name: string;
@@ -32,6 +39,7 @@ export interface CalendarEvent {
     recurrence?: string | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
+    labels?: string[];      // Label ids assigned locally (default + custom)
 }
 
 // ─── API Response shapes (to be connected to backend) ─────────────────────────

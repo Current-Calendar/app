@@ -86,6 +86,29 @@ export default function EventCard({
             <Ionicons name="location-outline" size={16} />
             <Text style={eventCalendarEventCardStyles.metaText}>{event.location}</Text>
           </View>
+
+          {event.labelObjects && event.labelObjects.length > 0 && (
+            <View style={eventCalendarEventCardStyles.labelRow}>
+              {event.labelObjects.slice(0, 3).map((label) => (
+                <View
+                  key={label.id}
+                  style={[
+                    eventCalendarEventCardStyles.labelBadge,
+                    { backgroundColor: label.color },
+                  ]}
+                >
+                  <Text style={eventCalendarEventCardStyles.labelBadgeText}>{label.name}</Text>
+                </View>
+              ))}
+              {event.labelObjects.length > 3 && (
+                <View style={[eventCalendarEventCardStyles.labelBadge, { backgroundColor: '#10464d' }]}>
+                  <Text style={eventCalendarEventCardStyles.labelBadgeText}>
+                    +{event.labelObjects.length - 3}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </Pressable>
 
@@ -114,4 +137,3 @@ export default function EventCard({
     </View>
   );
 }
-

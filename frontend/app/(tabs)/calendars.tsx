@@ -28,6 +28,9 @@ import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } 
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
+import { LabelFilterBar } from '@/components/label-filter-bar';
+import { useEventLabels } from '@/hooks/use-event-labels';
+import { LabelManagerModal } from '@/components/label-manager-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -69,14 +72,33 @@ export default function CalendarScreen() {
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
+    const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
     const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
     const [importModalVisible, setImportModalVisible] = useState(false);
+    const [labelManagerVisible, setLabelManagerVisible] = useState(false);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
     const [calendarsError, setCalendarsError] = useState<unknown>(null);
+
+    const {
+        labels: labelCatalog,
+        customLabels,
+        assignments: labelAssignments,
+        getLabelsForEvent,
+        labelIdFromType,
+        addCustomLabel,
+        removeCustomLabel,
+        colorPalette,
+    } = useEventLabels();
+
+    useEffect(() => {
+        if (selectedLabelId && !labelCatalog.find((l) => l.id === selectedLabelId)) {
+            setSelectedLabelId(null);
+        }
+    }, [labelCatalog, selectedLabelId]);
 
     const {
         events: backendEvents,
@@ -153,6 +175,13 @@ export default function CalendarScreen() {
             )
             .map((e: any) => {
                 const calendar = calendars.find(c => e.calendars.includes(Number(c.id)));
+                const type = (e.type || e.tipo || 'other') as EventType;
+                const typeLabelId = labelIdFromType(type);
+                const manualLabels = getLabelsForEvent(String(e.id));
+                const labels = Array.from(new Set([
+                    ...(typeLabelId ? [typeLabelId] : []),
+                    ...(manualLabels ?? []),
+                ]));
 
                 return {
                     id: String(e.id),
@@ -163,13 +192,14 @@ export default function CalendarScreen() {
                     date: e.date,
                     time: e.time.substring(0, 5),
                     recurrence: e.recurrence,
-                    type: 'other',
+                    type,
+                    labels,
                     color: calendar?.color || '#6C63FF',
                 };
             });
 
         setEvents(mappedEvents);
-    }, [backendEvents, calendars]);
+    }, [backendEvents, calendars, labelAssignments, getLabelsForEvent, labelIdFromType]);
 
     useEffect(() => {
         if (params.selectedCalendarId) {
@@ -222,8 +252,11 @@ export default function CalendarScreen() {
         if (selectedEventType) {
             list = list.filter((e) => e.type === selectedEventType);
         }
+        if (selectedLabelId) {
+            list = list.filter((e) => e.labels?.includes(selectedLabelId));
+        }
         return list;
-    }, [events, selectedCalendarId, selectedEventType]);
+    }, [events, selectedCalendarId, selectedEventType, selectedLabelId]);
 
     const eventsOfSelectedDay = useMemo(() => {
         if (!selectedDay) return [];
@@ -494,6 +527,12 @@ export default function CalendarScreen() {
 
                 <View style={styles.filterBlock}>
                     <EventFilterBar selected={selectedEventType} onChange={setSelectedEventType} />
+                    <LabelFilterBar
+                        labels={labelCatalog}
+                        selected={selectedLabelId}
+                        onChange={setSelectedLabelId}
+                        onManage={() => setLabelManagerVisible(true)}
+                    />
                 </View>
 
                 {/* MOBILE: inline add-event banner, sits above the grid inside the scroll */}
@@ -673,6 +712,15 @@ export default function CalendarScreen() {
                     </Animated.View>
                 </Pressable>
             )}
+            <LabelManagerModal
+                visible={labelManagerVisible}
+                labels={labelCatalog}
+                customLabels={customLabels}
+                palette={colorPalette}
+                onCreate={addCustomLabel}
+                onDelete={removeCustomLabel}
+                onClose={() => setLabelManagerVisible(false)}
+            />
             <ImportCalendarModal
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
@@ -758,6 +806,7 @@ const styles = StyleSheet.create({
     },
     filterBlock: {
         marginBottom: 8,
+        gap: 8,
     },
     // Mobile inline add-event banner
     mobileBanner: {
