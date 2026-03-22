@@ -3,8 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework import status
 from main.models import Label, Calendar, Event
-from datetime import datetime, date, time, timedelta
-from django.utils import timezone
+from datetime import date, time, timedelta
 
 User = get_user_model()
 
@@ -24,16 +23,19 @@ class LabelListTests(TestCase):
         response = self.client.get('/api/v1/labels/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 3)
-        self.assertEqual(response.data[0]['name'], 'Trabajo')
+
+        label_names = {label['name'] for label in response.data}
+        self.assertSetEqual(label_names, {'Trabajo', 'Personal', 'Viaje'})
 
     def test_list_default_labels(self):
         """Test listar solo labels predeterminadas."""
-        non_default_label = Label.objects.create(
+        Label.objects.create(
             name='Custom', color='#000000', icon='tag', is_default=False
         )
         response = self.client.get('/api/v1/labels/default/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)  # Solo las predeterminadas
+        self.assertEqual(len(response.data), 3)
+
         for label in response.data:
             self.assertTrue(label['is_default'])
 
@@ -87,7 +89,7 @@ class AddLabelToCalendarTests(TestCase):
         self.assertNotIn(self.label, self.calendar.labels.all())
 
     def test_add_label_missing_label_id(self):
-        """Test error cuando falta label_id."""
+        """Test error cuando falta label_id o name."""
         self.client.force_authenticate(user=self.user)
         response = self.client.post(
             f'/api/v1/calendars/{self.calendar.id}/labels/add/',
@@ -257,66 +259,65 @@ class FilterEventsByLabelTests(TestCase):
             creator=self.user,
             privacy='PRIVATE'
         )
-        
-        test_date1 = date.today() + timedelta(days=1)
+
         test_time = time(10, 0)
+
         self.event1 = Event.objects.create(
             title='Evento Trabajo 1',
             description='Test',
-            date=test_date1,
+            date=date.today() + timedelta(days=1),
             time=test_time,
             creator=self.user,
             place_name='Test Location'
         )
         self.event1.calendars.add(self.calendar)
         self.event1.labels.add(self.label_trabajo)
-        
-        test_date2 = date.today() + timedelta(days=2)
+
         self.event2 = Event.objects.create(
             title='Evento Trabajo 2',
             description='Test',
-            date=test_date2,
+            date=date.today() + timedelta(days=2),
             time=test_time,
             creator=self.user,
             place_name='Test Location'
         )
         self.event2.calendars.add(self.calendar)
         self.event2.labels.add(self.label_trabajo)
-        
-        test_date3 = date.today() + timedelta(days=3)
+
         self.event3 = Event.objects.create(
             title='Evento Personal',
             description='Test',
-            date=test_date3,
+            date=date.today() + timedelta(days=3),
             time=test_time,
             creator=self.user,
             place_name='Test Location'
         )
         self.event3.calendars.add(self.calendar)
         self.event3.labels.add(self.label_personal)
-        
+
         self.client = APIClient()
 
     def test_filter_events_by_label(self):
         """Test filtrar eventos por label."""
-        response = self.client.get(f'/api/v1/events/filter-by-label/{self.label_trabajo.id}/')
+        response = self.client.get('/api/v1/events/filter-by-label/?label=Trabajo')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2)
-        self.assertEqual(response.data['label']['name'], 'Trabajo')
-        self.assertEqual(len(response.data['events']), 2)
+        self.assertEqual(len(response.data), 2)
+
+        event_titles = {event['title'] for event in response.data}
+        self.assertSetEqual(event_titles, {'Evento Trabajo 1', 'Evento Trabajo 2'})
 
     def test_filter_events_by_label_no_results(self):
         """Test filtrar eventos por label sin resultados."""
-        empty_label = Label.objects.create(name='Vacio', color='#000000', is_default=False)
-        response = self.client.get(f'/api/v1/events/filter-by-label/{empty_label.id}/')
+        Label.objects.create(name='Vacio', color='#000000', is_default=False)
+        response = self.client.get('/api/v1/events/filter-by-label/?label=Vacio')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 0)
-        self.assertEqual(len(response.data['events']), 0)
+        self.assertEqual(len(response.data), 0)
 
     def test_filter_events_by_nonexistent_label(self):
         """Test filtrar eventos por label inexistente."""
-        response = self.client.get('/api/v1/events/filter-by-label/999/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.get('/api/v1/events/filter-by-label/?label=Inexistente')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
 
 
 class FilterCalendarsByLabelTests(TestCase):
@@ -327,7 +328,7 @@ class FilterCalendarsByLabelTests(TestCase):
         self.user = User.objects.create_user(username='testuser', email='test@test.com', password='testpass123')
         self.label_trabajo = Label.objects.create(name='Trabajo', color='#3498DB', icon='briefcase', is_default=True)
         self.label_personal = Label.objects.create(name='Personal', color='#E74C3C', icon='user', is_default=True)
-        
+
         self.calendar1 = Calendar.objects.create(
             name='Calendario Trabajo 1',
             description='Test',
@@ -335,7 +336,7 @@ class FilterCalendarsByLabelTests(TestCase):
             privacy='PRIVATE'
         )
         self.calendar1.labels.add(self.label_trabajo)
-        
+
         self.calendar2 = Calendar.objects.create(
             name='Calendario Trabajo 2',
             description='Test',
@@ -343,7 +344,7 @@ class FilterCalendarsByLabelTests(TestCase):
             privacy='PRIVATE'
         )
         self.calendar2.labels.add(self.label_trabajo)
-        
+
         self.calendar3 = Calendar.objects.create(
             name='Calendario Personal',
             description='Test',
@@ -351,26 +352,27 @@ class FilterCalendarsByLabelTests(TestCase):
             privacy='PRIVATE'
         )
         self.calendar3.labels.add(self.label_personal)
-        
+
         self.client = APIClient()
 
     def test_filter_calendars_by_label(self):
         """Test filtrar calendarios por label."""
-        response = self.client.get(f'/api/v1/calendars/filter-by-label/{self.label_trabajo.id}/')
+        response = self.client.get('/api/v1/calendars/filter-by-label/?label=Trabajo')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 2)
-        self.assertEqual(response.data['label']['name'], 'Trabajo')
-        self.assertEqual(len(response.data['calendars']), 2)
+        self.assertEqual(len(response.data), 2)
+
+        calendar_names = {calendar['name'] for calendar in response.data}
+        self.assertSetEqual(calendar_names, {'Calendario Trabajo 1', 'Calendario Trabajo 2'})
 
     def test_filter_calendars_by_label_no_results(self):
         """Test filtrar calendarios por label sin resultados."""
-        empty_label = Label.objects.create(name='Vacio', color='#000000', is_default=False)
-        response = self.client.get(f'/api/v1/calendars/filter-by-label/{empty_label.id}/')
+        Label.objects.create(name='Vacio', color='#000000', is_default=False)
+        response = self.client.get('/api/v1/calendars/filter-by-label/?label=Vacio')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count'], 0)
-        self.assertEqual(len(response.data['calendars']), 0)
+        self.assertEqual(len(response.data), 0)
 
     def test_filter_calendars_by_nonexistent_label(self):
         """Test filtrar calendarios por label inexistente."""
-        response = self.client.get('/api/v1/calendars/filter-by-label/999/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        response = self.client.get('/api/v1/calendars/filter-by-label/?label=Inexistente')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
