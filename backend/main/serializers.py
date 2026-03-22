@@ -5,7 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event, EventAttendance
 
-from .models import Calendar, Notification, Report
+from .models import Calendar, Label, Notification, Report
 from utils.storage import get_signed_url
 
 User = get_user_model()
@@ -170,10 +170,15 @@ class EditProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'photo', 'pronouns', 'link', 'bio']
 
+class LabelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Label
+        fields = ['id', 'name', 'color', 'icon', 'is_default']
 
 class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
     liked_by_me = serializers.SerializerMethodField()
+    labels = LabelSerializer(many=True, read_only=True)
 
     class Meta:
         model = Calendar
@@ -188,6 +193,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
             "created_at",
             "likes_count",
             "liked_by_me",
+            "labels",
         )
         read_only_fields = ("id", "created_at")
 
@@ -242,6 +248,7 @@ class EventSerializer(serializers.ModelSerializer):
     creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()
+    labels = LabelSerializer(many=True, read_only=True)
 
     class Meta:
         model = Event
@@ -250,7 +257,7 @@ class EventSerializer(serializers.ModelSerializer):
             'date', 'time', 'recurrence', 'external_id',
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
-            'photo', 'creator_username', 'creator_photo', 'attendees'
+            'photo', 'creator_username', 'creator_photo', 'attendees', 'labels'
         ]
 
     def get_creator_photo(self, obj):
