@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
 from main.models import User, Calendar, CalendarLike
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
