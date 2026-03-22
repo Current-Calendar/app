@@ -254,7 +254,7 @@ class EliminarCalendarTestCase(APITestCase):
     def test_eliminar_calendario_sin_autenticar(self):
         """An unauthenticated user cannot delete a calendar"""
         response = self.client.delete(f'/api/v1/calendars/{self.calendar.id}/delete/')
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_eliminar_calendario_sin_permiso(self):
         """A user who is not the creator cannot delete the calendar"""
@@ -312,7 +312,7 @@ class EditarCalendarTestCase(TestCase):
         response = self.client.put(f'/api/v1/calendars/{self.calendar.id}/edit/', {
             'name': 'Intento sin auth'
         })
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""

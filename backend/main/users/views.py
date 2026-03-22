@@ -1,10 +1,11 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from ..models import User
-from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer
+from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer, EditProfileSerializer
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from ..models import Calendar
 
 
 @api_view(['GET'])
@@ -28,7 +29,7 @@ def search_users(request):
         Q(pronouns__icontains=query)
     ).distinct()
     
-    users = UserSerializer(users, many=True, context={'request': request})
+    users = PublicUserSerializer(users, many=True, context={'request': request})
 
     return Response(users.data, status=status.HTTP_200_OK)
 
@@ -40,25 +41,61 @@ def follow_or_unfollow_user(request, pk):
     Endpoint to follow or unfollow another user
     POST /api/v1/users/<pk>/follow/
     """
-    
+    if request.user.pk == pk:
+        return Response({"error": "You cannot follow yourself"}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         user_to_follow = User.objects.get(pk=pk)
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     user = request.user
-    
+
     if user.following.filter(pk=user_to_follow.pk).exists():
         user.following.remove(user_to_follow)
         followed = False
     else:
         user.following.add(user_to_follow)
         followed = True
-        
+
     return Response({
         "user_id": user_to_follow.pk,
         "followed": followed
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_followers(request, pk):
+    """
+    Returns the list of users who follow the user with the given pk.
+    GET /api/v1/users/<pk>/followers/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    followers = user.followers_set.all()
+    serializer = PublicUserSerializer(followers, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_following(request, pk):
+    """
+    Returns the list of users that the user with the given pk is following.
+    GET /api/v1/users/<pk>/following/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    following = user.following.all()
+    serializer = PublicUserSerializer(following, many=True, context={'request': request})
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -75,12 +112,61 @@ def get_user_by_id(request, pk):
         return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     
     user_data = PublicUserSerializer(user, context={'request': request}).data
-    public_calendars = list(user.calendarios_creados.filter(privacy="PUBLIC").values(
-            "id", "name", "description", "cover", "created_at"
-        ))
+    public_calendars = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "created_at": cal.created_at,
+        }
+        for cal in user.created_calendars.filter(privacy="PUBLIC")
+    ]
     user_data["public_calendars"] = public_calendars
     
     return Response(user_data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user_by_username(request, username):
+    """
+    Endpoint to obtain the public profile of a user by their username.
+    GET /api/v1/users/by-username/<username>/
+    """
+    try:
+        user = User.objects.get(username=username)
+    except User.DoesNotExist:
+        return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    user_data = PublicUserSerializer(user, context={'request': request}).data
+    public_calendars = list(user.created_calendars.filter(privacy="PUBLIC").values(
+        "id", "name", "description", "cover", "created_at"
+    ))
+    user_data["public_calendars"] = public_calendars
+
+    return Response(user_data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_followed_calendars(request, pk):
+    """
+    Returns the public calendars that a user is subscribed to.
+    GET /api/v1/users/<pk>/followed_calendars/
+    """
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    calendars = list(
+        user.subscribed_calendars.filter(privacy="PUBLIC").values(
+            "id", "name", "description", "cover", "created_at"
+        )
+    )
+    return Response(calendars)
 
 
 @api_view(['GET'])
@@ -102,17 +188,18 @@ def edit_profile(request):
     Endpoint to allow users edit their profile
     PATCH /api/v1/users/me/edit/
     """
-    
-    serializer = UserSerializer(
+
+    serializer = EditProfileSerializer(
         request.user,
         data=request.data,
-        partial=True
+        partial=True,
+        context={'request': request},
     )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
     serializer.save()
-    
+
     return Response({
         'message': 'Profile updated correctly',
         'user': serializer.data

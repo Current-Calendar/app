@@ -4,14 +4,15 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import apiClient from '@/services/api-client';
 
 type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
+  const { updateCalendar } = useCalendarActions();
   const params = useLocalSearchParams<{
     id: string;
     name: string;
@@ -101,7 +102,6 @@ export default function EditScreen() {
     setIsLoading(true);
     try {
       if (newCoverImage) {
-        // Use FormData when uploading a new cover image
         const formData = new FormData();
         formData.append("name", calendarData.name);
         formData.append("description", calendarData.description);
@@ -112,9 +112,9 @@ export default function EditScreen() {
         const blob = await fetchResponse.blob();
         formData.append("cover", blob, filename);
 
-        await apiClient.put(`/calendars/${Number(calendarId)}/edit/`, formData);
+        await updateCalendar(Number(calendarId), formData);
       } else {
-        await apiClient.put(`/calendars/${Number(calendarId)}/edit/`, {
+        await updateCalendar(Number(calendarId), {
           name: calendarData.name,
           description: calendarData.description,
           privacy: selectedPrivacy,
@@ -133,7 +133,7 @@ export default function EditScreen() {
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
+        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop, !isDesktop && { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* FORM CARD */}
@@ -264,27 +264,7 @@ export default function EditScreen() {
             </Text>
           </View>
 
-          {/* DESKTOP BUTTON */}
-          {isDesktop && (
-            <Pressable
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-              onPress={handleEdit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.saveText}>Save Changes</Text>
-              )}
-            </Pressable>
-          )}
-
-        </View>
-      </ScrollView>
-
-      {/* SAVE BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.saveContainer}>
+          {/* SAVE BUTTON */}
           <Pressable
             style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
             onPress={handleEdit}
@@ -296,8 +276,9 @@ export default function EditScreen() {
               <Text style={styles.saveText}>Save Changes</Text>
             )}
           </Pressable>
+
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
@@ -305,11 +286,10 @@ export default function EditScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
   },
   container: {
     paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingBottom: 40,
   },
   containerDesktop: {
     alignItems: "center",
@@ -509,12 +489,6 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  saveContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-  },
   saveButton: {
     flex: 1,
     backgroundColor: "#10464d",

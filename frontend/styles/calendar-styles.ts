@@ -462,6 +462,9 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 6,
   },
+  subscribedBtn: {
+    backgroundColor: "#9E9E9E",
+  },
   btnIcon: {
     marginRight: 4,
   },

@@ -17,8 +17,11 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
+import { useCreateEventApi } from '@/hooks/use-create-event-api';
+import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
 import { useRouter } from "expo-router";
 import apiClient from '@/services/api-client';
+import { useLocalSearchParams } from "expo-router";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -28,27 +31,9 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-// ========= API CONFIG =========
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000").replace(
-  /\/$/,
-  ""
-);
-const API_V1 = `${API_BASE_URL}/api/v1`;
-
-// ========= NOMINATIM (OpenStreetMap) =========
-// Docs: https://nominatim.org/release-docs/latest/api/Search/
-const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
-const NOMINATIM_LIMIT = 6;
 const PLACE_DEBOUNCE_MS = 350;
 
 type CalendarItem = { id: string; name: string; image?: any };
-
-type PlaceSuggestion = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-};
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
@@ -61,26 +46,6 @@ const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
   name: String(raw?.name ?? raw?.title ?? "Calendar"),
 });
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_V1}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {}),
-    },
-    ...options,
-  });
-
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-
-  if (!res.ok) {
-    const errMsg =
-      data?.errors?.join("\n") || data?.detail || `Error ${res.status}: ${res.statusText}`;
-    throw new Error(errMsg);
-  }
-  return data as T;
-}
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTH_NAMES = [
@@ -132,7 +97,7 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
     const firstDowMondayBased = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-    const cells: Array<{ date: Date | null; label: string }> = [];
+    const cells: { date: Date | null; label: string }[] = [];
     for (let i = 0; i < firstDowMondayBased; i++) cells.push({ date: null, label: "" });
     for (let d = 1; d <= daysInMonth; d++)
       cells.push({ date: new Date(viewYear, viewMonth, d), label: String(d) });
@@ -307,6 +272,8 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { loadMyCalendars, createEvent } = useCreateEventApi();
+  const { date: dateParam } = useLocalSearchParams();
   const router = useRouter();
 
   const goBackOrCalendars = () => {
@@ -335,7 +302,7 @@ export default function CreateEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiClient.get<any>("/calendars/my-calendars");
+      const data: any = await loadMyCalendars();
 
       const list =
         (Array.isArray(data) && data) ||
@@ -372,15 +339,26 @@ export default function CreateEventsScreen() {
   const [lon, setLon] = useState<number | null>(null);
 
   // Autocomplete (Nominatim)
-  const [placeLoading, setPlaceLoading] = useState(false);
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [placeFocused, setPlaceFocused] = useState(false);
+  const keepCoordinatesOnNextPlaceChangeRef = useRef(false);
 
-  // Prevents re-triggering search when the user selects a suggestion
-  const suppressNextSearchRef = useRef(false);
+  const {
+    suggestions,
+    loading: placeLoading,
+    error: placeError,
+  } = usePlaceSearch(place, {
+    enabled: placeFocused,
+    delayMs: PLACE_DEBOUNCE_MS,
+    limit: 6,
+  });
 
   const [date, setDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
@@ -443,97 +421,34 @@ export default function CreateEventsScreen() {
     if (!result.canceled) setCoverUri(result.assets[0].uri);
   };
 
-  // ========= Nominatim search (debounced) =========
   useEffect(() => {
-    if (suppressNextSearchRef.current) {
-      suppressNextSearchRef.current = false;
+    if (keepCoordinatesOnNextPlaceChangeRef.current) {
+      keepCoordinatesOnNextPlaceChangeRef.current = false;
       return;
     }
 
     // si el user escribe manualmente, invalidamos coords (hasta que elija sugerencia)
     setLat(null);
     setLon(null);
-
-    const q = place.trim();
-    setPlaceError(null);
-
-    if (!q || q.length < 3) {
-      setSuggestions([]);
-      setPlaceLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      try {
-        setPlaceLoading(true);
-
-        const url =
-          `${NOMINATIM_SEARCH_URL}` +
-          `?q=${encodeURIComponent(q)}` +
-          `&format=json` +
-          `&addressdetails=1` +
-          `&limit=${NOMINATIM_LIMIT}`;
-
-        // Nominatim recomienda identificarse con un User-Agent;
-        // en web no se puede setear, pero en móvil sí.
-        const headers: Record<string, string> = {
-          Accept: "application/json",
-        };
-        if (Platform.OS !== "web") {
-          headers["User-Agent"] = "CurrentApp/1.0 (ISPP project)";
-        }
-
-        const res = await fetch(url, { headers });
-        const data = (await res.json()) as any[];
-
-        if (cancelled) return;
-
-        const mapped: PlaceSuggestion[] = (Array.isArray(data) ? data : [])
-          .map((x) => ({
-            place_id: Number(x?.place_id ?? 0),
-            display_name: String(x?.display_name ?? ""),
-            lat: String(x?.lat ?? ""),
-            lon: String(x?.lon ?? ""),
-          }))
-          .filter((x) => x.place_id && x.display_name && x.lat && x.lon);
-
-        setSuggestions(mapped);
-      } catch (e: any) {
-        if (cancelled) return;
-        setSuggestions([]);
-        setPlaceError(e?.message ?? "Error buscando locationes");
-      } finally {
-        if (!cancelled) setPlaceLoading(false);
-      }
-    }, PLACE_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
   }, [place]);
 
   const selectSuggestion = (s: PlaceSuggestion) => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = true;
     setPlace(s.display_name);
 
     const latNum = Number(s.lat);
     const lonNum = Number(s.lon);
     setLat(Number.isFinite(latNum) ? latNum : null);
     setLon(Number.isFinite(lonNum) ? lonNum : null);
-
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   const clearPlace = () => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = false;
     setPlace("");
     setLat(null);
     setLon(null);
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   // ====== Submit + Modal éxito ======
@@ -578,7 +493,7 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/events/create/', payload);
+      await createEvent(payload);
 
       setSuccessModalOpen(true);
     } catch (e: any) {
@@ -803,8 +718,8 @@ export default function CreateEventsScreen() {
               <Ionicons name="checkmark" size={28} color={WHITE} />
             </View>
 
-            <Text style={styles.successTitle}>¡Listo!</Text>
-            <Text style={styles.successBody}>Event creado correctamente</Text>
+            <Text style={styles.successTitle}>Ready!</Text>
+            <Text style={styles.successBody}>Event created successfully</Text>
 
             <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
               <Text style={styles.successBtnText}>OK</Text>
@@ -916,7 +831,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   iconBtn: { padding: 6 },
 

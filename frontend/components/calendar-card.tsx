@@ -11,10 +11,10 @@ import { calendarCardStyles } from '@/styles/calendar-styles';
 // ---------- Types ----------
 export interface CalendarData {
     id: string | number;
-    nombre: string;
-    descripcion?: string;
-    portada?: string;
-    estado?: 'AMIGOS' | 'PUBLICO' | 'PRIVADO' | string; // ? puedes ajustar
+    name: string;
+    description?: string;
+    cover?: string;
+    privacy?: 'FRIENDS' | 'PUBLIC' | 'PRIVATE' | string;
 }
 
 interface CalendarCardProps {
@@ -34,7 +34,7 @@ export default function CalendarCard({ calendar, onPress }: CalendarCardProps) {
             <View style={calendarCardStyles.cardContent}>
 
                 <Image
-                    source={{ uri: calendar.portada || 'https://via.placeholder.com/150' }}
+                    source={{ uri: calendar.cover || 'https://via.placeholder.com/150' }}
                     style={calendarCardStyles.cardImage}
                 />
 
@@ -42,16 +42,16 @@ export default function CalendarCard({ calendar, onPress }: CalendarCardProps) {
 
                     <View style={calendarCardStyles.titleRow}>
                         <Text style={calendarCardStyles.cardTitle} numberOfLines={1}>
-                            {calendar.nombre}
+                            {calendar.name}
                         </Text>
 
-                        {calendar.estado === 'AMIGOS' && (
+                        {calendar.privacy === 'FRIENDS' && (
                             <Ionicons name="star" size={18} color="#A0D842" style={calendarCardStyles.friendStar} />
                         )}
                     </View>
 
                     <Text style={calendarCardStyles.cardDesc} numberOfLines={3}>
-                        {calendar.descripcion || 'Sin descripciÃ³n disponible.'}
+                        {calendar.description || 'No description available.'}
                     </Text>
                 </View>
             </View>

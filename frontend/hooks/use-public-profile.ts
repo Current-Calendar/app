@@ -1,44 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 import { useAuth } from "@/hooks/use-auth";
-import { User } from '../types/user';
-import apiClient from '@/services/api-client';
+import apiClient, { ApiError } from '@/services/api-client';
 
 const USE_MOCK = false; // <<--- ENABLE ONLY FOR DEVELOPMENT
-
-const deriveDebuggerHost = () => {
-    const hostUri =
-        Constants.expoConfig?.hostUri ??
-        Constants.expoGoConfig?.hostUri ??
-        Constants.manifest2?.extra?.expoGo?.debuggerHost ??
-        Constants.manifest?.debuggerHost;
-
-    if (!hostUri) {
-        return null;
-    }
-
-    return hostUri.split(':')[0];
-};
-
-const buildDevBaseUrl = () => {
-    const debuggerHost = deriveDebuggerHost();
-
-    if (debuggerHost) {
-        return `http://${debuggerHost}:8000/api/v1/`;
-    }
-
-    return Platform.OS === 'android'
-        ? 'http://10.0.2.2:8000/api/v1/'
-        : 'http://localhost:8000/api/v1/';
-};
-
-const ensureTrailingSlash = (value: string) => (value.endsWith('/') ? value : `${value}/`);
-
-const API_BASE = ensureTrailingSlash(
-    process.env.EXPO_PUBLIC_API_URL ?? buildDevBaseUrl()
-);
 
 export type CalendarItem = {
     id: number;
@@ -47,6 +12,32 @@ export type CalendarItem = {
     privacy: string;
     cover: string;
     created_at?: string;
+};
+
+const hasHttpStatus = (error: unknown, statusCode: number) => {
+    if (error instanceof ApiError) {
+        return error.status === statusCode;
+    }
+    if (error instanceof Error) {
+        return error.message.includes(`HTTP ${statusCode}`);
+    }
+    return false;
+};
+
+const toPublicCalendarItems = (items: any[], creatorId?: number): CalendarItem[] => {
+    if (!Array.isArray(items)) return [];
+
+    return items
+        .filter((item) => !item?.privacy || item?.privacy === 'PUBLIC')
+        .filter((item) => (creatorId ? Number(item?.creator_id) === creatorId : true))
+        .map((item) => ({
+            id: Number(item.id),
+            name: item.name ?? '',
+            description: item.description ?? '',
+            privacy: item.privacy ?? 'PUBLIC',
+            cover: item.cover ?? '',
+            created_at: item.created_at,
+        }));
 };
 
 export const useUserProfile = (userId?: string) => {
@@ -82,14 +73,25 @@ export const useUserProfile = (userId?: string) => {
             return;
         }
 
+        let profileTargetId = userId;
+        try {
+            profileTargetId = decodeURIComponent(userId);
+        } catch {
+            profileTargetId = userId;
+        }
+        profileTargetId = profileTargetId.trim();
+        const normalizedUsername = profileTargetId.toLowerCase();
+
         async function fetchData() {
             setIsLoading(true);
+            setUserNotFound(false);
+            setFollowError(null);
 
             if (USE_MOCK) {
                 await new Promise(r => setTimeout(r, 700));
                 const mockUser = {
-                    id: userId,
-                    username: "john_doe",
+                    id: 1,
+                    username: userId,
                     pronouns: "he/him",
                     bio: "I'm a mock user for testing 😄",
                     photo: "https://i.pravatar.cc/300",
@@ -113,27 +115,100 @@ export const useUserProfile = (userId?: string) => {
             }
 
             try {
-                const headers: Record<string, string> = { Accept: 'application/json' };
-                const authToken = apiClient.getAccessToken();
-                if (authToken) {
-                    headers['Authorization'] = `Bearer ${authToken}`;
+                let resolvedUserId = profileTargetId;
+                let searchExactMatch: any | null = null;
+
+                if (!/^\d+$/.test(profileTargetId)) {
+                    const candidates = await apiClient.get<any[]>(
+                        `/users/search/?search=${encodeURIComponent(profileTargetId)}`
+                    );
+
+                    const exactMatch = Array.isArray(candidates)
+                        ? candidates.find((candidate) =>
+                            String(candidate?.username ?? '').toLowerCase() === normalizedUsername
+                        )
+                        : undefined;
+
+                    if (!exactMatch?.id) {
+                        setUserBeingViewed(null);
+                        setUserNotFound(true);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    searchExactMatch = exactMatch;
+                    resolvedUserId = String(exactMatch.id);
                 }
 
-                const response = await fetch(`${API_BASE}users/${userId}/`, {
-                    headers,
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setUserBeingViewed(data);
+                try {
+                    const data = await apiClient.get<any>(`/users/${resolvedUserId}/`);
+                    setUserBeingViewed({
+                        ...data,
+                        public_calendars: toPublicCalendarItems(data.public_calendars ?? []),
+                    });
                     setIsFollowing(Boolean(data.is_following));
-                } else {
-                    setUserNotFound(true);
+                    setUserNotFound(false);
+                } catch (error) {
+                    const notAllowed = hasHttpStatus(error, 401) || hasHttpStatus(error, 403);
+
+                    if (!notAllowed) {
+                        throw error;
+                    }
+
+                    const fallbackUser = searchExactMatch ?? (() => {
+                        if (!/^\d+$/.test(profileTargetId)) return null;
+                        return {
+                            id: Number(profileTargetId),
+                            username: '',
+                            pronouns: null,
+                            bio: null,
+                            photo: null,
+                            total_followers: 0,
+                            total_following: 0,
+                        };
+                    })();
+
+                    const fallbackCandidates = fallbackUser
+                        ? [fallbackUser]
+                        : await apiClient.get<any[]>(
+                            `/users/search/?search=${encodeURIComponent(profileTargetId)}`
+                        );
+
+                    const resolvedFallback = Array.isArray(fallbackCandidates)
+                        ? fallbackCandidates.find((candidate) => {
+                            if (/^\d+$/.test(profileTargetId)) {
+                                return Number(candidate?.id) === Number(profileTargetId);
+                            }
+                            return String(candidate?.username ?? '').toLowerCase() === normalizedUsername;
+                        })
+                        : null;
+
+                    if (!resolvedFallback?.id) {
+                        setUserBeingViewed(null);
+                        setUserNotFound(true);
+                        setIsFollowing(false);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    const publicCalendarsRaw = await apiClient.get<any[]>(
+                        `/calendars/list/?privacy=PUBLIC`
+                    );
+
+                    setUserBeingViewed({
+                        ...resolvedFallback,
+                        is_following: false,
+                        public_calendars: toPublicCalendarItems(publicCalendarsRaw, Number(resolvedFallback.id)),
+                    });
+                    setIsFollowing(false);
+                    setUserNotFound(false);
+                    setFollowError('Inicia sesión para ver información completa y seguir a este usuario.');
                 }
             } catch (error) {
                 console.error(error);
+                setUserBeingViewed(null);
                 setUserNotFound(true);
+                setIsFollowing(false);
             }
 
             setIsLoading(false);
@@ -142,9 +217,16 @@ export const useUserProfile = (userId?: string) => {
         fetchData();
     }, [userId, authLoading]);
 
-    // ----- Follow toggle -----
+    // ----- Follow toggle (usa el ID numérico del usuario visto) -----
     const handleFollowToggle = async () => {
-        if (!userId) return;
+        if (!userBeingViewed?.id) return;
+
+        if (!currentUser) {
+            setFollowError('Inicia sesión para seguir a este usuario.');
+            return;
+        }
+
+        const targetId = userBeingViewed?.id ? String(userBeingViewed.id) : userId;
 
         if (USE_MOCK) {
             await mockFollowToggle();
@@ -156,32 +238,14 @@ export const useUserProfile = (userId?: string) => {
         setIsFollowing(!previousState);
 
         try {
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-            };
-            const authToken = apiClient.getAccessToken();
-            if (authToken) {
-                headers['Authorization'] = `Bearer ${authToken}`;
-            }
+            const data = await apiClient.post<{ followed: boolean }>(`/users/${targetId}/follow/`, {});
 
-            const response = await fetch(`${API_BASE}users/${userId}/follow/`, {
-                method: 'POST',
-                headers,
-                credentials: 'include',
-            });
-
-            if (!response.ok) {
-                let message = 'Could not update follow status. Please try again.';
-                if (response.status === 401 || response.status === 403) {
-                    message = 'You need to log in to follow this user.';
-                }
+            if (typeof data?.followed !== 'boolean') {
+                let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
                 setFollowError(message);
                 setIsFollowing(previousState);
                 return;
             }
-
-            const data = await response.json();
             setIsFollowing(Boolean(data.followed));
         } catch (error) {
             console.error('Error follow:', error);

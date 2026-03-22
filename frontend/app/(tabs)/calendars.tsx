@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, } from 'react-native';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, Modal, TextInput } from 'react-native';
 
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,27 +9,30 @@ import { CalendarHeader, CalendarViewMode } from '@/components/calendar-header';
 import { CalendarWeekGrid } from '@/components/calendar-week-grid';
 import { CalendarYearGrid } from '@/components/calendar-year-grid';
 import { CalendarInfoModal } from '@/components/calendar-info-modal';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
 import { EventFilterBar } from '@/components/event-filter-bar';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
 
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
-import { API_CONFIG } from '@/constants/api';
-import { downloadCalendar } from '@/services/calendarService';
+import { useCalendars } from '@/hooks/use-calendars';
+import { useEventsList } from '@/hooks/use-events';
+import { useCalendarTransfer } from '@/hooks/use-calendar-transfer';
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
+import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
+import { ImportCalendarModal } from '@/components/import-calendar-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
 //   GET /events?calendarId= -> EventsResponse
-
+const todayKey = new Date().toISOString().slice(0, 10);
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -45,6 +48,8 @@ function formatSelectedDay(dateKey: string): string {
 
 export default function CalendarScreen() {
     const { isAuthenticated } = useAuth();
+    const { downloadCalendarFile } = useCalendarTransfer();
+    const { deleteCalendar } = useCalendarActions();
     const today = new Date();
     const router = useRouter();
     const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
@@ -52,7 +57,7 @@ export default function CalendarScreen() {
     const insets = useSafeAreaInsets();
     const isDesktop = width >= 768;
 
-    const BOTTOM_BAR_HEIGHT = 60 + 20;
+    const BOTTOM_BAR_HEIGHT = 60 + 25;
     const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
     const [year, setYear] = useState(today.getFullYear());
     const [month, setMonth] = useState(today.getMonth());
@@ -60,7 +65,6 @@ export default function CalendarScreen() {
     const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
     const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
@@ -70,18 +74,46 @@ export default function CalendarScreen() {
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
+    const [importModalVisible, setImportModalVisible] = useState(false);
+    const [loadingCalendars, setLoadingCalendars] = useState(true);
+    const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
+    const {
+        events: backendEvents,
+        loading: loadingEvents,
+        error: eventsError,
+        refetch: refetchEvents,
+    } = useEventsList();
     const fetchData = async () => {
-        setLoading(true);
         try {
-            const [calData, evData] = await Promise.all([
-                apiClient.get<any[]>('/calendars/list'),
-                apiClient.get<any[]>('/events/list'),
+            setLoadingCalendars(true);
+            setCalendarsError(null);
+
+            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData] = await Promise.all([
+                apiClient.get<any[]>('/calendars/my-calendars/'),
+                apiClient.get<any[]>('/calendars/subscribed/'),
+                apiClient.get<any[]>('/calendars/friends-calendars/'),
             ]);
 
             const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
 
-            const mappedCalendars: Calendar[] = calData.map((c: any, index: number) => ({
+            const mergedCalendarsMap = new Map<number, any>();
+
+            myCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            subscribedCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            friendsCalendarsData.forEach((calendar: any) => {
+                mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            const mergedCalendars = Array.from(mergedCalendarsMap.values());
+
+            const mappedCalendars: Calendar[] = mergedCalendars.map((c: any, index: number) => ({
                 id: String(c.id),
                 name: c.name,
                 description: c.description || '',
@@ -92,35 +124,52 @@ export default function CalendarScreen() {
                 color: COLORS[index % COLORS.length],
             }));
 
-            const mappedEvents: CalendarEvent[] = evData.map((e: any) => {
-            const calendar = mappedCalendars.find(c => e.calendars.includes(Number(c.id)));
-            return {
-                id: String(e.id),
-                calendarId: String(e.calendars[0] || ''),
-                title: e.title,
-                description: e.description || '',
-                place_name: e.place_name || '',
-                date: e.date,
-                time: e.time.substring(0, 5),
-                recurrence: e.recurrence,
-                type: 'other', // Default type
-                color: calendar?.color || '#6C63FF',
-            };
-        });
+            setCalendars(mappedCalendars);
 
-        setCalendars(mappedCalendars);
-        setEvents(mappedEvents);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            Alert.alert('Error', 'Could not load calendars or events.');
+            await refetchEvents();
+        } catch (e) {
+            console.error("Error al refrescar calendarios:", e);
+            setCalendarsError(e);
         } finally {
-            setLoading(false);
+            setLoadingCalendars(false);
         }
     };
-
     useEffect(() => {
         void fetchData();
     }, []);
+    useEffect(() => {
+        if (calendarsError || eventsError) {
+            console.error('Error fetching data:', calendarsError || eventsError);
+            Alert.alert('Error', 'Could not load calendars or events.');
+        }
+    }, [calendarsError, eventsError]);
+
+    useEffect(() => {
+        const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+
+        const mappedEvents: CalendarEvent[] = backendEvents
+            .filter((e: any) =>
+                e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
+            )
+            .map((e: any) => {
+                const calendar = calendars.find(c => e.calendars.includes(Number(c.id)));
+
+                return {
+                    id: String(e.id),
+                    calendarId: String(e.calendars[0] || ''),
+                    title: e.title,
+                    description: e.description || '',
+                    place_name: e.place_name || '',
+                    date: e.date,
+                    time: e.time.substring(0, 5),
+                    recurrence: e.recurrence,
+                    type: 'other',
+                    color: calendar?.color || '#6C63FF',
+                };
+            });
+
+        setEvents(mappedEvents);
+    }, [backendEvents, calendars]);
 
     useEffect(() => {
         if (params.selectedCalendarId) {
@@ -140,6 +189,7 @@ export default function CalendarScreen() {
 
     const showSheet = (dateKey: string) => {
         setSelectedDay(dateKey);
+        if (open) toggleMenu();
         Animated.spring(sheetY, {
             toValue: 0,
             useNativeDriver: true,
@@ -175,6 +225,14 @@ export default function CalendarScreen() {
         return list;
     }, [events, selectedCalendarId, selectedEventType]);
 
+    const eventsOfSelectedDay = useMemo(() => {
+        if (!selectedDay) return [];
+
+        return filteredEvents.filter(
+            (event) => event.date?.slice(0, 10) === selectedDay
+        );
+    }, [filteredEvents, selectedDay]);
+
     const removeCalendarFromState = (calendarId: string) => {
         setCalendars((current) => current.filter((item) => item.id !== calendarId));
         setEvents((current) => current.filter((event) => event.calendarId !== calendarId));
@@ -199,9 +257,8 @@ export default function CalendarScreen() {
 
         setDeletingCalendarId(calendar.id);
         try {
-            await apiClient.delete(`/calendars/${calendar.id}/delete/`);
-            setInfoCalendar(null);       
-            setDeletingCalendarId(null); 
+            await deleteCalendar(calendar.id);
+            setInfoCalendar(null);
             await fetchData();
         } catch (e) {
             console.error('Delete error:', e);
@@ -279,7 +336,8 @@ export default function CalendarScreen() {
         }
         return `${MONTH_NAMES[month]} ${year}`;
     };
-    // Show loading indicator while waiting for data
+    // Added loading para esperar a datos
+    const loading = loadingCalendars || loadingEvents;
     if (loading) {
         return (
             <View style={[styles.screenWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -323,10 +381,10 @@ export default function CalendarScreen() {
         }
         try {
             if (Platform.OS === "web") {
-                await downloadCalendar(selectedCalendarId);
-                alert("Calendar downloaded successfully");
+                await downloadCalendarFile(selectedCalendarId);
+                alert("Calendario descargado correctamente");
             } else {
-                const fileUri = await downloadCalendar(selectedCalendarId);
+                const fileUri = await downloadCalendarFile(selectedCalendarId);
                 if (await Sharing.isAvailableAsync() && fileUri) {
                     await Sharing.shareAsync(fileUri);
                 } else {
@@ -388,10 +446,14 @@ export default function CalendarScreen() {
 
                     {isDesktop && (
                         <View style={styles.toolbarButtons}>
+
+
                             <TouchableOpacity
                                 style={styles.primaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push(`/create_events?date=${selectedDay || ''}&calendarId=${selectedCalendarId || ''}`)}
+                                onPress={() =>
+                                    router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
+                                }
                             >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>
@@ -405,6 +467,16 @@ export default function CalendarScreen() {
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
                             </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                activeOpacity={0.7}
+                                onPress={() => setImportModalVisible(true)}
+                            >
+                                <Ionicons name="download-outline" size={18} color="#10464d" />
+                                <Text style={styles.secondaryBtnText}>Import Calendar</Text>
+                            </TouchableOpacity>
+
                         </View>
                     )}
                 </View>
@@ -518,28 +590,55 @@ export default function CalendarScreen() {
                     <View style={styles.sheetHandle} />
 
                     <View style={styles.sheetContent}>
+
                         <View style={styles.sheetTextBlock}>
                             <Text style={styles.sheetLabel}>Add event to</Text>
                             <Text style={styles.sheetDate}>
-                                {selectedDay ? formatSelectedDay(selectedDay) : ''}
+                                {selectedDay ? formatSelectedDay(selectedDay) : ""}
                             </Text>
                         </View>
+
+                        {eventsOfSelectedDay.length > 0 && (
+                            <ScrollView
+                                style={styles.dayEventsList}
+                                contentContainerStyle={{ paddingBottom: 6 }}
+                            >
+                                {eventsOfSelectedDay.map((event) => (
+                                    <TouchableOpacity
+                                        key={event.id}
+                                        style={styles.dayEventItem}
+                                        onPress={() => setActiveEvent(event)}
+                                    >
+                                        <Text style={styles.dayEventTime}>
+                                            {event.time?.slice(0, 5)}
+                                        </Text>
+
+                                        <Text style={styles.dayEventTitle}>
+                                            {event.title}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
 
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                            onPress={() =>
+                                router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
+                            }
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
                         </TouchableOpacity>
+
                     </View>
                 </Animated.View>
             )}
-            {optionAnimations.map((anim, index) => {
+            {isDesktop && !selectedDay && optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
-                const fabBottom = Platform.OS === "web" ? 30 : 90;
+                const fabBottom = isDesktop ? 30 : BOTTOM_BAR_HEIGHT;
                 const isCalendar = index === 1;
                 const text = isCalendar ? "Export calendar" : "Download as PNG";
                 const onPress = isCalendar ? exportCalendar : exportPng;
@@ -554,7 +653,7 @@ export default function CalendarScreen() {
                             opacity,
                             transform: [{ translateY }],
                         }}
-                        pointerEvents={open ? "auto" : "none"}
+                        pointerEvents={open && !selectedDay ? "auto" : "none"}
                     >
                         <Pressable style={styles.option} onPress={onPress}>
                             <Text style={styles.optionText}>{text}</Text>
@@ -562,11 +661,23 @@ export default function CalendarScreen() {
                     </Animated.View>
                 );
             })}
-            <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90, },]} onPress={toggleMenu}>
+            <Pressable style={[styles.fab, { bottom: isDesktop ? 30 : BOTTOM_BAR_HEIGHT, },]} onPress={toggleMenu}>
                 <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
                     <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
                 </Animated.View>
             </Pressable>
+            {isDesktop && !selectedDay && (
+                <Pressable style={[styles.fab, { bottom: isWeb ? 30 : 90 }]} onPress={toggleMenu}>
+                    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+                        <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
+                    </Animated.View>
+                </Pressable>
+            )}
+            <ImportCalendarModal
+                visible={importModalVisible}
+                onClose={() => setImportModalVisible(false)}
+                onSuccess={fetchData}
+            />
         </View>
     );
 }
@@ -574,11 +685,11 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
     screenWrapper: {
         flex: 1,
-        backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     container: {
         flex: 1,
-        backgroundColor: '#FFFDED',
+        overflow: 'visible',
     },
     contentContainer: {
         flexGrow: 1,
@@ -592,11 +703,15 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         gap: 12,
         flexWrap: 'wrap',
+        overflow: 'visible',
+        zIndex: 999,
     },
     toolbarButtons: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        overflow: 'visible',
+        zIndex: 999,
     },
     primaryBtn: {
         flexDirection: 'row',
@@ -709,11 +824,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#D0CFC8',
     },
     sheetContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
         paddingHorizontal: 20,
         paddingTop: 12,
+        gap: 10,
     },
     sheetTextBlock: {
         flex: 1,
@@ -820,5 +935,127 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 16,
         marginBottom: 20,
+    },
+    dayEventsList: {
+        marginTop: 12,
+        maxHeight: 120,
+    },
+
+    dayEventItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        paddingVertical: 6,
+    },
+
+    dayEventTime: {
+        fontWeight: "700",
+        color: "#10464d",
+        fontSize: 13,
+    },
+
+    dayEventTitle: {
+        color: "#10464d",
+        fontSize: 13,
+    },
+
+    importDropdown: {
+        position: 'absolute',
+        top: 40,
+        right: 0,
+        backgroundColor: '#fff',
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+        padding: 8,
+        zIndex: 999,
+        minWidth: 220,
+        shadowColor: '#000',
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
+    },
+    importOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        padding: 10,
+        borderRadius: 10,
+    },
+    importIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
+    },
+    importOptionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#10464d',
+    },
+    importOptionDesc: {
+        fontSize: 12,
+        color: '#10464d',
+        opacity: 0.6,
+    },
+    modalBackground: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    modalCard: {
+        width: '90%',
+        maxWidth: 400,
+        borderRadius: 16,
+        backgroundColor: '#fffded',
+        overflow: 'hidden',
+        elevation: 5,
+    },
+    modalHeader: {
+        backgroundColor: '#10464d',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+    },
+    modalHeaderText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    modalBody: {
+        padding: 20,
+    },
+    modalInput: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#10464d',
+        marginBottom: 16,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#fcfcfc',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#10464d',
+    },
+    submitButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        backgroundColor: '#10464d',
+        borderRadius: 12,
     },
 });

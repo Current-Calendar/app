@@ -46,32 +46,27 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
   const username = String(event?.creator_username ?? event?.creator?.username ?? "").trim();
   const description = String(event?.description ?? "").trim();
 
-  const dateStr = formatDate(event?.fecha);
-  const timeStr = formatTime(event?.hora);
+  const dateStr = formatDate(event?.date);
+  const timeStr = formatTime(event?.time);
   const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
   const distanceKm = formatDistanceKm(event?.distance_km);
 
-  if (__DEV__) {
-    console.log("EVENT PHOTO:", event?.photo);
-  }
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={eventDetailsModalStyles.overlay}>
-        <View style={eventDetailsModalStyles.card}>
+      <Pressable style={eventDetailsModalStyles.overlay} onPress={onClose}>
+        <Pressable style={eventDetailsModalStyles.card} onPress={() => {}}>
+          {/* Close X */}
           <Pressable onPress={onClose} style={eventDetailsModalStyles.closeBtn} hitSlop={10}>
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
 
-          {event.foto ? (
+          {event.photo ? (
             <View style={eventDetailsModalStyles.coverWrap}>
               <Image
-                source={{ uri: event.foto }}
+                source={{ uri: event.photo }}
                 style={eventDetailsModalStyles.cover}
                 resizeMode="cover"
-                onError={(e) => console.log("IMG ERROR:", event.photo, e?.nativeEvent)}
-                onLoad={() => console.log("IMG OK:", event.photo)}
               />
             </View>
           ) : null}
@@ -117,9 +112,9 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
           <Pressable onPress={onClose} style={eventDetailsModalStyles.primaryBtn}>
             <Text style={eventDetailsModalStyles.primaryBtnText}>Cerrar</Text>
           </Pressable>
-        </View>
-      </View>
-    </Modal>
+        </Pressable>
+        </Pressable>
+        </Modal>
   );
 }
 

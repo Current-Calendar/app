@@ -27,6 +27,9 @@ class User(AbstractUser):
     def total_subscribed_calendars(self):
         return self.subscribed_calendars.count()
 
+    def is_friend_with(self, other: "User"):
+        return self.following.filter(pk=other.pk).exists() and other.following.filter(pk=self.pk).exists()
+
     def __str__(self):
         return self.username
 
@@ -110,6 +113,37 @@ class Event(models.Model):
         uid = self.external_id or f"event-{self.pk}@current"
         event.add('uid', uid)
         return event
+
+class Report(models.Model):
+    REPORTED_TYPE_CHOICES = [
+        ('USER', 'User'),
+        ('EVENT', 'Event'),
+        ('CALENDAR', 'Calendar'),
+    ]
+    STATUS_CHOICES = [
+        ('OPEN', 'Open'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    REASON_CHOICES = [
+        ('INAPPROPRIATE_CONTENT', 'Inappropriate Content'),
+        ('SPAM', 'Spam'),
+        ('HARASSMENT', 'Harassment'),
+        ('OTHER', 'Other'),
+    ]
+    reporter = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports_made')
+    reported_type = models.CharField(max_length=20, choices=REPORTED_TYPE_CHOICES)
+    reported_calendar = models.ForeignKey(Calendar, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_event = models.ForeignKey(Event, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reported_user = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='reports')
+    reason = models.CharField(max_length=30, choices=REASON_CHOICES)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Report {self.id} by {self.reporter.username} on {self.reported_type} (Status: {self.status})"
+
 
 class MockElement(models.Model):
     name = models.CharField(max_length=100)

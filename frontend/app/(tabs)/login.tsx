@@ -15,7 +15,6 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 
-const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
@@ -56,7 +55,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(u, password);
 
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
@@ -153,7 +152,7 @@ export default function LoginScreen() {
 const W = Dimensions.get("window").width;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   content: {
     flex: 1,

@@ -31,7 +31,7 @@ class Command(BaseCommand):
             password='password123',
             pronouns='She/her',
             bio='Full Stack Developer. Passionate about code and the mountains.',
-            photo='profiles/avatar.png'
+            photo='perfiles/avatar.png'
         )
         user2 = User.objects.create_user(
             username='carlos_dev',
@@ -39,14 +39,14 @@ class Command(BaseCommand):
             password='password123',
             bio='Always learning something new.',
             link='https://github.com/carlosdev',
-            photo='profiles/avatar.png'
+            photo='perfiles/avatar.png'
         )
         user3 = User.objects.create_user(
             username='gym_fit',
             email='info@gymfit.com',
             password='password123',
             bio='Your trusted gym.',
-            photo='profiles/avatar.png'
+            photo='perfiles/avatar.png'
         )
 
         User.objects.create_user(
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             email='admin@currentcalendar.es',
             password='password123',
             bio='Your trusted admin.',
-            photo='profiles/avatar.png',
+            photo='perfiles/avatar.png',
             is_superuser=True,
             is_staff=True
         )
@@ -74,7 +74,7 @@ class Command(BaseCommand):
             creator=user1,
             origin='GOOGLE',
             external_id='google_123',
-            cover='covers/cover.jpeg'
+            cover='portadas/portada.jpeg'
         )
         cal_carlos_friends = Calendar.objects.create(
             name="Carlos Plans",
@@ -97,7 +97,7 @@ class Command(BaseCommand):
             location=Point(-3.7038, 40.4168, srid=4326),
             date=date(2026, 3, 15),
             time=time(18, 30),
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
             creator=user1
         )
         event_tech.calendars.add(cal_ana_public)
@@ -108,7 +108,7 @@ class Command(BaseCommand):
             description="See you at the usual restaurant.",
             date=date(2026, 3, 20),
             time=time(21, 00),
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
             creator=user2
         )
         event_dinner.calendars.add(cal_carlos_friends, cal_ana_private)
@@ -119,7 +119,7 @@ class Command(BaseCommand):
             location=Point(-3.6900, 40.4200, srid=4326),
             date=date(2026, 2, 25),
             time=time(10, 00),
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
             creator=user3
         )
         event_gym.calendars.add(cal_gym, cal_carlos_friends)
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             location=Point(-6.0062, 37.3866, srid=4326),
             date=date(2026, 3, 12),
             time=time(20, 30),
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
             creator=user3
         )
 
@@ -142,7 +142,7 @@ class Command(BaseCommand):
             date=date(2026, 3, 18),
             time=time(19, 15),
             creator=user3,
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
         )
 
         event_heliopolis = Event.objects.create(
@@ -152,7 +152,7 @@ class Command(BaseCommand):
             date=date(2026, 3, 23),
             time=time(12, 0),
             creator=user3,
-            photo='events/event.jpg',
+            photo='eventos/evento.jpg',
         )
 
         event_triana.calendars.add(cal_gym)

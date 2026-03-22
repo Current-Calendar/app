@@ -30,7 +30,7 @@ ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
 def publish_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
-    if calendar.creator !=request.user:
+    if calendar.creator != request.user:
         return Response(
             {"errors": ["No tienes permiso para publicar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
@@ -116,8 +116,6 @@ def edit_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated])
 def create_calendar(request):
     data = request.data
-    print("DATA:", request.data)
-    print("FILES:", request.FILES)
 
     name = data.get('name')
 
@@ -185,6 +183,69 @@ def create_calendar(request):
         status=status.HTTP_201_CREATED,
     )
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_subscribed_calendars(request):
+    """
+    List calendars the authenticated user is subscribed to.
+
+    GET /api/v1/calendars/subscribed/
+    """
+    queryset = request.user.subscribed_calendars.select_related('creator').order_by('-created_at')
+
+    results = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "created_at": cal.created_at,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_friends_calendars(request):
+    """
+    List calendars with privacy FRIENDS created by mutual friends
+    (users that the authenticated user follows and who also follow back).
+
+    GET /api/v1/calendars/friends-calendars/
+    """
+    user = request.user
+
+    mutual_friend_ids = user.following.filter(
+        following=user
+    ).values_list('id', flat=True)
+
+    queryset = Calendar.objects.select_related('creator').filter(
+        creator_id__in=mutual_friend_ids,
+        privacy='FRIENDS'
+    ).order_by('-created_at')
+
+    results = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "created_at": cal.created_at,
+            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

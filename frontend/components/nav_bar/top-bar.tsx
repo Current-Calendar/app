@@ -7,9 +7,9 @@ import { navTopBarStyles } from "@/styles/ui-styles";
 export default function TopBar() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-
+  const {user}=useAuth();
   const goProfileOrLogin = () => {
-    router.push((isAuthenticated ? "/" : "/login") as Href);
+    router.push((isAuthenticated ? `/profile/${user?.id}` : "/login") as Href);
   };
 
   return (

@@ -7,12 +7,14 @@ interface CalendarCardProps {
   calendar: Calendar;
   onPress: (id: string) => void;
   onSubscribe: (id: string) => void;
+  isSubscribed?: boolean;
 }
 
 export default function CalendarCard({
   calendar,
   onPress,
   onSubscribe,
+  isSubscribed = false,
 }: CalendarCardProps) {
   const privacyIcon: Record<string, any> = {
     PRIVATE: "lock-closed",
@@ -35,7 +37,7 @@ export default function CalendarCard({
         <Image
           source={{ uri: calendar.cover }}
           style={eventCalendarCalendarCardStyles.cover}
-        />  
+        />
       )}
 
       <View
@@ -73,20 +75,27 @@ export default function CalendarCard({
 
         <View style={eventCalendarCalendarCardStyles.footer}>
           <Pressable
-            style={eventCalendarCalendarCardStyles.subscribeBtn}
-            onPress={() => onSubscribe(calendar.id)}
+            style={[
+              eventCalendarCalendarCardStyles.subscribeBtn,
+              isSubscribed && eventCalendarCalendarCardStyles.subscribedBtn,
+            ]}
+            onPress={(e) => {
+              e.stopPropagation();
+              onSubscribe(calendar.id);
+            }}
           >
             <Ionicons
-              name="add-circle"
+              name={isSubscribed ? "checkmark-circle" : "add-circle"}
               size={18}
               color="#fff"
               style={eventCalendarCalendarCardStyles.btnIcon}
             />
-            <Text style={eventCalendarCalendarCardStyles.subscribeBtnText}>Subscribe</Text>
+            <Text style={eventCalendarCalendarCardStyles.subscribeBtnText}>
+              {isSubscribed ? "Subscribed" : "Subscribe"}
+            </Text>
           </Pressable>
         </View>
       </View>
     </Pressable>
   );
 }
-

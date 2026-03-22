@@ -50,7 +50,7 @@ export default function MapComponent({ location, events }: { location: any; even
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const apiBase = String(API_CONFIG.baseURL || "");
+  const apiBase = String(API_CONFIG.BaseURL || "");
   const mediaOrigin = getOriginFromApiBase(apiBase);
 
   // ðŸ“ Icono normal
@@ -155,17 +155,17 @@ export default function MapComponent({ location, events }: { location: any; even
 
         {events.map((event, index) => {
           const id = String(event?.id ?? "");
-          const lat = Number(event.latitud);
-          const lon = Number(event.longitud);
+          const lat = Number(event?.latitude);
+          const lon = Number(event?.longitude);
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
-          const title = String(event?.titulo ?? "Evento");
-          const place = String(event?.nombre_lugar ?? "");
-          const dateStr = formatDate(event?.fecha);
-          const timeStr = formatTime(event?.hora);
+          const title = String(event?.title ?? "Evento");
+          const place = String(event?.place_name ?? "");
+          const dateStr = formatDate(event?.date);
+          const timeStr = formatTime(event?.time);
           const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
-          const imgUrl = buildImageUrl(apiBase, event?.foto);
+          const imgUrl = buildImageUrl(apiBase, event?.photo);
 
           return (
             <Marker
@@ -208,7 +208,6 @@ export default function MapComponent({ location, events }: { location: any; even
         visible={modalOpen}
         onClose={closeModal}
         event={selectedEvent}
-        apiBaseUrl={apiBase}
       />
     </>
   );

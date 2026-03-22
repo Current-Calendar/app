@@ -33,7 +33,7 @@ class EventTests(APITestCase):
 
         request = self.client.delete(f"/api/v1/events/{self.event1.pk}/delete/")
 
-        self.assertEqual(request.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Event.objects.count(), 1)
 
 
@@ -253,16 +253,43 @@ class CrearEventoTests(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="eventuser",
-            email="event@example.com",
+            username="user1",
+            email="user1@example.com",
             password="testpass123",
         )
+        self.user2 = User.objects.create_user(
+            username="user2",
+            email="user2@example.com",
+            password="testpass123",
+        )
+        self.user3 = User.objects.create_user(
+            username="user3",
+            email="user3@example.com",
+            password="testpass123",
+        )
+        self.user3.following.add(self.user2)
+        self.user3.save()
+
+        self.user2.following.add(self.user3)
+        self.user2.save()
 
         self.calendar = Calendar.objects.create(
             creator=self.user,
             name="Calendar Test",
             privacy="PRIVATE",
         )
+        self.calendar2 = Calendar.objects.create(
+            creator=self.user2,
+            name="Public Calendar Test",
+            privacy="PUBLIC",
+        )
+        self.calendar3 = Calendar.objects.create(
+            creator=self.user3,
+            name="Friends Calendar Test",
+            privacy="FRIENDS",
+        )
+        self.calendar3.subscribers.add(self.user2)
+        self.calendar3.save()
 
     def test_crear_evento_exitoso(self):
         self.client.force_authenticate(self.user)
@@ -272,7 +299,6 @@ class CrearEventoTests(APITestCase):
             "date": "2026-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar.id],
-            "creator_id": self.user.id
         }
 
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
@@ -318,6 +344,77 @@ class CrearEventoTests(APITestCase):
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_private_calendar_of_other_user(self):
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar.pk],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_public_calendar_of_other_user(self):
+        self.client.force_authenticate(self.user)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar2.pk],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_friends_calendar(self):
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar3.pk],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_friends_calendar_not_friends(self):
+        self.user3.following.remove(self.user2)
+        self.user3.save()
+
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar3.pk],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_friends_calendar_not_following_calendar(self):
+        self.calendar3.subscribers.remove(self.user2)
+        self.calendar3.save()
+
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar3.pk],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_error_calendario_no_existe(self):
         self.client.force_authenticate(self.user)
 
@@ -326,7 +423,6 @@ class CrearEventoTests(APITestCase):
             "date": "2026-03-01",
             "time": "18:00:00",
             "calendars": [9999],
-            "creator_id": self.user.id
         }
 
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
@@ -342,10 +438,25 @@ class CrearEventoTests(APITestCase):
 class EditEventTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="eventuser",
-            email="event@example.com",
+            username="user1",
+            email="user1@example.com",
             password="testpass123",
         )
+        self.user2 = User.objects.create_user(
+            username="user2",
+            email="user2@example.com",
+            password="testpass123",
+        )
+        self.user3 = User.objects.create_user(
+            username="user3",
+            email="user3@example.com",
+            password="testpass123",
+        )
+        self.user3.following.add(self.user2)
+        self.user3.save()
+
+        self.user2.following.add(self.user3)
+        self.user2.save()
 
         self.calendar1 = Calendar.objects.create(
             creator=self.user,
@@ -356,8 +467,20 @@ class EditEventTests(APITestCase):
         self.calendar2 = Calendar.objects.create(
             creator=self.user,
             name="Calendar 2",
+            privacy="PRIVATE",
+        )
+        self.calendar3 = Calendar.objects.create(
+            creator=self.user2,
+            name="Public Calendar Test",
             privacy="PUBLIC",
         )
+        self.calendar4 = Calendar.objects.create(
+            creator=self.user3,
+            name="Friends Calendar Test",
+            privacy="FRIENDS",
+        )
+        self.calendar4.subscribers.add(self.user2)
+        self.calendar4.save()
 
         self.event = Event.objects.create(
             title="Event Original",
@@ -368,6 +491,28 @@ class EditEventTests(APITestCase):
             creator=self.user,
         )
         self.event.calendars.set([self.calendar1])
+        self.event.save()
+        self.event3 = Event.objects.create(
+            title="Event 3 Original",
+            description="Descripcion original",
+            place_name="Lugar original",
+            date="2026-03-01",
+            time="18:00:00",
+            creator=self.user2,
+        )
+        self.event3.calendars.set([self.calendar3])
+        self.event3.save()
+        self.event4 = Event.objects.create(
+            title="Event 4 Original",
+            description="Descripcion original",
+            place_name="Lugar original",
+            date="2026-03-01",
+            time="18:00:00",
+            creator=self.user3,
+        )
+        self.event4.calendars.set([self.calendar4])
+        self.event4.save()
+
 
     def endpoint(self, event_id=None):
         return EDIT_EVENT_ENDPOINT.format(event_id or self.event.id)
@@ -491,6 +636,14 @@ class EditEventTests(APITestCase):
 
     # ── Error cases ──
 
+    def test_edit_unauthenticated(self):
+        response = self.client.put(
+            self.endpoint(),
+            {"title": "Titulo Nuevo"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_event_not_found(self):
         self.client.force_authenticate(self.user)
 
@@ -566,6 +719,75 @@ class EditEventTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("errors", response.data)
+
+    def test_private_calendar_of_other_user(self):
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar2.pk],
+        }
+
+        response = self.client.put(self.endpoint(), payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_public_calendar_of_other_user(self):
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar1.pk],
+        }
+
+        response = self.client.put(self.endpoint(), payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_friends_calendar(self):
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar3.pk],
+        }
+
+        response = self.client.put(self.endpoint(), payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_friends_calendar_not_friends(self):
+        self.user2.following.remove(self.user3)
+        self.user2.save()
+
+        self.client.force_authenticate(self.user3)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+        }
+
+        response = self.client.put(self.endpoint(self.event4.pk), payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_friends_calendar_not_following_calendar(self):
+        self.calendar4.subscribers.remove(self.user2)
+        self.calendar4.save()
+
+        self.client.force_authenticate(self.user2)
+
+        payload = {
+            "title": "Event",
+            "date": "2026-03-01",
+            "time": "18:00:00",
+        }
+
+        response = self.client.put(self.endpoint(self.event4.pk), payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_event_data(self):
         response = self.client.get(self.endpoint())
