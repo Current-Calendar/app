@@ -205,7 +205,6 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
 class OwnProfileSerializer(serializers.ModelSerializer):
     calendars = CalendarSummarySerializer(source="created_calendars", many=True)
     following_calendars = CalendarSummarySerializer(source="subscribed_calendars", many=True)
-    co_owned_calendars = CalendarSummarySerializer(source="co_owned_calendars", many=True)
 
     class Meta:
         model = User
