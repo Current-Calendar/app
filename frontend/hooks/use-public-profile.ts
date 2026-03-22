@@ -246,7 +246,12 @@ export const useUserProfile = (userId?: string) => {
                 setIsFollowing(previousState);
                 return;
             }
-            setIsFollowing(Boolean(data.followed));
+            const followed = Boolean(data.followed);
+            setIsFollowing(followed);
+            setUserBeingViewed((prev: any) => prev ? {
+                ...prev,
+                total_followers: (prev.total_followers ?? 0) + (followed ? 1 : -1),
+            } : prev);
         } catch (error) {
             console.error('Error follow:', error);
             setFollowError('There was a network problem. Check your connection and try again.');
