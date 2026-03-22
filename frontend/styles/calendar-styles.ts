@@ -18,7 +18,6 @@ export const calendarHeaderStyles = StyleSheet.create({
     gap: 8,
   },
   todayBtn: {
-    gap: 5,
     ...ButtonStyles.base,
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
@@ -82,7 +81,6 @@ export const calendarSelectorStyles = StyleSheet.create({
     gap: 8,
   },
   trigger: {
-    gap: 6,
     ...ButtonStyles.base,
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
