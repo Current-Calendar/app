@@ -10,7 +10,16 @@ import React, { useState, useEffect } from "react";
 import * as Location from "expo-location";
 import apiConfig from "../../constants/api";
 import MapComponent from "../../components/map-component";
-import { useNearbyEvents, Coordinates } from "@/hooks/use-nearby-events";
+
+function normalizeEventList(data: any): any[] {
+  return (
+    (Array.isArray(data) && data) ||
+    (Array.isArray(data?.events) && data.events) ||
+    (Array.isArray(data?.eventos) && data.eventos) ||
+    (Array.isArray(data?.results) && data.results) ||
+    []
+  );
+}
 
 export default function RadarScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -70,18 +79,23 @@ export default function RadarScreen() {
         setLocation({ latitude: lat, longitude: lon });
 
         setLoadingStage("Searching nearby events...");
-        const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, 5));
-        if (!response.ok) {
-          throw new Error("Could not load nearby events.");
-        }
 
-        const data = await response.json();
-        const eventList =
-          (Array.isArray(data) && data) ||
-          (Array.isArray(data?.events) && data.events) ||
-          (Array.isArray(data?.eventos) && data.eventos) ||
-          (Array.isArray(data?.results) && data.results) ||
-          [];
+        const radiusCandidatesKm = [5, 15, 35];
+        let eventList: any[] = [];
+
+        for (const radiusKm of radiusCandidatesKm) {
+          if (cancelled) return;
+          setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
+
+          const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
+          if (!response.ok) {
+            throw new Error("Could not load nearby events.");
+          }
+
+          const data = await response.json();
+          eventList = normalizeEventList(data);
+          if (eventList.length > 0) break;
+        }
 
         if (!cancelled) {
           setEvents(eventList);

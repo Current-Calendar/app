@@ -62,6 +62,39 @@ export default function MapComponent({ location, events }: { location: any; even
   }, [isBrowser]);
 
   const apiBase = String(API_CONFIG.BaseURL || "");
+  const fallbackEventImage = useMemo(
+    () => Asset.fromModule(require("../assets/images/nube_login.png")).uri,
+    []
+  );
+
+  const nearbyEvents = useMemo(() => {
+    return events
+      .map((event, index) => {
+        const id = String(event?.id ?? event?._id ?? `event-${index}`);
+        const lat = Number(event?.latitude);
+        const lon = Number(event?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+        const title = String(event?.title ?? "Evento");
+        const place = String(event?.place_name ?? "");
+        const dateStr = formatDate(event?.date);
+        const timeStr = formatTime(event?.time);
+        const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
+
+        return {
+          raw: event,
+          id,
+          index,
+          lat,
+          lon,
+          title,
+          place,
+          when,
+          imgUrl: buildImageUrl(apiBase, event?.photo),
+        };
+      })
+      .filter((event): event is NonNullable<typeof event> => Boolean(event));
+  }, [apiBase, events]);
 
   // ðŸ“ Icono normal
   const defaultIcon = useMemo(() => {
@@ -125,6 +158,106 @@ export default function MapComponent({ location, events }: { location: any; even
   return (
     <>
       <style>{`
+        .radarLayout {
+          height: 100vh;
+          width: 100%;
+          display: grid;
+          grid-template-columns: minmax(280px, 360px) 1fr;
+          background: #fffded;
+        }
+        .radarSidebar {
+          border-right: 1px solid rgba(16,70,77,0.14);
+          background: #fff;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+        }
+        .radarSidebarHeader {
+          padding: 16px 14px 12px 14px;
+          border-bottom: 1px solid rgba(16,70,77,0.12);
+        }
+        .radarSidebarTitle {
+          color: #10464D;
+          margin: 0;
+          font-size: 18px;
+          font-weight: 900;
+          line-height: 1.2;
+        }
+        .radarSidebarSubtitle {
+          margin: 6px 0 0 0;
+          color: rgba(16,70,77,0.82);
+          font-size: 12px;
+          font-weight: 700;
+        }
+        .radarSidebarList {
+          overflow-y: auto;
+          padding: 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .radarListItem {
+          border: 1px solid rgba(16,70,77,0.16);
+          background: #fff;
+          border-radius: 12px;
+          padding: 8px;
+          display: grid;
+          grid-template-columns: 88px 1fr;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 140ms ease;
+        }
+        .radarListItem:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+          border-color: rgba(16,70,77,0.28);
+        }
+        .radarListItem.isActive {
+          border-color: #10464D;
+          box-shadow: 0 0 0 2px rgba(16,70,77,0.12);
+        }
+        .radarItemImage {
+          width: 88px;
+          height: 68px;
+          border-radius: 10px;
+          object-fit: cover;
+          background: rgba(16,70,77,0.08);
+          display: block;
+        }
+        .radarItemBody {
+          min-width: 0;
+        }
+        .radarItemTitle {
+          margin: 0;
+          color: #10464D;
+          font-size: 13px;
+          font-weight: 900;
+          line-height: 1.25;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .radarItemMeta {
+          margin: 6px 0 0 0;
+          color: #35595d;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .radarEmptyState {
+          color: #35595d;
+          font-size: 13px;
+          font-weight: 700;
+          padding: 20px 12px;
+        }
+        .radarMapArea {
+          min-width: 0;
+          height: 100%;
+        }
         .event-popup .leaflet-popup-content-wrapper {
           border-radius: 16px;
           padding: 0;
@@ -160,68 +293,105 @@ export default function MapComponent({ location, events }: { location: any; even
           font-size: 12px;
           margin-top: 4px;
         }
+
+        @media (max-width: 980px) {
+          .radarLayout {
+            grid-template-columns: 1fr;
+            grid-template-rows: 42vh 1fr;
+          }
+          .radarSidebar {
+            border-right: 0;
+            border-bottom: 1px solid rgba(16,70,77,0.14);
+          }
+        }
       `}</style>
 
-      <MapContainer center={center} zoom={14} style={mapComponentWebStyles.fullScreenMap}>
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      <div className="radarLayout">
+        <aside className="radarSidebar">
+          <div className="radarSidebarHeader">
+            <h2 className="radarSidebarTitle">Radar Nearby Events</h2>
+            <p className="radarSidebarSubtitle">
+              {nearbyEvents.length} result{nearbyEvents.length === 1 ? "" : "s"} around your location
+            </p>
+          </div>
 
-        <Marker position={center} icon={yourPositionIcon}>
-          <Popup closeButton={false}>EstÃ¡s aquÃ­</Popup>
-        </Marker>
+          <div className="radarSidebarList">
+            {nearbyEvents.length === 0 ? (
+              <div className="radarEmptyState">
+                No events found nearby. Try again in another area.
+              </div>
+            ) : (
+              nearbyEvents.map((event) => (
+                <article
+                  key={`list-${event.id}`}
+                  className={`radarListItem ${selectedEvent?.id === event.raw?.id ? "isActive" : ""}`}
+                  onClick={() => openEventModal(event.raw)}
+                >
+                  <img
+                    className="radarItemImage"
+                    src={event.imgUrl || fallbackEventImage}
+                    alt={event.title}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = fallbackEventImage;
+                    }}
+                  />
 
-        {events.map((event, index) => {
-          const id = String(event?.id ?? "");
-          const lat = Number(event?.latitude);
-          const lon = Number(event?.longitude);
-          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+                  <div className="radarItemBody">
+                    <h3 className="radarItemTitle">{event.title}</h3>
+                    {event.place && <p className="radarItemMeta">📍 {event.place}</p>}
+                    {event.when && <p className="radarItemMeta">🗓 {event.when}</p>}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </aside>
 
-          const title = String(event?.title ?? "Evento");
-          const place = String(event?.place_name ?? "");
-          const dateStr = formatDate(event?.date);
-          const timeStr = formatTime(event?.time);
-          const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
+        <div className="radarMapArea">
+          <MapContainer center={center} zoom={14} style={mapComponentWebStyles.fullScreenMap}>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
 
-          const imgUrl = buildImageUrl(apiBase, event?.photo);
+            <Marker position={center} icon={yourPositionIcon}>
+              <Popup closeButton={false}>EstÃ¡s aquÃ­</Popup>
+            </Marker>
 
-          return (
-            <Marker
-              key={id}
-              position={[lat, lon]}
-              icon={index === 0 ? starIcon : defaultIcon} // â­ aquÃ­ estÃ¡ la magia
-              eventHandlers={{
-                mouseover: (e: any) => e?.target?.openPopup(),
-                mouseout: (e: any) => e?.target?.closePopup(),
-                click: () => openEventModal(event),
-              }}
-            >
-              <Popup closeButton={false} className="event-popup" offset={[0, -10]}>
-                <div className="eventCard">
-                  {imgUrl && (
+            {nearbyEvents.map((event) => (
+              <Marker
+                key={event.id}
+                position={[event.lat, event.lon]}
+                icon={event.index === 0 ? starIcon : defaultIcon}
+                eventHandlers={{
+                  mouseover: (e: any) => e?.target?.openPopup(),
+                  mouseout: (e: any) => e?.target?.closePopup(),
+                  click: () => openEventModal(event.raw),
+                }}
+              >
+                <Popup closeButton={false} className="event-popup" offset={[0, -10]}>
+                  <div className="eventCard">
                     <img
                       className="eventImg"
-                      src={imgUrl}
-                      alt={title}
+                      src={event.imgUrl || fallbackEventImage}
+                      alt={event.title}
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                        (e.currentTarget as HTMLImageElement).src = fallbackEventImage;
                       }}
                     />
-                  )}
 
-                  <div className="eventBody">
-                    <div className="eventTitle">{title}</div>
-
-                    {place && <div className="eventMeta">ðŸ“ {place}</div>}
-                    {when && <div className="eventMeta">ðŸ—“ {when}</div>}
+                    <div className="eventBody">
+                      <div className="eventTitle">{event.title}</div>
+                      {event.place && <div className="eventMeta">ðŸ“ {event.place}</div>}
+                      {event.when && <div className="eventMeta">ðŸ—“ {event.when}</div>}
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-      </MapContainer>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      </div>
 
       <EventDetailsModal
         visible={modalOpen}
