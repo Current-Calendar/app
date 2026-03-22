@@ -630,7 +630,7 @@ class EditEventTests(APITestCase):
         expected_keys = {
             "id", "title", "description", "place_name",
             "date", "time", "recurrence", "external_id",
-            "calendars", "created_at",
+            "calendars", "created_at", "photo"
         }
         self.assertEqual(set(response.data.keys()), expected_keys)
 

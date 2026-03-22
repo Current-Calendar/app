@@ -592,10 +592,6 @@ export default function CreateEventsScreen() {
                   <Ionicons name="camera" size={28} color={TEXT} />
                 )}
               </Pressable>
-
-              <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /events no recibe imagen)
-              </Text>
             </View>
           </View>
 
