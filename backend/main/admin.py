@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
-from .models import User, Calendar, Event
+from .models import User, Calendar, Event, Report
 from django.contrib.auth.admin import UserAdmin
 
 @admin.register(Calendar)
@@ -23,3 +23,10 @@ class UsuarioAdmin(UserAdmin):
     filter_horizontal = ('following', 'subscribed_calendars') 
 
     list_display = ('username', 'email', 'is_staff', 'total_following')    
+
+@admin.register(Report)
+class ReportAdmin(admin.ModelAdmin):
+    list_display = ('reporter', 'reported_type', 'status', 'created_at')
+    list_filter  = ('reported_type', 'status', 'created_at')
+
+

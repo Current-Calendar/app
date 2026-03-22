@@ -2,7 +2,7 @@ import json
 
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from main.models import User
+from main.models import User, Calendar, CalendarLike
 from django.urls import reverse
 from django.test import TestCase
 from django.contrib.auth.hashers import check_password, identify_hasher
@@ -21,33 +21,207 @@ class UsuarioTests(APITestCase):
         self.user2 = User.objects.create_user(
             username="user2", email="user2@example.com", password="user2"
         )
+        self.user3 = User.objects.create_user(
+            username="user3", email="user3@example.com", password="user3"
+        )
+
+    # --- follow / unfollow ---
 
     def test_follow_user(self):
         self.client.force_authenticate(self.user1)
-
-        request = self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
-
-        self.assertEqual(request.status_code, status.HTTP_200_OK)
-
-        following = list(self.user1.following.all())
-        self.assertEqual(len(following), 1)
-        self.assertEqual(following[0], self.user2)
+        response = self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["followed"])
+        self.assertIn(self.user2, self.user1.following.all())
 
     def test_unfollow_user(self):
         self.user2.following.add(self.user1)
-        self.user2.save()
-
-        self.assertEqual(self.user2.following.count(), 1)
-
         self.client.force_authenticate(self.user2)
+        response = self.client.post(f"/api/v1/users/{self.user1.pk}/follow/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["followed"])
+        self.assertEqual(self.user2.following.count(), 0)
 
-        request = self.client.post(f"/api/v1/users/{self.user1.pk}/follow/")
+    def test_follow_returns_user_id(self):
+        self.client.force_authenticate(self.user1)
+        response = self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.assertEqual(response.data["user_id"], self.user2.pk)
 
-        self.assertEqual(request.status_code, status.HTTP_200_OK)
+    def test_follow_self_returns_400(self):
+        self.client.force_authenticate(self.user1)
+        response = self.client.post(f"/api/v1/users/{self.user1.pk}/follow/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        following = list(self.user2.following.all())
-        self.assertEqual(len(following), 0)
-        
+    def test_follow_nonexistent_user_returns_404(self):
+        self.client.force_authenticate(self.user1)
+        response = self.client.post("/api/v1/users/99999/follow/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_follow_requires_authentication(self):
+        response = self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    # --- get_followers ---
+
+    def test_get_followers_empty(self):
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_get_followers_returns_correct_users(self):
+        self.user2.following.add(self.user1)
+        self.user3.following.add(self.user1)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        usernames = [u["username"] for u in response.data]
+        self.assertIn("user2", usernames)
+        self.assertIn("user3", usernames)
+
+    def test_get_followers_nonexistent_user_returns_404(self):
+        response = self.client.get("/api/v1/users/99999/followers/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_followers_includes_is_following_field(self):
+        self.user2.following.add(self.user1)
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("is_following", response.data[0])
+
+    def test_get_followers_is_following_true_when_mutual(self):
+        # user2 follows user1, user1 also follows user2 → is_following=True
+        self.user2.following.add(self.user1)
+        self.user1.following.add(self.user2)
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertTrue(response.data[0]["is_following"])
+
+    # --- get_following ---
+
+    def test_get_following_empty(self):
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_get_following_returns_correct_users(self):
+        self.user1.following.add(self.user2)
+        self.user1.following.add(self.user3)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        usernames = [u["username"] for u in response.data]
+        self.assertIn("user2", usernames)
+        self.assertIn("user3", usernames)
+
+    def test_get_following_nonexistent_user_returns_404(self):
+        response = self.client.get("/api/v1/users/99999/following/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_following_includes_is_following_field(self):
+        self.user1.following.add(self.user2)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("is_following", response.data[0])
+
+    def test_get_following_is_accessible_without_auth(self):
+        self.user1.following.add(self.user2)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # --- is_following field value correctness ---
+
+    def test_get_followers_is_following_false_when_not_following_back(self):
+        # user2 follows user1, but user1 does NOT follow user2 back → is_following=False
+        self.user2.following.add(self.user1)
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        follower = next(u for u in response.data if u["username"] == "user2")
+        self.assertFalse(follower["is_following"])
+
+    def test_get_following_is_following_false_without_auth(self):
+        # Without auth, is_following must always be False
+        self.user1.following.add(self.user2)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        followed = next(u for u in response.data if u["username"] == "user2")
+        self.assertFalse(followed["is_following"])
+
+    def test_get_following_is_following_true_when_mutual(self):
+        # user1 follows user3, and user2 also follows user3 → is_following=True from user2's perspective
+        self.user1.following.add(self.user3)
+        self.user2.following.add(self.user3)
+        self.client.force_authenticate(self.user2)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/following/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        followed = next(u for u in response.data if u["username"] == "user3")
+        self.assertTrue(followed["is_following"])
+
+    # --- total_followers / total_following counts ---
+
+    def test_follow_increments_total_followers_and_total_following(self):
+        # Before: both counters are 0
+        self.assertEqual(self.user2.total_followers, 0)
+        self.assertEqual(self.user1.total_following, 0)
+        self.client.force_authenticate(self.user1)
+        self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.user1.refresh_from_db()
+        self.user2.refresh_from_db()
+        self.assertEqual(self.user2.total_followers, 1)
+        self.assertEqual(self.user1.total_following, 1)
+
+    def test_unfollow_decrements_total_followers_and_total_following(self):
+        self.user1.following.add(self.user2)
+        self.assertEqual(self.user2.total_followers, 1)
+        self.assertEqual(self.user1.total_following, 1)
+        self.client.force_authenticate(self.user1)
+        self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.user1.refresh_from_db()
+        self.user2.refresh_from_db()
+        self.assertEqual(self.user2.total_followers, 0)
+        self.assertEqual(self.user1.total_following, 0)
+
+    def test_total_followers_returned_in_followers_list(self):
+        # The serializer exposes total_followers; check it reflects the real count
+        self.user2.following.add(self.user1)
+        self.user3.following.add(self.user1)
+        response = self.client.get(f"/api/v1/users/{self.user1.pk}/followers/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for user_data in response.data:
+            self.assertIn("total_followers", user_data)
+            self.assertIn("total_following", user_data)
+
+    # --- toggle correctness with multiple follows ---
+
+    def test_toggle_follow_multiple_times_ends_unfollowed(self):
+        # follow → unfollow → follow → unfollow: final state must be unfollowed
+        self.client.force_authenticate(self.user1)
+        url = f"/api/v1/users/{self.user2.pk}/follow/"
+        for _ in range(4):
+            self.client.post(url)
+        self.user1.refresh_from_db()
+        self.assertFalse(self.user1.following.filter(pk=self.user2.pk).exists())
+
+    def test_toggle_follow_odd_number_of_times_ends_followed(self):
+        # Three consecutive toggles: follow → unfollow → follow → final state is followed
+        self.client.force_authenticate(self.user1)
+        url = f"/api/v1/users/{self.user2.pk}/follow/"
+        for _ in range(3):
+            self.client.post(url)
+        self.user1.refresh_from_db()
+        self.assertTrue(self.user1.following.filter(pk=self.user2.pk).exists())
+
+    def test_follow_multiple_users_independent_counts(self):
+        # user1 follows both user2 and user3; each should have exactly 1 follower
+        self.client.force_authenticate(self.user1)
+        self.client.post(f"/api/v1/users/{self.user2.pk}/follow/")
+        self.client.post(f"/api/v1/users/{self.user3.pk}/follow/")
+        self.user2.refresh_from_db()
+        self.user3.refresh_from_db()
+        self.assertEqual(self.user2.total_followers, 1)
+        self.assertEqual(self.user3.total_followers, 1)
+        self.assertEqual(self.user1.total_following, 2)
+
+
 
 class BorrarUsuarioTestCase(APITestCase):
     def setUp(self):
@@ -67,6 +241,26 @@ class BorrarUsuarioTestCase(APITestCase):
             self.url,
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_borrar_usuario_actualiza_likes_count(self):
+        owner = User.objects.create_user(
+            email="owner@example.com", password="password123", username="owner"
+        )
+        calendar = Calendar.objects.create(
+            name="Calendar with likes",
+            privacy="PUBLIC",
+            creator=owner,
+        )
+        CalendarLike.objects.create(user=self.user, calendar=calendar)
+        calendar.refresh_from_db()
+        self.assertEqual(calendar.likes_count, 1)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        calendar.refresh_from_db()
+        self.assertEqual(calendar.likes_count, 0)
         
 
 class BuscarUsuariosTests(TestCase):

@@ -7,7 +7,6 @@ import {
     Platform,
     TouchableOpacity,
     Image,
-    StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
@@ -15,6 +14,8 @@ import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { useAuth } from '@/hooks/use-auth';
 import InviteUserModal from '@/components/InviteUserModal';
+import { ShareCalendarModal } from '@/components/share-calendar-modal';
+import { AddCoOwnerModal } from '@/components/add-co-owner';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
     PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
@@ -33,6 +34,7 @@ interface CalendarInfoModalProps {
     onClose: () => void;
     onDelete?: (calendar: Calendar) => Promise<void> | void;
     onEdit?: (calendar: Calendar) => void;
+    onShare?: (calendar: Calendar) => void;
     isDeleting?: boolean;
 }
 
@@ -45,6 +47,8 @@ export function CalendarInfoModal({
 }: CalendarInfoModalProps) {
     const { user } = useAuth();
     const [inviteVisible, setInviteVisible] = useState(false);
+    const [showShare, setShowShare] = useState(false);
+    const [showCoOwners, setShowCoOwners] = useState(false);
 
     if (!calendar) return null;
 
@@ -79,102 +83,134 @@ export function CalendarInfoModal({
 
     return (
         <>
-        <BottomSheetModal visible={!!calendar} onClose={onClose}>
-            <View style={calendarInfoModalStyles.header}>
-                <View style={[calendarInfoModalStyles.colorBadge, { backgroundColor: accent }]} />
-                <View style={calendarInfoModalStyles.headerContent}>
-                    <Text style={calendarInfoModalStyles.title}>{calendar.name}</Text>
-                    <Text style={calendarInfoModalStyles.creatorText}>by @{calendar.creator}</Text>
+            <BottomSheetModal visible={!!calendar} onClose={onClose}>
+                <View style={calendarInfoModalStyles.header}>
+                    <View style={[calendarInfoModalStyles.colorBadge, { backgroundColor: accent }]} />
+                    <View style={calendarInfoModalStyles.headerContent}>
+                        <Text style={calendarInfoModalStyles.title}>{calendar.name}</Text>
+                        <Text style={calendarInfoModalStyles.creatorText}>by @{calendar.creator}</Text>
+                    </View>
+                    <TouchableOpacity onPress={onClose} hitSlop={12}>
+                        <Ionicons name="close-circle" size={26} color="#bbb" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={onClose} hitSlop={12}>
-                    <Ionicons name="close-circle" size={26} color="#bbb" />
-                </TouchableOpacity>
-            </View>
 
-            {calendar.cover ? (
-                <Image
-                    source={{ uri: calendar.cover }}
-                    style={calendarInfoModalStyles.coverImage}
-                    resizeMode="cover"
-                />
-            ) : null}
+                {calendar.cover ? (
+                    <Image
+                        source={{ uri: calendar.cover }}
+                        style={calendarInfoModalStyles.coverImage}
+                        resizeMode="cover"
+                    />
+                ) : null}
 
-            {calendar.description ? (
-                <Text style={calendarInfoModalStyles.description}>{calendar.description}</Text>
-            ) : null}
+                {calendar.description ? (
+                    <Text style={calendarInfoModalStyles.description}>{calendar.description}</Text>
+                ) : null}
 
-            <View style={calendarInfoModalStyles.infoGrid}>
-                <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
-                    <Ionicons name={privacy.icon} size={18} color={accent} />
-                    <View>
-                        <Text style={calendarInfoModalStyles.infoLabel}>Privacy</Text>
-                        <Text style={calendarInfoModalStyles.infoValue}>{privacy.label}</Text>
+                <View style={calendarInfoModalStyles.infoGrid}>
+                    <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
+                        <Ionicons name={privacy.icon} size={18} color={accent} />
+                        <View>
+                            <Text style={calendarInfoModalStyles.infoLabel}>Privacy</Text>
+                            <Text style={calendarInfoModalStyles.infoValue}>{privacy.label}</Text>
+                        </View>
+                    </View>
+                    <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
+                        <Ionicons name={origin.icon} size={18} color={accent} />
+                        <View>
+                            <Text style={calendarInfoModalStyles.infoLabel}>Source</Text>
+                            <Text style={calendarInfoModalStyles.infoValue}>{origin.label}</Text>
+                        </View>
                     </View>
                 </View>
-                <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
-                    <Ionicons name={origin.icon} size={18} color={accent} />
-                    <View>
-                        <Text style={calendarInfoModalStyles.infoLabel}>Source</Text>
-                        <Text style={calendarInfoModalStyles.infoValue}>{origin.label}</Text>
-                    </View>
-                </View>
-            </View>
 
-            <View style={calendarInfoModalStyles.actions}>
-                {isOwner && (
-                    <TouchableOpacity
-                        style={calendarInfoModalStyles.inviteButton}
-                        onPress={() => setInviteVisible(true)}
-                        activeOpacity={0.75}
-                    >
-                        <Ionicons name="person-add-outline" size={16} color="#10464d" />
-                        <Text 
-                            style={calendarInfoModalStyles.inviteButtonLabel}
-                            numberOfLines={1} 
-                            adjustsFontSizeToFit
+                <View style={calendarInfoModalStyles.actions}>
+                    {isOwner && (
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.inviteButton}
+                            onPress={() => setInviteVisible(true)}
+                            activeOpacity={0.75}
                         >
-                            Invite to calendar
-                        </Text>
-                    </TouchableOpacity>
-                )}
+                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
+                            <Text
+                                style={calendarInfoModalStyles.inviteButtonLabel}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                            >
+                                Invite to calendar
+                            </Text>
+                        </TouchableOpacity>
+                    )}
 
-                <TouchableOpacity
-                    style={calendarInfoModalStyles.editButton}
-                    onPress={() => onEdit?.(calendar)}
-                    activeOpacity={0.75}
-                >
-                    <Ionicons name="pencil" size={16} color="#fff" />
-                    <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
-                </TouchableOpacity>
-
-                {onDelete && (
                     <TouchableOpacity
-                        style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
-                        onPress={handleDeletePress}
-                        disabled={isDeleting}
+                        style={calendarInfoModalStyles.editButton}
+                        onPress={() => onEdit?.(calendar)}
                         activeOpacity={0.75}
                     >
-                        {isDeleting ? (
-                            <ActivityIndicator size="small" color="#B33F37" />
-                        ) : (
-                            <Ionicons name="trash-outline" size={16} color="#B33F37" />
-                        )}
-                        <Text style={calendarInfoModalStyles.deleteButtonLabel}>
-                            {isDeleting ? 'Deleting...' : 'Delete calendar'}
-                        </Text>
+                        <Ionicons name="pencil" size={16} color="#fff" />
+                        <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
                     </TouchableOpacity>
-                )}
-            </View>
-        </BottomSheetModal>
 
-        {isOwner && (
-            <InviteUserModal
-                visible={inviteVisible}
-                onClose={() => setInviteVisible(false)}
-                itemId={String(calendar.id)}
-                type="calendar"
+                    {isOwner && (
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.shareButton}
+                            onPress={() => setShowCoOwners(true)}
+                            activeOpacity={0.75}
+                        >
+                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
+                            <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {calendar.privacy !== 'PRIVATE' && (
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.shareButton}
+                            onPress={() => setShowShare(true)}
+                            activeOpacity={0.75}
+                        >
+                            <Ionicons name="share-social-outline" size={16} color="#10464d" />
+                            <Text style={calendarInfoModalStyles.shareButtonLabel}>Share</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {onDelete && (
+                        <TouchableOpacity
+                            style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
+                            onPress={handleDeletePress}
+                            disabled={isDeleting}
+                            activeOpacity={0.75}
+                        >
+                            {isDeleting ? (
+                                <ActivityIndicator size="small" color="#B33F37" />
+                            ) : (
+                                <Ionicons name="trash-outline" size={16} color="#B33F37" />
+                            )}
+                            <Text style={calendarInfoModalStyles.deleteButtonLabel}>
+                                {isDeleting ? 'Deleting...' : 'Delete calendar'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <ShareCalendarModal
+                    calendar={showShare ? calendar : null}
+                    onClose={() => setShowShare(false)}
+                />
+            </BottomSheetModal>
+
+            <AddCoOwnerModal
+                calendar={showCoOwners ? calendar : null}
+                onClose={() => setShowCoOwners(false)}
             />
-        )}
+
+            {isOwner && (
+                <InviteUserModal
+                    visible={inviteVisible}
+                    onClose={() => setInviteVisible(false)}
+                    itemId={String(calendar.id)}
+                    type="calendar"
+                />
+            )}
         </>
     );
 }

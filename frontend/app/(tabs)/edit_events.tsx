@@ -18,7 +18,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import apiClient from "@/services/api-client";
+import apiClient, { appendPhoto } from "@/services/api-client";
 
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
@@ -253,6 +253,9 @@ export default function EditEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
 
@@ -274,8 +277,6 @@ export default function EditEventsScreen() {
     d.setHours(14, 0, 0, 0);
     return d;
   });
-
-  const [coverUri, setCoverUri] = useState<string | null>(null);
 
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
   const [showWebTimePicker, setShowWebTimePicker] = useState(false);
@@ -333,42 +334,18 @@ export default function EditEventsScreen() {
     }
 
     try {
-      // Requiere backend: GET /api/v1/events/<id>/
+      setLoading(true);
+
       const event: any = await apiClient.get<any>(`/events/${eventId}/edit/`);
 
-      setTitle(String(event?.title ?? ""));
-      setDescription(String(event?.description ?? ""));
-      setPlace(String(event?.place_name ?? ""));
+      setTitle(event.title);
+      setDescription(event.description);
+      setPlace(event.place_name);
+      setCoverUri(event.photo);
 
-      if (event?.location?.coordinates?.length >= 2) {
-        const [lonValue, latValue] = event.location.coordinates;
-        const parsedLat = Number(latValue);
-        const parsedLon = Number(lonValue);
-        setLat(Number.isFinite(parsedLat) ? parsedLat : null);
-        setLon(Number.isFinite(parsedLon) ? parsedLon : null);
-      } else {
-        setLat(null);
-        setLon(null);
-      }
-
-      if (event?.photo) {
-        setCoverUri(String(event.photo));
-      }
-
-      if (event?.date) {
-        const [year, month, day] = String(event.date).split("-").map(Number);
-        const parsedDate = new Date(year, month - 1, day);
-        parsedDate.setHours(0, 0, 0, 0);
-        setDate(parsedDate);
-
-        if (event?.time) {
-          const [hh, mm] = String(event.time).split(":").map(Number);
-          const parsedTime = new Date(parsedDate);
-          parsedTime.setHours(hh || 0, mm || 0, 0, 0);
-          setTime(parsedTime);
-          setWebHour(hh || 0);
-          setWebMinute(mm || 0);
-        }
+      if (event.latitude && event.longitude) {
+        setLat(event.latitude);
+        setLon(event.longitude);
       }
 
       if (event?.calendars?.length > 0) {
@@ -534,6 +511,7 @@ export default function EditEventsScreen() {
 
     if (!result.canceled) {
       setCoverUri(result.assets[0].uri);
+      setCoverAsset(result.assets[0]);
     }
   };
 
@@ -556,25 +534,47 @@ export default function EditEventsScreen() {
     }
 
     setSaving(true);
+    const calendarsIds = [Number(selectedCalendar.id)];
 
     try {
-      const updateData: any = {
-        title: title.trim(),
-        description: description.trim(),
-        place_name: place.trim(),
-        date: toISODate(date),
-        time: toHMS(time),
-        calendars: [Number(selectedCalendar.id)],
-      };
 
-      if (lat != null && lon != null) {
-        updateData.location = {
-          type: "Point",
-          coordinates: [lon, lat],
+      if (coverAsset) {
+        const formData = new FormData();
+        formData.append("title", title.trim());
+        formData.append("description", description.trim());
+        formData.append("place_name", place.trim());
+        formData.append("date", toISODate(date));
+        formData.append("time", toHMS(time));
+        formData.append("calendars", JSON.stringify(calendarsIds));
+
+        if (lat != null && lon != null) {
+          formData.append("latitud", String(lat));
+          formData.append("longitud", String(lon));
+        }
+        await appendPhoto(formData, coverAsset, "photo");
+        await apiClient.put<any>(`/events/${eventId}/edit/`, formData);
+
+      } else {
+        const updateData: any = {
+          title: title.trim(),
+          description: description.trim(),
+          place_name: place.trim(),
+          date: toISODate(date),
+          time: toHMS(time),
+          calendars: calendarsIds,
         };
-      }
 
-      await apiClient.put<any>(`/events/${eventId}/edit/`, updateData);
+        if (lat != null && lon != null) {
+            updateData.latitud = lat;
+            updateData.longitud = lon;
+        }
+
+        if (!coverUri) {
+             updateData.remove_photo = "true";
+        }
+
+        await apiClient.put<any>(`/events/${eventId}/edit/`, updateData);
+      }
 
       setSuccessModalOpen(true);
     } catch (error: any) {
@@ -643,9 +643,9 @@ export default function EditEventsScreen() {
                       />
                     ) : (
                       <View style={styles.calendarImgPlaceholder} />
-                    )}
+                    )
+                  }
                   </View>
-
                   {calLoading ? (
                     <View style={{ marginTop: 6 }}>
                       <ActivityIndicator />
@@ -671,9 +671,6 @@ export default function EditEventsScreen() {
                   )}
                 </Pressable>
 
-                <Text style={styles.helperText}>
-                  (No se envía aún: el endpoint /events/... no recibe imagen en este formulario)
-                </Text>
               </View>
             </View>
 
@@ -1397,3 +1394,4 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 });
+

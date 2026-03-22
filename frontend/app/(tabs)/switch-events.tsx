@@ -1,13 +1,14 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
-import { API_CONFIG } from "@/constants/api";
+import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
+import { API_CONFIG } from "@/constants/api";
 import InvitationsModal from "@/components/InvitationsModal";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -20,7 +21,7 @@ export interface Event {
   time: string;
   image: string;
   username: string;
-  userAvatar: string;
+  userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
   attendees?: {
@@ -33,6 +34,8 @@ export interface Event {
 
 export default function EventsScreen() {
   const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const hasSession = isAuthenticated || Boolean(user);
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
@@ -42,8 +45,8 @@ export default function EventsScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [invitationsVisible, setInvitationsVisible] = useState(false);
-  const { isAuthenticated } = useAuth();
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -76,7 +79,14 @@ export default function EventsScreen() {
           time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
           image: resolveImageUrl(e.photo || e.foto),
           username: creatorUsername,
-          userAvatar: `https://i.pravatar.cc/100?u=${creatorUsername}`,
+          userAvatar: (() => {
+            const creatorPhoto = (e.creator_photo && e.creator_photo.trim() !== "")
+              ? e.creator_photo
+              : (cal?.creator_photo && cal.creator_photo.trim() !== ""
+                ? cal.creator_photo
+                : "");
+            return creatorPhoto || `https://i.pravatar.cc/100?u=${creatorUsername}`;
+          })(),
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
           // Temporary mock attendees for frontend testing.
@@ -147,24 +157,35 @@ export default function EventsScreen() {
     <View style={styles.container}>
       <View style={styles.inner}>
         {/* Header de Autenticación */}
-        <View style={styles.authHeader}>
-          {!isAuthenticated ? (
-            <>
-              <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
-                <Text style={styles.loginButtonText}>Log In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-                <Text style={styles.registerButtonText}>Sign Up</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.userHeader}>
-              <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
-                <Ionicons name="notifications-outline" size={24} color="#10464d" />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        {!authLoading && !hasSession && (
+          <View style={styles.authHeader}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/login');
+              }}
+            >
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/register');
+              }}
+            >
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {hasSession && (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
@@ -176,7 +197,13 @@ export default function EventsScreen() {
               event={item}
               onOpen={handleOpenEvent}
               onLike={(id) => console.log("Like:", id)}
-              onComment={(id) => console.log("Comment:", id)}
+              onComment={(id) => {
+              const found = events.find((e) => e.id === id);
+              if (found) {
+                setSelectedEvent(found);
+                setCommentsModalVisible(true);
+              }
+            }}
               onSave={(id) => console.log("Save:", id)}
             />
           )}
@@ -190,7 +217,11 @@ export default function EventsScreen() {
           onClose={handleCloseModal}
           event={selectedEvent}
         />
-
+        <CommentsModal
+          visible={commentsModalVisible}
+          onClose={() => setCommentsModalVisible(false)}
+          event={selectedEvent}
+        />
         <InvitationsModal
           visible={invitationsVisible}
           onClose={() => setInvitationsVisible(false)}
@@ -360,6 +391,20 @@ export const styles = StyleSheet.create({
 
     fontSize: 16,
 
+  },
+
+  userHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 
 });

@@ -34,6 +34,7 @@ export const API_CONFIG = {
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
     ownProfile: buildEndpoint('users/me/'),
     searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
+    getFollowing: (userId: number | string) => buildEndpoint(`users/${userId}/following/`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
     nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radius=${radius}`),
@@ -43,10 +44,13 @@ export const API_CONFIG = {
     getEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}/edit/`),
     editEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}/edit/`),
     deleteEvent: (eventId: string) => buildEndpoint(`events/${eventId}/delete/`),
+    shareCalendar: (calendarId: number | string) => buildEndpoint(`calendars/${calendarId}/share/`),
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
-
+    comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
+    commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
+    deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
     // Invitations & notifications
     inviteCalendar: (calendarId: string | number) => buildEndpoint(`calendars/${calendarId}/invite/`),
     inviteEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/invite/`),
