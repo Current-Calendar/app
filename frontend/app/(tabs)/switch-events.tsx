@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
@@ -19,7 +19,7 @@ export interface Event {
   time: string;
   image: string;
   username: string;
-  userAvatar: string;
+  userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
   attendees?: {
@@ -73,8 +73,12 @@ export default function EventsScreen() {
           date: e.date || e.fecha || "",
           time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
           image: resolveImageUrl(e.photo || e.foto),
-          username: cal?.creator_username || "unknown",
-          userAvatar: `https://i.pravatar.cc/100?u=${cal?.creator_username || "unknown"}`,
+          username: e.creator_username || cal?.creator_username || "unknown",
+          userAvatar: (e.creator_photo && e.creator_photo.trim() !== "")
+            ? e.creator_photo
+            : (cal?.creator_photo && cal.creator_photo.trim() !== ""
+              ? cal.creator_photo
+              : require("../../assets/images/default-user.jpg")),
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
           // Temporary mock attendees for frontend testing.

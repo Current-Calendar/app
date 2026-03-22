@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from logging import config
 import os
 from pathlib import Path
+
+from django.conf.global_settings import STORAGES
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -96,7 +98,14 @@ CHANNEL_LAYERS = {
 }
 
 if DEBUG:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 else:
@@ -104,12 +113,23 @@ else:
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')
 
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
     AWS_DEFAULT_ACL = 'public-read'
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        "default": {
+            "BACKEND": "utils.storage.PublicMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 
 GRAPHENE = {
     "SCHEMA": "current.schema.schema"

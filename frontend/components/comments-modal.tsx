@@ -75,10 +75,8 @@ export default function CommentsModal({
     [comments]
   );
 
-  const getAvatarUrl = (username?: string) =>
-    `https://i.pravatar.cc/100?u=${username || "user"}`;
-
   const loadComments = async () => {
+
     if (!event?.id) return;
 
     try {
@@ -256,9 +254,11 @@ export default function CommentsModal({
           <View style={styles.commentTopRow}>
             <View style={styles.commentLeft}>
               <Image
-                source={{
-                  uri: reply.author_avatar || getAvatarUrl(reply.author_username),
-                }}
+                source={
+                   reply.author_avatar && reply.author_avatar.trim() !== ""
+                    ? { uri: reply.author_avatar }
+                    : require("../assets/images/default-user.jpg")
+                }
                 style={styles.commentAvatar}
               />
 
@@ -316,9 +316,11 @@ export default function CommentsModal({
         <View style={styles.commentTopRow}>
           <View style={styles.commentLeft}>
             <Image
-              source={{
-                uri: item.author_avatar || getAvatarUrl(item.author_username),
-              }}
+              source={
+                item.author_avatar && item.author_avatar.trim() !== ""
+                  ? { uri: item.author_avatar }
+                  : require("../assets/images/default-user.jpg")
+              }
               style={styles.commentAvatar}
             />
 

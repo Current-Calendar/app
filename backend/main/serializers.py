@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from main.models import Event, EventAttendance
 
 from .models import Calendar, Notification, Report
+from utils.storage import get_signed_url
+
 User = get_user_model()
 
 
@@ -237,6 +239,7 @@ class EventSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
     creator_username = serializers.CharField(source='creator.username', read_only=True)
+    creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()
 
@@ -247,19 +250,14 @@ class EventSerializer(serializers.ModelSerializer):
             'date', 'time', 'recurrence', 'external_id',
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
-            'photo', 'creator_username', 'attendees'
+            'photo', 'creator_username', 'creator_photo', 'attendees'
         ]
 
+    def get_creator_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.creator.photo)
+
     def get_photo(self, obj):
-        if not obj.photo:
-            return None
-        photo_str = str(obj.photo)
-        if photo_str.startswith('http'):
-            return photo_str
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.photo.url)
-        return photo_str
+        return get_signed_url(self.context.get('request'), obj.photo)
 
     def get_distance_km(self, obj):
         if hasattr(obj, 'distance') and obj.distance:
@@ -376,17 +374,8 @@ class EventAttendeeSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'avatar', 'respondedAt']
     
     def get_avatar(self, obj):
-        """Devuelve URL de avatar o None."""
-        if not obj.user.photo:
-            return None
-        photo_str = str(obj.user.photo)
-        if photo_str.startswith('http'):
-            return photo_str
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.user.photo.url)
-        return photo_str
-    
+        return get_signed_url(self.context.get('request'), obj.user.photo)
+
     def get_respondedAt(self, obj):
         """Devuelve updated_at en ISO 8601 con Z (UTC)."""
         iso_str = obj.updated_at.isoformat()

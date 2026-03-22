@@ -113,7 +113,11 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
               <View style={styles.authorRow}>
                 {!!event.userAvatar ? (
                   <Image
-                    source={{ uri: event.userAvatar }}
+                    source={
+                      typeof event.userAvatar === 'string'
+                        ? { uri: event.userAvatar }
+                        : event.userAvatar
+                    }
                     style={styles.avatar}
                   />
                 ) : (

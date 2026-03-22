@@ -38,7 +38,11 @@ export default function CalendarCard({
     >
       <View style={calendarCardStyles.cardContent}>
         <Image
-          source={{ uri: calendar.cover || 'https://via.placeholder.com/150' }}
+          source={
+            calendar.cover && calendar.cover.trim() !== ''
+              ? { uri: calendar.cover }
+              : require('@/assets/images/default-user.jpg')
+          }
           style={calendarCardStyles.cardImage}
         />
 

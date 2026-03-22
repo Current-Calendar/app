@@ -184,7 +184,11 @@ export default function SearchScreen() {
                             <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
+                                        source={
+                                            user.photo && user.photo.trim() !== ""
+                                                ? { uri: user.photo }
+                                                : require('../../assets/images/default-user.jpg')
+                                        }
                                         style={styles.avatar}
                                     />
                                     <View style={styles.userTextContainer}>

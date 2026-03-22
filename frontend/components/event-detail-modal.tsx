@@ -5,6 +5,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  Image,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
@@ -89,6 +90,14 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
             <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
+
+            {event.photo && (
+              <Image
+                source={{ uri: event.photo }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            )}
 
             <View style={styles.content}>
               <Text style={styles.title}>{event.title}</Text>
@@ -428,5 +437,13 @@ const styles = StyleSheet.create({
   deleteText: {
     color: "#FFFFFF",
     fontWeight: "900",
+  },
+
+  image: {
+    width: "100%",
+    height: 200,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    marginBottom: 12,
   },
 });

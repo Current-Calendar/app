@@ -10,6 +10,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from ..serializers import EventSerializer
+from utils.storage import get_signed_url
+import json
 
 
 @api_view(['POST'])
@@ -22,6 +24,17 @@ def create_event(request):
     date = data.get("date")
     time = data.get("time")
     calendars_ids = data.get("calendars")
+
+    if calendars_ids and isinstance(calendars_ids, str):
+        try:
+            parsed = json.loads(calendars_ids)
+            if isinstance(parsed, list):
+                calendars_ids = parsed
+            else:
+                 calendars_ids = [calendars_ids]
+        except ValueError:
+            calendars_ids = [calendars_ids]
+
     creator = request.user
     
 
@@ -81,6 +94,7 @@ def create_event(request):
     location = None
     lat = data.get("latitud")
     lon = data.get("longitud")
+    photo = request.FILES.get("photo")
 
     if lat and lon:
         try:
@@ -97,6 +111,7 @@ def create_event(request):
         place_name=data.get("place_name", ""),
         date=date,
         time=time,
+        photo=photo,
         recurrence=data.get("recurrence"),
         external_id=data.get("external_id"),
         location=location,
@@ -108,6 +123,8 @@ def create_event(request):
         with transaction.atomic():
             event.save()
             event.calendars.set(calendars)
+            if photo:
+                event.photo.save(photo.name, photo, save=True)
 
     except ValidationError as exc:
         raw_messages = []
@@ -135,6 +152,7 @@ def create_event(request):
             "external_id": event.external_id,
             "calendars": calendars_ids,
             "created_at": event.created_at,
+            "photo": get_signed_url(request, event.photo),
         },
         status=status.HTTP_201_CREATED,
     )
@@ -195,17 +213,36 @@ def edit_event(request: Request, event_id):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    if "photo" in request.FILES:
+        if event.photo:
+             event.photo.delete(save=False)
+        event.photo = request.FILES["photo"]
+    elif request.data.get("remove_photo") == "true":
+         if event.photo:
+             event.photo.delete(save=False)
+         event.photo = None
+
     # Calendars M2M
     calendars = event.calendars.all()
     if "calendars" in data:
-        calendar_ids = data["calendars"]
-        if not calendar_ids or not isinstance(calendar_ids, list):
+        calendars_ids = data["calendars"]
+        if isinstance(calendars_ids, str):
+            try:
+                parsed = json.loads(calendars_ids)
+                if isinstance(parsed, list):
+                    calendars_ids = parsed
+                else:
+                    calendars_ids = [calendars_ids]
+            except ValueError:
+                calendars_ids = [calendars_ids]
+
+        if not calendars_ids or not isinstance(calendars_ids, list):
             return Response(
                 {"errors": ["Debe indicar al menos un calendar válido."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        calendars = Calendar.objects.filter(id__in=calendar_ids)
-        if calendars.count() != len(calendar_ids):
+        calendars = Calendar.objects.filter(id__in=calendars_ids)
+        if calendars.count() != len(calendars_ids):
             return Response(
                 {"errors": ["Algún calendar no existe."]},
                 status=status.HTTP_404_NOT_FOUND,
@@ -255,6 +292,7 @@ def edit_event(request: Request, event_id):
             "external_id": event.external_id,
             "calendars": list(event.calendars.values_list("id", flat=True)),
             "created_at": event.created_at,
+            "photo": get_signed_url(request, event.photo),
         },
         status=status.HTTP_200_OK,
     )
@@ -309,6 +347,7 @@ def list_events_from_calendar(request):
             "external_id": event.external_id,
             "calendars": list(event.calendars.values_list("id", flat=True)),
             "created_at": event.created_at,
+            "photo": get_signed_url(request, event.photo),
         }
         for event in queryset
     ]

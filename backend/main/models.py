@@ -61,7 +61,7 @@ class Calendar(models.Model):
     external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    cover = models.FileField(upload_to=calendar_cover_path, null=True, blank=True)
+    cover = models.ImageField(upload_to=calendar_cover_path, null=True, blank=True)
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)

@@ -20,8 +20,9 @@ import { useNavigation } from "@react-navigation/native";
 import { useCreateEventApi } from '@/hooks/use-create-event-api';
 import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
 import { useRouter } from "expo-router";
-import apiClient from '@/services/api-client';
+import apiClient, { appendPhoto } from '@/services/api-client';
 import { useLocalSearchParams } from "expo-router";
+import { useAuth } from "@/hooks/use-auth";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -272,6 +273,7 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
   const { date: dateParam } = useLocalSearchParams();
   const router = useRouter();
@@ -334,6 +336,9 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
   // Coordinates
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
@@ -369,8 +374,6 @@ export default function CreateEventsScreen() {
     d.setHours(14, 0, 0, 0);
     return d;
   });
-
-  const [coverUri, setCoverUri] = useState<string | null>(null);
 
   // ====== Pickers ======
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
@@ -418,7 +421,10 @@ export default function CreateEventsScreen() {
       quality: 0.9,
     });
 
-    if (!result.canceled) setCoverUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setCoverUri(result.assets[0].uri);
+      setCoverAsset(result.assets[0]);
+    }
   };
 
   useEffect(() => {
@@ -474,26 +480,50 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    const payload: any = {
-      title: titleTrimmed,
-      description: description?.trim() ?? "",
-      place_name: place?.trim() ?? "",
-      date: toISODate(date),
-      time: toHMS(time),
-      calendars: [Number(selectedCalendar.id)],
-      creator_id: 2, // MOCK por atime
-    };
-
-    // Send coords if available (backend expects latitude/longitude)
-    if (lat != null && lon != null) {
-      payload.latitude = lat;
-      payload.longitude = lon;
+    if (!user) {
+        setFormError("User not authenticated.");
+        return;
     }
+
+    const calendarsIds = [Number(selectedCalendar.id)];
 
     try {
       setPublishing(true);
 
-      await createEvent(payload);
+      if (coverAsset) {
+         const formData = new FormData();
+         formData.append("title", titleTrimmed);
+         formData.append("description", description?.trim() ?? "");
+         formData.append("place_name", place?.trim() ?? "");
+         formData.append("date", toISODate(date));
+         formData.append("time", toHMS(time));
+         formData.append("calendars", JSON.stringify(calendarsIds));
+         formData.append("creator_id", String(user.id));
+
+         if (lat != null && lon != null) {
+            formData.append("latitud", String(lat));
+            formData.append("longitud", String(lon));
+         }
+
+         await appendPhoto(formData, coverAsset, "photo");
+         await createEvent(formData);
+      } else {
+        const payload: any = {
+            title: titleTrimmed,
+            description: description?.trim() ?? "",
+            place_name: place?.trim() ?? "",
+            date: toISODate(date),
+            time: toHMS(time),
+            calendars: calendarsIds,
+            creator_id: user.id,
+        };
+
+        if (lat != null && lon != null) {
+            payload.latitude = lat;
+            payload.longitude = lon;
+        }
+        await createEvent(payload);
+      }
 
       setSuccessModalOpen(true);
     } catch (e: any) {
