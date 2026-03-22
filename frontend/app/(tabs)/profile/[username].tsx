@@ -136,7 +136,7 @@ const ProfileScreen = () => {
 
   const handleEditProfile = () => {
     if (!currentUser) return;
-    router.push('/(tabs)/profileEdit' as any);
+    router.push('/(tabs)/profile/profileEdit' as any);
   };
 
   const handleLogout = async () => {
