@@ -188,6 +188,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
             "created_at",
             "likes_count",
             "liked_by_me",
+            "co_owners",
         )
         read_only_fields = ("id", "created_at")
 
@@ -204,6 +205,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
 class OwnProfileSerializer(serializers.ModelSerializer):
     calendars = CalendarSummarySerializer(source="created_calendars", many=True)
     following_calendars = CalendarSummarySerializer(source="subscribed_calendars", many=True)
+    co_owned_calendars = CalendarSummarySerializer(source="co_owned_calendars", many=True)
 
     class Meta:
         model = User
@@ -221,6 +223,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
         read_only_fields = (
             "id",
@@ -230,6 +233,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
 
 

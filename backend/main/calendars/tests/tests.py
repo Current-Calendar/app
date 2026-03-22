@@ -894,3 +894,97 @@ class ShareCalendarHtmlTests(TestCase):
         """Returns 404 for a nonexistent calendar."""
         response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
         self.assertEqual(response.status_code, 404)
+
+
+class EditCoOwnersTests(APITestCase):
+    ENDPOINT = "/api/v1/calendars/{}/co_owners/"
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="co_creator",
+            email="co_creator@example.com",
+            password="pass1234",
+        )
+        self.co_owner = User.objects.create_user(
+            username="existing_co_owner",
+            email="existing_co_owner@example.com",
+            password="pass1234",
+        )
+        self.old_co_owner = User.objects.create_user(
+            username="old_co_owner",
+            email="old_co_owner@example.com",
+            password="pass1234",
+        )
+        self.new_user = User.objects.create_user(
+            username="new_user",
+            email="new_user@example.com",
+            password="pass1234",
+        )
+        self.outsider = User.objects.create_user(
+            username="outsider_user",
+            email="outsider_user@example.com",
+            password="pass1234",
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Co Owner Calendar",
+            description="Calendar for co-owner tests",
+            privacy="PRIVATE",
+            creator=self.creator,
+        )
+        self.calendar.co_owners.add(self.co_owner, self.old_co_owner)
+
+    def test_creator_replaces_co_owners(self):
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.calendar.refresh_from_db()
+        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
+        self.assertEqual(resulting_ids, {self.new_user.id})
+
+    def test_co_owner_adds_only_without_replacing(self):
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.calendar.refresh_from_db()
+        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
+        self.assertEqual(
+            resulting_ids,
+            {self.co_owner.id, self.old_co_owner.id, self.new_user.id},
+        )
+
+    def test_unauthorized_user_gets_403(self):
+        self.client.force_authenticate(self.outsider)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_missing_user_ids_get_400(self):
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
