@@ -5,21 +5,18 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../../types/auth';
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from '@/hooks/use-auth';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
-import CommentsModalC from '../../../components/comments-modal-c';
-import profileStyles from './profileStyles';
+import profileStyles from '../../../styles/profile-styles';
 import PublicProfile from './PublicProfile';
-import apiClient, { appendPhoto } from '../../../services/api-client';
-
+import apiClient from '../../../services/api-client';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -76,7 +73,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
 
-  const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
+  const { user: currentUser, logout } = useAuth();
 
   const isMe = !username || username === currentUser?.username;
 
@@ -89,12 +86,8 @@ const ProfileScreen = () => {
   const [myCalendars, setMyCalendars] = useState<CalendarData[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<CalendarData[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarData | null>(null);
-  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
 
   useEffect(() => {
     if (!isMe) {
@@ -104,7 +97,6 @@ const ProfileScreen = () => {
       setProfileError(null);
       return;
     }
-
     if (!currentUser) {
       setShownUser(null);
       return;
@@ -115,12 +107,9 @@ const ProfileScreen = () => {
     const fetchOwnProfile = async () => {
       setIsLoadingProfile(true);
       setProfileError(null);
-
       try {
         const data: OwnProfileResponse = await apiClient.get('/users/me/');
-
         if (!isMounted) return;
-
         setShownUser(mapUserFromApi(data));
         setMetrics({
           total_followers: data.total_followers ?? 0,
@@ -135,17 +124,12 @@ const ProfileScreen = () => {
           setProfileError("We couldn't load your profile. Please check your connection and try again.");
         }
       } finally {
-        if (isMounted) {
-          setIsLoadingProfile(false);
-        }
+        if (isMounted) setIsLoadingProfile(false);
       }
     };
 
     fetchOwnProfile();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [isMe, currentUser, reloadKey]);
 
   const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
@@ -156,77 +140,21 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    const message = "Are you sure you want to log out?";
-
+    const message = 'Are you sure you want to log out?';
     if (Platform.OS === 'web') {
       const confirmLogout = window.confirm(message);
-      if (confirmLogout) {
-        performLogout();
-      }
+      if (confirmLogout) performLogout();
     } else {
-      Alert.alert("Logout", message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes, exit", style: "destructive", onPress: performLogout },
+      Alert.alert('Logout', message, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes, exit', style: 'destructive', onPress: performLogout },
       ]);
     }
   };
 
   const performLogout = async () => {
     await logout();
-    router.replace('/login' as any);
-  };
-
-  const handleChangePhoto = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission required', 'Permission to access the library is required.');
-        return;
-      }
-
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (pickerResult.canceled) return;
-
-      const asset = pickerResult.assets[0];
-      setIsUploadingPhoto(true);
-
-      const formData = new FormData();
-      await appendPhoto(formData, asset);
-
-      const updated = await apiClient.put<{ user: { photo?: string } }>('/users/me/edit/', formData);
-      const newPhoto = updated?.user?.photo ?? asset.uri;
-
-      setShownUser((prev) => (prev ? { ...prev, photo: newPhoto } : prev));
-      if (currentUser) {
-        updateUserContext({ ...currentUser, photo: newPhoto });
-      }
-    } catch (error) {
-      console.error('Error updating photo:', error);
-      Alert.alert('Error', "We couldn't update the photo. Please try again.");
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const handleOpenCalendarComments = (calendarId: string) => {
-    const allCalendars = [...myCalendars, ...followingCalendars];
-    const found = allCalendars.find((cal) => String(cal.id) === String(calendarId));
-
-    if (found) {
-      setSelectedCalendar(found);
-      setCommentsModalVisible(true);
-    }
-  };
-
-  const handleCloseCommentsModal = () => {
-    setCommentsModalVisible(false);
-    setSelectedCalendar(null);
+    router.replace('/(auth)/login' as any);
   };
 
   if (!isMe && username) {
@@ -236,7 +164,7 @@ const ProfileScreen = () => {
   if (isMe && isLoadingProfile) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
-        <ActivityIndicator size="large" color="#164E52" />
+        <ActivityIndicator size="large" color="#10464d" />
       </SafeAreaView>
     );
   }
@@ -246,7 +174,7 @@ const ProfileScreen = () => {
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
         <Text style={profileStyles.errorText}>{profileError}</Text>
         <TouchableOpacity style={profileStyles.actionButton} onPress={handleRetryProfile}>
-          <Text style={profileStyles.actionButtonText}>Reintentar</Text>
+          <Text style={profileStyles.actionButtonText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -257,109 +185,103 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={profileStyles.container}>
       <ScrollView style={profileStyles.scrollView}>
+
+        <View style={profileStyles.profileHeaderGreen} />
+        <View style={profileStyles.profileHeaderCoral} />
+
         <View style={profileStyles.profileSection}>
-          <View style={profileStyles.profileRow}>
-            <TouchableOpacity
-              style={profileStyles.profilePictureContainer}
-              onPress={handleChangePhoto}
-              disabled={isUploadingPhoto}
-            >
-              <Image
-                source={
-                shownUser.photo && shownUser.photo.trim() !== ""
+
+          <View style={profileStyles.profilePictureContainer}>
+            <Image
+              source={
+                shownUser.photo
                   ? { uri: shownUser.photo }
                   : require('../../../assets/images/default-user.jpg')
               }
-                style={profileStyles.profilePicture}
-              />
-              {isUploadingPhoto ? (
-                <View style={profileStyles.photoOverlay}>
-                  <ActivityIndicator size="small" color="#ffffff" />
-                </View>
-              ) : (
-                <View style={profileStyles.photoOverlay}>
-                  <Text style={profileStyles.photoOverlayText}>✎</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <View style={profileStyles.statsContainer}>
-              <Text style={profileStyles.name}>{shownUser.username}</Text>
-              {shownUser.pronouns ? (
-                <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
-              ) : null}
-
-              <View style={profileStyles.statsRow}>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
-                  <Text style={profileStyles.statLabel}>Calendars</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
-                  <Text style={profileStyles.statLabel}>Followers</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
-                  <Text style={profileStyles.statLabel}>Following</Text>
-                </View>
-              </View>
-            </View>
+              style={profileStyles.profilePicture}
+            />
           </View>
+
+          <Text style={profileStyles.name}>{shownUser.username}</Text>
+
+          {shownUser.pronouns ? (
+            <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
+          ) : null}
 
           <View style={profileStyles.bioSection}>
             <Text style={profileStyles.bio}>
-              {shownUser.bio || 'Añade una biografía para que otros te conozcan.'}
+              {shownUser.bio || 'Add a bio so others can get to know you.'}
             </Text>
           </View>
 
-          <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
-            <Text style={profileStyles.actionButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <View style={profileStyles.statsContainer}>
+            <View style={profileStyles.statItem}>
+              <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
+              <Text style={profileStyles.statLabel}>Calendars</Text>
+            </View>
+            <View style={profileStyles.statItem}>
+              <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
+              <Text style={profileStyles.statLabel}>Followers</Text>
+            </View>
+            <View style={[profileStyles.statItem, profileStyles.statItemLast]}>
+              <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
+              <Text style={profileStyles.statLabel}>Following</Text>
+            </View>
+          </View>
 
-          <TouchableOpacity
-            style={[profileStyles.actionButton, profileStyles.logoutButton]}
-            onPress={handleLogout}
-          >
-            <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
-              Logout
-            </Text>
-          </TouchableOpacity>
+          <View style={profileStyles.buttonsRow}>
+            <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
+              <Text style={profileStyles.actionButtonText}>Edit profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[profileStyles.actionButton, profileStyles.logoutButton]}
+              onPress={handleLogout}
+            >
+              <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
+                Log out
+              </Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
 
-        <View style={profileStyles.postsGrid}>
-          <Text style={profileStyles.gridHeaderText}>My Calendars</Text>
-          {myCalendars.length > 0 ? (
-            myCalendars.map((cal) => (
-              <CalendarCard
-                key={cal.id}
-                calendar={cal}
-                onComment={handleOpenCalendarComments}
-              />
-            ))
-          ) : (
-            <Text style={profileStyles.emptyText}>No tienes calendarios creados aún.</Text>
-          )}
+        <View style={profileStyles.divider} />
 
-          <Text style={profileStyles.gridHeaderText}>Following</Text>
-          {followingCalendars.length > 0 ? (
-            followingCalendars.map((cal) => (
-              <CalendarCard
-                key={cal.id}
-                calendar={cal}
-                onComment={handleOpenCalendarComments}
-              />
-            ))
-          ) : (
-            <Text style={profileStyles.emptyText}>No sigues ningún calendario aún.</Text>
-          )}
+        <View style={profileStyles.calendarsWrapper}>
+
+          <View style={profileStyles.calendarSection}>
+            <View style={profileStyles.calendarSectionPill}>
+              <View style={profileStyles.gridHeaderContainer}>
+                <Text style={profileStyles.gridHeaderText}>My calendars</Text>
+                <Text style={profileStyles.gridHeaderCount}>{myCalendars.length}</Text>
+              </View>
+              {myCalendars.length > 0 ? (
+                myCalendars.map((cal) => <CalendarCard key={cal.id} calendar={cal} />)
+              ) : (
+                <Text style={profileStyles.emptyText}>No calendars created yet.</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={profileStyles.calendarSection}>
+            <View style={profileStyles.calendarSectionPill}>
+              <View style={profileStyles.gridHeaderContainer}>
+                <Text style={profileStyles.gridHeaderText}>Following</Text>
+                <Text style={profileStyles.gridHeaderCount}>{followingCalendars.length}</Text>
+              </View>
+              {followingCalendars.length > 0 ? (
+                followingCalendars.map((cal) => <CalendarCard key={cal.id} calendar={cal} />)
+              ) : (
+                <Text style={profileStyles.emptyText}>
+                  {"You're not following any calendars yet."}
+                </Text>
+              )}
+            </View>
+          </View>
+
         </View>
+
       </ScrollView>
-
-      <CommentsModalC
-        visible={commentsModalVisible}
-        onClose={handleCloseCommentsModal}
-        calendar={selectedCalendar}
-      />
     </SafeAreaView>
   );
 };
