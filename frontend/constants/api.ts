@@ -34,7 +34,6 @@ export const API_CONFIG = {
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
     ownProfile: buildEndpoint('users/me/'),
     searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
-    getFollowing: (userId: number | string) => buildEndpoint(`users/${userId}/following/`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
     nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radius=${radius}`),
