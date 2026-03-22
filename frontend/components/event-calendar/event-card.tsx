@@ -40,7 +40,14 @@ export default function EventCard({
   return (
     <View style={eventCalendarEventCardStyles.card}>
       <View style={eventCalendarEventCardStyles.userRow}>
-        <Image source={{ uri: event.userAvatar }} style={eventCalendarEventCardStyles.avatar} />
+        <Image
+          source={
+            typeof event.userAvatar === 'string'
+              ? { uri: event.userAvatar }
+              : event.userAvatar
+          }
+          style={eventCalendarEventCardStyles.avatar}
+        />
         <Text style={eventCalendarEventCardStyles.username}>{event.username}</Text>
       </View>
 

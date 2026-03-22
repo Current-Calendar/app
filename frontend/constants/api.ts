@@ -43,9 +43,13 @@ export const API_CONFIG = {
     getEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}/edit/`),
     editEvent: (eventId: number | string) => buildEndpoint(`events/${eventId}/edit/`),
     deleteEvent: (eventId: string) => buildEndpoint(`events/${eventId}/delete/`),
+    shareCalendar: (calendarId: number | string) => buildEndpoint(`calendars/${calendarId}/share/`),
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+    comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
+    commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
+    deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
   },
 };
 

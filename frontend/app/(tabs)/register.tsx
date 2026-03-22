@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ const TEXT = "#10464D";
 
 export default function SignUpScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { user, login, isAuthenticated, isLoading } = useAuth();
   const { registerUser } = useRegister();
   const { width } = useWindowDimensions();
   const formWidth =
@@ -40,6 +40,12 @@ export default function SignUpScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && (isAuthenticated || Boolean(user))) {
+      router.replace('/(tabs)/switch-events' as any);
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   const getRegisterErrorMessage = (error: unknown) => {
     if (error instanceof ApiError) {
@@ -69,6 +75,11 @@ export default function SignUpScreen() {
   };
 
   const onSignup = async () => {
+    if (isAuthenticated || user) {
+      router.replace('/(tabs)/switch-events' as any);
+      return;
+    }
+
     setErrorMsg(null);
     setSuccessMsg(null);
 

@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { appendPhoto } from '@/services/api-client';
 
 type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
@@ -124,10 +125,7 @@ export default function CreateScreen() {
       formData.append("origin", "CURRENT");
 
       if (coverImage) {
-        const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
-        const response = await fetch(coverImage.uri);
-        const blob = await response.blob();
-        formData.append("cover", blob, filename);
+        await appendPhoto(formData, coverImage, "cover");
       }
 
       await createCalendar(formData);
@@ -137,20 +135,22 @@ export default function CreateScreen() {
       router.replace("/(tabs)/calendars");
 
     } catch (error: any) {
-    console.log("FULL ERROR:", error);
+      console.log("FULL ERROR:", error);
 
-    const message = error?.message || "";
+      const backendErrors = error?.data?.errors;
+      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
+        setErrorMessage(String(backendErrors[0]));
+      } else {
+        const message = error?.message || "";
+        setErrorMessage(
+          message && !message.includes("HTTP")
+            ? message
+            : "Failed to publish calendar. Please try again."
+        );
+      }
 
-    if (message.includes("400")) {
-      setErrorMessage(
-        "You can only create one private calendar with the basic plan."
-      );
-    } else {
-      setErrorMessage("Failed to publish calendar. Please try again.");
-    }
-
-    console.error("Publish error:", error);
-  } finally {
+      console.error("Publish error:", error);
+    } finally {
       setIsLoading(false);
     }
   };
