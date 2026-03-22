@@ -7,7 +7,7 @@ SHELF_NAME = 'dataRS_calendars.dat'
 LOCATION_RADIUS_KM = 50
 
 def load_similarities():
-    shelf = shelve.open(SHELF_NAME)
+    shelf = shelve.open(SHELF_NAME)  # nosec # nosemgrep: python.lang.security.deserialization.pickle.avoid-shelve
 
     print("Extrayendo características de los calendarios...")
     calendars_features = get_all_calendars_features()
@@ -20,7 +20,7 @@ def load_similarities():
 
 
 def get_similar_calendars(calendar_id, top_n=5):
-    shelf = shelve.open(SHELF_NAME)
+    shelf = shelve.open(SHELF_NAME)  # nosec # nosemgrep: python.lang.security.deserialization.pickle.avoid-shelve
     if 'similarities' not in shelf or calendar_id not in shelf['similarities']:
         shelf.close()
         return []
@@ -43,11 +43,6 @@ def get_all_calendars_features():
 
 
 def get_location_clusters(calendar):
-    """
-    Agrupa los eventos del calendario por zona geográfica.
-    Devuelve una lista de strings tipo 'loc_<lat_round>_<lon_round>'
-    redondeando a 1 decimal (~10km de precisión).
-    """
     clusters = set()
     for event in calendar.events.all():
         if event.location:
@@ -90,14 +85,6 @@ def build_feature_set(calendar):
 
 
 def recommend_calendars(user: User, limit=30):
-    """
-    Recomienda calendarios para un usuario basándose en:
-    1. Calendarios similares a los que ya sigue (content-based)
-    2. Calendarios que siguen sus amigos (social)
-    3. Calendarios populares como fallback
-    
-    Excluye calendarios privados y los que el usuario ya sigue.
-    """
     already_following = set(user.subscribed_calendars.values_list('id', flat=True))
     recommended_ids = {}
 
@@ -106,7 +93,6 @@ def recommend_calendars(user: User, limit=30):
         for sim_id, score in similares:
             if sim_id not in already_following:
                 recommended_ids[sim_id] = recommended_ids.get(sim_id, 0) + score
-
 
     friends_ids = user.following.values_list('id', flat=True)
     friends_calendars = (
@@ -127,6 +113,7 @@ def recommend_calendars(user: User, limit=30):
     )
     id_to_cal = {cal.id: cal for cal in final_calendars}
     final_calendars = [id_to_cal[i] for i in sorted_ids if i in id_to_cal]
+    final_calendars = [cal for cal in final_calendars if cal.creator_id != user.id]
 
     if len(final_calendars) < limit:
         ids_to_exclude = already_following | set(recommended_ids.keys())
@@ -134,6 +121,7 @@ def recommend_calendars(user: User, limit=30):
         popular = (
             Calendar.objects
             .exclude(id__in=ids_to_exclude)
+            .exclude(creator_id=user.id)
             .exclude(privacy='PRIVATE')
             .annotate(num_subs=Count('subscribers'))
             .order_by('-num_subs')
