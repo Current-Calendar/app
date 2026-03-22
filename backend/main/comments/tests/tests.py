@@ -1,9 +1,15 @@
 from datetime import date, time
+import tempfile
+import shutil
 
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIRequestFactory
+from django.contrib.auth.models import AnonymousUser
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 
 from main.models import Calendar, Comment, Event, User
+from main.comments import views as comment_views
 
 COMMENTS_ENDPOINT = "/api/v1/comments/"
 
@@ -231,3 +237,236 @@ class CommentApiTests(APITestCase):
         self.assertEqual(replies_response.status_code, status.HTTP_200_OK)
         child_data = next(item for item in replies_response.data["results"] if item["id"] == child.id)
         self.assertIsNone(child_data["parent_preview"])
+
+    def test_get_comments_invalid_target_type(self):
+        response = self.client.get(
+            COMMENTS_ENDPOINT,
+            {"target_type": "INVALID", "target_id": self.public_event.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_comments_invalid_target_id(self):
+        response = self.client.get(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": "abc"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_comments_private_event_forbidden(self):
+        response = self.client.get(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": self.private_event.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_replies_requires_root_comment(self):
+        root = Comment.objects.create(author=self.alice, body="Root", event=self.public_event)
+        root.root = root
+        root.save(update_fields=["root", "updated_at"])
+        reply = Comment.objects.create(
+            author=self.bob,
+            body="Reply",
+            event=self.public_event,
+            parent=root,
+            root=root,
+        )
+
+        response = self.client.get(f"/api/v1/comments/{reply.id}/replies/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_comment_requires_body(self):
+        self.client.force_authenticate(self.alice)
+        response = self.client.post(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": self.public_event.id, "body": "   "},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_comment_parent_mismatch(self):
+        root = Comment.objects.create(author=self.owner, body="Root", event=self.public_event)
+        root.root = root
+        root.save(update_fields=["root", "updated_at"])
+
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            COMMENTS_ENDPOINT,
+            {
+                "target_type": "EVENT",
+                "target_id": self.private_event.id,
+                "parent_id": root.id,
+                "body": "Respuesta fuera de objetivo",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_comments_pagination_and_cursor(self):
+        for idx in range(3):
+            comment = Comment.objects.create(
+                author=self.alice,
+                body=f"Root {idx}",
+                event=self.public_event,
+            )
+            comment.root = comment
+            comment.save(update_fields=["root", "updated_at"])
+
+        first_page = self.client.get(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": self.public_event.id, "limit": 2, "sort": "old"},
+        )
+        self.assertEqual(first_page.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(first_page.data["results"]), 2)
+        self.assertTrue(first_page.data["has_more"])
+        cursor = first_page.data["next_cursor"]
+        self.assertIsNotNone(cursor)
+
+        second_page = self.client.get(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": self.public_event.id, "cursor": cursor, "sort": "old"},
+        )
+        self.assertEqual(second_page.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(second_page.data["results"]), 1)
+        self.assertFalse(second_page.data["has_more"])
+
+
+class CommentHelpersCoverageTests(APITestCase):
+    def setUp(self):
+        self._tmp_media = tempfile.mkdtemp()
+        self._override = override_settings(MEDIA_ROOT=self._tmp_media)
+        self._override.enable()
+        self.addCleanup(lambda: (self._override.disable(), shutil.rmtree(self._tmp_media, ignore_errors=True)))
+        self.factory = APIRequestFactory()
+        self.owner = User.objects.create_user(
+            username="owner2",
+            email="owner2@test.com",
+            password="pass1234",
+        )
+        self.friend = User.objects.create_user(
+            username="friend",
+            email="friend@test.com",
+            password="pass1234",
+        )
+        self.stranger = User.objects.create_user(
+            username="stranger",
+            email="stranger@test.com",
+            password="pass1234",
+        )
+        # Make owner and friend mutual followers
+        self.owner.following.add(self.friend)
+        self.friend.following.add(self.owner)
+
+        self.public_calendar = Calendar.objects.create(
+            name="Pub cal",
+            privacy="PUBLIC",
+            creator=self.owner,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Priv cal",
+            privacy="PRIVATE",
+            creator=self.owner,
+        )
+        self.friends_calendar = Calendar.objects.create(
+            name="Friends cal",
+            privacy="FRIENDS",
+            creator=self.owner,
+        )
+        self.friends_calendar.subscribers.add(self.friend)
+
+        self.event_public = Event.objects.create(
+            title="event public",
+            date=date(2026, 10, 1),
+            time=time(10, 0),
+            creator=self.owner,
+        )
+        self.event_public.calendars.add(self.public_calendar)
+
+        self.event_friend = Event.objects.create(
+            title="event friend",
+            date=date(2026, 10, 2),
+            time=time(11, 0),
+            creator=self.owner,
+        )
+        self.event_friend.calendars.add(self.friends_calendar)
+
+    def test_normalize_target_type_none(self):
+        self.assertIsNone(comment_views._normalize_target_type(None))
+
+    def test_is_friend_viewer_anonymous_false(self):
+        self.assertFalse(comment_views._is_friend_viewer(self.owner, AnonymousUser()))
+
+    def test_can_view_calendar_private_requires_auth(self):
+        self.assertFalse(comment_views.can_view_calendar(self.private_calendar, None))
+
+    def test_can_view_event_public_allows_anonymous(self):
+        self.assertTrue(comment_views.can_view_event(self.event_public, None))
+
+    def test_can_view_event_friends_allows_friend(self):
+        self.assertTrue(comment_views.can_view_event(self.event_friend, self.friend))
+        self.assertFalse(comment_views.can_view_event(self.event_friend, self.stranger))
+
+    def test_decode_cursor_invalid(self):
+        ts, _id = comment_views._decode_cursor("badcursor")
+        self.assertIsNone(ts)
+        self.assertIsNone(_id)
+
+    def test_comment_serializer_author_avatar(self):
+        photo = SimpleUploadedFile("avatar.jpg", b"data", content_type="image/jpeg")
+        self.owner.photo.save("avatar.jpg", photo, save=True)
+        comment = Comment.objects.create(
+            author=self.owner,
+            body="avatar comment",
+            calendar=self.public_calendar,
+        )
+        request = self.factory.get("/api/v1/comments/")
+        serializer = comment_views.CommentSerializer(comment, context={"request": request})
+        self.assertIn("avatar", serializer.data["author_avatar"])
+
+    def test_get_comments_forbidden_on_private_calendar(self):
+        request = self.factory.get(
+            "/api/v1/comments/",
+            {"target_type": "CALENDAR", "target_id": self.private_calendar.id},
+        )
+        request.user = self.stranger
+        response = comment_views.get_comments(request)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_comment_invalid_target_id(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(
+            COMMENTS_ENDPOINT,
+            {"target_type": "EVENT", "target_id": "abc", "body": "hola"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_comment_forbidden_on_private_calendar(self):
+        self.client.force_authenticate(self.stranger)
+        response = self.client.post(
+            COMMENTS_ENDPOINT,
+            {"target_type": "CALENDAR", "target_id": self.private_calendar.id, "body": "nope"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_replies_sort_new_branch(self):
+        root = Comment.objects.create(
+            author=self.owner,
+            body="root",
+            calendar=self.public_calendar,
+        )
+        root.root = root
+        root.save(update_fields=["root", "updated_at"])
+        Comment.objects.create(
+            author=self.owner,
+            body="reply",
+            calendar=self.public_calendar,
+            parent=root,
+            root=root,
+        )
+        request = self.factory.get("/api/v1/comments/1/replies/", {"sort": "new"})
+        request.user = None
+        response = comment_views.list_replies(request, root.id)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
