@@ -46,6 +46,12 @@ export const API_CONFIG = {
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+
+    // Invitations & notifications
+    inviteCalendar: (calendarId: string | number) => buildEndpoint(`calendars/${calendarId}/invite/`),
+    inviteEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/invite/`),
+    listNotifications: buildEndpoint('notifications/'),
+    handleNotification: (id: string | number) => buildEndpoint(`notifications/${id}/`),
   },
 };
 

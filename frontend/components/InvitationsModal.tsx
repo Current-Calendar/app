@@ -11,14 +11,15 @@ import {
   RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import apiClient from '@/services/api-client';
+import apiClient, { ApiError } from '@/services/api-client';
+import { API_CONFIG } from '@/constants/api';
 
-// Tipos esperados del backend (ajusta según lo que devuelva tu API)
+// Expected types from backend (adjust to real API response)
 export type Invitation = {
   id: string | number;
-  item_type: 'calendar' | 'event'; // Para saber si es calendario o evento
+  item_type: 'calendar' | 'event';
   item_id: string | number;
-  item_name: string; // Nombre del calendario o evento
+  item_name: string;
   sender: {
     username: string;
     photo?: string;
@@ -37,14 +38,44 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | number | null>(null);
 
+  const normalizeInvitation = (raw: any): Invitation | null => {
+    const type = raw?.type;
+    if (type !== 'CALENDAR_INVITE' && type !== 'EVENT_INVITE') return null;
+
+    const item_type = type === 'CALENDAR_INVITE' ? 'calendar' : 'event';
+    const related = raw.related_calendar ?? raw.calendar ?? raw.related_event ?? raw.event ?? {};
+
+    const sender = raw.sender ?? {};
+
+    return {
+      id: raw.id ?? `${item_type}-${related?.id ?? 'unknown'}`,
+      item_type,
+      item_id: related?.id ?? raw.related_calendar ?? raw.related_event ?? raw.item_id ?? raw.id,
+      item_name: related?.name ?? related?.title ?? raw.item_name ?? 'Invitation',
+      sender: {
+        username: sender?.username ?? raw.sender_username ?? 'unknown',
+        photo: sender?.photo ?? sender?.avatar,
+      },
+      created_at: raw.created_at ?? raw.created ?? raw.timestamp,
+    };
+  };
+
   const fetchInvitations = async () => {
     try {
-      // Llama a tu endpoint real de invitaciones pendientes
-      const response = await apiClient.get<Invitation[] | { data: Invitation[] }>('/invitations/');
-      const data = Array.isArray(response) ? response : (response as any)?.data || [];
-      setInvitations(data);
+      const response = await apiClient.get<any>(API_CONFIG.endpoints.listNotifications.replace(API_CONFIG.BaseURL, ''));
+      const raw = Array.isArray(response)
+        ? response
+        : (response as any)?.results
+          || (response as any)?.data
+          || [];
+
+      const normalized = raw
+        .map(normalizeInvitation)
+        .filter(Boolean) as Invitation[];
+
+      setInvitations(normalized);
     } catch (error) {
-      console.error('Error cargando invitaciones:', error);
+      console.error('Error loading invitations:', error);
     }
   };
 
@@ -64,16 +95,22 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
   const handleAction = async (inviteId: string | number, action: 'accept' | 'reject') => {
     setProcessingId(inviteId);
     try {
-      await apiClient.post(`/invitations/${inviteId}/${action}/`);
-      
-      // Quitamos la invitación de la lista tras responder
+      const status = action === 'accept' ? 'ACCEPT' : 'DECLINE';
+      await apiClient.post(
+        API_CONFIG.endpoints.handleNotification(inviteId).replace(API_CONFIG.BaseURL, ''),
+        { status }
+      );
+
       setInvitations((prev) => prev.filter((inv) => inviteId !== inv.id));
-      
+
       if (action === 'accept') {
-        Alert.alert('¡Aceptada!', 'Te has unido correctamente.');
+        Alert.alert('Accepted!', 'Invitation handled successfully.');
       }
     } catch (error) {
-      Alert.alert('Error', `No se pudo ${action === 'accept' ? 'aceptar' : 'rechazar'} la invitación.`);
+      const message = error instanceof ApiError && typeof (error.data as any)?.error === 'string'
+        ? (error.data as any).error
+        : `Could not ${action === 'accept' ? 'accept' : 'decline'} the invitation.`;
+      Alert.alert('Error', message);
     } finally {
       setProcessingId(null);
     }
@@ -92,7 +129,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
             </View>
             <View>
               <Text style={styles.senderName}>@{item.sender.username}</Text>
-              <Text style={styles.inviteContext}>te ha invitado a un {item.item_type}</Text>
+              <Text style={styles.inviteContext}>invited you to a {item.item_type}</Text>
             </View>
           </View>
         </View>
@@ -108,7 +145,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
             onPress={() => handleAction(item.id, 'reject')}
             disabled={isProcessing}
           >
-            <Text style={styles.btnRejectText}>Rechazar</Text>
+            <Text style={styles.btnRejectText}>Decline</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -119,7 +156,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
             {isProcessing ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.btnAcceptText}>Aceptar</Text>
+              <Text style={styles.btnAcceptText}>Accept</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -132,7 +169,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Tus Invitaciones</Text>
+            <Text style={styles.headerTitle}>Your Invitations</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
@@ -156,7 +193,7 @@ const InvitationsModal: React.FC<InvitationsModalProps> = ({ visible, onClose })
           ) : (
             <View style={styles.centerContent}>
               <Ionicons name="mail-open-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>No tienes invitaciones pendientes.</Text>
+              <Text style={styles.emptyText}>You have no pending invitations.</Text>
             </View>
           )}
         </View>

@@ -65,6 +65,8 @@ export default function EventsScreen() {
         const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
         const cal = calendarMap[Number(calId)];
 
+        const creatorUsername = e.creator_username || e.creator?.username || cal?.creator_username || "unknown";
+
         return {
           id: String(e.id),
           title: e.title || e.titulo || "",
@@ -73,8 +75,8 @@ export default function EventsScreen() {
           date: e.date || e.fecha || "",
           time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
           image: resolveImageUrl(e.photo || e.foto),
-          username: cal?.creator_username || "unknown",
-          userAvatar: `https://i.pravatar.cc/100?u=${cal?.creator_username || "unknown"}`,
+          username: creatorUsername,
+          userAvatar: `https://i.pravatar.cc/100?u=${creatorUsername}`,
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
           // Temporary mock attendees for frontend testing.

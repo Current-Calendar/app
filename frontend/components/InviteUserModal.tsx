@@ -14,13 +14,14 @@ import {
   Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import apiClient from '@/services/api-client';
+import apiClient, { ApiError } from '@/services/api-client';
+import { API_CONFIG } from '@/constants/api';
 
 // Tipos de datos esperados del backend
 export type UserSearchResult = {
   id: string | number;
   username: string;
-  photo?: string; // Añadido para soportar la foto de perfil si el backend la envía
+  photo?: string; // Photo if backend provides it
 };
 
 interface InviteUserModalProps {
@@ -36,7 +37,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
   const [isSearching, setIsSearching] = useState(false);
   const [invitingUserId, setInvitingUserId] = useState<string | number | null>(null);
 
-  // Efecto con "Debounce" para buscar usuarios mientras se escribe
+  // Debounced search while typing
   useEffect(() => {
     // Solo buscamos si hay al menos 3 caracteres
     if (searchQuery.trim().length < 3) {
@@ -47,30 +48,35 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
     const delayDebounceFn = setTimeout(async () => {
       setIsSearching(true);
       try {
-        // Llamada real al backend asumiendo un endpoint de búsqueda de usuarios
         const response = await apiClient.get<UserSearchResult[] | { data: UserSearchResult[] }>(`/users/search/?search=${encodeURIComponent(searchQuery)}`);
         
         const data = Array.isArray(response) ? response : (response as any)?.data || [];
         setResults(data);
       } catch (error) {
-        console.error("Error buscando usuarios:", error);
+        console.error("Error searching users:", error);
       } finally {
         setIsSearching(false);
       }
-    }, 500); // Espera 500ms después de que el usuario deje de escribir
+    }, 500); // Wait 500ms after user stops typing
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Función para enviar la invitación
+  // Function to send the invitation
   const handleInvite = async (userId: string | number) => {
     setInvitingUserId(userId);
     try {
-      const endpoint = type === 'calendar' ? `/calendars/${itemId}/invite/` : `/events/${itemId}/invite/`;
-      await apiClient.post(endpoint, { user_id: userId });
-      Alert.alert('¡Enviada!', 'La invitación se ha enviado correctamente.');
+      const endpoint = type === 'calendar'
+        ? API_CONFIG.endpoints.inviteCalendar(itemId)
+        : API_CONFIG.endpoints.inviteEvent(itemId);
+
+      await apiClient.post(endpoint.replace(API_CONFIG.BaseURL, ''), { user: userId });
+      Alert.alert('Sent!', 'Invitation sent successfully.');
     } catch (error) {
-      Alert.alert('Error', 'No se pudo enviar la invitación en este momento.');
+      const message = error instanceof ApiError && typeof (error.data as any)?.error === 'string'
+        ? (error.data as any).error
+        : 'Could not send the invitation right now.';
+      Alert.alert('Error', message);
     } finally {
       setInvitingUserId(null);
     }
@@ -101,7 +107,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
         {invitingUserId === item.id ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
-          <Text style={styles.inviteButtonText}>Invitar</Text>
+          <Text style={styles.inviteButtonText}>Invite</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -119,22 +125,22 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.modalContainer}>
-          {/* Cabecera del Modal */}
+          {/* Modal header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>
-              {type === 'calendar' ? 'Invitar a calendario' : 'Invitar a evento'}
+              {type === 'calendar' ? 'Invite to calendar' : 'Invite to event'}
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
 
-          {/* Barra de búsqueda */}
+          {/* Search bar */}
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Busca un usuario por username..."
+              placeholder="Search a user by username..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -142,7 +148,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
             />
           </View>
 
-          {/* Área de resultados */}
+          {/* Results area */}
           {isSearching ? (
             <View style={styles.centerContent}>
               <ActivityIndicator size="large" color="#164E52" />
@@ -157,12 +163,12 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
             />
           ) : searchQuery.trim().length >= 3 ? (
             <View style={styles.centerContent}>
-              <Text style={styles.emptyText}>No se encontraron usuarios.</Text>
+              <Text style={styles.emptyText}>No users found.</Text>
             </View>
           ) : (
             <View style={styles.centerContent}>
               <Ionicons name="people-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Escribe al menos 3 letras para buscar</Text>
+              <Text style={styles.emptyText}>Type at least 3 letters to search</Text>
             </View>
           )}
         </View>
