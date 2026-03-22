@@ -23,6 +23,7 @@ from main.calendars import views as calendar_views
 from main.events import views as event_views
 from main.radar import views as radar_views
 from main.auth import views as auth_views
+from main.reports import views as report_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -47,6 +48,10 @@ urlpatterns = [
     path('api/v1/auth/register/', auth_views.register_user, name='register'),
     path('api/v1/users/search/', user_views.search_users, name='search_users'),
     path('api/v1/users/<int:pk>/follow/', user_views.follow_or_unfollow_user, name='follow_users_logic'),
+    path('api/v1/users/<int:pk>/followers/', user_views.get_followers, name='get_followers'),
+    path('api/v1/users/<int:pk>/following/', user_views.get_following, name='get_following'),
+    path('api/v1/users/<int:pk>/followed_calendars/', user_views.get_followed_calendars, name='followed_calendars'),
+    path('api/v1/users/by-username/<str:username>/', user_views.get_user_by_username, name='get_user_by_username'),
     path('api/v1/users/<int:pk>/', user_views.get_user_by_id, name='get_user'),
     path('api/v1/users/me/', user_views.get_own_user, name='get_profile'),
     path('api/v1/users/me/edit/', user_views.edit_profile, name='edit_profile'),
@@ -57,6 +62,8 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/subscribe/', calendar_views.subscribe_calendar, name='subscribe_calendar'),
     path('api/v1/calendars/create/', calendar_views.create_calendar, name='create_calendar'),
     path('api/v1/calendars/list/', calendar_views.list_calendars, name='list_calendarios'),
+    path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
+    path('api/v1/calendars/friends-calendars/', calendar_views.list_friends_calendars, name='list_friends_calendars'),
     path('api/v1/calendars/my-calendars/', calendar_views.list_my_calendars, name='list_my_calendarios'),
     path('api/v1/calendars/import-google-calendar/', calendar_views.import_google_calendar, name='import_google_calendar'),
     path('api/v1/calendars/import-ios-calendar/', calendar_views.iOS_calendar_import, name='import_ios_calendar'),
@@ -70,6 +77,7 @@ urlpatterns = [
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
+    path('api/v1/reports/create/', report_views.create_report, name='create_report'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
 ]
