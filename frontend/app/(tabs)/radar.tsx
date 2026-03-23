@@ -34,60 +34,78 @@ export default function RadarScreen() {
     let cancelled = false;
 
     const loadRadar = async () => {
-      setLoading(true);
-      setLocation(null);
-      setEvents([]);
-      setErrorMessage(null);
-      setLocationMessage(null);
-      setLoadingStage("Getting your location...");
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              if (cancelled) return;
 
-      try {
-        let lat: number;
-        let lon: number;
+              const webLat = position.coords.latitude;
+              const webLon = position.coords.longitude;
 
-        if (Platform.OS === "web") {
-          try {
-            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0,
-              });
-            });
+              setLocation({ latitude: webLat, longitude: webLon });
+              setLoadingStage("Searching nearby events...");
 
-            lat = position.coords.latitude;
-            lon = position.coords.longitude;
-          } catch (geoError) {
-            const code =
-              typeof geoError === "object" &&
-              geoError !== null &&
-              "code" in geoError &&
-              typeof (geoError as { code?: unknown }).code === "number"
-                ? Number((geoError as { code?: number }).code)
-                : null;
+              try {
+                const radiusCandidatesKm = [5, 15, 35];
+                let eventList: any[] = [];
 
-            if (code === 1) {
-              throw new Error(
-                "Location permission was denied in the browser. Allow location for this site and tap Retry."
-              );
+                for (const radiusKm of radiusCandidatesKm) {
+                  if (cancelled) return;
+                  setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
+
+                  const response = await fetch(apiConfig.endpoints.nearbyEvents(webLat, webLon, radiusKm));
+                  if (!response.ok) {
+                    throw new Error("Could not load nearby events.");
+                  }
+
+                  const data = await response.json();
+                  eventList = normalizeEventList(data);
+                  if (eventList.length > 0) break;
+                }
+
+                if (!cancelled) {
+                  setEvents(eventList);
+                }
+              } catch (fetchError) {
+                if (!cancelled) {
+                  const message =
+                    fetchError instanceof Error ? fetchError.message : "Error loading Radar.";
+                  setErrorMessage(message);
+                }
+              } finally {
+                if (!cancelled) {
+                  setLoading(false);
+                }
+              }
+            },
+            (geoError) => {
+              if (cancelled) return;
+              const code =
+                typeof geoError === "object" &&
+                geoError !== null &&
+                "code" in geoError &&
+                typeof (geoError as { code?: unknown }).code === "number"
+                  ? Number((geoError as { code?: number }).code)
+                  : null;
+
+              if (code === 1) {
+                setLocationMessage(
+                  "Location permission was denied in the browser. Allow location for this site and tap Retry."
+                );
+              } else {
+                setLocationMessage(
+                  "Location is required to show nearby events. Please enable location services and try again."
+                );
+              }
+
+              setLoading(false);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 15000,
+              maximumAge: 0,
             }
-
-            // Check if it's a security error (HTTPS required)
-            const errorMsg = (geoError as any)?.message || String(geoError);
-            if (errorMsg.includes("secure context") || errorMsg.includes("HTTPS")) {
-              throw new Error(
-                "Chrome requires HTTPS (or localhost) for geolocation. Please access this app via a secure connection."
-              );
-            }
-
-            throw new Error(
-              "Location is required to show nearby events. Please enable location services and try again."
-            );
-          }
-        } else {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            throw new Error(
+          );
+          return;
               "Location permission is required to show nearby events. Please enable location and try again."
             );
           } else {
