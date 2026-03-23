@@ -162,10 +162,13 @@ export const calendarSelectorStyles = StyleSheet.create({
 export const eventFilterBarStyles = StyleSheet.create({
   strip: {
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 8,
     gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16,70,77,0.08)',
   },
   chip: {
     ...ChipStyles.base,
