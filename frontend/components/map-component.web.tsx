@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Asset } from "expo-asset";
 import { API_CONFIG } from "../constants/api";
 import EventDetailsModal from "./event-details-modal";
@@ -45,6 +45,14 @@ export default function MapComponent({ location, events }: { location: any; even
 
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isCompactLayout, setIsCompactLayout] = useState(false);
+  const [sheetOffsetRatio, setSheetOffsetRatio] = useState(0.76);
+  const [sheetDragging, setSheetDragging] = useState(false);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const dragStartY = useRef(0);
+  const dragStartOffset = useRef(0);
+
+  const SHEET_SNAP_POINTS = [0, 0.38, 0.76];
 
   const leafletReact = useMemo(() => {
     if (!isBrowser) return null;
@@ -59,6 +67,30 @@ export default function MapComponent({ location, events }: { location: any; even
   useEffect(() => {
     if (!isBrowser) return;
     require("./leaflet-fix.css");
+  }, [isBrowser]);
+
+  useEffect(() => {
+    if (!isBrowser) return;
+
+    const mediaQuery = window.matchMedia("(max-width: 980px)");
+    const syncLayout = () => {
+      const isCompact = mediaQuery.matches;
+      setIsCompactLayout(isCompact);
+      if (!isCompact) {
+        setSheetOffsetRatio(0);
+      } else {
+        setSheetOffsetRatio((prev) => (prev > 0.8 ? 0.76 : prev));
+      }
+    };
+
+    syncLayout();
+    mediaQuery.addEventListener("change", syncLayout);
+    window.addEventListener("resize", syncLayout);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncLayout);
+      window.removeEventListener("resize", syncLayout);
+    };
   }, [isBrowser]);
 
   const apiBase = String(API_CONFIG.BaseURL || "");
@@ -96,7 +128,6 @@ export default function MapComponent({ location, events }: { location: any; even
       .filter((event): event is NonNullable<typeof event> => Boolean(event));
   }, [apiBase, events]);
 
-  // ðŸ“ Icono normal
   const defaultIcon = useMemo(() => {
     if (!leaflet) return null;
     const markerUri = Asset.fromModule(require("../assets/images/marcador_evento.png")).uri;
@@ -111,7 +142,6 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [leaflet]);
 
-  // â­ Icono estrella para el evento mÃ¡s cercano
   const starIcon = useMemo(() => {
     if (!leaflet) return null;
     const starUri = Asset.fromModule(require("../assets/images/star_marker.png")).uri;
@@ -124,7 +154,6 @@ export default function MapComponent({ location, events }: { location: any; even
     });
   }, [leaflet]);
 
-  // ðŸ“ Icono posiciÃ³n usuario
   const yourPositionIcon = useMemo(() => {
     if (!leaflet) return null;
     const markerUri = Asset.fromModule(require("../assets/images/position_icon.png")).uri;
@@ -149,6 +178,64 @@ export default function MapComponent({ location, events }: { location: any; even
     setSelectedEvent(null);
   };
 
+  const getSheetHeight = () => {
+    const height = sheetRef.current?.getBoundingClientRect().height ?? 0;
+    return height > 0 ? height : 1;
+  };
+
+  const startSheetDrag = (clientY: number) => {
+    if (!isCompactLayout) return;
+    dragStartY.current = clientY;
+    dragStartOffset.current = sheetOffsetRatio;
+    setSheetDragging(true);
+  };
+
+  const updateSheetDrag = (clientY: number) => {
+    if (!isCompactLayout || !sheetDragging) return;
+    const deltaY = clientY - dragStartY.current;
+    const ratioDelta = deltaY / getSheetHeight();
+    const next = Math.max(0, Math.min(0.82, dragStartOffset.current + ratioDelta));
+    setSheetOffsetRatio(next);
+  };
+
+  const endSheetDrag = () => {
+    if (!isCompactLayout || !sheetDragging) return;
+    let nearest = SHEET_SNAP_POINTS[0];
+    let nearestDistance = Math.abs(sheetOffsetRatio - nearest);
+
+    for (const snap of SHEET_SNAP_POINTS) {
+      const distance = Math.abs(sheetOffsetRatio - snap);
+      if (distance < nearestDistance) {
+        nearest = snap;
+        nearestDistance = distance;
+      }
+    }
+
+    setSheetOffsetRatio(nearest);
+    setSheetDragging(false);
+  };
+
+  const onHandlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    startSheetDrag(event.clientY);
+  };
+
+  const onHandlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!sheetDragging) return;
+    updateSheetDrag(event.clientY);
+  };
+
+  const onHandlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    endSheetDrag();
+  };
+
+  const compactSidebarStyle = isCompactLayout
+    ? (({ ["--sheet-offset" as string]: `${sheetOffsetRatio * 100}%` }) as React.CSSProperties)
+    : undefined;
+
   if (!isBrowser || !leafletReact || !leaflet || !defaultIcon || !starIcon || !yourPositionIcon) {
     return null;
   }
@@ -164,6 +251,7 @@ export default function MapComponent({ location, events }: { location: any; even
           display: grid;
           grid-template-columns: minmax(280px, 360px) 1fr;
           background: #fffded;
+          font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
         }
         .radarSidebar {
           border-right: 1px solid rgba(16,70,77,0.14);
@@ -171,6 +259,17 @@ export default function MapComponent({ location, events }: { location: any; even
           display: flex;
           flex-direction: column;
           min-height: 0;
+        }
+        .radarSheetHandle {
+          display: none;
+        }
+        .radarSheetGrip {
+          display: block;
+          width: 52px;
+          height: 6px;
+          border-radius: 999px;
+          background: rgba(16,70,77,0.24);
+          margin: 0 auto;
         }
         .radarSidebarHeader {
           padding: 16px 14px 12px 14px;
@@ -195,6 +294,7 @@ export default function MapComponent({ location, events }: { location: any; even
           display: flex;
           flex-direction: column;
           gap: 8px;
+          -webkit-overflow-scrolling: touch;
         }
         .radarListItem {
           border: 1px solid rgba(16,70,77,0.16);
@@ -248,6 +348,10 @@ export default function MapComponent({ location, events }: { location: any; even
           overflow: hidden;
           text-overflow: ellipsis;
         }
+        .radarItemMetaLabel {
+          font-weight: 900;
+          color: #10464D;
+        }
         .radarEmptyState {
           color: #35595d;
           font-size: 13px;
@@ -296,18 +400,61 @@ export default function MapComponent({ location, events }: { location: any; even
 
         @media (max-width: 980px) {
           .radarLayout {
-            grid-template-columns: 1fr;
-            grid-template-rows: 42vh 1fr;
+            display: block;
+            position: relative;
+            height: 100dvh;
           }
           .radarSidebar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: min(82dvh, 680px);
             border-right: 0;
-            border-bottom: 1px solid rgba(16,70,77,0.14);
+            border-top: 1px solid rgba(16,70,77,0.14);
+            border-radius: 18px 18px 0 0;
+            box-shadow: 0 -10px 22px rgba(0, 0, 0, 0.14);
+            transform: translateY(var(--sheet-offset, 76%));
+            transition: transform 180ms ease;
+            z-index: 900;
+          }
+          .radarSidebar.isDragging {
+            transition: none;
+          }
+          .radarSheetHandle {
+            display: block;
+            padding: 10px 0 6px 0;
+            cursor: ns-resize;
+            touch-action: none;
+          }
+          .radarSidebarHeader {
+            padding-top: 10px;
+          }
+          .radarSidebarList {
+            padding-bottom: 20px;
+          }
+          .radarMapArea {
+            height: 100dvh;
           }
         }
       `}</style>
 
       <div className="radarLayout">
-        <aside className="radarSidebar">
+        <aside
+          ref={sheetRef}
+          className={`radarSidebar ${sheetDragging ? "isDragging" : ""}`}
+          style={compactSidebarStyle}
+        >
+          <div
+            className="radarSheetHandle"
+            onPointerDown={onHandlePointerDown}
+            onPointerMove={onHandlePointerMove}
+            onPointerUp={onHandlePointerUp}
+            onPointerCancel={onHandlePointerUp}
+          >
+            <span className="radarSheetGrip" />
+          </div>
+
           <div className="radarSidebarHeader">
             <h2 className="radarSidebarTitle">Radar Nearby Events</h2>
             <p className="radarSidebarSubtitle">
@@ -338,8 +485,16 @@ export default function MapComponent({ location, events }: { location: any; even
 
                   <div className="radarItemBody">
                     <h3 className="radarItemTitle">{event.title}</h3>
-                    {event.place && <p className="radarItemMeta">📍 {event.place}</p>}
-                    {event.when && <p className="radarItemMeta">🗓 {event.when}</p>}
+                    {event.place && (
+                      <p className="radarItemMeta">
+                        <span className="radarItemMetaLabel">Location:</span> {event.place}
+                      </p>
+                    )}
+                    {event.when && (
+                      <p className="radarItemMeta">
+                        <span className="radarItemMetaLabel">When:</span> {event.when}
+                      </p>
+                    )}
                   </div>
                 </article>
               ))
@@ -355,7 +510,7 @@ export default function MapComponent({ location, events }: { location: any; even
             />
 
             <Marker position={center} icon={yourPositionIcon}>
-              <Popup closeButton={false}>EstÃ¡s aquÃ­</Popup>
+              <Popup closeButton={false}>You are here</Popup>
             </Marker>
 
             {nearbyEvents.map((event) => (
@@ -382,8 +537,8 @@ export default function MapComponent({ location, events }: { location: any; even
 
                     <div className="eventBody">
                       <div className="eventTitle">{event.title}</div>
-                      {event.place && <div className="eventMeta">ðŸ“ {event.place}</div>}
-                      {event.when && <div className="eventMeta">ðŸ—“ {event.when}</div>}
+                      {event.place && <div className="eventMeta">Location: {event.place}</div>}
+                      {event.when && <div className="eventMeta">When: {event.when}</div>}
                     </div>
                   </div>
                 </Popup>

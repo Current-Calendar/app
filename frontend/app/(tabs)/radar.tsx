@@ -57,7 +57,31 @@ export default function RadarScreen() {
 
             lat = position.coords.latitude;
             lon = position.coords.longitude;
-          } catch {
+          } catch (geoError) {
+            const host = typeof window !== "undefined" ? window.location.hostname : "";
+            const isLocalHost = host === "localhost" || host === "127.0.0.1";
+            const isSecureContextOnWeb = typeof window !== "undefined" ? window.isSecureContext : false;
+
+            if (!isSecureContextOnWeb && !isLocalHost) {
+              throw new Error(
+                "Chrome requires HTTPS (or localhost) for geolocation. Open this app in a secure context and try again."
+              );
+            }
+
+            const code =
+              typeof geoError === "object" &&
+              geoError !== null &&
+              "code" in geoError &&
+              typeof (geoError as { code?: unknown }).code === "number"
+                ? Number((geoError as { code?: number }).code)
+                : null;
+
+            if (code === 1) {
+              throw new Error(
+                "Location permission was denied in the browser. Allow location for this site and tap Retry."
+              );
+            }
+
             throw new Error(
               "Location is required to show nearby events. Please enable location services and try again."
             );
@@ -161,8 +185,9 @@ export default function RadarScreen() {
         </Text>
         {Platform.OS === "web" ? (
           <View style={styles.guideBox}>
-            <Text style={styles.guideStep}>1. Click the lock icon next to the URL.</Text>
-            <Text style={styles.guideStep}>2. Allow location access for this site.</Text>
+            <Text style={styles.guideStep}>1. Use HTTPS (or localhost) in Chrome.</Text>
+            <Text style={styles.guideStep}>2. Click the lock icon next to the URL.</Text>
+            <Text style={styles.guideStep}>3. Allow location access for this site.</Text>
           </View>
         ) : (
           <Text style={styles.loadingSubtitle}>
