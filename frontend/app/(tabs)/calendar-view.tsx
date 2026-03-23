@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
@@ -16,9 +16,10 @@ const MONTH_NAMES = [
 
 export default function CalendarViewScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ calendarId?: string | string[] }>();
+  const params = useLocalSearchParams<{ calendarId?: string | string[]; eventId?: string | string[] }>();
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
+  const eventId = Array.isArray(params.eventId) ? params.eventId[0] : params.eventId;
   const { calendars: backendCalendars } = useCalendars();
 
   const {
@@ -40,6 +41,7 @@ export default function CalendarViewScreen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
   
   // Load events when screen gains focus
   useFocusEffect(
@@ -82,6 +84,27 @@ export default function CalendarViewScreen() {
   if (!selectedDay) return [];
   return events.filter((event) => event.date?.slice(0,10) === selectedDay);
   }, [events, selectedDay]);
+
+  useEffect(() => {
+    setOpenedEventFromParams(false);
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!eventId || openedEventFromParams || events.length === 0) {
+      return;
+    }
+
+    const matchedEvent = events.find((event) => String(event.id) === String(eventId));
+    if (!matchedEvent) {
+      setOpenedEventFromParams(true);
+      return;
+    }
+
+    setSelectedDay(matchedEvent.date?.slice(0, 10) ?? null);
+    setActiveEvent(matchedEvent);
+    setOpenedEventFromParams(true);
+  }, [eventId, events, openedEventFromParams]);
+
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function formatSelectedDay(dateKey: string): string {

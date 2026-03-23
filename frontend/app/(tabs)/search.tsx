@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
+import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
@@ -23,6 +24,7 @@ export default function SearchScreen() {
     const router = useRouter();
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
+    const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
 
     const { results: userResults } = useUserSearch(query);
     const { results: calendars } = useCalendarSearch(query);
@@ -94,8 +96,8 @@ export default function SearchScreen() {
         router.push(`/calendar-view?calendarId=${calendarId}`);
     };
 
-    const handleEventSelect = (calendarId: string | number) => {
-        router.push(`/calendar-view?calendarId=${calendarId}`);
+    const handleEventSelect = (event: CalendarEvent) => {
+        setActiveEvent(event);
     };
 
     return (
@@ -168,7 +170,7 @@ export default function SearchScreen() {
 
                     const ev = item.data as CalendarEvent;
                     return (
-                        <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev.calendarId)}>
+                        <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev)}>
                             <View style={styles.eventRow}>
                                 {ev.photo && (
                                     <Image
@@ -189,6 +191,8 @@ export default function SearchScreen() {
                     );
                 }}
             />
+
+            <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
         </View>
     );
 }
