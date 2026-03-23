@@ -19,9 +19,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import apiClient, { appendPhoto } from "@/services/api-client";
-import { useEventLabels } from "@/hooks/use-event-labels";
-import { LabelChip } from "@/components/label-chip";
-import { LabelManagerModal } from "@/components/label-manager-modal";
 
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
@@ -261,18 +258,6 @@ export default function EditEventsScreen() {
 
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
-  const [labelManagerVisible, setLabelManagerVisible] = useState(false);
-  const {
-    labels: labelCatalog,
-    customLabels,
-    loading: labelsLoading,
-    addCustomLabel,
-    removeCustomLabel,
-    setLabelsForEvent,
-    colorPalette,
-    labelIdFromType,
-  } = useEventLabels();
 
   const [placeLoading, setPlaceLoading] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
@@ -362,16 +347,6 @@ export default function EditEventsScreen() {
         setLat(event.latitude);
         setLon(event.longitude);
       }
-
-      const eventLabels: string[] =
-        (Array.isArray(event.labels) && event.labels.map(String)) ||
-        (Array.isArray(event.label_ids) && event.label_ids.map(String)) ||
-        [];
-      const typeLabelId = labelIdFromType(event.type || event.tipo || null);
-      const mergedLabels = Array.from(
-        new Set([...(typeLabelId ? [typeLabelId] : []), ...eventLabels])
-      );
-      setSelectedLabelIds(mergedLabels);
 
       if (event?.calendars?.length > 0) {
         const selectedId = String(event.calendars[0]);
@@ -601,11 +576,6 @@ export default function EditEventsScreen() {
         await apiClient.put<any>(`/events/${eventId}/edit/`, updateData);
       }
 
-      // Sync labels after successful update (non-blocking)
-      if (eventId) {
-        setLabelsForEvent(String(eventId), selectedLabelIds);
-      }
-
       setSuccessModalOpen(true);
     } catch (error: any) {
       setFormError(error?.message ?? "No se pudo actualizar el evento");
@@ -719,46 +689,6 @@ export default function EditEventsScreen() {
                 textAlignVertical="top"
                 scrollEnabled
               />
-
-              <View style={styles.labelsBlock}>
-                <View style={styles.labelsHeader}>
-                  <Text style={styles.fieldLabel}>Labels:</Text>
-                  <Pressable
-                    style={styles.manageBtn}
-                    onPress={() => setLabelManagerVisible(true)}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="add-circle-outline" size={16} color={TEXT} />
-                    <Text style={styles.manageText}>New</Text>
-                  </Pressable>
-                </View>
-
-                {labelsLoading ? (
-                  <ActivityIndicator />
-                ) : (
-                  <View style={styles.labelsChips}>
-                    {labelCatalog.map((label) => {
-                      const selected = selectedLabelIds.includes(label.id);
-                      return (
-                        <LabelChip
-                          key={label.id}
-                          label={label}
-                          selected={selected}
-                          compact
-                          onPress={() => {
-                            setSelectedLabelIds((prev) =>
-                              selected ? prev.filter((id) => id !== label.id) : [...prev, label.id]
-                            );
-                          }}
-                        />
-                      );
-                    })}
-                    {labelCatalog.length === 0 && (
-                      <Text style={styles.helperText}>No labels yet.</Text>
-                    )}
-                  </View>
-                )}
-              </View>
 
               <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
 
@@ -884,16 +814,6 @@ export default function EditEventsScreen() {
             </View>
           </Pressable>
         </Modal>
-
-        <LabelManagerModal
-          visible={labelManagerVisible}
-          labels={labelCatalog}
-          customLabels={customLabels}
-          palette={colorPalette}
-          onCreate={addCustomLabel}
-          onDelete={removeCustomLabel}
-          onClose={() => setLabelManagerVisible(false)}
-        />
 
         <Modal visible={successModalOpen} transparent animationType="fade">
           <Pressable style={styles.successOverlay} onPress={closeSuccessAndGoRoot}>

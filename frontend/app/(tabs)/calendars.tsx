@@ -12,7 +12,6 @@ import { CalendarInfoModal } from '@/components/calendar-info-modal';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CalendarSelector } from '@/components/calendar-selector';
 import { EventDetailModal } from '@/components/event-detail-modal';
-import { EventFilterBar } from '@/components/event-filter-bar';
 
 import { Calendar, CalendarEvent, EventType } from '@/types/calendar';
 
@@ -30,7 +29,6 @@ import apiClient from '@/services/api-client';
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { LabelFilterBar } from '@/components/label-filter-bar';
 import { useEventLabels } from '@/hooks/use-event-labels';
-import { LabelManagerModal } from '@/components/label-manager-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -71,7 +69,6 @@ export default function CalendarScreen() {
     const isWeb = Platform.OS === "web";
 
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
-    const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
     const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
     const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -79,19 +76,14 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
     const [importModalVisible, setImportModalVisible] = useState(false);
-    const [labelManagerVisible, setLabelManagerVisible] = useState(false);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
     const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
     const {
         labels: labelCatalog,
-        customLabels,
         assignments: labelAssignments,
         getLabelsForEvent,
         labelIdFromType,
-        addCustomLabel,
-        removeCustomLabel,
-        colorPalette,
     } = useEventLabels();
 
     useEffect(() => {
@@ -166,10 +158,15 @@ export default function CalendarScreen() {
         }
     }, [calendarsError, eventsError]);
 
+    // Base sync from backend only when no label filter is active
     useEffect(() => {
-        const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+        if (selectedLabelId) return;
+        setEvents(mapEventsData(backendEvents));
+    }, [backendEvents, calendars, labelAssignments, selectedLabelId]);
 
-        const mappedEvents: CalendarEvent[] = backendEvents
+    function mapEventsData(rawEvents: any[]): CalendarEvent[] {
+        const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+        return rawEvents
             .filter((e: any) =>
                 e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
             )
@@ -181,6 +178,7 @@ export default function CalendarScreen() {
                 const labels = Array.from(new Set([
                     ...(typeLabelId ? [typeLabelId] : []),
                     ...(manualLabels ?? []),
+                    ...(Array.isArray(e.labels) ? e.labels.map((l: any) => String(l?.id ?? l)) : []),
                 ]));
 
                 return {
@@ -195,11 +193,56 @@ export default function CalendarScreen() {
                     type,
                     labels,
                     color: calendar?.color || '#6C63FF',
+                    creator_id: e.creator_id ?? e.creator ?? null,
+                    creator_username: e.creator_username ?? e.creator ?? '',
                 };
             });
+    }
 
-        setEvents(mappedEvents);
-    }, [backendEvents, calendars, labelAssignments, getLabelsForEvent, labelIdFromType]);
+    const normalizeLabelName = (name: string) => {
+        const trimmed = name.trim();
+        if (!trimmed) return '';
+        return trimmed.slice(0, 1).toUpperCase() + trimmed.slice(1).toLowerCase();
+    };
+
+    useEffect(() => {
+        const fetchFiltered = async () => {
+            const fallback = () => setEvents(mapEventsData(backendEvents));
+
+            if (!selectedLabelId) {
+                fallback();
+                return;
+            }
+
+            const label = labelCatalog.find((l) => String(l.id) === String(selectedLabelId));
+            if (!label?.name) {
+                fallback();
+                return;
+            }
+
+            try {
+                setLoadingCalendars(true);
+                const normName = normalizeLabelName(label.name);
+                const resp = await apiClient.get<any>(`/events/filter-by-label/?label=${encodeURIComponent(normName)}`);
+                const list = Array.isArray(resp)
+                    ? resp
+                    : Array.isArray(resp?.results)
+                        ? resp.results
+                        : Array.isArray(resp?.events)
+                            ? resp.events
+                            : [];
+                setEvents(mapEventsData(list));
+            } catch (err) {
+                console.error('Error filtering events by label:', err);
+                fallback();
+            } finally {
+                setLoadingCalendars(false);
+            }
+        };
+
+        void fetchFiltered();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedLabelId, labelCatalog, backendEvents, calendars, labelAssignments]);
 
     useEffect(() => {
         if (params.selectedCalendarId) {
@@ -249,14 +292,8 @@ export default function CalendarScreen() {
         if (selectedCalendarId) {
             list = list.filter((e) => e.calendarId === selectedCalendarId);
         }
-        if (selectedEventType) {
-            list = list.filter((e) => e.type === selectedEventType);
-        }
-        if (selectedLabelId) {
-            list = list.filter((e) => e.labels?.includes(selectedLabelId));
-        }
         return list;
-    }, [events, selectedCalendarId, selectedEventType, selectedLabelId]);
+    }, [events, selectedCalendarId]);
 
     const eventsOfSelectedDay = useMemo(() => {
         if (!selectedDay) return [];
@@ -526,12 +563,10 @@ export default function CalendarScreen() {
                 </View>
 
                 <View style={styles.filterBlock}>
-                    <EventFilterBar selected={selectedEventType} onChange={setSelectedEventType} />
                     <LabelFilterBar
                         labels={labelCatalog}
                         selected={selectedLabelId}
                         onChange={setSelectedLabelId}
-                        onManage={() => setLabelManagerVisible(true)}
                     />
                 </View>
 
@@ -712,15 +747,6 @@ export default function CalendarScreen() {
                     </Animated.View>
                 </Pressable>
             )}
-            <LabelManagerModal
-                visible={labelManagerVisible}
-                labels={labelCatalog}
-                customLabels={customLabels}
-                palette={colorPalette}
-                onCreate={addCustomLabel}
-                onDelete={removeCustomLabel}
-                onClose={() => setLabelManagerVisible(false)}
-            />
             <ImportCalendarModal
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}

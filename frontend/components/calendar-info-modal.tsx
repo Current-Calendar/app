@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -14,6 +14,9 @@ import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { ShareCalendarModal } from '@/components/share-calendar-modal';
 import { AddCoOwnerModal } from '@/components/add-co-owner';
+import { useEventLabels } from '@/hooks/use-event-labels';
+import { LabelChip } from '@/components/label-chip';
+import { LabelManagerModal } from '@/components/label-manager-modal';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
     PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
@@ -45,6 +48,20 @@ export function CalendarInfoModal({
 }: CalendarInfoModalProps) {
     const [showShare, setShowShare] = useState(false);
     const [showCoOwners, setShowCoOwners] = useState(false);
+    const {
+        labels,
+        addLabelToCalendar,
+        removeLabelFromCalendar,
+        addCustomLabel,
+        removeCustomLabel,
+        colorPalette,
+    } = useEventLabels();
+    const [localLabels, setLocalLabels] = useState(calendar?.labels ?? []);
+    const [labelManagerVisible, setLabelManagerVisible] = useState(false);
+
+    useEffect(() => {
+        setLocalLabels(calendar?.labels ?? []);
+    }, [calendar]);
 
     if (!calendar) return null;
 
@@ -101,6 +118,46 @@ export function CalendarInfoModal({
                 {calendar.description ? (
                     <Text style={calendarInfoModalStyles.description}>{calendar.description}</Text>
                 ) : null}
+
+                <View style={calendarInfoModalStyles.labelsBlock}>
+                    <View style={calendarInfoModalStyles.labelsHeader}>
+                        <Text style={calendarInfoModalStyles.infoLabel}>Labels</Text>
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.manageBtn}
+                            onPress={() => setLabelManagerVisible(true)}
+                            activeOpacity={0.8}
+                        >
+                            <Ionicons name="add-circle-outline" size={16} color="#10464d" />
+                            <Text style={calendarInfoModalStyles.manageText}>New</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={calendarInfoModalStyles.labelsChips}>
+                        {labels.map((label) => {
+                            const selected = localLabels.some((l) => String(l.id) === String(label.id));
+                            return (
+                                <LabelChip
+                                    key={label.id}
+                                    label={label}
+                                    selected={selected}
+                                    compact
+                                    onPress={() => {
+                                        const id = String(label.id);
+                                        if (selected) {
+                                            removeLabelFromCalendar(calendar.id, id);
+                                            setLocalLabels((prev) => prev.filter((l) => String(l.id) !== id));
+                                        } else {
+                                            addLabelToCalendar(calendar.id, id);
+                                            setLocalLabels((prev) => [...prev, label]);
+                                        }
+                                    }}
+                                />
+                            );
+                        })}
+                        {labels.length === 0 && (
+                            <Text style={calendarInfoModalStyles.helperText}>No labels yet.</Text>
+                        )}
+                    </View>
+                </View>
 
                 <View style={calendarInfoModalStyles.infoGrid}>
                     <View style={[calendarInfoModalStyles.infoCard, { borderLeftColor: accent }]}>
@@ -177,6 +234,16 @@ export function CalendarInfoModal({
             <AddCoOwnerModal
                 calendar={showCoOwners ? calendar : null}
                 onClose={() => setShowCoOwners(false)}
+            />
+
+            <LabelManagerModal
+                visible={labelManagerVisible}
+                labels={labels}
+                customLabels={labels.filter((l) => !l.is_default && !l.isDefault)}
+                palette={colorPalette}
+                onCreate={(name, color) => addCustomLabel(name, color, { type: 'calendar', id: calendar.id })}
+                onDelete={(id) => removeCustomLabel(id, { type: 'calendar', id: calendar.id })}
+                onClose={() => setLabelManagerVisible(false)}
             />
         </>
     );

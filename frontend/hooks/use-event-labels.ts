@@ -2,15 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { EventLabel, EventType } from '@/types/calendar';
 import apiClient from '@/services/api-client';
 
-const DEFAULT_LABELS: EventLabel[] = [
-  { id: 'meeting', name: 'Meeting', color: '#1F6A6A', isDefault: true },
-  { id: 'task', name: 'Task', color: '#F2A3A6', isDefault: true },
-  { id: 'reminder', name: 'Reminder', color: '#F7B801', isDefault: true },
-  { id: 'holiday', name: 'Holiday', color: '#7B61FF', isDefault: true },
-  { id: 'birthday', name: 'Birthday', color: '#FF8FB1', isDefault: true },
-  { id: 'other', name: 'Other', color: '#9CA3AF', isDefault: true },
-];
-
 const COLOR_SWATCHES = ['#10464D', '#1F6A6A', '#F2A3A6', '#F7B801', '#7B61FF', '#FF8FB1', '#43D9AD', '#FF9F43'];
 
 const sanitizeColor = (color?: string) => {
@@ -26,6 +17,7 @@ const slugify = (value: string) =>
     .replace(/^-+|-+$/g, '');
 
 export function useEventLabels() {
+  const [defaultLabels, setDefaultLabels] = useState<EventLabel[]>([]);
   const [customLabels, setCustomLabels] = useState<EventLabel[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
@@ -35,12 +27,11 @@ export function useEventLabels() {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.get<{ labels: EventLabel[]; assignments?: Record<string, string[]> } | EventLabel[]>('/event-labels/');
+      const data = await apiClient.get<EventLabel[]>('/labels/');
       if (Array.isArray(data)) {
-        setCustomLabels(data.filter((l) => !l.isDefault));
-      } else if (data?.labels) {
-        setCustomLabels((data.labels || []).filter((l) => !l.isDefault));
-        if (data.assignments) setAssignments(data.assignments);
+        const defaults = data.filter((l) => l.is_default || l.isDefault);
+        setDefaultLabels(defaults);
+        setCustomLabels(data.filter((l) => !l.is_default && !l.isDefault));
       }
     } catch (err) {
       console.warn('Failed to fetch labels from backend', err);
@@ -54,7 +45,7 @@ export function useEventLabels() {
     void fetchLabels();
   }, [fetchLabels]);
 
-  const labels = useMemo<EventLabel[]>(() => [...DEFAULT_LABELS, ...customLabels], [customLabels]);
+  const labels = useMemo<EventLabel[]>(() => [...defaultLabels, ...customLabels], [defaultLabels, customLabels]);
   const labelMap = useMemo(() => {
     const map: Record<string, EventLabel> = {};
     labels.forEach((l) => {
@@ -63,93 +54,154 @@ export function useEventLabels() {
     return map;
   }, [labels]);
 
-  const addCustomLabel = useCallback((name: string, color?: string) => {
-    const normalized = name.trim();
-    if (!normalized) return;
+  const addCustomLabel = useCallback(
+    (
+      name: string,
+      color?: string,
+      target?: { type: 'event' | 'calendar'; id: string | number }
+    ) => {
+      const normalized = name.trim();
+      if (!normalized || !target) {
+        console.warn('addCustomLabel requires name and target (event|calendar).');
+        return;
+      }
 
-    const idBase = slugify(normalized) || 'custom';
-    const payload = { name: normalized, color: sanitizeColor(color), slug: idBase };
+      const payload = { name: normalized, color: sanitizeColor(color) };
+      const endpoint =
+        target.type === 'event'
+          ? `/events/${target.id}/labels/add/`
+          : `/calendars/${target.id}/labels/add/`;
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    apiClient
-      .post<EventLabel>('/event-labels/', payload)
-      .then((created) => {
-        setCustomLabels((prev) => [...prev, created]);
-      })
-      .catch((err) => {
-        setError(err as Error);
-        console.warn('Failed to create label', err);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+      apiClient
+        .post(endpoint, payload)
+        .then(() => {
+          void fetchLabels();
+        })
+        .catch((err) => {
+          setError(err as Error);
+          console.warn('Failed to create label', err);
+        })
+        .finally(() => setLoading(false));
+    },
+    [fetchLabels]
+  );
 
-  const removeCustomLabel = useCallback((labelId: string) => {
-    setLoading(true);
-    setError(null);
-    apiClient
-      .delete(`/event-labels/${labelId}/`)
-      .then(() => {
-        setCustomLabels((prev) => prev.filter((l) => l.id !== labelId));
-        setAssignments((prev) => {
-          const next: Record<string, string[]> = {};
-          Object.entries(prev).forEach(([eventId, ids]) => {
-            const filtered = ids.filter((id) => id !== labelId);
-            if (filtered.length > 0) next[eventId] = filtered;
+  const removeCustomLabel = useCallback(
+    (labelId: string, target?: { type: 'event' | 'calendar'; id: string | number }) => {
+      if (!target) {
+        console.warn('removeCustomLabel requires a target (event|calendar).');
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      const endpoint =
+        target.type === 'event'
+          ? `/events/${target.id}/labels/remove/${labelId}/`
+          : `/calendars/${target.id}/labels/remove/${labelId}/`;
+
+      apiClient
+        .delete(endpoint)
+        .then(() => {
+          setCustomLabels((prev) => prev.filter((l) => String(l.id) !== String(labelId)));
+          setAssignments((prev) => {
+            const next: Record<string, string[]> = {};
+            Object.entries(prev).forEach(([entityId, ids]) => {
+              const filtered = ids.filter((id) => id !== String(labelId));
+              if (filtered.length > 0) next[entityId] = filtered;
+            });
+            return next;
           });
-          return next;
-        });
-      })
-      .catch((err) => {
-        setError(err as Error);
-        console.warn('Failed to delete label', err);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+        })
+        .catch((err) => {
+          setError(err as Error);
+          console.warn('Failed to delete label', err);
+        })
+        .finally(() => setLoading(false));
+    },
+    []
+  );
 
-  const toggleLabelForEvent = useCallback((eventId: string, labelId: string) => {
-    setAssignments((prev) => {
-      const current = prev[eventId] ?? [];
-      const exists = current.includes(labelId);
-      const updated = exists ? current.filter((id) => id !== labelId) : [...current, labelId];
-      const next = { ...prev, [eventId]: updated };
-      if (updated.length === 0) delete next[eventId];
-      return next;
-    });
+  const toggleLabelForEvent = useCallback(
+    (eventId: string, labelId: string, isSelected?: boolean) => {
+      setAssignments((prev) => {
+        const current = prev[eventId] ?? [];
+        const exists = isSelected ?? current.includes(labelId);
+        const updated = exists ? current.filter((id) => id !== labelId) : [...current, labelId];
+        return { ...prev, [eventId]: updated };
+      });
 
-    const exists = assignments[eventId]?.includes(labelId);
-    const method = exists ? 'delete' : 'post';
-    const endpoint = `/events/${eventId}/labels/${labelId}/`;
+      const existsServer = isSelected ?? assignments[eventId]?.includes(labelId);
+      const method = existsServer ? 'delete' : 'post';
+      const endpoint = existsServer
+        ? `/events/${eventId}/labels/remove/${labelId}/`
+        : `/events/${eventId}/labels/add/`;
 
+      setLoading(true);
+      setError(null);
+      (apiClient as any)[method](endpoint, existsServer ? undefined : { label_id: labelId })
+        .catch((err: Error) => {
+          // revert optimistic update on failure
+          setAssignments((prev) => {
+            const current = prev[eventId] ?? [];
+            const corrected = existsServer ? [...current, labelId] : current.filter((id) => id !== labelId);
+            return { ...prev, [eventId]: corrected };
+          });
+          setError(err);
+          console.warn('Failed to toggle label for event', err);
+        })
+        .finally(() => setLoading(false));
+    },
+    [assignments]
+  );
+
+  const setLabelsForEvent = useCallback((eventId: string, labelIds: string[]) => {
+    const desired = Array.from(new Set(labelIds)).map(String);
+    const current = assignments[eventId] ?? [];
+    const toAdd = desired.filter((id) => !current.includes(id));
+    const toRemove = current.filter((id) => !desired.includes(id));
+
+    setAssignments((prev) => ({ ...prev, [eventId]: desired }));
     setLoading(true);
     setError(null);
-    (apiClient as any)[method](endpoint, exists ? undefined : {})
-      .catch((err: Error) => {
-        // revert optimistic update on failure
-        setAssignments((prev) => {
-          const current = prev[eventId] ?? [];
-          const corrected = exists ? [...current, labelId] : current.filter((id) => id !== labelId);
-          const next = { ...prev, [eventId]: corrected };
-          if (corrected.length === 0) delete next[eventId];
-          return next;
-        });
-        setError(err);
-        console.warn('Failed to toggle label for event', err);
+
+    const addPromises = toAdd.map((id) =>
+      apiClient.post(`/events/${eventId}/labels/add/`, { label_id: id })
+    );
+    const removePromises = toRemove.map((id) =>
+      apiClient.delete(`/events/${eventId}/labels/remove/${id}/`)
+    );
+
+    Promise.allSettled([...addPromises, ...removePromises])
+      .catch((err) => {
+        setError(err as Error);
+        console.warn('Failed to sync labels for event', err);
       })
       .finally(() => setLoading(false));
   }, [assignments]);
 
-  const setLabelsForEvent = useCallback((eventId: string, labelIds: string[]) => {
-    const unique = Array.from(new Set(labelIds));
-    setAssignments((prev) => ({ ...prev, [eventId]: unique }));
+  const addLabelToCalendar = useCallback((calendarId: string | number, labelId: string) => {
     setLoading(true);
     setError(null);
     apiClient
-      .put(`/events/${eventId}/labels/`, { labels: unique })
+      .post(`/calendars/${calendarId}/labels/add/`, { label_id: labelId })
       .catch((err) => {
         setError(err as Error);
-        console.warn('Failed to set labels for event', err);
+        console.warn('Failed to add label to calendar', err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const removeLabelFromCalendar = useCallback((calendarId: string | number, labelId: string) => {
+    setLoading(true);
+    setError(null);
+    apiClient
+      .delete(`/calendars/${calendarId}/labels/remove/${labelId}/`)
+      .catch((err) => {
+        setError(err as Error);
+        console.warn('Failed to remove label from calendar', err);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -165,11 +217,7 @@ export function useEventLabels() {
     [labelMap]
   );
 
-  const labelIdFromType = useCallback((type?: EventType | null) => {
-    if (!type) return null;
-    const found = DEFAULT_LABELS.find((l) => l.id === type);
-    return found ? found.id : null;
-  }, []);
+  const labelIdFromType = useCallback((_type?: EventType | null) => null, []);
 
   return {
     labels,
@@ -183,10 +231,11 @@ export function useEventLabels() {
     removeCustomLabel,
     toggleLabelForEvent,
     setLabelsForEvent,
+    addLabelToCalendar,
+    removeLabelFromCalendar,
     getLabelsForEvent,
     getLabelObjects,
     labelIdFromType,
-    defaultLabels: DEFAULT_LABELS,
     colorPalette: COLOR_SWATCHES,
   };
 }

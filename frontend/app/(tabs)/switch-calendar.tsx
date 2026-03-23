@@ -16,6 +16,8 @@ import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
+import { LabelFilterBar } from "@/components/label-filter-bar";
+import { useEventLabels } from "@/hooks/use-event-labels";
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -25,12 +27,14 @@ export default function CalendarsScreen() {
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
 
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
   } = useCalendars();
+  const { labels: labelCatalog } = useEventLabels();
 
   useEffect(() => {
     if (calendarsError) {
@@ -56,30 +60,61 @@ export default function CalendarsScreen() {
     void fetchSubscribedCalendars();
   }, []);
 
+  const normalizeLabel = (name: string) => {
+    const t = name?.trim() || '';
+    if (!t) return '';
+    return t.slice(0,1).toUpperCase() + t.slice(1).toLowerCase();
+  };
+
   useEffect(() => {
     const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
 
-    const filteredCalendars = backendCalendars.filter((c: any) => {
-      const isPublic = c.privacy === "PUBLIC";
-      const isNotMine = String(c.creator_id) !== String(user?.id);
-      return isPublic && isNotMine;
-    });
+    const mapCalendars = (list: any[], allowAll = false) =>
+      (allowAll ? list : list.filter((c: any) => c.privacy === "PUBLIC"))
+        .filter((c: any) => String(c.creator_id) !== String(user?.id)) // never show my own
+        .map((c: any, index: number) => ({
+          id: String(c.id),
+          name: c.name,
+          description: c.description || "",
+          privacy: c.privacy,
+          origin: c.origin,
+          creator: c.creator_username || c.creator || "unknown",
+          color: COLORS[index % COLORS.length],
+          cover: c.cover || null,
+          likes_count: c.likes_count,
+          liked_by_me: c.liked_by_me || false,
+          labels: c.labels || [],
+        }));
 
-    const mappedCalendars: Calendar[] = filteredCalendars.map((c: any, index: number) => ({
-      id: String(c.id),
-      name: c.name,
-      description: c.description || "",
-      privacy: c.privacy,
-      origin: c.origin,
-      creator: c.creator_username || "unknown",
-      color: COLORS[index % COLORS.length],
-      cover: c.cover || null,
-      likes_count: c.likes_count,
-      liked_by_me : c.liked_by_me || false
-    }));
+    const fetchFiltered = async () => {
+      if (!selectedLabelId) {
+        setCalendars(mapCalendars(backendCalendars));
+        return;
+      }
+      const label = labelCatalog.find((l) => String(l.id) === String(selectedLabelId));
+      if (!label?.name) {
+        setCalendars(mapCalendars(backendCalendars));
+        return;
+      }
+      try {
+        const resp = await apiClient.get<any>(`/calendars/filter-by-label/?label=${encodeURIComponent(normalizeLabel(label.name))}`);
+        const list = Array.isArray(resp)
+          ? resp
+          : Array.isArray(resp?.results)
+            ? resp.results
+            : Array.isArray(resp?.calendars)
+              ? resp.calendars
+              : [];
+        // When filtering by label, show every calendar returned by backend (do not hide by privacy/owner)
+        setCalendars(mapCalendars(list, true));
+      } catch (err) {
+        console.error('Error filtering calendars by label', err);
+        setCalendars(mapCalendars(backendCalendars));
+      }
+    };
 
-    setCalendars(mappedCalendars);
-  }, [backendCalendars, user]);
+    void fetchFiltered();
+  }, [backendCalendars, user, selectedLabelId, labelCatalog]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
@@ -181,6 +216,14 @@ export default function CalendarsScreen() {
 
         <EventsSwitch />
 
+        <View style={styles.filtersRow}>
+          <LabelFilterBar
+            labels={labelCatalog}
+            selected={selectedLabelId}
+            onChange={setSelectedLabelId}
+          />
+        </View>
+
         <FlatList
           data={calendars}
           keyExtractor={(item) => item.id}
@@ -230,6 +273,10 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     paddingBottom: 120,
+  },
+  filtersRow: {
+    marginHorizontal: 16,
+    marginBottom: 10,
   },
 
   emptyText: {

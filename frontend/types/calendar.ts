@@ -10,7 +10,9 @@ export type EventLabel = {
     id: string;
     name: string;
     color: string;
+    icon?: string;
     isDefault?: boolean;
+    is_default?: boolean;
 };
 
 export interface Calendar {
@@ -24,6 +26,7 @@ export interface Calendar {
     color: string;          // UI-only accent color
     likes_count: number;
     liked_by_me: boolean;
+    labels?: EventLabel[];
 }
 
 export interface CalendarEvent {
@@ -40,6 +43,8 @@ export interface CalendarEvent {
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
     labels?: string[];      // Label ids assigned locally (default + custom)
+    creator_id?: number | string;
+    creator_username?: string;
 }
 
 // ─── API Response shapes (to be connected to backend) ─────────────────────────

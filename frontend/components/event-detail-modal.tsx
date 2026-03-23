@@ -14,6 +14,8 @@ import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
 import { useEventLabels } from "@/hooks/use-event-labels";
 import { LabelChip } from "./label-chip";
+import { LabelManagerModal } from "./label-manager-modal";
+import { useAuth } from "@/hooks/use-auth";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -31,11 +33,31 @@ interface EventDetailModalProps {
 export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
-  const { getLabelsForEvent, labelIdFromType, getLabelObjects } = useEventLabels();
+  const {
+    labels,
+    assignments,
+    getLabelsForEvent,
+    labelIdFromType,
+    toggleLabelForEvent,
+    addCustomLabel,
+    removeCustomLabel,
+    colorPalette,
+  } = useEventLabels();
+  const { user } = useAuth();
+  const isOwner = (() => {
+    const currentUsername = user?.username || user?.user?.username;
+    const eventUsername = (event as any)?.creator_username || (event as any)?.creator || '';
+    const currentId = user?.id || (user as any)?.user?.id;
+    const eventCreatorId = (event as any)?.creator_id;
+    if (currentUsername && eventUsername && String(currentUsername) === String(eventUsername)) return true;
+    if (currentId != null && eventCreatorId != null && String(currentId) === String(eventCreatorId)) return true;
+    return false;
+  })();
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [labelManagerVisible, setLabelManagerVisible] = useState(false);
   useEffect(() => {
     setAttendanceMenuOpen(false);
     setCommentsVisible(false);
@@ -85,11 +107,29 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   };
 
   const assignedIds = event ? getLabelsForEvent(event.id) : [];
+  const hasLocalAssignment = event ? Object.prototype.hasOwnProperty.call(assignments, event.id) : false;
+  const normalizeLabelId = (value: any): string => {
+    if (!value) return '';
+    const candidateId = value.id ?? value.label_id ?? value.label ?? value;
+    const idStr = String(candidateId ?? '').trim();
+    if (idStr && labels.some((l) => String(l.id) === idStr)) return idStr;
+    const nameCandidate = value.name ?? (typeof value === 'string' ? value : '');
+    if (nameCandidate) {
+      const match = labels.find(
+        (l) => l.name && l.name.toLowerCase() === String(nameCandidate).toLowerCase()
+      );
+      if (match) return String(match.id);
+    }
+    return '';
+  };
+  const eventLabelIds = Array.isArray(event?.labels)
+    ? event.labels.map((l: any) => normalizeLabelId(l)).filter(Boolean)
+    : [];
   const typeLabelId = labelIdFromType(event?.type ?? null);
+  const baseLabelIds = hasLocalAssignment ? assignedIds : eventLabelIds;
   const activeLabelIds = Array.from(
-    new Set([...(typeLabelId ? [typeLabelId] : []), ...(event?.labels ?? assignedIds ?? [])])
+    new Set([...(typeLabelId ? [typeLabelId] : []), ...(baseLabelIds ?? [])])
   );
-  const activeLabelObjects = getLabelObjects(activeLabelIds);
 
   return (
     <>
@@ -111,19 +151,40 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
             <View style={styles.content}>
               <Text style={styles.title}>{event.title}</Text>
 
-              <View style={styles.labelsSection}>
-                <Text style={styles.sectionHeading}>Labels</Text>
+              {/** Show label controls only if the viewer is the creator */}
+              { isOwner && (
+                <View style={styles.labelsSection}>
+                  <View style={styles.labelsHeader}>
+                    <Text style={styles.sectionHeading}>Labels</Text>
+                    <Pressable
+                      style={styles.manageBtn}
+                      onPress={() => setLabelManagerVisible(true)}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="add-circle-outline" size={16} color={TEXT} />
+                      <Text style={styles.manageText}>New</Text>
+                    </Pressable>
+                  </View>
 
-                <View style={styles.labelChips}>
-                  {activeLabelObjects.length > 0 ? (
-                    activeLabelObjects.map((label) => (
-                      <LabelChip key={label.id} label={label} compact selected />
-                    ))
-                  ) : (
-                    <Text style={styles.helperText}>This event has no labels yet.</Text>
-                  )}
+                  <View style={styles.labelChips}>
+                    {labels.length === 0 && (
+                      <Text style={styles.helperText}>No labels yet.</Text>
+                    )}
+                    {labels.map((label) => {
+                      const selected = activeLabelIds.includes(String(label.id));
+                    return (
+                      <LabelChip
+                        key={label.id}
+                        label={label}
+                        selected={selected}
+                        compact
+                        onPress={() => toggleLabelForEvent(event.id, String(label.id), selected)}
+                      />
+                    );
+                  })}
                 </View>
               </View>
+              )}
 
               {!!event.place_name && (
                 <DetailRow icon="location-outline" label={event.place_name} />
@@ -233,6 +294,18 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
         }}
       />
 
+      {isOwner && (
+        <LabelManagerModal
+          visible={labelManagerVisible}
+          labels={labels}
+          customLabels={labels.filter((l) => !l.is_default && !l.isDefault)}
+          palette={colorPalette}
+          onCreate={(name, color) => addCustomLabel(name, color, { type: 'event', id: event.id })}
+          onDelete={(id) => removeCustomLabel(id, { type: 'event', id: event.id })}
+          onClose={() => setLabelManagerVisible(false)}
+        />
+      )}
+
     </>
   );
 }
@@ -319,7 +392,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     gap: 6,
   },
+  labelsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   sectionHeading: { color: TEXT, fontWeight: "800", fontSize: 14 },
+  manageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: "rgba(31,106,106,0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(31,106,106,0.22)",
+  },
+  manageText: { color: TEXT, fontWeight: "800", fontSize: 12 },
   labelChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   helperText: { color: TEXT, opacity: 0.7, fontWeight: "700" },
 

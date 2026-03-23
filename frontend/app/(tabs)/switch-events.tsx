@@ -12,6 +12,7 @@ import { API_CONFIG } from "@/constants/api";
 import { LabelFilterBar } from "@/components/label-filter-bar";
 import { useEventLabels } from "@/hooks/use-event-labels";
 import { EventLabel, EventType } from "@/types/calendar";
+import apiClient from "@/services/api-client";
 
 export interface Event {
   id: string;
@@ -42,7 +43,6 @@ export default function EventsScreen() {
   const hasSession = isAuthenticated || Boolean(user);
   const {
     labels: labelCatalog,
-    customLabels,
     assignments: labelAssignments,
     getLabelsForEvent,
     getLabelObjects,
@@ -74,69 +74,111 @@ export default function EventsScreen() {
     return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
   };
 
-  // Mapeo y transformación de datos
+  function mapEventsData(rawEvents: any[]): Event[] {
+    const calendarMap: Record<number, any> = {};
+    backendCalendars.forEach((c: any) => {
+      calendarMap[Number(c.id)] = c;
+    });
+
+    return rawEvents.map((e: any, index: number) => {
+      const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
+      const cal = calendarMap[Number(calId)];
+      const type = (e.type || e.tipo || 'other') as EventType;
+      const typeLabelId = labelIdFromType(type);
+      const manualLabels = getLabelsForEvent(String(e.id));
+      const labelIds = Array.from(new Set([
+        ...(typeLabelId ? [typeLabelId] : []),
+        ...(manualLabels ?? []),
+        ...(Array.isArray(e.labels) ? e.labels.map((l: any) => String(l?.id ?? l)) : []),
+      ]));
+      const labelObjects = getLabelObjects(labelIds);
+
+      return {
+        id: String(e.id),
+        title: e.title || e.titulo || "",
+        description: e.description || e.descripcion || "",
+        location: e.place_name || e.nombre_lugar || "",
+        date: e.date || e.fecha || "",
+        time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+        image: resolveImageUrl(e.photo || e.foto),
+        username: e.creator_username || cal?.creator_username || "unknown",
+        userAvatar: (e.creator_photo && e.creator_photo.trim() !== "")
+          ? e.creator_photo
+          : (cal?.creator_photo && cal.creator_photo.trim() !== ""
+            ? cal.creator_photo
+            : require("../../assets/images/default-user.jpg")),
+        calendarId: String(calId || ""),
+        calendarName: cal?.name || "General",
+        type,
+        labels: labelIds,
+        labelObjects,
+        creator_id: e.creator_id ?? e.creator ?? null,
+        creator_username: e.creator_username ?? e.creator ?? '',
+        attendees: index % 2 === 0
+          ? [
+            {
+              id: "1",
+              name: "Rocío",
+              respondedAt: "2026-03-17T18:42:00Z",
+              avatar: "https://i.pravatar.cc/100?u=rocio",
+            },
+            {
+              id: "2",
+              name: "Lucía",
+              respondedAt: "2026-03-17T19:05:00Z",
+              avatar: "https://i.pravatar.cc/100?u=lucia",
+            },
+          ]
+          : [],
+      };
+    }).filter((evt: Event) => evt.id && evt.title);
+  }
+
+  // Base sync only when no label filter is active
   useEffect(() => {
+    if (selectedLabelId) return;
     if (backendCalendars.length > 0 || backendEvents.length > 0) {
-      const calendarMap: Record<number, any> = {};
-      backendCalendars.forEach((c: any) => {
-        calendarMap[Number(c.id)] = c;
-      });
-
-      const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
-        const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
-        const cal = calendarMap[Number(calId)];
-        const type = (e.type || e.tipo || 'other') as EventType;
-        const typeLabelId = labelIdFromType(type);
-        const manualLabels = getLabelsForEvent(String(e.id));
-        const labelIds = Array.from(new Set([
-          ...(typeLabelId ? [typeLabelId] : []),
-          ...(manualLabels ?? []),
-        ]));
-        const labelObjects = getLabelObjects(labelIds);
-
-        return {
-          id: String(e.id),
-          title: e.title || e.titulo || "",
-          description: e.description || e.descripcion || "",
-          location: e.place_name || e.nombre_lugar || "",
-          date: e.date || e.fecha || "",
-          time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
-          image: resolveImageUrl(e.photo || e.foto),
-          username: e.creator_username || cal?.creator_username || "unknown",
-          userAvatar: (e.creator_photo && e.creator_photo.trim() !== "")
-            ? e.creator_photo
-            : (cal?.creator_photo && cal.creator_photo.trim() !== ""
-              ? cal.creator_photo
-              : require("../../assets/images/default-user.jpg")),
-          calendarId: String(calId || ""),
-          calendarName: cal?.name || "General",
-          type,
-          labels: labelIds,
-          labelObjects,
-          // Temporary mock attendees for frontend testing.
-          // Backend should replace this with real attendees data per event.
-          attendees: index % 2 === 0
-            ? [
-              {
-                id: "1",
-                name: "Rocío",
-                respondedAt: "2026-03-17T18:42:00Z",
-                avatar: "https://i.pravatar.cc/100?u=rocio",
-              },
-              {
-                id: "2",
-                name: "Lucía",
-                respondedAt: "2026-03-17T19:05:00Z",
-                avatar: "https://i.pravatar.cc/100?u=lucia",
-              },
-            ]
-            : [],
-        };
-      }).filter((evt: Event) => evt.id && evt.title);
-
-      setEvents(mappedEvents);
+      setEvents(mapEventsData(backendEvents));
     }
-  }, [backendCalendars, backendEvents, labelAssignments, getLabelsForEvent, getLabelObjects, labelIdFromType]);
+  }, [backendCalendars, backendEvents, labelAssignments, selectedLabelId]);
+
+  const normalizeLabelName = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+    return trimmed.slice(0, 1).toUpperCase() + trimmed.slice(1).toLowerCase();
+  };
+
+  useEffect(() => {
+    const fetchFiltered = async () => {
+      const fallback = () => setEvents(mapEventsData(backendEvents));
+      if (!selectedLabelId) {
+        fallback();
+        return;
+      }
+      const label = labelCatalog.find((l) => String(l.id) === String(selectedLabelId));
+      if (!label?.name) {
+        fallback();
+        return;
+      }
+      try {
+        const norm = normalizeLabelName(label.name);
+        const resp = await apiClient.get<any>(`/events/filter-by-label/?label=${encodeURIComponent(norm)}`);
+        const list = Array.isArray(resp)
+          ? resp
+          : Array.isArray(resp?.results)
+            ? resp.results
+            : Array.isArray(resp?.events)
+              ? resp.events
+              : [];
+        setEvents(mapEventsData(list));
+      } catch (err) {
+        console.error('Error filtering events by label:', err);
+        fallback();
+      }
+    };
+    void fetchFiltered();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLabelId, labelCatalog, backendEvents, backendCalendars, labelAssignments]);
 
   // Manejo de errores
   const errorMessage = calendarsError || eventsError;
@@ -177,9 +219,7 @@ export default function EventsScreen() {
     );
   }
 
-  const visibleEvents = selectedLabelId
-    ? events.filter((evt) => evt.labels?.includes(selectedLabelId))
-    : events;
+  const visibleEvents = events;
 
   return (
     <View style={styles.container}>
