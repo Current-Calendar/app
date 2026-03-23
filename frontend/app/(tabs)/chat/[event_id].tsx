@@ -8,14 +8,18 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChat } from '@/hooks/use-chat';
 import { useAuth } from '@/hooks/use-auth';
 import ChatMessage from '@/components/chat-message';
 import { ChatMessage as ChatMessageType } from '@/types/chat';
+
+const BOTTOM_BAR_HEIGHT = 60 + 25;
 
 export default function ChatScreen() {
   const { event_id } = useLocalSearchParams<{ event_id: string }>();
@@ -24,6 +28,9 @@ export default function ChatScreen() {
   const { messages, connected, loading, error, sendMessage } = useChat(event_id);
   const [inputText, setInputText] = useState('');
   const listRef = useRef<FlatList<ChatMessageType>>(null);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
 
   const handleSend = () => {
     if (!inputText.trim()) return;
@@ -91,7 +98,7 @@ export default function ChatScreen() {
       />
 
       {/* Input bar */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, !isDesktop && { paddingBottom: BOTTOM_BAR_HEIGHT + insets.bottom }]}>
         <TextInput
           style={styles.input}
           value={inputText}
