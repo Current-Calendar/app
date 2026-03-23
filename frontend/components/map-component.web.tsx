@@ -52,7 +52,7 @@ export default function MapComponent({ location, events }: { location: any; even
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
 
-  const SHEET_SNAP_POINTS = [0, 0.45, 0.84];
+  const SHEET_SNAP_POINTS = [0, 0.42, 0.76];
 
   const leafletReact = useMemo(() => {
     if (!isBrowser) return null;
@@ -79,7 +79,7 @@ export default function MapComponent({ location, events }: { location: any; even
       if (!isCompact) {
         setSheetOffsetRatio(0);
       } else {
-        setSheetOffsetRatio((prev) => (prev > 0.8 ? 0.76 : prev));
+        setSheetOffsetRatio((prev) => (prev > 0.76 ? 0.76 : prev));
       }
     };
 
@@ -194,7 +194,7 @@ export default function MapComponent({ location, events }: { location: any; even
     if (!isCompactLayout || !sheetDragging) return;
     const deltaY = clientY - dragStartY.current;
     const ratioDelta = deltaY / getSheetHeight();
-    const next = Math.max(0, Math.min(0.88, dragStartOffset.current + ratioDelta));
+    const next = Math.max(0, Math.min(0.76, dragStartOffset.current + ratioDelta));
     setSheetOffsetRatio(next);
   };
 
@@ -408,12 +408,12 @@ export default function MapComponent({ location, events }: { location: any; even
             position: absolute;
             left: 10px;
             right: 10px;
-            bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+            bottom: calc(104px + env(safe-area-inset-bottom, 0px));
             height: min(58dvh, 460px);
             border: 1px solid rgba(16,70,77,0.14);
             border-radius: 20px;
             box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
-            transform: translateY(var(--sheet-offset, 84%));
+            transform: translateY(var(--sheet-offset, 76%));
             transition: transform 180ms ease;
             z-index: 900;
           }
