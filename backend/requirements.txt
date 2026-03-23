@@ -80,3 +80,6 @@ uritemplate==4.2.0
 urllib3==2.6.3
 whitenoise==6.11.0
 zope.interface==8.2
+channels
+daphne
+channels-redis

@@ -266,10 +266,10 @@ const ProfileScreen = () => {
             >
               <Image
                 source={
-                shownUser.photo && shownUser.photo.trim() !== ""
-                  ? { uri: shownUser.photo }
-                  : require('../../../assets/images/default-user.jpg')
-              }
+                  shownUser.photo && shownUser.photo.trim() !== ""
+                    ? { uri: shownUser.photo }
+                    : require('../../../assets/images/default-user.jpg')
+                }
                 style={profileStyles.profilePicture}
               />
               {isUploadingPhoto ? (
@@ -285,24 +285,25 @@ const ProfileScreen = () => {
 
             <View style={profileStyles.statsContainer}>
               <Text style={profileStyles.name}>{shownUser.username}</Text>
-              {shownUser.pronouns ? (
-                <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
-              ) : null}
+            </View>
+          </View>
 
-              <View style={profileStyles.statsRow}>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
-                  <Text style={profileStyles.statLabel}>Calendars</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
-                  <Text style={profileStyles.statLabel}>Followers</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
-                  <Text style={profileStyles.statLabel}>Following</Text>
-                </View>
-              </View>
+          {shownUser.pronouns ? (
+            <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
+          ) : null}
+
+          <View style={profileStyles.statsRow}>
+            <View style={profileStyles.statItem}>
+              <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
+              <Text style={profileStyles.statLabel}>Calendars</Text>
+            </View>
+            <View style={profileStyles.statItem}>
+              <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
+              <Text style={profileStyles.statLabel}>Followers</Text>
+            </View>
+            <View style={profileStyles.statItem}>
+              <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
+              <Text style={profileStyles.statLabel}>Following</Text>
             </View>
           </View>
 
