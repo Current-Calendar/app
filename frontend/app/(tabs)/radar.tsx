@@ -30,7 +30,7 @@ export default function RadarScreen() {
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
- useEffect(() => {
+useEffect(() => {
     let cancelled = false;
 
     const loadRadar = async () => {
@@ -41,36 +41,56 @@ export default function RadarScreen() {
       setLocationMessage(null);
       setLoadingStage("Getting your location...");
 
-      try {
-        let lat: number;
-        let lon: number;
+      if (Platform.OS === "web") {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            if (cancelled) return;
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            setLocation({ latitude: lat, longitude: lon });
+            setLoadingStage("Searching nearby events...");
 
-        if (Platform.OS === "web") {
-          const position = await new Promise<any>((resolve, reject) => {
-            if (!navigator.geolocation) {
-              reject(new Error("Geolocation is not supported by this browser."));
-            } else {
-              navigator.geolocation.getCurrentPosition(resolve, reject);
+            try {
+              const radiusCandidatesKm = [5, 15, 35];
+              let eventList: any[] = [];
+
+              for (const radiusKm of radiusCandidatesKm) {
+                if (cancelled) return;
+                setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
+                const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
+                if (response.ok) {
+                  const data = await response.json();
+                  eventList = normalizeEventList(data);
+                  if (eventList.length > 0) break;
+                }
+              }
+              if (!cancelled) setEvents(eventList);
+            } catch (e) {
+              if (!cancelled) setErrorMessage("Error loading events.");
+            } finally {
+              if (!cancelled) setLoading(false);
             }
-          });
-          
-          lat = position.coords.latitude;
-          lon = position.coords.longitude;
-        } else {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            throw new Error(
-              "Location permission is required to show nearby events. Please enable location and try again."
-            );
+          },
+          (error) => {
+            if (cancelled) return;
+            console.error("Error real de Chrome:", error);
+            setLocationMessage(`Error de geolocalización: ${error.message}`);
+            setLoading(false);
           }
+        );
+        return;
+      }
 
-          const currentLocation = await Location.getCurrentPositionAsync({});
-          lat = currentLocation.coords.latitude;
-          lon = currentLocation.coords.longitude;
-        }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") throw new Error("Permission denied");
+
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        const lat = currentLocation.coords.latitude;
+        const lon = currentLocation.coords.longitude;
 
         if (cancelled) return;
-        
         setLocation({ latitude: lat, longitude: lon });
         setLoadingStage("Searching nearby events...");
 
@@ -80,46 +100,18 @@ export default function RadarScreen() {
         for (const radiusKm of radiusCandidatesKm) {
           if (cancelled) return;
           setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
-
           const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
-          if (!response.ok) {
-            throw new Error("Could not load nearby events.");
-          }
-
-          const data = await response.json();
-          eventList = normalizeEventList(data);
-          if (eventList.length > 0) break;
-        }
-
-        if (!cancelled) {
-          setEvents(eventList);
-        }
-      } catch (error: any) {
-        console.error("Error getting location or events:", error);
-        if (!cancelled) {
-          if (error?.code === 1) {
-            setLocationMessage(
-              "Location permission was denied in the browser. Allow location for this site and tap Retry."
-            );
-          } else {
-            const message =
-              error instanceof Error
-                ? error.message
-                : typeof error === "object" && error !== null && "message" in error
-                  ? String((error as { message?: string }).message || "")
-                  : "Error loading Radar.";
-
-            if (message.toLowerCase().includes("location") || message.toLowerCase().includes("ubicacion") || error?.code === 2 || error?.code === 3) {
-              setLocationMessage(message || "Getting your location...");
-            } else {
-              setErrorMessage(message);
-            }
+          if (response.ok) {
+            const data = await response.json();
+            eventList = normalizeEventList(data);
+            if (eventList.length > 0) break;
           }
         }
+        if (!cancelled) setEvents(eventList);
+      } catch (error) {
+        if (!cancelled) setErrorMessage("Error en móvil.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
