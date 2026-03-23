@@ -35,7 +35,8 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
+
+ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es', 'api-testers.currentcalendar.es']
 
 # Trust HTTPS from reverse proxies (tunnel, Render, etc.)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

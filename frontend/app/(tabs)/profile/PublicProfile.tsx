@@ -87,24 +87,25 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
 
                         <View style={profileStyles.statsContainer}>
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-                            {userBeingViewed.pronouns ? (
-                                <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
-                            ) : null}
+                        </View>
+                    </View>
 
-                            <View style={profileStyles.statsRow}>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Calendars</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Followers</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Following</Text>
-                                </View>
-                            </View>
+                    {userBeingViewed.pronouns ? (
+                        <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
+                    ) : null}
+
+                    <View style={profileStyles.statsRow}>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
+                            <Text style={profileStyles.statLabel}>Calendars</Text>
+                        </View>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
+                            <Text style={profileStyles.statLabel}>Followers</Text>
+                        </View>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
+                            <Text style={profileStyles.statLabel}>Following</Text>
                         </View>
                     </View>
 
