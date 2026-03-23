@@ -30,7 +30,7 @@ export default function RadarScreen() {
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
+ useEffect(() => {
     let cancelled = false;
 
     const loadRadar = async () => {
@@ -42,94 +42,35 @@ export default function RadarScreen() {
       setLoadingStage("Getting your location...");
 
       try {
+        let lat: number;
+        let lon: number;
+
         if (Platform.OS === "web") {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              if (cancelled) return;
-
-              const lat = position.coords.latitude;
-              const lon = position.coords.longitude;
-
-              setLocation({ latitude: lat, longitude: lon });
-              setLoadingStage("Searching nearby events...");
-
-              try {
-                const radiusCandidatesKm = [5, 15, 35];
-                let eventList: any[] = [];
-
-                for (const radiusKm of radiusCandidatesKm) {
-                  if (cancelled) return;
-                  setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
-
-                  const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
-                  if (!response.ok) {
-                    throw new Error("Could not load nearby events.");
-                  }
-
-                  const data = await response.json();
-                  eventList = normalizeEventList(data);
-                  if (eventList.length > 0) break;
-                }
-
-                if (!cancelled) {
-                  setEvents(eventList);
-                }
-              } catch (fetchError) {
-                if (!cancelled) {
-                  const message = fetchError instanceof Error ? fetchError.message : "Error loading Radar.";
-                  setErrorMessage(message);
-                }
-              } finally {
-                if (!cancelled) {
-                  setLoading(false);
-                }
-              }
-            },
-            (geoError) => {
-              if (cancelled) return;
-
-              const code =
-                typeof geoError === "object" &&
-                geoError !== null &&
-                "code" in geoError &&
-                typeof (geoError as { code?: unknown }).code === "number"
-                  ? Number((geoError as { code?: number }).code)
-                  : null;
-
-              if (code === 1) {
-                setLocationMessage(
-                  "Location permission was denied in the browser. Allow location for this site and tap Retry."
-                );
-              } else {
-                setLocationMessage(
-                  "Location is required to show nearby events. Please enable location services and try again."
-                );
-              }
-
-              setLoading(false);
-            },
-            {
-              enableHighAccuracy: true,
-              timeout: 15000,
-              maximumAge: 0,
+          const position = await new Promise<any>((resolve, reject) => {
+            if (!navigator.geolocation) {
+              reject(new Error("Geolocation is not supported by this browser."));
+            } else {
+              navigator.geolocation.getCurrentPosition(resolve, reject);
             }
-          );
+          });
+          
+          lat = position.coords.latitude;
+          lon = position.coords.longitude;
+        } else {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            throw new Error(
+              "Location permission is required to show nearby events. Please enable location and try again."
+            );
+          }
 
-          return;
+          const currentLocation = await Location.getCurrentPositionAsync({});
+          lat = currentLocation.coords.latitude;
+          lon = currentLocation.coords.longitude;
         }
-
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          throw new Error(
-            "Location permission is required to show nearby events. Please enable location and try again."
-          );
-        }
-
-        const currentLocation = await Location.getCurrentPositionAsync({});
-        const lat = currentLocation.coords.latitude;
-        const lon = currentLocation.coords.longitude;
 
         if (cancelled) return;
+        
         setLocation({ latitude: lat, longitude: lon });
         setLoadingStage("Searching nearby events...");
 
@@ -153,24 +94,30 @@ export default function RadarScreen() {
         if (!cancelled) {
           setEvents(eventList);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error getting location or events:", error);
         if (!cancelled) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : typeof error === "object" && error !== null && "message" in error
-                ? String((error as { message?: string }).message || "")
-                : "";
-
-          if (message.toLowerCase().includes("location") || message.toLowerCase().includes("ubicacion")) {
-            setLocationMessage(message || "Getting your location...");
+          if (error?.code === 1) {
+            setLocationMessage(
+              "Location permission was denied in the browser. Allow location for this site and tap Retry."
+            );
           } else {
-            setErrorMessage(message || "Error loading Radar.");
+            const message =
+              error instanceof Error
+                ? error.message
+                : typeof error === "object" && error !== null && "message" in error
+                  ? String((error as { message?: string }).message || "")
+                  : "Error loading Radar.";
+
+            if (message.toLowerCase().includes("location") || message.toLowerCase().includes("ubicacion") || error?.code === 2 || error?.code === 3) {
+              setLocationMessage(message || "Getting your location...");
+            } else {
+              setErrorMessage(message);
+            }
           }
         }
       } finally {
-        if (!cancelled && Platform.OS !== "web") {
+        if (!cancelled) {
           setLoading(false);
         }
       }
