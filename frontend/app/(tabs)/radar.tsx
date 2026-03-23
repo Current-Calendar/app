@@ -58,21 +58,6 @@ export default function RadarScreen() {
             lat = position.coords.latitude;
             lon = position.coords.longitude;
           } catch (geoError) {
-            const host = typeof window !== "undefined" ? window.location.hostname : "";
-            const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
-            const protocol = typeof window !== "undefined" ? window.location.protocol : "";
-            const isHttps = protocol === "https:";
-            const isSecureContextOnWeb = typeof window !== "undefined" ? window.isSecureContext : false;
-
-            // Debug info
-            console.log("Geolocation debug:", { host, isLocalHost, protocol, isHttps, isSecureContextOnWeb });
-
-            if (!isSecureContextOnWeb && !isLocalHost && !isHttps) {
-              throw new Error(
-                "Chrome requires HTTPS (or localhost) for geolocation. You are currently on " + protocol + ". Please access this app via HTTPS."
-              );
-            }
-
             const code =
               typeof geoError === "object" &&
               geoError !== null &&
@@ -84,6 +69,14 @@ export default function RadarScreen() {
             if (code === 1) {
               throw new Error(
                 "Location permission was denied in the browser. Allow location for this site and tap Retry."
+              );
+            }
+
+            // Check if it's a security error (HTTPS required)
+            const errorMsg = (geoError as any)?.message || String(geoError);
+            if (errorMsg.includes("secure context") || errorMsg.includes("HTTPS")) {
+              throw new Error(
+                "Chrome requires HTTPS (or localhost) for geolocation. Please access this app via a secure connection."
               );
             }
 
