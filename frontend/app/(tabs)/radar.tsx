@@ -50,7 +50,7 @@ export default function RadarScreen() {
             const position = await new Promise<GeolocationPosition>((resolve, reject) => {
               navigator.geolocation.getCurrentPosition(resolve, reject, {
                 enableHighAccuracy: true,
-                timeout: 10000,
+                timeout: 15000,
                 maximumAge: 0,
               });
             });
@@ -59,12 +59,17 @@ export default function RadarScreen() {
             lon = position.coords.longitude;
           } catch (geoError) {
             const host = typeof window !== "undefined" ? window.location.hostname : "";
-            const isLocalHost = host === "localhost" || host === "127.0.0.1";
+            const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+            const protocol = typeof window !== "undefined" ? window.location.protocol : "";
+            const isHttps = protocol === "https:";
             const isSecureContextOnWeb = typeof window !== "undefined" ? window.isSecureContext : false;
 
-            if (!isSecureContextOnWeb && !isLocalHost) {
+            // Debug info
+            console.log("Geolocation debug:", { host, isLocalHost, protocol, isHttps, isSecureContextOnWeb });
+
+            if (!isSecureContextOnWeb && !isLocalHost && !isHttps) {
               throw new Error(
-                "Chrome requires HTTPS (or localhost) for geolocation. Open this app in a secure context and try again."
+                "Chrome requires HTTPS (or localhost) for geolocation. You are currently on " + protocol + ". Please access this app via HTTPS."
               );
             }
 
@@ -185,9 +190,13 @@ export default function RadarScreen() {
         </Text>
         {Platform.OS === "web" ? (
           <View style={styles.guideBox}>
-            <Text style={styles.guideStep}>1. Use HTTPS (or localhost) in Chrome.</Text>
-            <Text style={styles.guideStep}>2. Click the lock icon next to the URL.</Text>
-            <Text style={styles.guideStep}>3. Allow location access for this site.</Text>
+            <Text style={[styles.guideStep, { fontWeight: "700", fontSize: 13, marginBottom: 8 }]}>
+              📍 Location Permission Required
+            </Text>
+            <Text style={styles.guideStep}>1. Make sure you're using HTTPS or localhost</Text>
+            <Text style={styles.guideStep}>2. Click the lock icon next to the URL in Chrome</Text>
+            <Text style={styles.guideStep}>3. Find "Location" and select "Allow"</Text>
+            <Text style={styles.guideStep}>4. Refresh the page and try again</Text>
           </View>
         ) : (
           <Text style={styles.loadingSubtitle}>
