@@ -508,15 +508,21 @@ def invite_event(request: Request, event_id: int):
 
     if event.creator != request.user:
         return Response(
-            {"error": "Only the event creator send invitations"},
+            {"error": "Only the event creator can send invitations"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    Notification.objects.create(
+    if not Notification.objects.filter(
         recipient=user_to_invite,
         type="EVENT_INVITE",
         related_event=event,
         sender=request.user,
-    )
+    ).exists():
+        Notification.objects.create(
+            recipient=user_to_invite,
+            type="EVENT_INVITE",
+            related_event=event,
+            sender=request.user,
+        )
 
     return Response(status=status.HTTP_204_NO_CONTENT)
