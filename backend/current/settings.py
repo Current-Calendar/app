@@ -53,6 +53,19 @@ GOOGLE_REDIRECT_URIS = os.getenv('GOOGLE_REDIRECT_URIS')
 RESEND_API_KEY = os.getenv('RESEND_API_KEY')
 RESEND_EMAIL_FROM = os.getenv('RESEND_EMAIL_FROM')
 
+# ---------------------------------------------------------------------------
+# Stripe
+# ---------------------------------------------------------------------------
+# STRIPE_SECRET_KEY      — server-side secret key (sk_live_... / sk_test_...)
+# STRIPE_PUBLISHABLE_KEY — client-side key returned by /api/v1/payments/config/
+# STRIPE_WEBHOOK_SECRET  — from `stripe listen` or the Stripe dashboard (whsec_...)
+# STRIPE_ALLOWED_PRICE_IDS — comma-separated list of Price IDs the server accepts
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+_raw_price_ids = os.getenv('STRIPE_ALLOWED_PRICE_IDS', '')
+STRIPE_ALLOWED_PRICE_IDS = [p.strip() for p in _raw_price_ids.split(',') if p.strip()]
+
 GOOGLE_OAUTH2_CLIENT_CONFIG = {
     "web": {
         "client_id": GOOGLE_CLIENT_ID,

@@ -285,17 +285,79 @@ class EventAttendance(models.Model):
         ('NOT_ASSISTING', 'Not Attending'),
         ('PENDING', 'Pending'),
     ]
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_attendances')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='attendances')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['user', 'event'], name='unique_user_event_attendance')
         ]
-    
+
     def __str__(self):
         return f"{self.user.username} - {self.event.title} ({self.status})"
+
+
+class StripeCustomer(models.Model):
+    """Maps a platform user to a Stripe customer object."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='stripe_customer')
+    stripe_customer_id = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} → {self.stripe_customer_id}"
+
+
+class Payment(models.Model):
+    """Audit record for every PaymentIntent created on behalf of a user."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+        ('canceled', 'Canceled'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='payments')
+    stripe_payment_intent_id = models.CharField(max_length=255, unique=True)
+    # Amount stored in the smallest currency unit (e.g. cents for EUR/USD)
+    amount = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default='eur')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    description = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Payment {self.stripe_payment_intent_id} ({self.status})"
+
+
+class Subscription(models.Model):
+    """Tracks the active Stripe subscription for a user."""
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('canceled', 'Canceled'),
+        ('past_due', 'Past Due'),
+        ('trialing', 'Trialing'),
+        ('incomplete', 'Incomplete'),
+        ('incomplete_expired', 'Incomplete Expired'),
+        ('unpaid', 'Unpaid'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
+    stripe_subscription_id = models.CharField(max_length=255, unique=True)
+    stripe_price_id = models.CharField(max_length=255)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} subscription ({self.status})"

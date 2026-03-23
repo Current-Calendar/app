@@ -27,6 +27,7 @@ from main.radar import views as radar_views
 from main.auth import views as auth_views
 from main.notifications import views as notification_views
 from main.reports import views as report_views
+from main.payments import views as payment_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -92,6 +93,15 @@ urlpatterns = [
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
+    # Payments — Stripe integration
+    # NOTE: stripe_webhook is intentionally csrf_exempt (verified via Stripe-Signature header)
+    path('api/v1/payments/config/', payment_views.stripe_config, name='stripe_config'),
+    path('api/v1/payments/create-payment-intent/', payment_views.create_payment_intent, name='create_payment_intent'),
+    path('api/v1/payments/history/', payment_views.payment_history, name='payment_history'),
+    path('api/v1/payments/create-subscription/', payment_views.create_subscription, name='create_subscription'),
+    path('api/v1/payments/subscription/', payment_views.get_subscription, name='get_subscription'),
+    path('api/v1/payments/cancel-subscription/', payment_views.cancel_subscription, name='cancel_subscription'),
+    path('api/v1/payments/webhook/', payment_views.stripe_webhook, name='stripe_webhook'),
 ]
 
 
