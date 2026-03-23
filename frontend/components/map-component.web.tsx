@@ -236,6 +236,18 @@ export default function MapComponent({ location, events }: { location: any; even
     ? (({ ["--sheet-offset" as string]: `${sheetOffsetRatio * 100}%` }) as React.CSSProperties)
     : undefined;
 
+  const listRevealProgress = !isCompactLayout
+    ? 1
+    : Math.max(0, Math.min(1, (0.76 - sheetOffsetRatio) / 0.2));
+
+  const compactListStyle: React.CSSProperties | undefined = isCompactLayout
+    ? {
+        opacity: listRevealProgress,
+        transform: `translateY(${(1 - listRevealProgress) * 18}px)`,
+        pointerEvents: listRevealProgress < 0.08 ? "none" : "auto",
+      }
+    : undefined;
+
   if (!isBrowser || !leafletReact || !leaflet || !defaultIcon || !starIcon || !yourPositionIcon) {
     return null;
   }
@@ -408,7 +420,7 @@ export default function MapComponent({ location, events }: { location: any; even
             position: absolute;
             left: 10px;
             right: 10px;
-            bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+            bottom: calc(140px + env(safe-area-inset-bottom, 0px));
             height: min(58dvh, 460px);
             border: 1px solid rgba(16,70,77,0.14);
             border-radius: 20px;
@@ -461,7 +473,7 @@ export default function MapComponent({ location, events }: { location: any; even
             </p>
           </div>
 
-          <div className="radarSidebarList">
+          <div className="radarSidebarList" style={compactListStyle}>
             {nearbyEvents.length === 0 ? (
               <div className="radarEmptyState">
                 No events found nearby. Try again in another area.
