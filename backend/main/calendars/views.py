@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendar, Event, User, Notification
+from main.models import Calendar, Event, User, Notification, CalendarLike
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.conf import settings
 from utils.security import get_safe_ip
+from utils.storage import get_signed_url
 from icalendar import Calendar as ICalCalendar
 from urllib.parse import urlparse
 
@@ -98,7 +99,13 @@ def edit_calendar(request, calendar_id):
             setattr(calendar, campo, valor)
 
     if 'cover' in request.FILES:
+        if calendar.cover:
+            calendar.cover.delete(save=False)
         calendar.cover = request.FILES['cover']
+    elif request.data.get('remove_cover') == 'true':
+        if calendar.cover:
+            calendar.cover.delete(save=False)
+        calendar.cover = None
 
     calendar.save()
     return Response({
@@ -106,7 +113,7 @@ def edit_calendar(request, calendar_id):
         'name': calendar.name,
         'description': calendar.description,
         'privacy': calendar.privacy,
-        'cover': request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+        'cover': get_signed_url(request, calendar.cover),
     }, status=status.HTTP_200_OK)
 
 
@@ -114,15 +121,44 @@ def edit_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated])
 def create_calendar(request):
     data = request.data
+    creator = request.user
+    
+    cover_file = request.FILES.get('cover')
 
     name = data.get('name')
+    if isinstance(name, str):
+        name = name.strip()
+    description = data.get('description', '')
 
-    if not name:
+    if not name or not isinstance(name, str) or name.strip() == "":
         return Response(
-            {"errors": ["El campo 'name' es obligatorio."]},
+            {"errors": ["El campo 'name' es obligatorio y no puede estar vacío."]},
             status = status.HTTP_400_BAD_REQUEST
         )
-    creator = request.user
+    
+    if description and not isinstance(description, str):
+        return Response(
+            {"errors": ["El campo 'description' debe ser texto."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    privacy = data.get('privacy', 'PRIVATE')
+    valid_privacy = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+
+    if privacy not in valid_privacy:
+        return Response(
+            {"errors": [f"El valor de 'privacy' no es válido. Valores permitidos: {', '.join(sorted(valid_privacy))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    origin = data.get('origin', 'CURRENT')
+    valid_origin = {choice[0] for choice in Calendar.ORIGIN_CHOICES}
+
+    if origin not in valid_origin:
+        return Response(
+            {"errors": [f"El valor de 'origin' no es válido. Valores permitidos: {', '.join(sorted(valid_origin))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     calendar = Calendar(
         creator=creator,
@@ -131,8 +167,10 @@ def create_calendar(request):
         privacy=data.get('privacy', 'PRIVATE'),
         origin=data.get('origin', 'CURRENT'),
         external_id=data.get('external_id'),
-        cover=request.FILES.get('cover')
     )
+    
+    if cover_file:
+        calendar.cover.save(cover_file.name, cover_file, save=True)
 
     try:
         calendar.full_clean()
@@ -166,10 +204,32 @@ def create_calendar(request):
             "privacy": calendar.privacy,
             "creator_id": calendar.creator_id,
             "created_at": calendar.created_at,
-            "cover": request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": False,
+            "cover": get_signed_url(request, calendar.cover),
         },
         status=status.HTTP_201_CREATED,
     )
+
+
+def _get_liked_calendar_ids(user, queryset):
+    if not user.is_authenticated:
+        return set()
+    return set(
+        CalendarLike.objects.filter(user=user, calendar__in=queryset)
+        .values_list("calendar_id", flat=True)
+    )
+
+
+def _can_like_calendar(user, calendar: Calendar) -> bool:
+    if calendar.creator == user:
+        return True
+    if calendar.privacy == "PUBLIC":
+        return True
+    if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
+        return True
+    return False
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -181,6 +241,8 @@ def list_subscribed_calendars(request):
     """
     queryset = request.user.subscribed_calendars.select_related('creator').order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -190,8 +252,11 @@ def list_subscribed_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
         }
         for cal in queryset
     ]
@@ -218,6 +283,8 @@ def list_friends_calendars(request):
         privacy='FRIENDS'
     ).order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -227,8 +294,11 @@ def list_friends_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
         }
         for cal in queryset
     ]
@@ -262,6 +332,42 @@ def subscribe_calendar(request, calendar_id):
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_like_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+
+    with transaction.atomic():
+        like = CalendarLike.objects.filter(user=user, calendar=calendar).first()
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            if not _can_like_calendar(user, calendar):
+                return Response(
+                    {"errors": ["No tienes permiso para dar me gusta a este calendar."]},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            try:
+                CalendarLike.objects.create(user=user, calendar=calendar)
+            except IntegrityError:
+                pass
+            liked = True
+
+    calendar.refresh_from_db(fields=['likes_count'])
+    return Response(
+        {
+            "calendar_id": calendar_id,
+            "liked": liked,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": liked,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['GET'])
 def list_calendars(request):
     """
@@ -291,6 +397,8 @@ def list_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -300,8 +408,11 @@ def list_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
         }
         for cal in queryset
     ]
@@ -339,6 +450,8 @@ def list_my_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -348,8 +461,11 @@ def list_my_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
         }
         for cal in queryset
     ]
@@ -605,7 +721,7 @@ def get_calendar_share_info(request, calendar_id):
         'calendar_id': calendar.id,
         'name': calendar.name,
         'description': calendar.description,
-        'cover': request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+        'cover': get_signed_url(request, calendar.cover),
         'privacy': calendar.privacy,
         'creator_username': calendar.creator.username,
         'share_url': share_url,
@@ -629,7 +745,7 @@ def share_calendar_html(request, calendar_id):
         or request.build_absolute_uri('/static/images/og-default.png')
     )
     if calendar.cover:
-        raw_cover_url = request.build_absolute_uri(calendar.cover.url)
+        raw_cover_url = get_signed_url(request, calendar.cover)
         is_local = raw_cover_url.startswith('http://localhost') or raw_cover_url.startswith('http://127.')
         # visual_cover: always show the real photo in the page
         visual_cover_url = raw_cover_url

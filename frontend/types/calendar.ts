@@ -15,6 +15,8 @@ export interface Calendar {
     origin: CalendarOrigin;
     creator: string;        // username
     color: string;          // UI-only accent color
+    likes_count: number;
+    liked_by_me: boolean;
 }
 
 export interface CalendarEvent {

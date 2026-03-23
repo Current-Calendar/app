@@ -94,7 +94,7 @@ export const useUserProfile = (userId?: string) => {
                     username: userId,
                     pronouns: "he/him",
                     bio: "I'm a mock user for testing 😄",
-                    photo: "https://i.pravatar.cc/300",
+                    photo: undefined,
                     is_following: false,
                     total_followers: 123,
                     total_following: 456,

@@ -227,6 +227,19 @@ export const calendarCardStyles = StyleSheet.create({
     flexDirection: 'row',
     padding: 12,
   },
+  commentButton: {
+  marginTop: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  alignSelf: 'flex-start',
+  },
+
+  commentText: {
+    marginLeft: 6,
+    color: '#10464d',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   cardImage: {
     width: 100,
     height: 100,
@@ -452,7 +465,22 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  likeBtn: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 16,
+    marginLeft: 8,
+  },
+  likeBtnIcon: {
+    color: 'lightcoral'
+  },
+  likeBtnText: {
+    fontSize: 16,
+    fontWeight: '100',
+    alignSelf: 'center',
+    marginRight: 4,
   },
   subscribeBtn: {
     flexDirection: 'row',
@@ -464,6 +492,18 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   subscribedBtn: {
     backgroundColor: "#9E9E9E",
+  },
+  commentBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 10,
+  paddingHorizontal: 2,
+  },
+
+  commentBtnText: {
+    color: "#10464d",
+    fontWeight: "600",
+    fontSize: 14,
   },
   btnIcon: {
     marginRight: 4,

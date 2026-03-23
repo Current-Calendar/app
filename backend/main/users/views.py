@@ -6,6 +6,7 @@ from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from ..models import Calendar
+from utils.storage import get_signed_url
 
 
 @api_view(['GET'])
@@ -126,7 +127,7 @@ def get_user_by_id(request, pk):
             "name": cal.name,
             "description": cal.description,
             "privacy": cal.privacy,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "cover": get_signed_url(request, cal.cover),
             "created_at": cal.created_at,
         }
         for cal in user.created_calendars.filter(privacy="PUBLIC")
@@ -149,9 +150,17 @@ def get_user_by_username(request, username):
         return Response({"error": "User no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
     user_data = PublicUserSerializer(user, context={'request': request}).data
-    public_calendars = list(user.created_calendars.filter(privacy="PUBLIC").values(
-        "id", "name", "description", "cover", "created_at"
-    ))
+
+    public_calendars = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "cover": get_signed_url(request, cal.cover),
+            "created_at": cal.created_at
+        }
+        for cal in user.created_calendars.filter(privacy="PUBLIC")
+    ]
     user_data["public_calendars"] = public_calendars
 
     return Response(user_data)
@@ -169,11 +178,17 @@ def get_followed_calendars(request, pk):
     except User.DoesNotExist:
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    calendars = list(
-        user.subscribed_calendars.filter(privacy="PUBLIC").values(
-            "id", "name", "description", "cover", "created_at"
-        )
-    )
+    calendars_queryset = user.subscribed_calendars.filter(privacy="PUBLIC")
+    calendars = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "cover": get_signed_url(request, cal.cover),
+            "created_at": cal.created_at
+        }
+        for cal in calendars_queryset
+    ]
     return Response(calendars)
 
 
@@ -185,7 +200,13 @@ def get_own_user(request):
     GET /api/v1/users/me/
     """
     
-    serializer = OwnProfileSerializer(request.user, context={"request": request})
+    liked_calendar_ids = set(
+        request.user.calendar_likes.values_list("calendar_id", flat=True)
+    )
+    serializer = OwnProfileSerializer(
+        request.user,
+        context={"request": request, "liked_calendar_ids": liked_calendar_ids},
+    )
     return Response(serializer.data)
 
 

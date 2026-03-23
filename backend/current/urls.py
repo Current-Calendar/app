@@ -22,6 +22,7 @@ from main import views
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
+from main.comments import views as comment_views
 from main.radar import views as radar_views
 from main.auth import views as auth_views
 from main.notifications import views as notification_views
@@ -62,6 +63,7 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/delete/', calendar_views.delete_calendar, name='delete_calendar'),
     path('api/v1/calendars/<int:calendar_id>/edit/', calendar_views.edit_calendar, name='edit_calendar'),
     path('api/v1/calendars/<int:calendar_id>/subscribe/', calendar_views.subscribe_calendar, name='subscribe_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/like/', calendar_views.toggle_like_calendar, name='like_calendar'),
     path('api/v1/calendars/create/', calendar_views.create_calendar, name='create_calendar'),
     path('api/v1/calendars/list/', calendar_views.list_calendars, name='list_calendarios'),
     path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
@@ -75,16 +77,21 @@ urlpatterns = [
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
+    path('api/v1/events/<int:event_id>/rsvp/', event_views.rsvp_event, name='rsvp_event'),
     path('api/v1/events/list', event_views.list_events, name='list_events'),
     path('api/v1/events/list/<int:calendar_id>', event_views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),
+    path('api/v1/comments/', comment_views.comments_collection, name='comments_collection'),
+    path('api/v1/comments/<int:comment_id>/replies/', comment_views.list_replies, name='list_replies'),
+    path('api/v1/comments/<int:comment_id>/delete/', comment_views.delete_comment, name='delete_comment'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
     path('api/v1/notifications/', notification_views.get_notifications, name='get_notifications'),
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
 ]
 
 

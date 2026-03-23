@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { appendPhoto } from '@/services/api-client';
 
 type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
@@ -124,10 +125,7 @@ export default function CreateScreen() {
       formData.append("origin", "CURRENT");
 
       if (coverImage) {
-        const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
-        const response = await fetch(coverImage.uri);
-        const blob = await response.blob();
-        formData.append("cover", blob, filename);
+        await appendPhoto(formData, coverImage, "cover");
       }
 
       await createCalendar(formData);

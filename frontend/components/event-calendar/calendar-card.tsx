@@ -6,14 +6,18 @@ import { eventCalendarCalendarCardStyles } from "@/styles/calendar-styles";
 interface CalendarCardProps {
   calendar: Calendar;
   onPress: (id: string) => void;
+  onLike: (id: string) => void;
   onSubscribe: (id: string) => void;
+  onComment: (id: string) => void;
   isSubscribed?: boolean;
 }
 
 export default function CalendarCard({
   calendar,
   onPress,
+  onLike,
   onSubscribe,
+  onComment,
   isSubscribed = false,
 }: CalendarCardProps) {
   const privacyIcon: Record<string, any> = {
@@ -74,6 +78,39 @@ export default function CalendarCard({
         </Text>
 
         <View style={eventCalendarCalendarCardStyles.footer}>
+          <Pressable
+            style={eventCalendarCalendarCardStyles.commentBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onComment(calendar.id);
+            }}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={18}
+              color="#10464d"
+              style={eventCalendarCalendarCardStyles.btnIcon}
+            />
+            <Text style={eventCalendarCalendarCardStyles.commentBtnText}>
+              Comment
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={eventCalendarCalendarCardStyles.likeBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              onLike(calendar.id);
+            }}
+          >
+            <Text style={eventCalendarCalendarCardStyles.likeBtnText}>{calendar.likes_count}</Text>
+            <Ionicons
+              name={calendar.liked_by_me ? "heart" : "heart-outline"}
+              size={30}
+              style={eventCalendarCalendarCardStyles.likeBtnIcon}
+            />
+          </Pressable>
+
           <Pressable
             style={[
               eventCalendarCalendarCardStyles.subscribeBtn,

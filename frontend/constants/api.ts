@@ -54,6 +54,9 @@ export const API_CONFIG = {
       );
       return `${wsBase}/ws/chat/${eventId}/`;
     },
+    comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
+    commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
+    deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
   },
 };
 
