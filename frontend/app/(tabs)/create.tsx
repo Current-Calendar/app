@@ -30,6 +30,11 @@ interface PublishData {
   privacy: PrivacyStatus;
   origin?: CalendarOrigin;
 }
+
+type CreatedCalendarResponse = {
+  id?: number | string;
+};
+
 export default function CreateScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -128,11 +133,16 @@ export default function CreateScreen() {
         await appendPhoto(formData, coverImage, "cover");
       }
 
-      await createCalendar(formData);
+      const createdCalendar = await createCalendar(formData) as CreatedCalendarResponse;
+      const createdCalendarId = createdCalendar?.id;
 
       Alert.alert("Success", "Calendar created successfully.");
 
-      router.replace("/(tabs)/calendars");
+      if (createdCalendarId !== undefined && createdCalendarId !== null) {
+        router.replace(`/(tabs)/calendars?selectedCalendarId=${encodeURIComponent(String(createdCalendarId))}`);
+      } else {
+        router.replace("/(tabs)/calendars");
+      }
 
     } catch (error: any) {
       console.log("FULL ERROR:", error);
