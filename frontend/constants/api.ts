@@ -36,7 +36,7 @@ export const API_CONFIG = {
     searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
-    nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radius=${radius}`),
+    nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radio=${radius}`),
     createCalendar: buildEndpoint('calendars/create/'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/edit/`),
     createEvent: buildEndpoint('events/create/'),
