@@ -14,6 +14,7 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "@/hooks/use-auth";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
@@ -30,8 +31,14 @@ interface PublishData {
   privacy: PrivacyStatus;
   origin?: CalendarOrigin;
 }
+
+type CreatedCalendarResponse = {
+  id?: number | string;
+};
+
 export default function CreateScreen() {
   const router = useRouter();
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { createCalendar } = useCalendarActions();
   const [selectedPrivacy, setSelectedPrivacy] =
@@ -102,6 +109,14 @@ export default function CreateScreen() {
     setCoverImage(null);
   };
 
+  const handleCancel = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      router.replace("/(tabs)/calendars");
+    }
+  };
+
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -128,11 +143,16 @@ export default function CreateScreen() {
         await appendPhoto(formData, coverImage, "cover");
       }
 
-      await createCalendar(formData);
+      const createdCalendar = await createCalendar(formData) as CreatedCalendarResponse;
+      const createdCalendarId = createdCalendar?.id;
 
       Alert.alert("Success", "Calendar created successfully.");
 
-      router.replace("/(tabs)/calendars");
+      if (createdCalendarId !== undefined && createdCalendarId !== null) {
+        router.replace(`/(tabs)/calendars?selectedCalendarId=${encodeURIComponent(String(createdCalendarId))}`);
+      } else {
+        router.replace("/(tabs)/calendars");
+      }
 
     } catch (error: any) {
       console.log("FULL ERROR:", error);
@@ -333,6 +353,13 @@ export default function CreateScreen() {
           <View
             style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
           >
+            <Pressable
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
 
             <Pressable
               style={[
@@ -536,6 +563,27 @@ const styles = StyleSheet.create({
   },
   buttonGroupDesktop: {
     justifyContent: "space-between",
+  },
+
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  cancelText: {
+    color: "#10464d",
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: Fonts?.rounded,
   },
 
   publishButton: {

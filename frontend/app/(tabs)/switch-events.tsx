@@ -9,6 +9,7 @@ import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import apiClient from "@/services/api-client";
 
 export interface Event {
   id: string;
@@ -41,6 +42,7 @@ export default function EventsScreen() {
 
   // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
@@ -53,6 +55,29 @@ export default function EventsScreen() {
     return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
   };
 
+  useEffect(() => {
+    const fetchSubscribedCalendars = async () => {
+      if (!hasSession) {
+        setSubscribedCalendarIds([]);
+        return;
+      }
+
+      try {
+        const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
+        const dataArray = Array.isArray(subscribedData)
+          ? subscribedData
+          : (subscribedData as any)?.data || [];
+
+        setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
+      } catch (error) {
+        console.error("Error fetching subscribed calendars for events feed:", error);
+        setSubscribedCalendarIds([]);
+      }
+    };
+
+    void fetchSubscribedCalendars();
+  }, [hasSession]);
+
   // Mapeo y transformación de datos
   useEffect(() => {
     if (backendCalendars.length > 0 || backendEvents.length > 0) {
@@ -60,6 +85,22 @@ export default function EventsScreen() {
       backendCalendars.forEach((c: any) => {
         calendarMap[Number(c.id)] = c;
       });
+
+      const subscribedSet = new Set(subscribedCalendarIds);
+      const recommendedCalendarIds = new Set(
+        backendCalendars
+          .filter((c: any) => {
+            const calendarId = String(c.id);
+            const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
+            const isNotMine = !user?.id || creatorId !== String(user.id);
+            const isNotSubscribed = !subscribedSet.has(calendarId);
+            const isVisibleByPrivacy =
+              c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+
+            return isVisibleByPrivacy && isNotMine && isNotSubscribed;
+          })
+          .map((c: any) => String(c.id))
+      );
 
       const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
         const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
@@ -100,11 +141,16 @@ export default function EventsScreen() {
             ]
             : [],
         };
-      }).filter((evt: Event) => evt.id && evt.title);
+      }).filter((evt: Event) => (
+        evt.id &&
+        evt.title &&
+        evt.calendarId &&
+        recommendedCalendarIds.has(evt.calendarId)
+      ));
 
       setEvents(mappedEvents);
     }
-  }, [backendCalendars, backendEvents]);
+  }, [backendCalendars, backendEvents, subscribedCalendarIds, user, hasSession]);
 
   // Manejo de errores
   const errorMessage = calendarsError || eventsError;
@@ -192,7 +238,14 @@ export default function EventsScreen() {
               onSave={(id) => console.log("Save:", id)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyStateWrap}>
+              <Text style={styles.emptyText}>No recommended events right now.</Text>
+              <Text style={styles.emptySubtext}>
+                There are no events from calendars you do not own or follow that you can currently access.
+              </Text>
+            </View>
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -305,6 +358,30 @@ export const styles = StyleSheet.create({
     opacity: 0.8,
 
     fontWeight: "600",
+
+  },
+
+  emptyStateWrap: {
+
+    marginTop: 40,
+
+    paddingHorizontal: 10,
+
+  },
+
+  emptySubtext: {
+
+    marginTop: 6,
+
+    textAlign: "center",
+
+    color: "#4f6f74",
+
+    opacity: 0.9,
+
+    lineHeight: 20,
+
+    fontSize: 13,
 
   },
 

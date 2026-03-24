@@ -38,7 +38,7 @@ export const API_CONFIG = {
     editCoOwners: (calendarId: number | string) => buildEndpoint(`calendars/${calendarId}/co_owners/`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
-    nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radius=${radius}`),
+    nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radio=${radius}`),
     createCalendar: buildEndpoint('calendars/create/'),
     editCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/edit/`),
     createEvent: buildEndpoint('events/create/'),
@@ -49,6 +49,13 @@ export const API_CONFIG = {
     recoverPassword: buildEndpoint('auth/recover-password/'),
     setNewPassword: buildEndpoint('auth/set-new-password/'),
     validateResetToken: buildEndpoint('auth/validate-reset-token/'),
+    chatHistory: (eventId: number | string) => buildEndpoint(`events/${eventId}/chat/`),
+    chatWs: (eventId: number | string) => {
+      const wsBase = rootBaseURL.replace(/^https?/, (protocol) =>
+        protocol === 'https' ? 'wss' : 'ws'
+      );
+      return `${wsBase}/ws/chat/${eventId}/`;
+    },
     comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
     commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
     deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),

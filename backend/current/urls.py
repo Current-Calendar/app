@@ -64,6 +64,7 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/edit/', calendar_views.edit_calendar, name='edit_calendar'),
     path('api/v1/calendars/<int:calendar_id>/subscribe/', calendar_views.subscribe_calendar, name='subscribe_calendar'),
     path('api/v1/calendars/<int:calendar_id>/like/', calendar_views.toggle_like_calendar, name='like_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/invite/', calendar_views.invite_calendar, name='invite_calendar'),
     path('api/v1/calendars/create/', calendar_views.create_calendar, name='create_calendar'),
     path('api/v1/calendars/list/', calendar_views.list_calendars, name='list_calendarios'),
     path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
@@ -80,6 +81,7 @@ urlpatterns = [
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
     path('api/v1/events/<int:event_id>/rsvp/', event_views.rsvp_event, name='rsvp_event'),
+    path('api/v1/events/<int:event_id>/invite/', event_views.invite_event, name='invite_event'),
     path('api/v1/events/list', event_views.list_events, name='list_events'),
     path('api/v1/events/list/<int:calendar_id>', event_views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
@@ -90,9 +92,11 @@ urlpatterns = [
     path('api/v1/comments/<int:comment_id>/delete/', comment_views.delete_comment, name='delete_comment'),
     path('api/v1/radar/', radar_views.radar_events, name='radar_events'),
     path('api/v1/notifications/', notification_views.get_notifications, name='get_notifications'),
+    path('api/v1/notifications/<int:id>/', notification_views.handle_invite, name='handle_invite'),
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
 ]
 
 
