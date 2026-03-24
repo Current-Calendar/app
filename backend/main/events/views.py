@@ -80,7 +80,7 @@ def create_event(request):
             status=status.HTTP_404_NOT_FOUND,
         )
     for calendar in calendars:
-        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != creator:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != creator and not calendar.co_owners.filter(id=request.user.id).exists():
             return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -249,7 +249,7 @@ def edit_event(request: Request, event_id):
             )
 
     for calendar in calendars:
-        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != user:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != user and not calendar.co_owners.filter(id=request.user.id).exists() :
             return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -376,7 +376,7 @@ def asign_event_to_calendar(request):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-    if calendar.creator != request.user:
+    if calendar.creator != request.user and not calendar.co_owners.filter(id=request.user.id).exists():
         return Response(
             {"errors": ["No tienes permiso para modificar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
@@ -421,7 +421,7 @@ def deasign_event_from_calendar(request):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     
-    if calendar.creator != request.user:
+    if calendar.creator != request.user and not calendar.co_owners.filter(id=request.user.id).exists():
         return Response(
             {"error": "No tienes permiso para modificar este calendar"},
             status=status.HTTP_403_FORBIDDEN

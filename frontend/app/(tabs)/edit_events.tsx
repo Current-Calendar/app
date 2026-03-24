@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import apiClient, { appendPhoto } from "@/services/api-client";
+import { useCreateEventApi } from "@/hooks/use-create-event-api";
 
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
@@ -263,6 +264,7 @@ export default function EditEventsScreen() {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [placeFocused, setPlaceFocused] = useState(false);
+  const { loadMyCalendars } = useCreateEventApi();
 
   const suppressNextSearchRef = useRef(false);
 
@@ -304,7 +306,7 @@ export default function EditEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiClient.get<any>("/calendars/my-calendars/");
+      const data: any = await loadMyCalendars()
 
       const list =
         (Array.isArray(data) && data) ||
