@@ -21,8 +21,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function CalendarsScreen() {
   const router = useRouter();
+
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
+
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
@@ -191,6 +193,7 @@ export default function CalendarsScreen() {
             </TouchableOpacity>
           </View>
         )}
+
 
         <EventsSwitch />
 
