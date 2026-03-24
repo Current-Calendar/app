@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 export default function CalendarsScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const {
@@ -103,21 +103,23 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        <View style={styles.authHeader}>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => router.push('/login')}
-          >
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
+        {!isAuthenticated && (
+            <View style={styles.authHeader}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => router.push('/login')}
+              >
+                <Text style={styles.loginButtonText}>Log In</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.registerButton}
-            onPress={() => router.push('/register')}
-          >
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => router.push('/register')}
+              >
+                <Text style={styles.registerButtonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
         <EventsSwitch />
 

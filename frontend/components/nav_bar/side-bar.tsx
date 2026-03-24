@@ -7,11 +7,18 @@ import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navSideBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 
-export default function Sidebar() {
+  interface SidebarProps {
+  expanded: boolean;
+  setExpanded: (value: boolean) => void;
+}
+
+export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const [importVisible, setImportVisible] = useState(false);
+
+
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
