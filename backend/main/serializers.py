@@ -5,7 +5,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event, EventAttendance
 
-from .models import Calendar, Notification, Report
+from .models import Calendar, Notification, Report, ChatMessage
 from utils.storage import get_signed_url
 
 User = get_user_model()
@@ -188,6 +188,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
             "created_at",
             "likes_count",
             "liked_by_me",
+            "co_owners",
         )
         read_only_fields = ("id", "created_at")
 
@@ -221,6 +222,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
         read_only_fields = (
             "id",
@@ -230,6 +232,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
 
 
@@ -362,6 +365,16 @@ class ReportSerializer(serializers.ModelSerializer):
         
         return attrs
     
+class ChatMessageSerializer(serializers.ModelSerializer):
+    
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_photo = serializers.ImageField(source='sender.photo', read_only=True)
+
+    class Meta:
+        model = ChatMessage
+        
+        fields = ['id', 'event', 'sender', 'sender_username', 'sender_photo', 'text', 'timestamp']
+        read_only_fields = ['sender', 'event', 'timestamp']
 class EventAttendeeSerializer(serializers.ModelSerializer):
     """Serializa asistentes de un evento (solo ASSISTING)."""
     id = serializers.IntegerField(source='user.id')

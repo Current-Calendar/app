@@ -9,10 +9,9 @@ import { useNotifications } from "@/hooks/use-notifications";
 export default function TopBar() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const {user}=useAuth();
   const { unreadCount } = useNotifications();
   const goProfileOrLogin = () => {
-    router.push((isAuthenticated ? `/profile/${user?.username}` : "/login") as Href);
+    router.push((isAuthenticated ? "/profile" : "/login") as Href);
   };
 
   return (

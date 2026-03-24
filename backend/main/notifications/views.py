@@ -50,11 +50,17 @@ def handle_invite(request: Request, id: int) -> Response:
     if notification.type == "EVENT_INVITE":
         user_status = "ASSISTING" if user_status == "ACCEPT" else "NOT_ASSISTING"
 
-        EventAttendance.objects.create(
+        defaults = {
+            "status": user_status,
+        }
+        EventAttendance.objects.update_or_create(
             user=notification.recipient,
             event=notification.related_event,
-            status=user_status,
+            defaults=defaults,
+            create_defaults=defaults,
         )
+
+        notification.delete()
 
         return Response({"message": "Handled event invitation"})
 
@@ -62,6 +68,8 @@ def handle_invite(request: Request, id: int) -> Response:
     if user_status == "ACCEPT":
         calendar: Calendar = notification.related_calendar
         calendar.subscribers.add(notification.recipient)
+
+    notification.delete()
 
     return Response({"message": "Handled calendar invitation"})
 

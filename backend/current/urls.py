@@ -70,12 +70,14 @@ urlpatterns = [
     path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
     path('api/v1/calendars/friends-calendars/', calendar_views.list_friends_calendars, name='list_friends_calendars'),
     path('api/v1/calendars/my-calendars/', calendar_views.list_my_calendars, name='list_my_calendarios'),
+    path('api/v1/calendars/co_owned/', calendar_views.list_co_owned_calendars, name='list_co_owned_calendars'),
     path('api/v1/calendars/import-google-calendar/', calendar_views.import_google_calendar, name='import_google_calendar'),
     path('api/v1/calendars/import-ios-calendar/', calendar_views.iOS_calendar_import, name='import_ios_calendar'),
     path('api/v1/calendars/import-ics/', calendar_views.ics_import, name='import_ics_calendar'),
     path('api/v1/calendars/<int:calendar_id>/export/', calendar_views.export_to_ics, name='export_to_ics'),
     path('api/v1/calendars/<int:calendar_id>/share/', calendar_views.get_calendar_share_info, name='get_calendar_share_info'),
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
+    path('api/v1/calendars/<int:calendar_id>/co_owners/', calendar_views.edit_co_owners, name='edit_co_owners'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
     path('api/v1/events/<int:event_id>/rsvp/', event_views.rsvp_event, name='rsvp_event'),
@@ -94,6 +96,7 @@ urlpatterns = [
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
 ]
 
 

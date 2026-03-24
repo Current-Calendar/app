@@ -100,18 +100,6 @@ class InvitationNotificationTests(APITestCase):
         )
 
         self.cal1 = Calendar.objects.create(
-            name="Private Calendar",
-            privacy="PRIVATE",
-            creator=self.user1,
-        )
-
-        self.cal2 = Calendar.objects.create(
-            name="Friends Calendar",
-            privacy="PUBLIC",
-            creator=self.user2,
-        )
-
-        self.cal3 = Calendar.objects.create(
             name="Public Calendar",
             privacy="PUBLIC",
             creator=self.user1,
@@ -124,20 +112,20 @@ class InvitationNotificationTests(APITestCase):
             time=time(21, 00),
             creator=self.user1,
         )
-        self.event1.calendars.add(self.cal3)
+        self.event1.calendars.add(self.cal1)
         self.event1.save()
 
         self.notification = Notification.objects.create(
             recipient=self.user2,
-            sender=self.user2,
+            sender=self.user1,
             type='EVENT_INVITE',
             related_event=self.event1,
         )
         self.notification2 = Notification.objects.create(
             recipient=self.user3,
-            sender=self.user2,
+            sender=self.user1,
             type='CALENDAR_INVITE',
-            related_calendar=self.cal2,
+            related_calendar=self.cal1,
         )
 
     def test_accept_unauthenticated(self):
@@ -159,6 +147,7 @@ class InvitationNotificationTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_200_OK)
         self.assertTrue(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="ASSISTING").exists())
+        self.assertFalse(Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
 
     def test_decline_event(self):
         self.client.force_authenticate(self.user2)
@@ -169,6 +158,7 @@ class InvitationNotificationTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_200_OK)
         self.assertTrue(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="NOT_ASSISTING").exists())
+        self.assertFalse(Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
 
     def test_wrong_status(self):
         self.client.force_authenticate(self.user2)
@@ -179,6 +169,7 @@ class InvitationNotificationTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(EventAttendance.objects.filter(user=self.user2, event=self.event1, status="MAYBE").exists())
+        self.assertTrue(Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
 
     def test_accept_calendar(self):
         self.client.force_authenticate(self.user3)
@@ -187,6 +178,7 @@ class InvitationNotificationTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_200_OK)
         self.assertTrue(Calendar.objects.filter(subscribers__id=self.user3.pk).exists())
+        self.assertFalse(Notification.objects.filter(recipient=self.user3, type="CALENDAR_INVITE", related_calendar=self.cal1, sender=self.user1).exists())
 
     def test_decline_calendar(self):
         self.client.force_authenticate(self.user3)
@@ -197,4 +189,5 @@ class InvitationNotificationTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_200_OK)
         self.assertFalse(Calendar.objects.filter(subscribers__id=self.user3.pk).exists())
+        self.assertFalse(Notification.objects.filter(recipient=self.user3, type="CALENDAR_INVITE", related_calendar=self.cal1, sender=self.user1).exists())
     

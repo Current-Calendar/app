@@ -39,6 +39,8 @@ def can_view_calendar(calendar: Calendar, user) -> bool:
         return False
     if calendar.creator_id == user.id:
         return True
+    if calendar.co_owners.filter(id=user.id).exists():
+        return True
     if calendar.privacy == "FRIENDS":
         return _is_friend_viewer(calendar.creator, user)
     return False
@@ -73,6 +75,8 @@ def can_delete_comment(comment: Comment, user) -> bool:
     if comment.event_id and comment.event and comment.event.creator_id == user.id:
         return True
     if comment.calendar_id and comment.calendar and comment.calendar.creator_id == user.id:
+        return True
+    if comment.calendar_id and comment.calendar and comment.calendar.co_owners.filter(id=user.id).exists():
         return True
     return False
 
