@@ -1,14 +1,16 @@
 import datetime
+import html as html_lib
 import requests
 import socket
 import ipaddress
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from main.models import Calendar, Event, User
+from main.models import Calendar, Event, User, Notification, CalendarLike
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
@@ -16,11 +18,87 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.conf import settings
 from utils.security import get_safe_ip
+from utils.storage import get_signed_url
 from icalendar import Calendar as ICalCalendar
 from urllib.parse import urlparse
 
 REQUEST_TIMEOUT_SECONDS = 5
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def edit_co_owners(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    if calendar.creator != request.user and not calendar.co_owners.filter(id=request.user.id).exists():
+        return Response(
+            {"errors": ["You do not have permission to modify this calendar."]},
+            status = status.HTTP_403_FORBIDDEN
+        )
+
+    if "co_owners" not in request.data:
+        return Response(
+            {"errors": ["El campo 'co_owners' es obligatorio."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    co_owner_ids = request.data.get("co_owners")
+
+    if not isinstance(co_owner_ids, list):
+        return Response(
+            {"errors": ["El campo 'co_owners' debe ser una lista de IDs de usuario."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        parsed_ids = [int(user_id) for user_id in co_owner_ids]
+    except (TypeError, ValueError):
+        return Response(
+            {"errors": ["Todos los valores de 'co_owners' deben ser IDs numéricos."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    unique_ids = list(set(parsed_ids))
+
+    if calendar.creator_id in unique_ids:
+        return Response(
+            {"errors": ["El creador no puede añadirse como co-owner."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    users = User.objects.filter(id__in=unique_ids)
+    found_ids = set(users.values_list("id", flat=True))
+    missing_ids = [user_id for user_id in unique_ids if user_id not in found_ids]
+
+    if missing_ids:
+        return Response(
+            {"errors": [f"No existen usuarios con estos IDs: {missing_ids}."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if calendar.creator == request.user:
+        calendar.co_owners.set(users)
+    elif calendar.co_owners.filter(id=request.user.id).exists():
+        calendar.co_owners.add(*users)
+
+    co_owners_payload = list(
+        calendar.co_owners.values("id", "username")
+    )
+
+    return Response(
+        {
+            "id": calendar.id,
+            "name": calendar.name,
+            "description": calendar.description,
+            "privacy": calendar.privacy,
+            "origin": calendar.origin,
+            "creator": calendar.creator.id,
+            "created_at": calendar.created_at,
+            "co_owners": co_owners_payload,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -50,7 +128,7 @@ def publish_calendar(request, calendar_id):
             "privacy": calendar.privacy,
             "origin": calendar.origin,
             "creator": calendar.creator.id,
-            "created_at": calendar.created_at,
+            "created_at": calendar.created_at
         },
         status=status.HTTP_200_OK,
     )
@@ -97,7 +175,13 @@ def edit_calendar(request, calendar_id):
             setattr(calendar, campo, valor)
 
     if 'cover' in request.FILES:
+        if calendar.cover:
+            calendar.cover.delete(save=False)
         calendar.cover = request.FILES['cover']
+    elif request.data.get('remove_cover') == 'true':
+        if calendar.cover:
+            calendar.cover.delete(save=False)
+        calendar.cover = None
 
     calendar.save()
     return Response({
@@ -105,7 +189,8 @@ def edit_calendar(request, calendar_id):
         'name': calendar.name,
         'description': calendar.description,
         'privacy': calendar.privacy,
-        'cover': request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+        'cover': get_signed_url(request, calendar.cover),
+        'co_owners': _serialize_co_owners(calendar),
     }, status=status.HTTP_200_OK)
 
 
@@ -113,15 +198,44 @@ def edit_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated])
 def create_calendar(request):
     data = request.data
+    creator = request.user
+    
+    cover_file = request.FILES.get('cover')
 
     name = data.get('name')
+    if isinstance(name, str):
+        name = name.strip()
+    description = data.get('description', '')
 
-    if not name:
+    if not name or not isinstance(name, str) or name.strip() == "":
         return Response(
-            {"errors": ["El campo 'name' es obligatorio."]},
+            {"errors": ["El campo 'name' es obligatorio y no puede estar vacío."]},
             status = status.HTTP_400_BAD_REQUEST
         )
-    creator = request.user
+    
+    if description and not isinstance(description, str):
+        return Response(
+            {"errors": ["El campo 'description' debe ser texto."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    privacy = data.get('privacy', 'PRIVATE')
+    valid_privacy = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+
+    if privacy not in valid_privacy:
+        return Response(
+            {"errors": [f"El valor de 'privacy' no es válido. Valores permitidos: {', '.join(sorted(valid_privacy))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    origin = data.get('origin', 'CURRENT')
+    valid_origin = {choice[0] for choice in Calendar.ORIGIN_CHOICES}
+
+    if origin not in valid_origin:
+        return Response(
+            {"errors": [f"El valor de 'origin' no es válido. Valores permitidos: {', '.join(sorted(valid_origin))}."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     calendar = Calendar(
         creator=creator,
@@ -130,18 +244,16 @@ def create_calendar(request):
         privacy=data.get('privacy', 'PRIVATE'),
         origin=data.get('origin', 'CURRENT'),
         external_id=data.get('external_id'),
-        cover=request.FILES.get('cover')
     )
-
-    CONSTRAINT_PRIVADO = "unique_private_calendar_per_user"
+    
+    if cover_file:
+        calendar.cover.save(cover_file.name, cover_file, save=True)
 
     try:
         calendar.full_clean()
         with transaction.atomic():
             calendar.save()
     except ValidationError as exc:
-        # full_clean() / validate_constraints() puede lanzar ValidationError
-        # cuando se viola el UniqueConstraint condicional (privacy=PRIVADO).
         raw_messages = []
         if hasattr(exc, "message_dict"):
             for field_errors in exc.message_dict.values():
@@ -149,19 +261,13 @@ def create_calendar(request):
         if not raw_messages and getattr(exc, "messages", None):
             raw_messages.extend(exc.messages)
 
-        if any(CONSTRAINT_PRIVADO in str(m) for m in raw_messages):
-            return Response(
-                {"errors": ["El usuario ya tiene un calendario privado."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         return Response(
             {"errors": raw_messages or ["Datos inválidos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
     except IntegrityError:
         return Response(
-            {"errors": ["El usuario ya tiene un calendario privado."]},
+            {"errors": ["No se pudo crear el calendario por una restricción de datos."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -175,10 +281,38 @@ def create_calendar(request):
             "privacy": calendar.privacy,
             "creator_id": calendar.creator_id,
             "created_at": calendar.created_at,
-            "cover": request.build_absolute_uri(calendar.cover.url) if calendar.cover else None,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": False,
+            "cover": get_signed_url(request, calendar.cover),
         },
         status=status.HTTP_201_CREATED,
     )
+
+
+def _get_liked_calendar_ids(user, queryset):
+    if not user.is_authenticated:
+        return set()
+    return set(
+        CalendarLike.objects.filter(user=user, calendar__in=queryset)
+        .values_list("calendar_id", flat=True)
+    )
+
+
+def _serialize_co_owners(calendar: Calendar):
+    return list(calendar.co_owners.values("id", "username"))
+
+
+def _can_like_calendar(user, calendar: Calendar) -> bool:
+    if calendar.co_owners.filter(id=user.id).exists() : 
+        return True
+    if calendar.creator == user:
+        return True
+    if calendar.privacy == "PUBLIC":
+        return True
+    if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
+        return True
+    return False
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -188,7 +322,9 @@ def list_subscribed_calendars(request):
 
     GET /api/v1/calendars/subscribed/
     """
-    queryset = request.user.subscribed_calendars.select_related('creator').order_by('-created_at')
+    queryset = request.user.subscribed_calendars.select_related('creator').prefetch_related('co_owners').order_by('-created_at')
+
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
 
     results = [
         {
@@ -199,8 +335,12 @@ def list_subscribed_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
         }
         for cal in queryset
     ]
@@ -227,6 +367,8 @@ def list_friends_calendars(request):
         privacy='FRIENDS'
     ).order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -236,8 +378,50 @@ def list_friends_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
+        }
+        for cal in queryset
+    ]
+
+    return Response(results, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_co_owned_calendars(request):
+    """
+    List calendars where the authenticated user is a co-owner.
+
+    GET /api/v1/calendars/co_owners/
+    """
+    user = request.user
+
+    queryset = Calendar.objects.select_related('creator').filter(
+        co_owners=user
+    ).order_by('-created_at')
+
+    liked_ids = _get_liked_calendar_ids(user, queryset)
+
+    results = [
+        {
+            "id": cal.id,
+            "name": cal.name,
+            "description": cal.description,
+            "privacy": cal.privacy,
+            "origin": cal.origin,
+            "creator_id": cal.creator_id,
+            "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
+            "created_at": cal.created_at,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
         }
         for cal in queryset
     ]
@@ -261,7 +445,75 @@ def subscribe_calendar(request, calendar_id):
         return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
     else:
         user.subscribed_calendars.add(calendar)
+        Notification.objects.create(
+            recipient=calendar.creator,
+            sender=user,
+            type= 'CALENDAR_FOLLOW',
+            message=f"{user.username} has subscribed to '{calendar.name}'.",
+            related_calendar=calendar
+        )
         return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def subscribe_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+
+    if calendar.creator == user:
+        return Response(
+            {'error': 'No puedes suscribirte a tu propio calendario.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.subscribed_calendars.filter(id=calendar_id).exists():
+        user.subscribed_calendars.remove(calendar)
+        return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
+    else:
+        user.subscribed_calendars.add(calendar)
+        Notification.objects.create(
+            recipient=calendar.creator,
+            sender=user,
+            type= 'CALENDAR_FOLLOW',
+            message=f"{user.username} has subscribed to '{calendar.name}'.",
+            related_calendar=calendar
+        )
+        return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_like_calendar(request, calendar_id):
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+
+    with transaction.atomic():
+        like = CalendarLike.objects.filter(user=user, calendar=calendar).first()
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            if not _can_like_calendar(user, calendar):
+                return Response(
+                    {"errors": ["No tienes permiso para dar me gusta a este calendar."]},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            try:
+                CalendarLike.objects.create(user=user, calendar=calendar)
+            except IntegrityError:
+                pass
+            liked = True
+
+    calendar.refresh_from_db(fields=['likes_count'])
+    return Response(
+        {
+            "calendar_id": calendar_id,
+            "liked": liked,
+            "likes_count": calendar.likes_count,
+            "liked_by_me": liked,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])
@@ -293,6 +545,8 @@ def list_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -302,8 +556,11 @@ def list_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover)
         }
         for cal in queryset
     ]
@@ -323,7 +580,7 @@ def list_my_calendars(request):
         q       (str)  -- case-insensitive substring match on calendar name
         privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
     """
-    queryset = Calendar.objects.select_related('creator').filter(creator=request.user)
+    queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners').filter(creator=request.user)
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -341,6 +598,8 @@ def list_my_calendars(request):
 
     queryset = queryset.order_by('-created_at')
 
+    liked_ids = _get_liked_calendar_ids(request.user, queryset)
+
     results = [
         {
             "id": cal.id,
@@ -350,8 +609,12 @@ def list_my_calendars(request):
             "origin": cal.origin,
             "creator_id": cal.creator_id,
             "creator_username": cal.creator.username,
+            "creator_photo": get_signed_url(request, cal.creator.photo),
             "created_at": cal.created_at,
-            "cover": request.build_absolute_uri(cal.cover.url) if cal.cover else None,
+            "likes_count": cal.likes_count,
+            "liked_by_me": cal.id in liked_ids,
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
         }
         for cal in queryset
     ]
@@ -595,6 +858,112 @@ def ics_import(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_calendar_share_info(request, calendar_id):
+    """Returns shareable link info for a calendar."""
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    share_url = request.build_absolute_uri(f'/share/calendar/{calendar_id}/')
+    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+
+    return Response({
+        'calendar_id': calendar.id,
+        'name': calendar.name,
+        'description': calendar.description,
+        'cover': get_signed_url(request, calendar.cover),
+        'privacy': calendar.privacy,
+        'creator_username': calendar.creator.username,
+        'co_owners': _serialize_co_owners(calendar),
+        'share_url': share_url,
+        'deep_link': deep_link,
+    })
+
+
+def share_calendar_html(request, calendar_id):
+    """Serve an HTML page with Open Graph meta tags for rich link previews."""
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    if calendar.privacy == 'PRIVATE':
+        return HttpResponse(
+            "<h1>This calendar is private</h1>",
+            status=403,
+            content_type='text/html'
+        )
+
+    _default_og_image = (
+        getattr(settings, 'SHARE_OG_IMAGE_FALLBACK', None)
+        or request.build_absolute_uri('/static/images/og-default.png')
+    )
+    if calendar.cover:
+        raw_cover_url = get_signed_url(request, calendar.cover)
+        is_local = raw_cover_url.startswith('http://localhost') or raw_cover_url.startswith('http://127.')
+        # visual_cover: always show the real photo in the page
+        visual_cover_url = raw_cover_url
+        # og_cover: use fallback when local (WhatsApp/Telegram can't reach localhost)
+        og_cover_url = raw_cover_url if not is_local else _default_og_image
+    else:
+        visual_cover_url = ''
+        og_cover_url = _default_og_image
+    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    page_url = request.build_absolute_uri()
+
+    safe_name = html_lib.escape(calendar.name)
+    safe_desc = html_lib.escape(calendar.description or 'View this calendar on Current Calendar')
+    safe_creator = html_lib.escape(calendar.creator.username)
+    safe_visual_cover = html_lib.escape(visual_cover_url)
+    safe_og_cover = html_lib.escape(og_cover_url)
+    safe_deep_link = html_lib.escape(deep_link)
+    safe_page_url = html_lib.escape(page_url)
+
+    cover_html = f'<img class="cover" src="{safe_visual_cover}" alt="{safe_name}">' if visual_cover_url else '<div class="cover-placeholder">📅</div>'
+    desc_html = f'<p class="description">{safe_desc}</p>' if calendar.description else ''
+    og_image_html = f'<meta property="og:image" content="{safe_og_cover}"><meta name="twitter:image" content="{safe_og_cover}">'
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{safe_name} · Current Calendar</title>
+  <meta property="og:title" content="{safe_name}">
+  <meta property="og:description" content="{safe_desc}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{safe_page_url}">
+  {og_image_html}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{safe_name}">
+  <meta name="twitter:description" content="{safe_desc}">
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f4; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }}
+    .card {{ background: #fff; border-radius: 16px; overflow: hidden; max-width: 440px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }}
+    .cover {{ width: 100%; height: 220px; object-fit: cover; background: #10464d; display: block; }}
+    .cover-placeholder {{ width: 100%; height: 180px; background: linear-gradient(135deg, #10464d, #1a7a80); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 48px; }}
+    .body {{ padding: 24px; }}
+    h1 {{ font-size: 22px; font-weight: 800; color: #10464d; margin-bottom: 6px; }}
+    .creator {{ font-size: 14px; color: #888; margin-bottom: 12px; }}
+    .description {{ font-size: 15px; color: #555; line-height: 1.5; margin-bottom: 20px; }}
+    .btn {{ display: block; text-align: center; background: #10464d; color: #fff; text-decoration: none; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 16px; }}
+    .btn:hover {{ background: #0d3a40; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    {cover_html}
+    <div class="body">
+      <h1>{safe_name}</h1>
+      <p class="creator">by @{safe_creator}</p>
+      {desc_html}
+      <a class="btn" href="{safe_deep_link}">Open in Current Calendar</a>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return HttpResponse(html_content, content_type='text/html; charset=utf-8')
+
+
+@api_view(['GET'])
 def export_to_ics(request, calendar_id):
     """Endpoint para exportar un calendar a formato ICS."""
     try:
@@ -615,3 +984,48 @@ def export_to_ics(request, calendar_id):
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
     return response
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def invite_calendar(request: Request, calendar_id: int) -> Response:
+    calendar = get_object_or_404(Calendar, pk=calendar_id)
+    user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
+
+    if request.user == user_to_invite:
+        return Response(
+            {"error": "Cannot invite yourself"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if calendar.creator != request.user:
+        return Response(
+            {"error": "Only the calendar creator can send invitations"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if calendar.privacy == "PRIVATE":
+        return Response(
+            {"error": "Cannot invite to a private calendar"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    elif calendar.privacy == "FRIENDS":
+        if not request.user.is_friend_with(user_to_invite):
+            return Response(
+                {"error": "Cannot invite non-friend to friends calendar"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if not Notification.objects.filter(
+        recipient=user_to_invite,
+        type="CALENDAR_INVITE",
+        related_calendar=calendar,
+        sender=request.user,
+    ).exists():
+        Notification.objects.create(
+            recipient=user_to_invite,
+            type="CALENDAR_INVITE",
+            related_calendar=calendar,
+            sender=request.user,
+        )
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

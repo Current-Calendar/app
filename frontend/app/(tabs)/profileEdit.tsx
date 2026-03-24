@@ -143,7 +143,7 @@ const EditProfileScreen = () => {
 
       setShowDeleteConfirm(false);
       await logout();
-      router.replace('/calendars');
+      router.replace('/login');
     } catch (error) {
       console.error('Error deleting profile:', error);
       setDeleteError(error instanceof Error ? error.message : 'Could not delete your profile. Please try again.');

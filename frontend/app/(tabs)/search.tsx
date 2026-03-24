@@ -19,6 +19,64 @@ import { Calendar, CalendarEvent } from '@/types/calendar';
 
 const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
 
+function normalizeText(value: unknown): string {
+    return String(value ?? "").trim();
+}
+
+function getMatchIndex(text: string, term: string): number {
+    if (!text || !term) return -1;
+    return text.toLowerCase().indexOf(term.toLowerCase());
+}
+
+function buildDescriptionSnippet(description: string, term: string, maxLength = 100): string {
+    const raw = normalizeText(description);
+    const query = normalizeText(term);
+    if (!raw) return "";
+    if (!query) return raw.length > maxLength ? `${raw.slice(0, maxLength).trim()}...` : raw;
+
+    const matchIndex = getMatchIndex(raw, query);
+    if (matchIndex < 0) {
+        return raw.length > maxLength ? `${raw.slice(0, maxLength).trim()}...` : raw;
+    }
+
+    const contextSize = Math.max(20, Math.floor((maxLength - query.length) / 2));
+    const start = Math.max(0, matchIndex - contextSize);
+    const end = Math.min(raw.length, matchIndex + query.length + contextSize);
+    const prefix = start > 0 ? "..." : "";
+    const suffix = end < raw.length ? "..." : "";
+
+    return `${prefix}${raw.slice(start, end).trim()}${suffix}`;
+}
+
+function renderHighlightedText(text: string, query: string, baseStyle: any, highlightStyle: any) {
+    const source = normalizeText(text);
+    const term = normalizeText(query);
+
+    if (!source) {
+        return <Text style={baseStyle} />;
+    }
+
+    if (!term) {
+        return <Text style={baseStyle}>{source}</Text>;
+    }
+
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")})`, "ig");
+    const parts = source.split(regex);
+
+    return (
+        <Text style={baseStyle}>
+            {parts.map((part, index) => {
+                const isMatch = part.toLowerCase() === term.toLowerCase();
+                return (
+                    <Text key={`${part}-${index}`} style={isMatch ? highlightStyle : undefined}>
+                        {part}
+                    </Text>
+                );
+            })}
+        </Text>
+    );
+}
+
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
     const router = useRouter();
@@ -98,6 +156,11 @@ export default function SearchScreen() {
 
     const handleEventSelect = (event: CalendarEvent) => {
         setActiveEvent(event);
+        if (event.calendarId) {
+            router.push(`/calendar-view?calendarId=${event.calendarId}`);
+            return;
+        }
+        router.push(`/switch-events`);
     };
 
     return (
@@ -124,7 +187,11 @@ export default function SearchScreen() {
                             <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: user.photo || 'https://i.pravatar.cc/100' }}
+                                        source={
+                                            user.photo && user.photo.trim() !== ""
+                                                ? { uri: user.photo }
+                                                : require('../../assets/images/default-user.jpg')
+                                        }
                                         style={styles.avatar}
                                     />
                                     <View style={styles.userTextContainer}>
@@ -155,6 +222,11 @@ export default function SearchScreen() {
 
                     if (item.type === 'calendar') {
                         const cal = item.data as Calendar;
+                        const description = normalizeText(cal.description);
+                        const titleMatches = getMatchIndex(normalizeText(cal.name), query) >= 0;
+                        const descriptionMatches = getMatchIndex(description, query) >= 0;
+                        const descriptionSnippet = buildDescriptionSnippet(description, query);
+
                         return (
                             <TouchableOpacity style={styles.calendarCard} onPress={() => handleCalendarSelect(cal.id)}>
                                 {cal.cover && (
@@ -162,13 +234,31 @@ export default function SearchScreen() {
                                 )}
                                 <View style={styles.calendarInfo}>
                                     <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
-                                    <Text style={styles.calendarDesc} numberOfLines={2} ellipsizeMode="tail">{cal.description}</Text>
+
+                                    {!!descriptionSnippet && (
+                                        <View>
+                                            {renderHighlightedText(
+                                                descriptionSnippet,
+                                                query,
+                                                styles.calendarDesc,
+                                                styles.highlightText
+                                            )}
+                                            {descriptionMatches && !titleMatches && (
+                                                <Text style={styles.matchTag}>Matches description</Text>
+                                            )}
+                                        </View>
+                                    )}
                                 </View>
                             </TouchableOpacity>
                         );
                     }
 
                     const ev = item.data as CalendarEvent;
+                    const eventDescription = normalizeText(ev.description);
+                    const eventTitleMatches = getMatchIndex(normalizeText(ev.title), query) >= 0;
+                    const eventDescriptionMatches = getMatchIndex(eventDescription, query) >= 0;
+                    const eventDescriptionSnippet = buildDescriptionSnippet(eventDescription, query);
+
                     return (
                         <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev)}>
                             <View style={styles.eventRow}>
@@ -185,6 +275,20 @@ export default function SearchScreen() {
                                         {ev.calendarId &&
                                             ` • ${calendarMap[ev.calendarId] || ''}`}
                                     </Text>
+
+                                    {!!eventDescriptionSnippet && (
+                                        <View>
+                                            {renderHighlightedText(
+                                                eventDescriptionSnippet,
+                                                query,
+                                                styles.eventDesc,
+                                                styles.highlightText
+                                            )}
+                                            {eventDescriptionMatches && !eventTitleMatches && (
+                                                <Text style={styles.matchTag}>Matches description</Text>
+                                            )}
+                                        </View>
+                                    )}
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -314,6 +418,11 @@ const styles = StyleSheet.create({
         color: "#666",
         marginTop: 2,
     },
+    eventDesc: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+    },
     eventRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -323,5 +432,15 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 8,
         marginRight: 12,
+    },
+    highlightText: {
+        color: "#10464d",
+        fontWeight: "700",
+    },
+    matchTag: {
+        marginTop: 4,
+        fontSize: 11,
+        color: "#10464d",
+        fontWeight: "700",
     },
 });
