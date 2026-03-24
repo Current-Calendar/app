@@ -88,11 +88,22 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'current.asgi.application'
 
+redis_host = os.getenv('REDIS_HOST', 'redis')
+redis_port = os.getenv('REDIS_PORT', '6379')
+redis_password = os.getenv('REDIS_PASSWORD')
+
+if redis_password:
+    redis_location = f"redis://:{redis_password}@{redis_host}:{redis_port}/1"
+    channels_redis_location = f"redis://:{redis_password}@{redis_host}:{redis_port}/2"
+else:
+    redis_location = f"redis://{redis_host}:{redis_port}/1"
+    channels_redis_location = f"redis://{redis_host}:{redis_port}/2"
+
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('redis', 6379)],
+            "hosts": [channels_redis_location],
         },
     },
 }
@@ -189,16 +200,6 @@ DATABASES = {
 }
 
 # Caching configuration using Redis
-
-redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
-redis_port = os.getenv('REDIS_PORT', '6379')
-redis_password = os.getenv('REDIS_PASSWORD')
-
-if redis_password:
-    redis_location = f"redis://:{redis_password}@{redis_host}:{redis_port}/1"
-else:
-    redis_location = f"redis://{redis_host}:{redis_port}/1"
-    
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
