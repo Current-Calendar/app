@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { eventDetailsModalStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 const TEXT = "#10464D";
 
@@ -51,6 +52,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
   const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
 
   const distanceKm = formatDistanceKm(event?.distance_km);
+  const hasPhoto = typeof event?.photo === "string" && event.photo.trim().length > 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -61,15 +63,21 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
 
-          {event.photo ? (
-            <View style={eventDetailsModalStyles.coverWrap}>
+          <View style={eventDetailsModalStyles.coverWrap}>
+            {hasPhoto ? (
               <Image
-                source={{ uri: event.photo }}
+                source={{ uri: event.photo.trim() }}
                 style={eventDetailsModalStyles.cover}
                 resizeMode="cover"
               />
-            </View>
-          ) : null}
+            ) : (
+              <DefaultCalendarCover
+                style={eventDetailsModalStyles.cover}
+                label="Evento"
+                iconSize={52}
+              />
+            )}
+          </View>
 
           <View style={eventDetailsModalStyles.content}>
             {!!title && <Text style={eventDetailsModalStyles.title}>{title}</Text>}

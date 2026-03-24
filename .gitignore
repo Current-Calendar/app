@@ -13,3 +13,4 @@ venv
 /backend/dataRS_events.dat
 
 .idea
+.vercel

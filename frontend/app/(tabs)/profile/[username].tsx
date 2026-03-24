@@ -5,21 +5,27 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import CommentsModalC from '../../../components/comments-modal-c';
-import profileStyles from './profileStyles';
-import PublicProfile from './PublicProfile';
-import apiClient, { appendPhoto } from '../../../services/api-client';
+import profileStyles from '../../../styles/profile-styles';
+import apiClient, { appendPhoto } from '../../../services/api-client';  
+import { useProfileActions } from '@/hooks/use-profile-actions';
+import LogoutModal from '../../../components/logout-modal';
 
+import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
+import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
+import { ReportModal } from '@/components/report-modal';
+import { Calendar } from '@/types/calendar';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -30,6 +36,8 @@ type OwnProfileCalendarResponse = {
   origin: string;
   creator: string;
   created_at: string;
+  likes_count?: number;
+  liked_by_me?: boolean;
 };
 
 type OwnProfileResponse = {
@@ -70,13 +78,114 @@ const mapCalendarsFromApi = (items: OwnProfileCalendarResponse[]): CalendarData[
     description: item.description ?? undefined,
     cover: item.cover ?? undefined,
     privacy: item.privacy,
+    likes_count: item.likes_count ?? 0,
+    liked_by_me: item.liked_by_me ?? false,
   }));
 
-const ProfileScreen = () => {
+const toCalendarData = (item: CalendarItem): CalendarData => ({
+  id: String(item.id),
+  name: item.name,
+  description: item.description,
+  cover: item.cover,
+  likes_count: (item as any).likes_count ?? 0,
+  liked_by_me: (item as any).liked_by_me ?? false,
+});
+
+const handleLikeInList = async (
+  id: string,
+  setter: React.Dispatch<React.SetStateAction<CalendarData[]>>
+) => {
+  try {
+    const res = await apiClient.post<{ liked: boolean; likes_count: number }>(
+      `/calendars/${id}/like/`
+    );
+    setter((prev) =>
+      prev.map((cal) =>
+        String(cal.id) === id
+          ? { ...cal, liked_by_me: res.liked, likes_count: res.likes_count }
+          : cal
+      )
+    );
+  } catch (error) {
+    Alert.alert('Error', 'Could not like this calendar.');
+    console.error('Like error:', error);
+  }
+};
+
+const ProfileHeader = () => (
+  <>
+    <View style={profileStyles.profileHeaderGreen} />
+    <View style={profileStyles.profileHeaderCoral} />
+  </>
+);
+
+const ProfileAvatar = ({ uri }: { uri?: string }) => (
+  <View style={profileStyles.profilePictureContainer}>
+    <Image
+      source={uri ? { uri } : require('../../../assets/images/default-user.jpg')}
+      style={profileStyles.profilePicture}
+    />
+  </View>
+);
+
+const ProfileStats = ({
+  calendarsCount,
+  totalFollowers,
+  totalFollowing,
+}: {
+  calendarsCount: number;
+  totalFollowers: number;
+  totalFollowing: number;
+}) => (
+  <View style={profileStyles.statsContainer}>
+    <View style={profileStyles.statItem}>
+      <Text style={profileStyles.statNumber}>{calendarsCount}</Text>
+      <Text style={profileStyles.statLabel}>Calendars</Text>
+    </View>
+    <View style={profileStyles.statItem}>
+      <Text style={profileStyles.statNumber}>{totalFollowers}</Text>
+      <Text style={profileStyles.statLabel}>Followers</Text>
+    </View>
+    <View style={[profileStyles.statItem, profileStyles.statItemLast]}>
+      <Text style={profileStyles.statNumber}>{totalFollowing}</Text>
+      <Text style={profileStyles.statLabel}>Following</Text>
+    </View>
+  </View>
+);
+
+const CalendarSectionPill = ({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) => (
+  <View style={profileStyles.calendarSection}>
+    <View style={profileStyles.calendarSectionPill}>
+      <View style={profileStyles.gridHeaderContainer}>
+        <Text style={profileStyles.gridHeaderText}>{title}</Text>
+        {count !== undefined && (
+          <Text style={profileStyles.gridHeaderCount}>{count}</Text>
+        )}
+      </View>
+      {children}
+    </View>
+  </View>
+);
+
+const OwnProfile = () => {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
 
   const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const performLogout = async () => {
+    setShowLogoutModal(false); 
+    await logout();            
+    router.replace('/login'); 
+  };
 
   const isMe = !username || username === currentUser?.username;
 
@@ -89,38 +198,22 @@ const ProfileScreen = () => {
   const [myCalendars, setMyCalendars] = useState<CalendarData[]>([]);
   const [followingCalendars, setFollowingCalendars] = useState<CalendarData[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarData | null>(null);
-  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
 
   useEffect(() => {
-    if (!isMe) {
-      setShownUser(null);
-      setMyCalendars([]);
-      setFollowingCalendars([]);
-      setProfileError(null);
-      return;
-    }
-
-    if (!currentUser) {
-      setShownUser(null);
-      return;
-    }
+    if (!currentUser) { setShownUser(null); return; }
 
     let isMounted = true;
 
     const fetchOwnProfile = async () => {
       setIsLoadingProfile(true);
       setProfileError(null);
-
       try {
         const data: OwnProfileResponse = await apiClient.get('/users/me/');
-
         if (!isMounted) return;
-
         setShownUser(mapUserFromApi(data));
         setMetrics({
           total_followers: data.total_followers ?? 0,
@@ -135,118 +228,58 @@ const ProfileScreen = () => {
           setProfileError("We couldn't load your profile. Please check your connection and try again.");
         }
       } finally {
-        if (isMounted) {
-          setIsLoadingProfile(false);
-        }
+        if (isMounted) setIsLoadingProfile(false);
       }
     };
 
     fetchOwnProfile();
+    return () => { isMounted = false; };
+  }, [currentUser, reloadKey]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [isMe, currentUser, reloadKey]);
+  const handleLikeMy = (id: string) => handleLikeInList(id, setMyCalendars);
+  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendars);
 
-  const handleRetryProfile = () => setReloadKey((prev) => prev + 1);
-
-  const handleEditProfile = () => {
-    if (!currentUser) return;
-    router.push('/(tabs)/profileEdit' as any);
-  };
-
-  const handleLogout = async () => {
-    const message = "Are you sure you want to log out?";
-
-    if (Platform.OS === 'web') {
-      const confirmLogout = window.confirm(message);
-      if (confirmLogout) {
-        performLogout();
-      }
-    } else {
-      Alert.alert("Logout", message, [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes, exit", style: "destructive", onPress: performLogout },
-      ]);
-    }
-  };
-
-  const performLogout = async () => {
-    await logout();
-    router.replace('/login' as any);
-  };
-
-  const handleChangePhoto = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert('Permission required', 'Permission to access the library is required.');
-        return;
-      }
-
-      const pickerResult = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (pickerResult.canceled) return;
-
-      const asset = pickerResult.assets[0];
-      setIsUploadingPhoto(true);
-
-      const formData = new FormData();
-      await appendPhoto(formData, asset);
-
-      const updated = await apiClient.put<{ user: { photo?: string } }>('/users/me/edit/', formData);
-      const newPhoto = updated?.user?.photo ?? asset.uri;
-
-      setShownUser((prev) => (prev ? { ...prev, photo: newPhoto } : prev));
-      if (currentUser) {
-        updateUserContext({ ...currentUser, photo: newPhoto });
-      }
-    } catch (error) {
-      console.error('Error updating photo:', error);
-      Alert.alert('Error', "We couldn't update the photo. Please try again.");
-    } finally {
-      setIsUploadingPhoto(false);
-    }
-  };
-
-  const handleOpenCalendarComments = (calendarId: string) => {
-    const allCalendars = [...myCalendars, ...followingCalendars];
-    const found = allCalendars.find((cal) => String(cal.id) === String(calendarId));
-
+  const handleComment = (id: string, list: CalendarData[]) => {
+    const found = list.find((c) => String(c.id) === id);
     if (found) {
-      setSelectedCalendar(found);
-      setCommentsModalVisible(true);
+      setSelectedCalendar({
+        id: found.id as string,
+        name: found.name,
+        description: found.description || '',
+        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        origin: 'CURRENT',
+        creator: '',
+        color: '#10464d',
+        cover: found.cover ?? undefined,
+        likes_count: found.likes_count ?? 0,
+        liked_by_me: found.liked_by_me ?? false,
+      });
+      setCommentsVisible(true);
     }
   };
 
-  const handleCloseCommentsModal = () => {
-    setCommentsModalVisible(false);
-    setSelectedCalendar(null);
+  const handleLogout = () => {
+    setShowLogoutModal(true); 
   };
 
-  if (!isMe && username) {
-    return <PublicProfile targetUsername={username} />;
-  }
 
-  if (isMe && isLoadingProfile) {
+  if (isLoadingProfile) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
-        <ActivityIndicator size="large" color="#164E52" />
+        <ActivityIndicator size="large" color="#10464d" />
       </SafeAreaView>
     );
   }
 
-  if (isMe && profileError) {
+  if (profileError) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
         <Text style={profileStyles.errorText}>{profileError}</Text>
-        <TouchableOpacity style={profileStyles.actionButton} onPress={handleRetryProfile}>
-          <Text style={profileStyles.actionButtonText}>Reintentar</Text>
+        <TouchableOpacity
+          style={profileStyles.actionButton}
+          onPress={() => setReloadKey((k) => k + 1)}
+        >
+          <Text style={profileStyles.actionButtonText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -257,111 +290,302 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={profileStyles.container}>
       <ScrollView style={profileStyles.scrollView}>
+
+        <ProfileHeader />
+
         <View style={profileStyles.profileSection}>
-          <View style={profileStyles.profileRow}>
-            <TouchableOpacity
-              style={profileStyles.profilePictureContainer}
-              onPress={handleChangePhoto}
-              disabled={isUploadingPhoto}
-            >
-              <Image
-                source={
-                shownUser.photo && shownUser.photo.trim() !== ""
-                  ? { uri: shownUser.photo }
-                  : require('../../../assets/images/default-user.jpg')
-              }
-                style={profileStyles.profilePicture}
-              />
-              {isUploadingPhoto ? (
-                <View style={profileStyles.photoOverlay}>
-                  <ActivityIndicator size="small" color="#ffffff" />
-                </View>
-              ) : (
-                <View style={profileStyles.photoOverlay}>
-                  <Text style={profileStyles.photoOverlayText}>✎</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+          <ProfileAvatar uri={shownUser.photo} />
 
-            <View style={profileStyles.statsContainer}>
-              <Text style={profileStyles.name}>{shownUser.username}</Text>
-              {shownUser.pronouns ? (
-                <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
-              ) : null}
-
-              <View style={profileStyles.statsRow}>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.calendars_count}</Text>
-                  <Text style={profileStyles.statLabel}>Calendars</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_followers}</Text>
-                  <Text style={profileStyles.statLabel}>Followers</Text>
-                </View>
-                <View style={profileStyles.statItem}>
-                  <Text style={profileStyles.statNumber}>{metrics.total_following}</Text>
-                  <Text style={profileStyles.statLabel}>Following</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+          <Text style={profileStyles.name}>{shownUser.username}</Text>
+          {shownUser.pronouns ? (
+            <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
+          ) : null}
 
           <View style={profileStyles.bioSection}>
             <Text style={profileStyles.bio}>
-              {shownUser.bio || 'Añade una biografía para que otros te conozcan.'}
+              {shownUser.bio || 'Add a bio so others can get to know you.'}
             </Text>
           </View>
 
-          <TouchableOpacity style={profileStyles.actionButton} onPress={handleEditProfile}>
-            <Text style={profileStyles.actionButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <ProfileStats
+            calendarsCount={metrics.calendars_count}
+            totalFollowers={metrics.total_followers}
+            totalFollowing={metrics.total_following}
+          />
 
-          <TouchableOpacity
-            style={[profileStyles.actionButton, profileStyles.logoutButton]}
-            onPress={handleLogout}
-          >
-            <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
-              Logout
-            </Text>
-          </TouchableOpacity>
+          <View style={profileStyles.buttonsRow}>
+            <TouchableOpacity
+              style={profileStyles.actionButton}
+              onPress={() => router.push('/(tabs)/profile/profileEdit' as any)}
+            >
+              <Text style={profileStyles.actionButtonText}>Edit profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[profileStyles.actionButton, profileStyles.logoutButton]}
+              onPress={handleLogout}
+            >
+              <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
+                Log out
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={profileStyles.postsGrid}>
-          <Text style={profileStyles.gridHeaderText}>My Calendars</Text>
-          {myCalendars.length > 0 ? (
-            myCalendars.map((cal) => (
-              <CalendarCard
-                key={cal.id}
-                calendar={cal}
-                onComment={handleOpenCalendarComments}
-              />
-            ))
-          ) : (
-            <Text style={profileStyles.emptyText}>No tienes calendarios creados aún.</Text>
-          )}
+        <View style={profileStyles.divider} />
 
-          <Text style={profileStyles.gridHeaderText}>Following</Text>
-          {followingCalendars.length > 0 ? (
-            followingCalendars.map((cal) => (
-              <CalendarCard
-                key={cal.id}
-                calendar={cal}
-                onComment={handleOpenCalendarComments}
-              />
-            ))
-          ) : (
-            <Text style={profileStyles.emptyText}>No sigues ningún calendario aún.</Text>
-          )}
+        <View style={profileStyles.calendarsWrapper}>
+          <CalendarSectionPill title="My calendars" count={myCalendars.length}>
+            {myCalendars.length > 0 ? (
+              myCalendars.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeMy}
+                  onComment={(id) => handleComment(id, myCalendars)}
+                />
+              ))
+            ) : (
+              <Text style={profileStyles.emptyText}>No calendars created yet.</Text>
+            )}
+          </CalendarSectionPill>
+
+          <CalendarSectionPill title="Following" count={followingCalendars.length}>
+            {followingCalendars.length > 0 ? (
+              followingCalendars.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeFollowing}
+                  onComment={(id) => handleComment(id, followingCalendars)}
+                />
+              ))
+            ) : (
+              <Text style={profileStyles.emptyText}>
+                {"You're not following any calendars yet."}
+              </Text>
+            )}
+          </CalendarSectionPill>
         </View>
+
       </ScrollView>
 
+      {/* AQUÍ INVOCAMOS TU NUEVO MODAL DE LEGO */}
+      <LogoutModal 
+        visible={showLogoutModal} 
+        onClose={() => setShowLogoutModal(false)} 
+        onConfirm={performLogout} 
+      />
+
       <CommentsModalC
-        visible={commentsModalVisible}
-        onClose={handleCloseCommentsModal}
+        visible={commentsVisible}
+        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
         calendar={selectedCalendar}
       />
     </SafeAreaView>
   );
+};
+
+const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
+  const router = useRouter();
+  const { user: currentUser } = useAuth();
+  const [reportOpen, setReportOpen] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const [followingCalendarsData, setFollowingCalendarsData] = useState<CalendarData[]>([]);
+  const [publicCalendarsData, setPublicCalendarsData] = useState<CalendarData[]>([]);
+
+  const {
+    userBeingViewed,
+    calendars,
+    isFollowing,
+    isLoading,
+    userNotFound,
+    followError,
+    handleFollowToggle,
+  } = useUserProfile(targetUsername);
+
+  const { calendars: followingCalendars, loading: followingLoading } =
+    useFollowedCalendars(userBeingViewed?.username, {
+      enabled: !!userBeingViewed && !!currentUser,
+    });
+
+  useEffect(() => {
+    setFollowingCalendarsData(followingCalendars.map(toCalendarData));
+  }, [followingCalendars]);
+
+  useEffect(() => {
+    setPublicCalendarsData(calendars.map(toCalendarData));
+  }, [calendars]);
+
+  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendarsData);
+  const handleLikePublic = (id: string) => handleLikeInList(id, setPublicCalendarsData);
+
+  const handleComment = (id: string, list: CalendarData[]) => {
+    const found = list.find((c) => String(c.id) === id);
+    if (found) {
+      setSelectedCalendar({
+        id: found.id as string,
+        name: found.name,
+        description: found.description || '',
+        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        origin: 'CURRENT',
+        creator: '',
+        color: '#10464d',
+        cover: found.cover ?? undefined,
+        likes_count: found.likes_count ?? 0,
+        liked_by_me: found.liked_by_me ?? false,
+      });
+      setCommentsVisible(true);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
+        <ActivityIndicator size="large" color="#10464d" />
+      </SafeAreaView>
+    );
+  }
+
+  if (userNotFound || !userBeingViewed) {
+    return (
+      <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
+        <Ionicons name="person-remove-outline" size={60} color="#dddcce" />
+        <Text style={profileStyles.errorText}>This profile is not available.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={profileStyles.container}>
+      <ScrollView style={profileStyles.scrollView}>
+
+        <ProfileHeader />
+
+        <View style={profileStyles.profileSection}>
+          <ProfileAvatar uri={userBeingViewed.photo} />
+
+          <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
+          {userBeingViewed.pronouns ? (
+            <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
+          ) : null}
+
+          <View style={profileStyles.bioSection}>
+            <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
+          </View>
+
+          <ProfileStats
+            calendarsCount={userBeingViewed.public_calendars?.length ?? 0}
+            totalFollowers={userBeingViewed.total_followers || 0}
+            totalFollowing={userBeingViewed.total_following || 0}
+          />
+
+          <View style={profileStyles.buttonsRow}>
+            <TouchableOpacity
+              style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]}
+              onPress={handleFollowToggle}
+            >
+              <Text style={[
+                profileStyles.actionButtonText,
+                isFollowing && profileStyles.actionButtonTextAlt,
+              ]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[profileStyles.actionButton, profileStyles.logoutButton]}
+              onPress={() => setReportOpen(true)}
+            >
+              <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
+                Report user
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {followError ? (
+            <Text style={profileStyles.errorText}>{followError}</Text>
+          ) : null}
+        </View>
+
+        <View style={profileStyles.divider} />
+
+        <View style={profileStyles.calendarsWrapper}>
+          <CalendarSectionPill
+            title="Calendars I follow"
+            count={followingCalendarsData.length > 0 ? followingCalendarsData.length : undefined}
+          >
+            {!currentUser ? (
+              <Text style={profileStyles.emptyText}>
+                Log in to see which calendars from this profile you follow.
+              </Text>
+            ) : followingLoading ? (
+              <ActivityIndicator size="small" color="#10464d" style={{ marginVertical: 8 }} />
+            ) : followingCalendarsData.length > 0 ? (
+              followingCalendarsData.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeFollowing}
+                  onComment={(id) => handleComment(id, followingCalendarsData)}
+                />
+              ))
+            ) : (
+              <Text style={profileStyles.emptyText}>
+                {"You're not following any calendars from this profile."}
+              </Text>
+            )}
+          </CalendarSectionPill>
+
+          <CalendarSectionPill
+            title={`${userBeingViewed.username}'s calendars`}
+            count={publicCalendarsData.length}
+          >
+            {publicCalendarsData.length > 0 ? (
+              publicCalendarsData.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikePublic}
+                  onComment={(id) => handleComment(id, publicCalendarsData)}
+                />
+              ))
+            ) : (
+              <Text style={profileStyles.emptyText}>No public calendars yet.</Text>
+            )}
+          </CalendarSectionPill>
+        </View>
+
+      </ScrollView>
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reportedType="USER"
+        reportedId={userBeingViewed.id}
+        reportedLabel={userBeingViewed.username}
+      />
+
+      <CommentsModalC
+        visible={commentsVisible}
+        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
+        calendar={selectedCalendar}
+      />
+    </SafeAreaView>
+  );
+};
+
+const ProfileScreen = () => {
+  const { username } = useLocalSearchParams<{ username: string }>();
+  const { user: currentUser } = useAuth();
+
+  const isMe = !username || username === currentUser?.username;
+
+  return isMe ? <OwnProfile /> : <PublicProfile targetUsername={username!} />;
 };
 
 export default ProfileScreen;

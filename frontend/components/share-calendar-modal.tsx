@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { API_CONFIG } from '@/constants/api';
+import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 
 interface ShareCalendarModalProps {
     calendar: Calendar | null;
@@ -65,9 +66,11 @@ export function ShareCalendarModal({ calendar, onClose }: ShareCalendarModalProp
                     resizeMode="cover"
                 />
             ) : (
-                <View style={styles.coverPlaceholder}>
-                    <Ionicons name="calendar-outline" size={48} color="#fff" />
-                </View>
+                <DefaultCalendarCover
+                    style={styles.coverPlaceholder}
+                    label="Calendario"
+                    iconSize={48}
+                />
             )}
 
             <View style={styles.info}>
@@ -111,9 +114,6 @@ const styles = StyleSheet.create({
         height: 140,
         borderRadius: 12,
         marginBottom: 16,
-        backgroundColor: '#10464d',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     info: {
         marginBottom: 20,

@@ -2,6 +2,7 @@ import { View, Text, Image, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Calendar } from "@/types/calendar";
 import { eventCalendarCalendarCardStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 interface CalendarCardProps {
   calendar: Calendar;
@@ -20,10 +21,45 @@ export default function CalendarCard({
   onComment,
   isSubscribed = false,
 }: CalendarCardProps) {
-  const privacyIcon: Record<string, any> = {
-    PRIVATE: "lock-closed",
-    FRIENDS: "people",
-    PUBLIC: "globe",
+  const privacyMeta: Record<
+    string,
+    {
+      icon: any;
+      label: string;
+      bgColor: string;
+      borderColor: string;
+      textColor: string;
+    }
+  > = {
+    PRIVATE: {
+      icon: "lock-closed",
+      label: "Private",
+      bgColor: "#EFEFF2",
+      borderColor: "#D9D9DE",
+      textColor: "#4A4A56",
+    },
+    FRIENDS: {
+      icon: "people",
+      label: "Friends",
+      bgColor: "#E7F4FF",
+      borderColor: "#B9DEFF",
+      textColor: "#155A8A",
+    },
+    PUBLIC: {
+      icon: "globe",
+      label: "Public",
+      bgColor: "#EAF8EE",
+      borderColor: "#BFE7C9",
+      textColor: "#1F6A36",
+    },
+  };
+
+  const selectedPrivacy = privacyMeta[calendar.privacy] ?? {
+    icon: "help",
+    label: "Unknown",
+    bgColor: "#F3F3F3",
+    borderColor: "#DCDCDC",
+    textColor: "#666",
   };
 
   const originIcon: Record<string, any> = {
@@ -32,25 +68,26 @@ export default function CalendarCard({
     APPLE: "logo-apple",
   };
 
+  const hasCalendarCover =
+    typeof calendar.cover === "string" && calendar.cover.trim().length > 0;
+
   return (
     <Pressable
       style={eventCalendarCalendarCardStyles.card}
       onPress={() => onPress(calendar.id)}
     >
-      {calendar.cover && (
+      {hasCalendarCover ? (
         <Image
-          source={{ uri: calendar.cover }}
+          source={{ uri: calendar.cover!.trim() }}
           style={eventCalendarCalendarCardStyles.cover}
         />
+      ) : (
+        <DefaultCalendarCover
+          style={eventCalendarCalendarCardStyles.cover}
+          label="Calendario"
+          iconSize={40}
+        />
       )}
-
-      <View
-        style={[
-          eventCalendarCalendarCardStyles.coverFallback,
-          !calendar.cover && eventCalendarCalendarCardStyles.coverFallbackShown,
-          { backgroundColor: calendar.color },
-        ]}
-      />
 
       <View style={eventCalendarCalendarCardStyles.content}>
         <View style={eventCalendarCalendarCardStyles.header}>
@@ -59,17 +96,33 @@ export default function CalendarCard({
             <Text style={eventCalendarCalendarCardStyles.creator}>by {calendar.creator}</Text>
           </View>
           <View style={eventCalendarCalendarCardStyles.badges}>
-            <Ionicons
-              name={privacyIcon[calendar.privacy] || "help"}
-              size={16}
-              color="#666"
-              style={eventCalendarCalendarCardStyles.badge}
-            />
-            <Ionicons
-              name={originIcon[calendar.origin] || "help"}
-              size={16}
-              color="#666"
-            />
+            <View
+              style={[
+                eventCalendarCalendarCardStyles.privacyBadge,
+                {
+                  backgroundColor: selectedPrivacy.bgColor,
+                  borderColor: selectedPrivacy.borderColor,
+                },
+              ]}
+            >
+              <Ionicons name={selectedPrivacy.icon} size={14} color={selectedPrivacy.textColor} />
+              <Text
+                style={[
+                  eventCalendarCalendarCardStyles.privacyBadgeText,
+                  { color: selectedPrivacy.textColor },
+                ]}
+              >
+                {selectedPrivacy.label}
+              </Text>
+            </View>
+
+            <View style={eventCalendarCalendarCardStyles.originBadge}>
+              <Ionicons
+                name={originIcon[calendar.origin] || "help"}
+                size={14}
+                color="#4F4F59"
+              />
+            </View>
           </View>
         </View>
 
