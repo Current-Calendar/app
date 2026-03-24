@@ -2,6 +2,7 @@ import { View, Text, Image, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Calendar } from "@/types/calendar";
 import { eventCalendarCalendarCardStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 interface CalendarCardProps {
   calendar: Calendar;
@@ -34,19 +35,24 @@ export default function CalendarCard({
 
   const hasCalendarCover =
     typeof calendar.cover === "string" && calendar.cover.trim().length > 0;
-  const calendarCoverSource = hasCalendarCover
-    ? { uri: calendar.cover!.trim() }
-    : require("@/assets/images/icon.png");
 
   return (
     <Pressable
       style={eventCalendarCalendarCardStyles.card}
       onPress={() => onPress(calendar.id)}
     >
-      <Image
-        source={calendarCoverSource}
-        style={eventCalendarCalendarCardStyles.cover}
-      />
+      {hasCalendarCover ? (
+        <Image
+          source={{ uri: calendar.cover!.trim() }}
+          style={eventCalendarCalendarCardStyles.cover}
+        />
+      ) : (
+        <DefaultCalendarCover
+          style={eventCalendarCalendarCardStyles.cover}
+          label="Calendario"
+          iconSize={40}
+        />
+      )}
 
       <View style={eventCalendarCalendarCardStyles.content}>
         <View style={eventCalendarCalendarCardStyles.header}>

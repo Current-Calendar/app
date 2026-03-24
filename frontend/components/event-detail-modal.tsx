@@ -12,6 +12,7 @@ import { CalendarEvent } from '@/types/calendar';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
+import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -46,9 +47,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
       : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
         ? (event as any).image.trim()
         : "";
-  const eventImageSource = eventImageRaw
-    ? { uri: eventImageRaw }
-    : require("@/assets/images/nube_login.png");
+  const hasEventImage = eventImageRaw.length > 0;
 
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
 
@@ -100,11 +99,19 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
 
-            <Image
-              source={eventImageSource}
-              style={styles.image}
-              resizeMode="cover"
-            />
+            {hasEventImage ? (
+              <Image
+                source={{ uri: eventImageRaw }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              <DefaultCalendarCover
+                style={styles.image}
+                label="Evento"
+                iconSize={52}
+              />
+            )}
 
             <View style={styles.content}>
               <Text style={styles.title}>{event.title}</Text>
