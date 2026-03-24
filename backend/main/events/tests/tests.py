@@ -8,7 +8,7 @@ import tempfile
 import shutil
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
-from main.models import User, Calendar, Event, EventAttendance
+from main.models import User, Calendar, Event, EventAttendance, Notification
 from main.events.views import list_events_from_calendar
 
 ENDPOINT_EVENTOS = "/api/v1/events/"
@@ -1224,6 +1224,74 @@ class CreateEventDuplicateTests(APITestCase):
         self.assertIn("Ya tienes un evento creado para esa fecha y hora.", response2.json()["errors"])
 
 
+class InviteEventTests(APITestCase):
+    def setUp(self) -> None:
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="user1"
+        )
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="user2"
+        )
+
+        self.event1 = Event.objects.create(
+            title="Birthday Dinner",
+            description="See you at the usual restaurant.",
+            date=date(2026, 3, 20),
+            time=time(21, 00),
+            creator=self.user1,
+        )
+
+
+    def test_invite_unauthenticated(self):
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/")
+
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_invite_yourself(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user1.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user1, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_invite_not_creator(self):
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user1.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user1, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_duplicate_invite(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(1, Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).count())
+
+    
 class ListEventsTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
