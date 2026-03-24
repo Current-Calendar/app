@@ -17,6 +17,7 @@ export interface Calendar {
     color: string;          // UI-only accent color
     likes_count: number;
     liked_by_me: boolean;
+    co_owners?: { username: string; name: string }[]; // For shared calendars
 }
 
 export interface CalendarEvent {
