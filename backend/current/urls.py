@@ -17,8 +17,8 @@ Including another URLconf
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from graphene_django.views import GraphQLView
 from rest_framework import routers
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from main import views
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
@@ -97,6 +97,8 @@ urlpatterns = [
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
+    path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
+    path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
 ]
 
 

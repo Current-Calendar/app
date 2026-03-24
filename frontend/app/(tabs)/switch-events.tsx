@@ -1,4 +1,4 @@
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
@@ -49,6 +49,7 @@ export default function EventsScreen() {
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [invitationsVisible, setInvitationsVisible] = useState(false);
 
@@ -85,83 +86,68 @@ export default function EventsScreen() {
 
   // Mapeo y transformación de datos
   useEffect(() => {
-    if (backendCalendars.length > 0 || backendEvents.length > 0) {
-      const calendarMap: Record<number, any> = {};
-      backendCalendars.forEach((c: any) => {
-        calendarMap[Number(c.id)] = c;
-      });
+    if (authLoading) return;
 
-      const subscribedSet = new Set(subscribedCalendarIds);
-      const recommendedCalendarIds = new Set(
-        backendCalendars
-          .filter((c: any) => {
-            const calendarId = String(c.id);
-            const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
-            const isNotMine = !user?.id || creatorId !== String(user.id);
-            const isNotSubscribed = !subscribedSet.has(calendarId);
-            const isVisibleByPrivacy =
-              c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [calData, evData] = await Promise.all([
+          apiClient.get<any[]>("/recommendations/calendars/"),
+          apiClient.get<any[]>("/recommendations/events/"),
+        ]);
 
-            return isVisibleByPrivacy && isNotMine && isNotSubscribed;
-          })
-          .map((c: any) => String(c.id))
-      );
+        // Map calendars for easy lookup
+        const calendarMap: Record<number, any> = {};
+        calData.forEach((c: any) => {
+          calendarMap[Number(c.id)] = c;
+        });
 
-      const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
-        const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
-        const cal = calendarMap[Number(calId)];
-
-        const creatorUsername = e.creator_username || e.creator?.username || cal?.creator_username || "unknown";
-
-        return {
-          id: String(e.id),
-          title: e.title || e.titulo || "",
-          description: e.description || e.descripcion || "",
-          location: e.place_name || e.nombre_lugar || "",
-          date: e.date || e.fecha || "",
-          time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
-          image: resolveImageUrl(e.photo || e.foto),
-          username: creatorUsername,
-          userAvatar: (() => {
-            const creatorPhoto = (e.creator_photo && e.creator_photo.trim() !== "")
-              ? e.creator_photo
-              : (cal?.creator_photo && cal.creator_photo.trim() !== ""
-                ? cal.creator_photo
-                : "");
-            return creatorPhoto || `https://i.pravatar.cc/100?u=${creatorUsername}`;
-          })(),
-          calendarId: String(calId || ""),
-          calendarName: cal?.name || "General",
-          // Temporary mock attendees for frontend testing.
-          // Backend should replace this with real attendees data per event.
-          attendees: index % 2 === 0
-            ? [
-              {
-                id: "1",
-                name: "Rocío",
-                respondedAt: "2026-03-17T18:42:00Z",
-                avatar: "https://i.pravatar.cc/100?u=rocio",
-              },
-              {
-                id: "2",
-                name: "Lucía",
-                respondedAt: "2026-03-17T19:05:00Z",
-                avatar: "https://i.pravatar.cc/100?u=lucia",
-              },
-            ]
-            : [],
-        };
-      }).filter((evt: Event) => (
-        evt.id &&
-        evt.title &&
-        evt.calendarId &&
-        recommendedCalendarIds.has(evt.calendarId)
-      ));
+        const mappedEvents: Event[] = evData.map((e: any, index: number) => {
+          const cal = calendarMap[e.calendars[0]];
+          return {
+            id: String(e.id),
+            title: e.title || e.titulo || "",
+            description: e.description || e.descripcion || "",
+            location: e.place_name || e.nombre_lugar || "",
+            date: e.date || e.fecha || "",
+            time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+            image: resolveImageUrl(e.photo || e.foto),
+            username: cal?.creator_username || "unknown",
+            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creator_username || "unknown"),
+            calendarId: String(e.calendars[0] || ""),
+            calendarName: cal?.name || "General",
+            // Temporary mock attendees for frontend testing.
+            // Backend should replace this with real attendees data per event.
+            attendees: index % 2 === 0
+              ? [
+                {
+                  id: "1",
+                  name: "Rocío",
+                  respondedAt: "2026-03-17T18:42:00Z",
+                  avatar: "https://i.pravatar.cc/100?u=rocio",
+                },
+                {
+                  id: "2",
+                  name: "Lucía",
+                  respondedAt: "2026-03-17T19:05:00Z",
+                  avatar: "https://i.pravatar.cc/100?u=lucia",
+                },
+              ]
+              : [],
+          };
+        }).filter((evt: Event) => evt.id && evt.title);
 
       setEvents(mappedEvents);
-    }
-  }, [backendCalendars, backendEvents, subscribedCalendarIds, user, hasSession]);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        Alert.alert("Error", "Could not load events.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    void fetchData();
+  }, [authLoading]);
   // Manejo de errores
   const errorMessage = calendarsError || eventsError;
 
