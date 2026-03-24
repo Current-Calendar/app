@@ -22,6 +22,8 @@ export const calendarHeaderStyles = StyleSheet.create({
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
     ...AppShadows.soft,
+    gap: 5,
+
   },
   todayLabel: {
     fontSize: 13,
@@ -81,6 +83,7 @@ export const calendarSelectorStyles = StyleSheet.create({
     gap: 8,
   },
   trigger: {
+    
     ...ButtonStyles.base,
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
@@ -89,6 +92,7 @@ export const calendarSelectorStyles = StyleSheet.create({
     paddingVertical: 8,
     maxWidth: 200,
     ...AppShadows.soft,
+    gap: 6,
   },
   dot: {
     width: 10,
