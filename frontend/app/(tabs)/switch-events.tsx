@@ -38,6 +38,7 @@ export default function EventsScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
 
+  
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
