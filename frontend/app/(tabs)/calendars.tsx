@@ -433,7 +433,7 @@ export default function CalendarScreen() {
         <View style={styles.screenWrapper}>
             <ScrollView
                 style={styles.container}
-                contentContainerStyle={styles.contentContainer}
+                contentContainerStyle={!isDesktop ? styles.contentContainerMobile : styles.contentContainer}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={styles.toolbar}>
@@ -694,6 +694,12 @@ const styles = StyleSheet.create({
     contentContainer: {
         flexGrow: 1,
         paddingBottom: 100,
+        paddingTop: 8,
+    },
+    contentContainerMobile: {
+        flexGrow: 1,
+        paddingBottom: 100,
+        paddingTop: 12,
     },
     toolbar: {
         flexDirection: 'row',
@@ -757,7 +763,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     filterBlock: {
-        marginBottom: 8,
+        marginBottom: 12,
+        paddingHorizontal: 4,
     },
     // Mobile inline add-event banner
     mobileBanner: {
