@@ -631,7 +631,7 @@ def import_google_calendar(request):
     """Endpoint para importar eventos del calendar de Google."""
     momento_actual = timezone.now().isoformat()
     events = []
-    user_creator = User.objects.filter().first()
+    user_creator = request.user
     privacy_solicitado = 'FRIENDS'
     raw_credentials = request.session.get('google_credentials')
     if not raw_credentials:
@@ -684,9 +684,8 @@ def iOS_calendar_import(request):
     """Endpoint para importar eventos desde iOS Calendar."""
 
     webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
-    user_id = request.data.get('user')
-    privacy_solicitado = request.data.get('privacy', 'PRIVATE') 
-    user_creator = User.objects.filter(id=user_id).first()
+    privacy_solicitado = request.data.get('privacy', 'PRIVATE')
+    user_creator = request.user
 
     if not webcal_url:
         return Response({"error": "webcal_url es requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
@@ -797,7 +796,8 @@ def _is_safe_calendar_url(raw_url: str):
     return True, None
 
 
-@api_view(['POST']) 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def ics_import(request):
     """Endpoint para importar eventos desde un archivo ICS subido por el user."""
     if 'file' not in request.FILES:
@@ -812,9 +812,7 @@ def ics_import(request):
 
     momento_actual = timezone.now()
     privacy_solicitado = request.data.get('privacy', 'PRIVATE')
-    user_creator = User.objects.filter(id=request.data.get('user')).first()
-    if not user_creator:
-        return Response({"error": "User no encontrado"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+    user_creator = request.user
 
     calendar = Calendar.objects.create(
             name="Calendar de ICS",
