@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { calendarCardStyles } from '@/styles/calendar-styles';
+import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 
 // ---------- Types ----------
 export interface CalendarData {
@@ -44,14 +45,17 @@ export default function CalendarCard({
       activeOpacity={onPress ? 0.8 : 1}
     >
       <View style={calendarCardStyles.cardContent}>
-        <Image
-          source={
-            calendar.cover && calendar.cover.trim() !== ''
-              ? { uri: calendar.cover }
-              : require('@/assets/images/default-user.jpg')
-          }
-          style={calendarCardStyles.cardImage}
-        />
+        {calendar.cover && calendar.cover.trim() !== '' ? (
+          <Image
+            source={{ uri: calendar.cover }}
+            style={calendarCardStyles.cardImage}
+          />
+        ) : (
+          <DefaultCalendarCover
+            style={calendarCardStyles.cardImage}
+            label="Calendario"
+          />
+        )}
 
         <View style={calendarCardStyles.cardDetails}>
           <View style={calendarCardStyles.titleRow}>

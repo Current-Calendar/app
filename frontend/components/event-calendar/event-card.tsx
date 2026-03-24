@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Event } from "@/app/(tabs)/switch-events";
 import { eventCalendarEventCardStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 interface Props {
   event: Event;
@@ -38,6 +39,8 @@ export default function EventCard({
   );
 
   const imageHeight = imageWidth * 0.7;
+  const hasEventImage =
+    typeof event.image === "string" && event.image.trim().length > 0;
 
   return (
     <View style={eventCalendarEventCardStyles.card}>
@@ -60,7 +63,18 @@ export default function EventCard({
             { width: imageWidth, height: imageHeight },
           ]}
         >
-          <Image source={{ uri: event.image }} style={eventCalendarEventCardStyles.image} />
+          {hasEventImage ? (
+            <Image
+              source={{ uri: event.image.trim() }}
+              style={eventCalendarEventCardStyles.image}
+            />
+          ) : (
+            <DefaultCalendarCover
+              style={eventCalendarEventCardStyles.image}
+              label="Evento"
+              iconSize={24}
+            />
+          )}
         </View>
 
         <View style={eventCalendarEventCardStyles.content}>

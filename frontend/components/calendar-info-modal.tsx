@@ -15,6 +15,7 @@ import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
 import { useAuth } from '@/hooks/use-auth';
 import InviteUserModal from '@/components/InviteUserModal';
 import { ShareCalendarModal } from '@/components/share-calendar-modal';
+import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { AddCoOwnerModal } from '@/components/add-co-owner';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
@@ -66,6 +67,8 @@ export function CalendarInfoModal({
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
   const isOwner = user && localCalendar.creator === user.username;
+  const hasCalendarCover =
+        typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
 
 
   const handleDeletePress = () => {
@@ -123,14 +126,19 @@ export function CalendarInfoModal({
           </TouchableOpacity>
         </View>
 
-        {localCalendar.cover ? (
-          <Image
-            source={{ uri: localCalendar.cover }}
-            style={calendarInfoModalStyles.coverImage}
-            resizeMode="cover"
-          />
-        ) : null}
-
+      {hasCalendarCover ? (
+                <Image
+                    source={{ uri: localCalendar.cover.trim() }}
+                    style={calendarInfoModalStyles.coverImage}
+                    resizeMode="cover"
+                />
+            ) : (
+                <DefaultCalendarCover
+                    style={calendarInfoModalStyles.coverImage}
+                    label="Calendario"
+                    iconSize={42}
+                />
+            )}
         {localCalendar.description ? (
           <Text style={calendarInfoModalStyles.description}>{localCalendar.description}</Text>
         ) : null}
