@@ -68,7 +68,6 @@ export const useUserProfile = (userId?: string) => {
             return;
         }
 
-        // Wait for auth to finish loading before making API calls
         if (authLoading) {
             return;
         }
@@ -202,7 +201,7 @@ export const useUserProfile = (userId?: string) => {
                     });
                     setIsFollowing(false);
                     setUserNotFound(false);
-                    setFollowError('Inicia sesión para ver información completa y seguir a este usuario.');
+                    setFollowError('Log in to see full information and follow this user.');
                 }
             } catch (error) {
                 console.error(error);
@@ -217,12 +216,12 @@ export const useUserProfile = (userId?: string) => {
         fetchData();
     }, [userId, authLoading]);
 
-    // ----- Follow toggle (usa el ID numérico del usuario visto) -----
+    // ----- Follow toggle -----
     const handleFollowToggle = async () => {
         if (!userBeingViewed?.id) return;
 
         if (!currentUser) {
-            setFollowError('Inicia sesión para seguir a este usuario.');
+            setFollowError('Log in to follow this user.');
             return;
         }
 
@@ -241,12 +240,16 @@ export const useUserProfile = (userId?: string) => {
             const data = await apiClient.post<{ followed: boolean }>(`/users/${targetId}/follow/`, {});
 
             if (typeof data?.followed !== 'boolean') {
-                let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
-                setFollowError(message);
+                setFollowError('Could not update follow status. Please try again.');
                 setIsFollowing(previousState);
                 return;
             }
-            setIsFollowing(Boolean(data.followed));
+            const followed = Boolean(data.followed);
+            setIsFollowing(followed);
+            setUserBeingViewed((prev: any) => prev ? {
+                ...prev,
+                total_followers: (prev.total_followers ?? 0) + (followed ? 1 : -1),
+            } : prev);
         } catch (error) {
             console.error('Error follow:', error);
             setFollowError('There was a network problem. Check your connection and try again.');

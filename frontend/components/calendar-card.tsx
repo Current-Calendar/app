@@ -15,26 +15,33 @@ export interface CalendarData {
   description?: string;
   cover?: string;
   privacy?: 'FRIENDS' | 'PUBLIC' | 'PRIVATE' | string;
+  likes_count?: number;
+  liked_by_me?: boolean;
 }
 
 interface CalendarCardProps {
   calendar: CalendarData;
   onPress?: () => void;
   onComment?: (id: string) => void;
+  onLike?: (id: string) => void;
 }
 
 export default function CalendarCard({
   calendar,
   onPress,
   onComment,
+  onLike,
 }: CalendarCardProps) {
   if (!calendar) return null;
+
+  const liked = calendar.liked_by_me ?? false;
+  const likesCount = calendar.likes_count ?? 0;
 
   return (
     <TouchableOpacity
       style={calendarCardStyles.cardContainer}
       onPress={onPress}
-      activeOpacity={0.8}
+      activeOpacity={onPress ? 0.8 : 1}
     >
       <View style={calendarCardStyles.cardContent}>
         <Image
@@ -66,14 +73,31 @@ export default function CalendarCard({
             {calendar.description || 'No description available.'}
           </Text>
 
-          <TouchableOpacity
-            onPress={() => onComment?.(String(calendar.id))}
-            style={calendarCardStyles.commentButton}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chatbubble-outline" size={18} color="#10464d" />
-            <Text style={calendarCardStyles.commentText}>Comment</Text>
-          </TouchableOpacity>
+          <View style={calendarCardStyles.actionsRow}>
+            <TouchableOpacity
+              onPress={() => onLike?.(String(calendar.id))}
+              style={calendarCardStyles.actionButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={liked ? 'heart' : 'heart-outline'}
+                size={18}
+                color={liked ? '#eb8c85' : '#10464d'}
+              />
+              {likesCount > 0 && (
+                <Text style={calendarCardStyles.actionText}>{likesCount}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => onComment?.(String(calendar.id))}
+              style={calendarCardStyles.actionButton}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color="#10464d" />
+              <Text style={calendarCardStyles.actionText}>Comment</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </TouchableOpacity>

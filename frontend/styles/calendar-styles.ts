@@ -274,6 +274,22 @@ export const calendarCardStyles = StyleSheet.create({
   friendStar: {
     marginLeft: 6,
   },
+  actionsRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 16,
+  marginTop: 10,
+},
+actionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 5,
+},
+actionText: {
+  color: '#10464d',
+  fontWeight: '600',
+  fontSize: 14,
+},
 });
 
 export const calendarGridStyles = StyleSheet.create({
