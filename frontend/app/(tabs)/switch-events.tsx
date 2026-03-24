@@ -1,14 +1,17 @@
-import { View, FlatList, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Text } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
-import apiClient from "@/services/api-client";
-import EventFeedModal from "@/components/event-feed-modal";
+import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
+import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
+import apiClient from "@/services/api-client";
 
 export interface Event {
   id: string;
@@ -19,7 +22,7 @@ export interface Event {
   time: string;
   image: string;
   username: string;
-  userAvatar: string;
+  userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
   attendees?: {
@@ -31,8 +34,9 @@ export interface Event {
 }
 
 export default function EventsScreen() {
-  const { isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const hasSession = isAuthenticated || Boolean(user);
 
 
   // Hooks de datos (HEAD)
@@ -41,9 +45,12 @@ export default function EventsScreen() {
 
   // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -52,6 +59,29 @@ export default function EventsScreen() {
     const base = API_CONFIG.rootBaseURL || API_CONFIG.BaseURL;
     return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
   };
+
+  useEffect(() => {
+    const fetchSubscribedCalendars = async () => {
+      if (!hasSession) {
+        setSubscribedCalendarIds([]);
+        return;
+      }
+
+      try {
+        const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
+        const dataArray = Array.isArray(subscribedData)
+          ? subscribedData
+          : (subscribedData as any)?.data || [];
+
+        setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
+      } catch (error) {
+        console.error("Error fetching subscribed calendars for events feed:", error);
+        setSubscribedCalendarIds([]);
+      }
+    };
+
+    void fetchSubscribedCalendars();
+  }, [hasSession]);
 
   // Mapeo y transformación de datos
   useEffect(() => {
@@ -160,14 +190,35 @@ export default function EventsScreen() {
     <View style={styles.container}>
       <View style={styles.inner}>
         {/* Header de Autenticación */}
-        <View style={styles.authHeader}>
-          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/login')}>
-            <Text style={styles.loginButtonText}>Log In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/register')}>
-            <Text style={styles.registerButtonText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+        {!authLoading && !hasSession && (
+          <View style={styles.authHeader}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/login');
+              }}
+            >
+              <Text style={styles.loginButtonText}>Log In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => {
+                if (hasSession) return;
+                router.push('/register');
+              }}
+            >
+              <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {hasSession && (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
@@ -179,11 +230,24 @@ export default function EventsScreen() {
               event={item}
               onOpen={handleOpenEvent}
               onLike={(id) => console.log("Like:", id)}
-              onComment={(id) => console.log("Comment:", id)}
+              onComment={(id) => {
+              const found = events.find((e) => e.id === id);
+              if (found) {
+                setSelectedEvent(found);
+                setCommentsModalVisible(true);
+              }
+            }}
               onSave={(id) => console.log("Save:", id)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyStateWrap}>
+              <Text style={styles.emptyText}>No recommended events right now.</Text>
+              <Text style={styles.emptySubtext}>
+                There are no events from calendars you do not own or follow that you can currently access.
+              </Text>
+            </View>
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -191,7 +255,16 @@ export default function EventsScreen() {
         <EventFeedModal
           visible={modalVisible}
           onClose={handleCloseModal}
+          event={selectedEvent as FeedEvent}
+        />
+        <CommentsModal
+          visible={commentsModalVisible}
+          onClose={() => setCommentsModalVisible(false)}
           event={selectedEvent}
+        />
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
         />
       </View>
     </View>
@@ -294,6 +367,30 @@ export const styles = StyleSheet.create({
 
   },
 
+  emptyStateWrap: {
+
+    marginTop: 40,
+
+    paddingHorizontal: 10,
+
+  },
+
+  emptySubtext: {
+
+    marginTop: 6,
+
+    textAlign: "center",
+
+    color: "#4f6f74",
+
+    opacity: 0.9,
+
+    lineHeight: 20,
+
+    fontSize: 13,
+
+  },
+
 
 
   authHeader: {
@@ -358,6 +455,20 @@ export const styles = StyleSheet.create({
 
     fontSize: 16,
 
+  },
+
+  userHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 
 });

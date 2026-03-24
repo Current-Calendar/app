@@ -18,11 +18,12 @@ export const calendarHeaderStyles = StyleSheet.create({
     gap: 8,
   },
   todayBtn: {
-    gap: 5,
     ...ButtonStyles.base,
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
     ...AppShadows.soft,
+    gap: 5,
+
   },
   todayLabel: {
     fontSize: 13,
@@ -82,7 +83,7 @@ export const calendarSelectorStyles = StyleSheet.create({
     gap: 8,
   },
   trigger: {
-    gap: 6,
+    
     ...ButtonStyles.base,
     ...ButtonStyles.pill,
     ...ButtonStyles.secondary,
@@ -91,6 +92,7 @@ export const calendarSelectorStyles = StyleSheet.create({
     paddingVertical: 8,
     maxWidth: 200,
     ...AppShadows.soft,
+    gap: 6,
   },
   dot: {
     width: 10,
@@ -162,10 +164,13 @@ export const calendarSelectorStyles = StyleSheet.create({
 export const eventFilterBarStyles = StyleSheet.create({
   strip: {
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 8,
     gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(16,70,77,0.08)',
   },
   chip: {
     ...ChipStyles.base,
@@ -226,6 +231,19 @@ export const calendarCardStyles = StyleSheet.create({
   cardContent: {
     flexDirection: 'row',
     padding: 12,
+  },
+  commentButton: {
+  marginTop: 10,
+  flexDirection: 'row',
+  alignItems: 'center',
+  alignSelf: 'flex-start',
+  },
+
+  commentText: {
+    marginLeft: 6,
+    color: '#10464d',
+    fontWeight: '600',
+    fontSize: 14,
   },
   cardImage: {
     width: 100,
@@ -440,9 +458,33 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     gap: 6,
+    alignItems: 'center',
   },
   badge: {
     marginLeft: 8,
+  },
+  privacyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  privacyBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  originBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DFDFE4',
+    backgroundColor: '#F4F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   description: {
     fontSize: 13,
@@ -452,7 +494,22 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  likeBtn: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginRight: 16,
+    marginLeft: 8,
+  },
+  likeBtnIcon: {
+    color: 'lightcoral'
+  },
+  likeBtnText: {
+    fontSize: 16,
+    fontWeight: '100',
+    alignSelf: 'center',
+    marginRight: 4,
   },
   subscribeBtn: {
     flexDirection: 'row',
@@ -464,6 +521,18 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   subscribedBtn: {
     backgroundColor: "#9E9E9E",
+  },
+  commentBtn: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 10,
+  paddingHorizontal: 2,
+  },
+
+  commentBtnText: {
+    color: "#10464d",
+    fontWeight: "600",
+    fontSize: 14,
   },
   btnIcon: {
     marginRight: 4,
@@ -703,6 +772,42 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#B33F37',
+  },
+  inviteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    backgroundColor: '#EAF7F6',
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  inviteButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10464d',
+  },
+  shareButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  shareButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10464d',
   },
 });
 

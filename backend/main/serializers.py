@@ -3,9 +3,10 @@ from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from main.models import Event
+from main.models import Event, EventAttendance
 
-from .models import Calendar, Report
+from .models import Calendar, Notification, Report, ChatMessage
+from utils.storage import get_signed_url
 
 User = get_user_model()
 
@@ -172,6 +173,7 @@ class EditProfileSerializer(serializers.ModelSerializer):
 
 class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
+    liked_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = Calendar
@@ -184,8 +186,20 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
             "origin",
             "creator",
             "created_at",
+            "likes_count",
+            "liked_by_me",
+            "co_owners",
         )
         read_only_fields = ("id", "created_at")
+
+    def get_liked_by_me(self, obj):
+        request = self.context.get('request')
+        liked_calendar_ids = self.context.get('liked_calendar_ids')
+        if liked_calendar_ids is not None:
+            return obj.id in liked_calendar_ids
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(user_id=request.user.id).exists()
+        return False
 
 
 class OwnProfileSerializer(serializers.ModelSerializer):
@@ -208,6 +222,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
         read_only_fields = (
             "id",
@@ -217,6 +232,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "total_following",
             "calendars",
             "following_calendars",
+            "co_owned_calendars",
         )
 
 
@@ -226,7 +242,9 @@ class EventSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
     creator_username = serializers.CharField(source='creator.username', read_only=True)
+    creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
+    attendees = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -235,19 +253,14 @@ class EventSerializer(serializers.ModelSerializer):
             'date', 'time', 'recurrence', 'external_id',
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
-            'photo', 'creator_username'
+            'photo', 'creator_username', 'creator_photo', 'attendees'
         ]
 
+    def get_creator_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.creator.photo)
+
     def get_photo(self, obj):
-        if not obj.photo:
-            return None
-        photo_str = str(obj.photo)
-        if photo_str.startswith('http'):
-            return photo_str
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.photo.url)
-        return photo_str
+        return get_signed_url(self.context.get('request'), obj.photo)
 
     def get_distance_km(self, obj):
         if hasattr(obj, 'distance') and obj.distance:
@@ -262,7 +275,38 @@ class EventSerializer(serializers.ModelSerializer):
 
     def get_calendars(self, obj):
         return list(obj.calendars.values_list('id', flat=True))
+    
+    def get_attendees(self, obj):
+        """Devuelve solo asistentes (status=ASSISTING)."""
+        attendances = obj.attendances.filter(status='ASSISTING')
+        return EventAttendeeSerializer(
+            attendances,
+            many=True,
+            context=self.context
+        ).data
 
+class NotificationSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True, default=None)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'recipient', 'sender', 'sender_username', 'type', 
+            'message', 'is_read', 'created_at', 'related_calendar', 'related_event'
+        ]
+        read_only_fields = [
+            'id', 'recipient', 'sender', 'type', 'message', 
+            'created_at', 'related_calendar', 'related_event'
+        ]
+
+    def validate(self, attrs):
+        if self.instance and len(attrs) > 1:
+            for field in attrs.keys():
+                if field != 'is_read':
+                    raise serializers.ValidationError(f"Modification of the '{field}' field is strictly prohibited.")
+        return attrs
+
+    
 class ReportSerializer(serializers.ModelSerializer):
     reporter_username = serializers.CharField(source='reporter.username', read_only=True)
 
@@ -320,3 +364,34 @@ class ReportSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"reported_user": "You cannot report yourself."})
         
         return attrs
+    
+class ChatMessageSerializer(serializers.ModelSerializer):
+    
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_photo = serializers.ImageField(source='sender.photo', read_only=True)
+
+    class Meta:
+        model = ChatMessage
+        
+        fields = ['id', 'event', 'sender', 'sender_username', 'sender_photo', 'text', 'timestamp']
+        read_only_fields = ['sender', 'event', 'timestamp']
+class EventAttendeeSerializer(serializers.ModelSerializer):
+    """Serializa asistentes de un evento (solo ASSISTING)."""
+    id = serializers.IntegerField(source='user.id')
+    name = serializers.CharField(source='user.username')
+    avatar = serializers.SerializerMethodField()
+    respondedAt = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventAttendance
+        fields = ['id', 'name', 'avatar', 'respondedAt']
+    
+    def get_avatar(self, obj):
+        return get_signed_url(self.context.get('request'), obj.user.photo)
+
+    def get_respondedAt(self, obj):
+        """Devuelve updated_at en ISO 8601 con Z (UTC)."""
+        iso_str = obj.updated_at.isoformat()
+        if '+00:00' in iso_str:
+            iso_str = iso_str.replace('+00:00', 'Z')
+        return iso_str

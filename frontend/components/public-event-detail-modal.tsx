@@ -12,20 +12,28 @@ import { CalendarEvent } from "@/types/calendar";
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
+const RED = "#E53935";
 
 interface PublicEventDetailModalProps {
   event: CalendarEvent | null;
   onClose: () => void;
+  onReport?: () => void;
 }
 
 export function PublicEventDetailModal({
   event,
   onClose,
+  onReport,
 }: PublicEventDetailModalProps) {
   if (!event) return null;
 
   return (
-    <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={!!event}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.card} onPress={() => {}}>
           <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
@@ -45,13 +53,6 @@ export function PublicEventDetailModal({
               <DetailRow icon="time-outline" label={event.time} />
             )}
 
-            {!!event.location && (
-              <DetailRow
-                icon="navigate-outline"
-                label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
-              />
-            )}
-
             {!!event.recurrence && (
               <DetailRow icon="repeat-outline" label={event.recurrence} />
             )}
@@ -64,9 +65,16 @@ export function PublicEventDetailModal({
             </View>
           )}
 
-          <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Close</Text>
-          </Pressable>
+          <View style={styles.actions}>
+            {onReport && (
+              <Pressable style={styles.reportBtn} onPress={onReport}>
+                <Text style={styles.reportBtnText}>Report Event</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={onClose} style={styles.primaryBtn}>
+              <Text style={styles.primaryBtnText}>Close</Text>
+            </Pressable>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -120,6 +128,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
+    paddingBottom: 16,
   },
   closeBtn: {
     position: "absolute",
@@ -177,15 +186,33 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     opacity: 0.9,
   },
-  primaryBtn: {
+  actions: {
     marginHorizontal: 16,
     marginTop: 16,
-    marginBottom: 14,
+    gap: 8,
+  },
+  reportBtn: {
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: RED,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reportBtnText: {
+    color: RED,
+    fontWeight: "700",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  primaryBtn: {
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: TEAL,
     borderWidth: 2,
     borderColor: "#0B3D3D",
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryBtnText: {
     color: "#EAF7F6",

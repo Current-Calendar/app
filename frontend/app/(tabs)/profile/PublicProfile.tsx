@@ -1,21 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    View, 
-    Text, 
-    Image, 
-    ScrollView, 
-    TouchableOpacity, 
+    View,
+    Text,
+    Image,
+    ScrollView,
+    TouchableOpacity,
     ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-// Hooks, contextos y estilos
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import profileStyles from './profileStyles';
 import { useAuth } from "@/hooks/use-auth";
+import { ReportModal } from "@/components/report-modal";
 
 const toCalendarData = (item: CalendarItem): CalendarData => ({
     id: String(item.id),
@@ -26,8 +26,7 @@ const toCalendarData = (item: CalendarItem): CalendarData => ({
 
 export default function PublicProfile({ targetUsername }: { targetUsername: string }) {
     const { user: currentUser } = useAuth();
-    
-    //Hook personalizado para manejar toda la lógica de perfil público (datos del user, seguimiento, calendars públicos, etc.)
+
     const {
         userBeingViewed,
         calendars,
@@ -38,7 +37,6 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
         handleFollowToggle,
     } = useUserProfile(targetUsername);
 
-    //  Estado para los calendarios que sigo de este usuario
     const {
         calendars: followingCalendars,
         loading: followingLoading,
@@ -46,10 +44,11 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
         enabled: !!userBeingViewed && !!currentUser,
     });
 
-    // --- MANEJO DE ERRORES Y CARGA ---
+    const [reportOpen, setReportOpen] = useState(false);
+
     if (!targetUsername) {
         return (
-            <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}> 
+            <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
                 <Ionicons name="person-circle-outline" size={60} color="#dbdbdb" />
                 <Text style={profileStyles.errorText}>Selecciona un user.</Text>
             </SafeAreaView>
@@ -73,7 +72,6 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
         );
     }
 
-    // --- RENDERIZADO PRINCIPAL ---
     return (
         <SafeAreaView style={profileStyles.container}>
             <ScrollView style={profileStyles.scrollView}>
@@ -89,24 +87,25 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
 
                         <View style={profileStyles.statsContainer}>
                             <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-                            {userBeingViewed.pronouns ? (
-                                <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
-                            ) : null}
+                        </View>
+                    </View>
 
-                            <View style={profileStyles.statsRow}>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Calendars</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Followers</Text>
-                                </View>
-                                <View style={profileStyles.statItem}>
-                                    <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
-                                    <Text style={profileStyles.statLabel}>Following</Text>
-                                </View>
-                            </View>
+                    {userBeingViewed.pronouns ? (
+                        <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
+                    ) : null}
+
+                    <View style={profileStyles.statsRow}>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.public_calendars?.length ?? 0}</Text>
+                            <Text style={profileStyles.statLabel}>Calendars</Text>
+                        </View>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_followers || 0}</Text>
+                            <Text style={profileStyles.statLabel}>Followers</Text>
+                        </View>
+                        <View style={profileStyles.statItem}>
+                            <Text style={profileStyles.statNumber}>{userBeingViewed.total_following || 0}</Text>
+                            <Text style={profileStyles.statLabel}>Following</Text>
                         </View>
                     </View>
 
@@ -114,8 +113,8 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                         <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
                     </View>
 
-                    <TouchableOpacity 
-                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]} 
+                    <TouchableOpacity
+                        style={[profileStyles.actionButton, isFollowing && profileStyles.actionButtonAlt]}
                         onPress={handleFollowToggle}
                     >
                         <Text style={[profileStyles.actionButtonText, isFollowing && profileStyles.actionButtonTextAlt]}>
@@ -123,12 +122,18 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                         </Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={[profileStyles.actionButton, { backgroundColor: '#fff', borderColor: '#e53935', borderWidth: 1, marginTop: 10 }]}
+                        onPress={() => setReportOpen(true)}
+                    >
+                        <Text style={[profileStyles.actionButtonText, { color: '#e53935' }]}>Report User</Text>
+                    </TouchableOpacity>
+
                     {followError ? (
                         <Text style={profileStyles.errorText}>{followError}</Text>
                     ) : null}
                 </View>
 
-                {/* Calendars que sigo de este user */}
                 {followingLoading ? (
                     <ActivityIndicator size="small" color="#262626" />
                 ) : !currentUser ? (
@@ -140,18 +145,13 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                     <View style={profileStyles.postsGrid}>
                         <Text style={profileStyles.gridHeaderText}>Calendars I Follow</Text>
                         {followingCalendars.map((cal) => (
-                            <CalendarCard
-                                key={cal.id}
-                                calendar={toCalendarData(cal)}
-                            />
+                            <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />
                         ))}
                     </View>
                 )}
 
-                {/*Renderizado de calendars públicos */}
                 <View style={profileStyles.postsGrid}>
                     <Text style={profileStyles.gridHeaderText}>{`${userBeingViewed.username}'s Public Calendars`}</Text>
-                    
                     {calendars.length > 0 ? (
                         calendars.map((cal: CalendarItem) => (
                             <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />
@@ -162,6 +162,14 @@ export default function PublicProfile({ targetUsername }: { targetUsername: stri
                 </View>
 
             </ScrollView>
+
+            <ReportModal
+                open={reportOpen}
+                onClose={() => setReportOpen(false)}
+                reportedType="USER"
+                reportedId={userBeingViewed.id}
+                reportedLabel={userBeingViewed.username}
+            />
         </SafeAreaView>
     );
 }

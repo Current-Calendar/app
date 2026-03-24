@@ -1,0 +1,11 @@
+services:
+  api-prod:
+    container_name: backend_container_prod
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.backend.pro
+    restart: unless-stopped

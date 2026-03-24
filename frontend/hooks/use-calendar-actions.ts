@@ -45,17 +45,28 @@ export function useCalendarActions() {
   }, []);
 
   const getMyCalendars = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      return await apiClient.get<any>('/calendars/my-calendars/');
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setLoading(true);
+      setError(null);
+      try {
+        const [owned, coOwned] = await Promise.all([
+          apiClient.get<any[]>('/calendars/my-calendars/'),
+          apiClient.get<any[]>('/calendars/co_owned/'),
+        ]);
+
+        const mergedMap = new Map();
+
+        [...owned, ...coOwned].forEach((calendar: any) => {
+          mergedMap.set(calendar.id, calendar);
+        });
+
+        return Array.from(mergedMap.values());
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    }, []);
 
   return {
     loading,
