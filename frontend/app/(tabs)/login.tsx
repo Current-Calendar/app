@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -31,7 +31,13 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { login } = useAuth();
+  const { user, login, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && (isAuthenticated || Boolean(user))) {
+      router.replace('/(tabs)/switch-events' as any);
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -45,6 +51,11 @@ export default function LoginScreen() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const onLogin = async () => {
+    if (isAuthenticated || user) {
+      router.replace('/(tabs)/switch-events' as any);
+      return;
+    }
+
     setErrorMsg(null);
     setSuccessMsg(null);
 

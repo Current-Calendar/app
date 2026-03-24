@@ -1,8 +1,15 @@
 import datetime
-from datetime import date, time
-from rest_framework.test import APITestCase
+import json
+from datetime import date, time, datetime as dt
+from rest_framework.test import APITestCase, APIRequestFactory
+from django.test import override_settings
+from django.conf import settings
+import tempfile
+import shutil
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
-from main.models import User, Calendar, Event
+from main.models import User, Calendar, Event, EventAttendance, Notification
+from main.events.views import list_events_from_calendar
 
 ENDPOINT_EVENTOS = "/api/v1/events/"
 EDIT_EVENT_ENDPOINT = "/api/v1/events/{}/edit/"
@@ -62,7 +69,7 @@ class EventTests(APITestCase):
 
         self.client.force_authenticate(self.user1)
 
-        request = self.client.delete("/api/v1/events/999999999999/")
+        request = self.client.delete("/api/v1/events/999999/delete/")
 
         self.assertEqual(request.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(Event.objects.count(), 1)
@@ -247,6 +254,114 @@ class DesasignarEventoCalendarTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
+
+
+class AsignarPermisosTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="ownerperm",
+            email="ownerperm@test.com",
+            password="pass123",
+        )
+        self.other = User.objects.create_user(
+            username="otherperm",
+            email="otherperm@test.com",
+            password="pass123",
+        )
+        self.calendar = Calendar.objects.create(
+            name="Cal owner",
+            creator=self.owner,
+            privacy="PUBLIC",
+        )
+        self.event = Event.objects.create(
+            title="Evento owner",
+            date=date(2026, 9, 1),
+            time=time(12, 0),
+            creator=self.owner,
+        )
+
+    def test_asign_forbidden_when_not_calendar_owner(self):
+        self.client.force_authenticate(self.other)
+
+        response = self.client.post(
+            "/api/v1/events/asign-to-calendar/",
+            {"evento_id": self.event.id, "calendario_id": self.calendar.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_asign_forbidden_when_not_event_owner(self):
+        self.client.force_authenticate(self.owner)
+        other_event = Event.objects.create(
+            title="Evento other",
+            date=date(2026, 9, 2),
+            time=time(13, 0),
+            creator=self.other,
+        )
+
+        response = self.client.post(
+            "/api/v1/events/asign-to-calendar/",
+            {"evento_id": other_event.id, "calendario_id": self.calendar.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class DeasignarPermisosTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="ownerperm2",
+            email="ownerperm2@test.com",
+            password="pass123",
+        )
+        self.other = User.objects.create_user(
+            username="otherperm2",
+            email="otherperm2@test.com",
+            password="pass123",
+        )
+        self.calendar = Calendar.objects.create(
+            name="Cal owner2",
+            creator=self.owner,
+            privacy="PUBLIC",
+        )
+        self.event = Event.objects.create(
+            title="Evento owner2",
+            date=date(2026, 9, 3),
+            time=time(14, 0),
+            creator=self.owner,
+        )
+        self.event.calendars.add(self.calendar)
+
+    def test_deasign_forbidden_when_not_calendar_owner(self):
+        self.client.force_authenticate(self.other)
+
+        response = self.client.delete(
+            "/api/v1/events/deasign-from-calendar/",
+            {"evento_id": self.event.id, "calendario_id": self.calendar.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_deasign_forbidden_when_not_event_owner(self):
+        self.client.force_authenticate(self.owner)
+        other_event = Event.objects.create(
+            title="Evento other2",
+            date=date(2026, 9, 4),
+            time=time(15, 0),
+            creator=self.other,
+        )
+        other_event.calendars.add(self.calendar)
+
+        response = self.client.delete(
+            "/api/v1/events/deasign-from-calendar/",
+            {"evento_id": other_event.id, "calendario_id": self.calendar.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         
 
 class CrearEventoTests(APITestCase):
@@ -630,7 +745,7 @@ class EditEventTests(APITestCase):
         expected_keys = {
             "id", "title", "description", "place_name",
             "date", "time", "recurrence", "external_id",
-            "calendars", "created_at",
+            "calendars", "created_at", "photo"
         }
         self.assertEqual(set(response.data.keys()), expected_keys)
 
@@ -808,4 +923,593 @@ class EditEventTests(APITestCase):
             {"title": "No permitido"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)        
+
+
+class EditEventExtraCoverageTests(APITestCase):
+    def setUp(self):
+        self._tmp_media = tempfile.mkdtemp()
+        self._override = override_settings(MEDIA_ROOT=self._tmp_media)
+        self._override.enable()
+        self.addCleanup(lambda: (self._override.disable(), shutil.rmtree(self._tmp_media, ignore_errors=True)))
+        self.user = User.objects.create_user(
+            username="editcov",
+            email="editcov@test.com",
+            password="pass123",
+        )
+        self.calendar = Calendar.objects.create(
+            creator=self.user,
+            name="Calendar cov",
+            privacy="PUBLIC",
+        )
+        self.event = Event.objects.create(
+            title="Evento foto",
+            date="2026-08-01",
+            time="15:00:00",
+            creator=self.user,
+        )
+        self.event.calendars.set([self.calendar])
+
+    def test_edit_accepts_calendars_string(self):
+        self.client.force_authenticate(self.user)
+        calendars_str = json.dumps([self.calendar.id])
+
+        response = self.client.put(
+            f"/api/v1/events/{self.event.id}/edit/",
+            {"calendars": calendars_str},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertIn(self.calendar.id, self.event.calendars.values_list("id", flat=True))
+
+    def test_edit_remove_photo_flag(self):
+        image = SimpleUploadedFile("foto2.jpg", b"filecontent", content_type="image/jpeg")
+        self.event.photo.save("foto2.jpg", image, save=True)
+        self.client.force_authenticate(self.user)
+
+        response = self.client.put(
+            f"/api/v1/events/{self.event.id}/edit/",
+            {"remove_photo": "true"},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertFalse(bool(self.event.photo))
+
+    def test_edit_replace_photo(self):
+        first_image = SimpleUploadedFile("foto3.jpg", b"aaa", content_type="image/jpeg")
+        self.event.photo.save("foto3.jpg", first_image, save=True)
+        old_name = self.event.photo.name
+        new_image = SimpleUploadedFile("foto4.jpg", b"bbb", content_type="image/jpeg")
+        self.client.force_authenticate(self.user)
+
+        response = self.client.put(
+            f"/api/v1/events/{self.event.id}/edit/",
+            {"photo": new_image},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.event.refresh_from_db()
+        self.assertTrue(self.event.photo)
+        self.assertNotEqual(self.event.photo.name, old_name)
+
+    def test_edit_validation_error_returns_400(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.put(
+            f"/api/v1/events/{self.event.id}/edit/",
+            {"date": "not-a-date"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+# ── Test Constants ──
+TEST_PASSWORD = 'testpass123'
+TEST_USERNAME_1 = 'user_rsvp1'
+TEST_USERNAME_2 = 'user_rsvp2'
+TEST_EMAIL_1 = 'rsvp1@test.com'
+TEST_EMAIL_2 = 'rsvp2@test.com'
+EVENT_TITLE = 'RSVP Test Event'
+EVENT_DATE = date(2026, 4, 15)
+EVENT_TIME = time(18, 0)
+RSVP_ENDPOINT_TEMPLATE = '/api/v1/events/{}/rsvp/'
+EVENT_DETAIL_ENDPOINT_TEMPLATE = '/api/v1/events/{}/edit/'
+NONEXISTENT_EVENT_ID = 999999
+
+
+class RSVPEventTests(APITestCase):
+    """Tests para endpoint RSVP de eventos."""
+
+    def setUp(self):
+        """Crear usuarios y evento para tests."""
+        self.user1 = User.objects.create_user(
+            username=TEST_USERNAME_1,
+            email=TEST_EMAIL_1,
+            password=TEST_PASSWORD
+        )
+        self.user2 = User.objects.create_user(
+            username=TEST_USERNAME_2,
+            email=TEST_EMAIL_2,
+            password=TEST_PASSWORD
+        )
+        self.event = Event.objects.create(
+            title=EVENT_TITLE,
+            date=EVENT_DATE,
+            time=EVENT_TIME,
+            creator=self.user1
+        )
+
+    @staticmethod
+    def _validate_iso_datetime(datetime_str):
+        """Validar que una cadena sea ISO 8601 válido.
+
+        Args:
+            datetime_str: String en formato ISO 8601.
+
+        Raises:
+            AssertionError: Si el formato no es ISO 8601 válido.
+        """
+        try:
+            normalized = datetime_str.replace('Z', '+00:00')
+            dt.fromisoformat(normalized)
+        except ValueError as exc:
+            raise AssertionError(f"Formato ISO 8601 inválido: {datetime_str}") from exc
+
+    def test_rsvp_no_auth(self):
+        """Test: RSVP sin autenticación retorna 401."""
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_rsvp_event_not_found(self):
+        """Test: RSVP a evento inexistente retorna 404."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(NONEXISTENT_EVENT_ID),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_rsvp_missing_status(self):
+        """Test: RSVP sin status retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_invalid_status(self):
+        """Test: RSVP con status inválido retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'INVALID'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_pending_rejected(self):
+        """Test: RSVP con status PENDING retorna 400."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'PENDING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_rsvp_create_assisting(self):
+        """Test: Crear RSVP ASSISTING retorna 200 con respondedAt ISO."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        self.assertIn('respondedAt', response.data)
+        self._validate_iso_datetime(response.data['respondedAt'])
+
+    def test_rsvp_create_not_assisting(self):
+        """Test: Crear RSVP NOT_ASSISTING retorna 200."""
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'NOT_ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'NOT_ASSISTING')
+
+    def test_rsvp_update_existing(self):
+        """Test: Actualizar RSVP existente no duplica registros."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        self.client.force_authenticate(self.user1)
+        response = self.client.patch(
+            RSVP_ENDPOINT_TEMPLATE.format(self.event.pk),
+            {'status': 'ASSISTING'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'ASSISTING')
+        count = EventAttendance.objects.filter(
+            user=self.user1,
+            event=self.event
+        ).count()
+        self.assertEqual(count, 1)
+
+    def test_event_detail_attendees_only_assisting(self):
+        """Test: GET evento expone solo attendees con status ASSISTING."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        EventAttendance.objects.create(
+            user=self.user2,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        response = self.client.get(
+            EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['attendees']), 1)
+        self.assertEqual(response.data['attendees'][0]['name'], TEST_USERNAME_1)
+
+    def test_attendee_responded_at_iso(self):
+        """Test: respondedAt en attendees siempre es ISO 8601."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        response = self.client.get(
+            EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
+        )
+        self.assertIn('attendees', response.data)
+        self.assertGreater(len(response.data['attendees']), 0)
+        responded_at = response.data['attendees'][0]['respondedAt']
+        self._validate_iso_datetime(responded_at)
+
+class CreateEventDuplicateTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="eventuser",
+            email="event@test.com",
+            password="pass123"
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Mi calendario",
+            privacy="PUBLIC",
+            creator=self.user
+        )
+
+        self.client.force_authenticate(self.user)
+
+        self.payload = {
+            "title": "Evento test",
+            "date": "2025-01-01",
+            "time": "10:00:00",
+            "calendars": [self.calendar.id]
+        }
+
+    def test_no_permite_eventos_duplicados_misma_fecha_y_hora(self):
+
+        response1 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+        self.assertEqual(response1.status_code, status.HTTP_201_CREATED)
+
+        response2 = self.client.post("/api/v1/events/create/", self.payload, format="json")
+
+        self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Ya tienes un evento creado para esa fecha y hora.", response2.json()["errors"])
+
+
+class InviteEventTests(APITestCase):
+    def setUp(self) -> None:
+        self.user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="user1"
+        )
+        self.user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="user2"
+        )
+
+        self.event1 = Event.objects.create(
+            title="Birthday Dinner",
+            description="See you at the usual restaurant.",
+            date=date(2026, 3, 20),
+            time=time(21, 00),
+            creator=self.user1,
+        )
+
+
+    def test_invite_unauthenticated(self):
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/")
+
+        self.assertEqual(request.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_invite_yourself(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user1.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user1, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_invite_not_creator(self):
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user1.pk,
+        })
+
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(Notification.objects.filter(recipient=self.user1, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).exists())
+
+    def test_duplicate_invite(self):
+        self.client.force_authenticate(self.user1)
+
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
+            "user": self.user2.pk,
+        })
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+
+        self.assertEqual(1, Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).count())
+
+    
+class ListEventsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="listuser",
+            email="list@test.com",
+            password="pass123",
+        )
+        self.calendar_a = Calendar.objects.create(
+            name="Cal A",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.calendar_b = Calendar.objects.create(
+            name="Cal B",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.event_a = Event.objects.create(
+            title="Brunch con amigos",
+            description="comida rica",
+            date=date(2026, 5, 1),
+            time=time(11, 30),
+            creator=self.user,
+        )
+        self.event_a.calendars.add(self.calendar_a)
+
+        self.event_b = Event.objects.create(
+            title="Reunión de trabajo",
+            description="tema importante",
+            date=date(2026, 5, 2),
+            time=time(9, 0),
+            creator=self.user,
+        )
+        self.event_b.calendars.add(self.calendar_b)
+
+    def test_list_events_filters_by_query(self):
+        response = self.client.get("/api/v1/events/list", {"q": "brunch"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.event_a.id)
+
+    def test_list_events_filters_by_calendar(self):
+        response = self.client.get("/api/v1/events/list", {"calendarId": self.calendar_b.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.event_b.id)
+
+
+class ListEventsFromCalendarFunctionTests(APITestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.user = User.objects.create_user(
+            username="functionlist",
+            email="function@test.com",
+            password="pass123",
+        )
+        self.calendar_a = Calendar.objects.create(
+            name="Cal Func A",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.calendar_b = Calendar.objects.create(
+            name="Cal Func B",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.event_a = Event.objects.create(
+            title="Func Event A",
+            description="desc a",
+            date=date(2026, 5, 10),
+            time=time(10, 0),
+            creator=self.user,
+        )
+        self.event_a.calendars.add(self.calendar_a)
+        self.event_b = Event.objects.create(
+            title="Func Event B",
+            description="desc b",
+            date=date(2026, 5, 11),
+            time=time(11, 0),
+            creator=self.user,
+        )
+        self.event_b.calendars.add(self.calendar_b)
+
+    def _call_view(self, params=None):
+        request = self.factory.get("/api/v1/events/list/", params or {})
+        return list_events_from_calendar(request)
+
+    def test_list_events_from_calendar_returns_all_when_no_filter(self):
+        response = self._call_view()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ids = {item["id"] for item in response.data}
+        self.assertSetEqual(ids, {self.event_a.id, self.event_b.id})
+
+    def test_list_events_from_calendar_filters_by_calendar_id(self):
+        response = self._call_view({"calendarId": self.calendar_a.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.event_a.id)
+
+
+class CreateEventParsingTests(APITestCase):
+    def setUp(self):
+        self._tmp_media = tempfile.mkdtemp()
+        self._override = override_settings(MEDIA_ROOT=self._tmp_media)
+        self._override.enable()
+        self.addCleanup(lambda: (self._override.disable(), shutil.rmtree(self._tmp_media, ignore_errors=True)))
+        self.user = User.objects.create_user(
+            username="parser",
+            email="parser@test.com",
+            password="pass123",
+        )
+        self.calendar = Calendar.objects.create(
+            name="Parser Cal",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_accepts_calendars_as_json_string(self):
+        payload = {
+            "title": "Evento con string",
+            "date": "2026-07-01",
+            "time": "08:00:00",
+            "calendars": json.dumps([self.calendar.id]),
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Event.objects.filter(title="Evento con string").exists())
+
+    def test_accepts_calendars_as_plain_string_number(self):
+        payload = {
+            "title": "Evento string numero",
+            "date": "2026-07-01",
+            "time": "08:30:00",
+            "calendars": str(self.calendar.id),
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_requires_time_field(self):
+        payload = {
+            "title": "Sin hora",
+            "date": "2026-07-04",
+            "calendars": [self.calendar.id],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_returns_validation_errors(self):
+        payload = {
+            "title": "Fecha invalida",
+            "date": "2026-07-06",
+            "time": "10:00:00",
+            "calendars": [self.calendar.id],
+            "recurrence": "abc",  # debe ser int
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_saves_photo_when_present(self):
+        image = SimpleUploadedFile("foto.jpg", b"filecontent", content_type="image/jpeg")
+        payload = {
+            "title": "Con foto",
+            "date": "2026-07-05",
+            "time": "12:00:00",
+            "calendars": [self.calendar.id],
+            "photo": image,
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="multipart")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = Event.objects.get(title="Con foto")
+        self.assertTrue(event.photo)
+
+    def test_rejects_invalid_coordinates(self):
+        payload = {
+            "title": "Evento con coords malas",
+            "date": "2026-07-02",
+            "time": "09:00:00",
+            "calendars": [self.calendar.id],
+            "latitud": "abc",
+            "longitud": "xyz",
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+
+    def test_saves_location_when_coordinates_are_valid(self):
+        payload = {
+            "title": "Evento con ubicacion",
+            "date": "2026-07-03",
+            "time": "10:00:00",
+            "calendars": [self.calendar.id],
+            "latitud": 40.4168,
+            "longitud": -3.7038,
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        event = Event.objects.get(title="Evento con ubicacion")
+        self.assertIsNotNone(event.location)
+        self.assertAlmostEqual(event.location.y, 40.4168, places=4)
+        self.assertAlmostEqual(event.location.x, -3.7038, places=4)

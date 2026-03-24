@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navSideBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
+import { useNotifications } from "@/hooks/use-notifications";
 
   interface SidebarProps {
   expanded: boolean;
@@ -22,6 +23,7 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
+  const { unreadCount } = useNotifications();
 
   const navigateTo = (path: string) => {
     closeMenu();
@@ -66,7 +68,7 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   };
 
   const profileLabel = isAuthenticated ? "Profile" : "Login";
-  const profileHref: string = isAuthenticated ? `/profile/${user?.username}` : "/login";
+  const profileHref: string = isAuthenticated ? "/profile" : "/login";
 
   return (
     <View style={navSideBarStyles.sidebar}>
@@ -85,6 +87,23 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
         <SidebarItem icon="calendar" label="Discover" href="/(tabs)/switch-calendar" />
         <SidebarItem icon="people" label="Our Team" />
         <SidebarItem icon="compass" label="Map" href="/radar" />
+        <View style={{ position: "relative" }}>
+          <SidebarItem icon="notifications" label="Notifications" href="/(tabs)/notifications" />
+          {unreadCount > 0 && (
+            <View style={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              width: 9,
+              height: 9,
+              borderRadius: 5,
+              backgroundColor: "#e53935",
+              borderWidth: 1.5,
+              borderColor: "#10464d",
+              pointerEvents: "none",
+            }} />
+          )}
+        </View>
         <SidebarItem icon="person" label={profileLabel} href={profileHref} />
 
         <CreateMenuModal
