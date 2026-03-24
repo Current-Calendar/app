@@ -755,48 +755,51 @@ class UsuarioPropioView(APIView):
             status=202
         )
   
-@api_view(['GET','PUT', 'PATCH'])
-@permission_classes([IsAuthenticated])
+@api_view(['GET', 'PUT', 'PATCH'])
 def edit_event(request, evento_id):
     event = get_object_or_404(Evento, id=evento_id)
-   
+
     if request.method == 'GET':
-        return Response({
-            "id": event.id,
-            "titulo": event.titulo,
-            "descripcion": event.descripcion,
-            "calendarios": list(event.calendarios.values_list("id", flat=True)),
-        }, status= status.HTTP_200_OK)
-    
-    
-    if event.creador !=request.user:
-         return Response(
-                {"errors": ["No tienes permiso para editar este evento."]},
-                status = status.HTTP_403_FORBIDDEN
+        return Response(
+            {
+                "id": event.id,
+                "titulo": event.titulo,
+                "descripcion": event.descripcion,
+                "nombre_lugar": event.nombre_lugar,
+                "fecha": event.fecha,
+                "hora": event.hora,
+                "recurrencia": event.recurrencia,
+                "id_externo": event.id_externo,
+                "calendarios": list(event.calendarios.values_list("id", flat=True)),
+                "fecha_creacion": event.fecha_creacion,
+            },
+            status=status.HTTP_200_OK,
         )
+
  
+    if not request.user.is_authenticated:
+        return Response(
+            {"errors": ["Debes iniciar sesión para realizar esta acción."]},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    if event.creador != request.user:
+        return Response(
+            {"errors": ["No tienes permiso para editar este evento."]},
+            status=status.HTTP_403_FORBIDDEN
+        )
+        
     data = request.data
 
-    # Validate required fields are not empty if provided
     if "titulo" in data and not data["titulo"]:
-        return Response(
-            {"errors": ["El campo 'titulo' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'titulo' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
     if "fecha" in data and not data["fecha"]:
-        return Response(
-            {"errors": ["El campo 'fecha' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'fecha' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
     if "hora" in data and not data["hora"]:
-        return Response(
-            {"errors": ["El campo 'hora' no puede estar vacío."]},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"errors": ["El campo 'hora' no puede estar vacío."]}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Update scalar fields if present
     editable_fields = [
         "titulo", "descripcion", "nombre_lugar",
         "fecha", "hora", "recurrencia", "id_externo",
@@ -805,33 +808,22 @@ def edit_event(request, evento_id):
         if field in data:
             setattr(event, field, data[field])
 
-    # Location via lat/lon
     if "latitud" in data or "longitud" in data:
         lat = data.get("latitud")
         lon = data.get("longitud")
         try:
             event.ubicacion = Point(float(lon), float(lat))
         except Exception:
-            return Response(
-                {"errors": ["Latitud o longitud inválidas."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"errors": ["Latitud o longitud inválidas."]}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Calendars M2M
     calendars = None
     if "calendarios" in data:
         calendar_ids = data["calendarios"]
         if not calendar_ids or not isinstance(calendar_ids, list):
-            return Response(
-                {"errors": ["Debe indicar al menos un calendario válido."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"errors": ["Debe indicar al menos un calendario válido."]}, status=status.HTTP_400_BAD_REQUEST)
         calendars = Calendario.objects.filter(id__in=calendar_ids)
         if calendars.count() != len(calendar_ids):
-            return Response(
-                {"errors": ["Algún calendario no existe."]},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"errors": ["Algún calendario no existe."]}, status=status.HTTP_404_NOT_FOUND)
 
     try:
         event.full_clean()
