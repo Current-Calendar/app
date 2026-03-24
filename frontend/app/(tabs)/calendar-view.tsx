@@ -8,6 +8,8 @@ import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
+import InviteUserModal from "@/components/InviteUserModal";
 import { ReportModal } from "@/components/report-modal";
 
 const MONTH_NAMES = [
@@ -21,6 +23,10 @@ export default function CalendarViewScreen() {
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
   const { calendars: backendCalendars } = useCalendars();
   const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList();
+  const { user } = useAuth();
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
 
   const calendar = useMemo(() => {
     const found = backendCalendars.find((c) => String(c.id) === calendarId);
@@ -32,9 +38,6 @@ export default function CalendarViewScreen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
-
-  const [reportOpen, setReportOpen] = useState(false);
-  const [reportTarget, setReportTarget] = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
 
   useFocusEffect(
     React.useCallback(() => { refetchEvents(); }, [refetchEvents])
@@ -63,6 +66,12 @@ export default function CalendarViewScreen() {
     });
     return transformed.filter((e) => String(e.calendarId) === String(calendar.id));
   }, [calendar, backendEvents, loadingEvents]);
+
+  // Check if current user is the owner of the calendar
+  const isOwner = useMemo(() => {
+    if (!calendar || !user) return false;
+    return calendar.creator_username === user.username || calendar.creator === user.username;
+  }, [calendar, user]);
 
   const eventsOfSelectedDay = useMemo(() => {
     if (!selectedDay) return [];
@@ -142,7 +151,12 @@ export default function CalendarViewScreen() {
           )}
 
           <View style={styles.actionsRow}>
-            <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
+            {isOwner && (
+              <Pressable style={styles.inviteButton} onPress={() => setInviteVisible(true)}>
+                <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
+              </Pressable>
+            )}
+            <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar") }>
               <Text style={styles.secondaryButtonText}>Back to calendars</Text>
             </Pressable>
           </View>
@@ -166,6 +180,15 @@ export default function CalendarViewScreen() {
           )}
 
         </ScrollView>
+      )}
+
+      {calendar && isOwner && (
+        <InviteUserModal
+          visible={inviteVisible}
+          onClose={() => setInviteVisible(false)}
+          itemId={String(calendar.id)}
+          type="calendar"
+        />
       )}
     </View>
   );
@@ -232,10 +255,21 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     marginTop: 14,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 12,
   },
   secondaryButton: {
     backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#10464d",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  inviteButton: {
+    backgroundColor: "#EAF7F6",
     borderWidth: 1,
     borderColor: "#10464d",
     borderRadius: 10,

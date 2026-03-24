@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 import { calendarInfoModalStyles } from '@/styles/calendar-styles';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
+import { useAuth } from '@/hooks/use-auth';
+import InviteUserModal from '@/components/InviteUserModal';
 import { ShareCalendarModal } from '@/components/share-calendar-modal';
 import { AddCoOwnerModal } from '@/components/add-co-owner';
 
@@ -45,19 +47,26 @@ export function CalendarInfoModal({
   onCalendarUpdated,
   isDeleting = false,
 }: CalendarInfoModalProps) {
-  const [showShare, setShowShare] = useState(false);
-  const [showCoOwners, setShowCoOwners] = useState(false);
+    const { user } = useAuth();
+    const [inviteVisible, setInviteVisible] = useState(false);
+    const [showShare, setShowShare] = useState(false);
+    const [showCoOwners, setShowCoOwners] = useState(false);
+
   const [localCalendar, setLocalCalendar] = useState<Calendar | null>(calendar);
 
   useEffect(() => {
     setLocalCalendar(calendar);
   }, [calendar]);
 
+ 
   if (!localCalendar) return null;
+
 
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
+  const isOwner = user && localCalendar.creator === user.username;
+
 
   const handleDeletePress = () => {
     if (!onDelete) return;
@@ -144,6 +153,22 @@ export function CalendarInfoModal({
         </View>
 
         <View style={calendarInfoModalStyles.actions}>
+             {isOwner && (
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.inviteButton}
+                            onPress={() => setInviteVisible(true)}
+                            activeOpacity={0.75}
+                        >
+                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
+                            <Text
+                                style={calendarInfoModalStyles.inviteButtonLabel}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                            >
+                                Invite to calendar
+                            </Text>
+                        </TouchableOpacity>
+                    )}
           <TouchableOpacity
             style={calendarInfoModalStyles.editButton}
             onPress={() => onEdit?.(localCalendar)}
@@ -152,15 +177,16 @@ export function CalendarInfoModal({
             <Ionicons name="pencil" size={16} color="#fff" />
             <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={calendarInfoModalStyles.shareButton}
-            onPress={() => setShowCoOwners(true)}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="person-add-outline" size={16} color="#10464d" />
-            <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
-          </TouchableOpacity>
+                    {isOwner && (
+                        <TouchableOpacity
+                            style={calendarInfoModalStyles.shareButton}
+                            onPress={() => setShowCoOwners(true)}
+                            activeOpacity={0.75}
+                        >
+                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
+                            <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
+                        </TouchableOpacity>
+                    )}
 
           {localCalendar.privacy !== 'PRIVATE' && (
             <TouchableOpacity
@@ -203,6 +229,15 @@ export function CalendarInfoModal({
         onClose={() => setShowCoOwners(false)}
         onCalendarUpdated={handleCalendarUpdated}
       />
+
+            {isOwner && (
+                <InviteUserModal
+                    visible={inviteVisible}
+                    onClose={() => setInviteVisible(false)}
+                    itemId={String(localCalendar.id)}
+                    type="calendar"
+                />
+            )}
     </>
   );
 }

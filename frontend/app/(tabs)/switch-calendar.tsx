@@ -16,6 +16,8 @@ import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function CalendarsScreen() {
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
@@ -160,7 +162,7 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        {!authLoading && !hasSession && (
+        {!authLoading && !hasSession ? (
           <View style={styles.authHeader}>
             <TouchableOpacity
               style={styles.loginButton}
@@ -180,6 +182,12 @@ export default function CalendarsScreen() {
               }}
             >
               <Text style={styles.registerButtonText}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
             </TouchableOpacity>
           </View>
         )}
@@ -215,6 +223,11 @@ export default function CalendarsScreen() {
           visible={commentsModalVisible}
           onClose={handleCloseCommentsModal}
           calendar={selectedCalendar}
+        />
+
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
         />
       </View>
     </View>
@@ -299,5 +312,18 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 16,
+  },
+  userHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 });

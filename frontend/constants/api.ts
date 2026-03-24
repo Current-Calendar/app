@@ -59,6 +59,11 @@ export const API_CONFIG = {
     comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
     commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
     deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
+    // Invitations & notifications
+    inviteCalendar: (calendarId: string | number) => buildEndpoint(`calendars/${calendarId}/invite/`),
+    inviteEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/invite/`),
+    listNotifications: buildEndpoint('notifications/'),
+    handleNotification: (id: string | number) => buildEndpoint(`notifications/${id}/`),
   },
 };
 
