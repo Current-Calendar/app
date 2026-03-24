@@ -14,10 +14,12 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "@/hooks/use-auth";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { appendPhoto } from '@/services/api-client';
 
 type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
@@ -29,8 +31,14 @@ interface PublishData {
   privacy: PrivacyStatus;
   origin?: CalendarOrigin;
 }
+
+type CreatedCalendarResponse = {
+  id?: number | string;
+};
+
 export default function CreateScreen() {
   const router = useRouter();
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { createCalendar } = useCalendarActions();
   const [selectedPrivacy, setSelectedPrivacy] =
@@ -101,6 +109,14 @@ export default function CreateScreen() {
     setCoverImage(null);
   };
 
+  const handleCancel = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      router.replace("/(tabs)/calendars");
+    }
+  };
+
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
@@ -124,33 +140,37 @@ export default function CreateScreen() {
       formData.append("origin", "CURRENT");
 
       if (coverImage) {
-        const filename = coverImage.uri.split("/").pop() ?? "cover.jpg";
-        const response = await fetch(coverImage.uri);
-        const blob = await response.blob();
-        formData.append("cover", blob, filename);
+        await appendPhoto(formData, coverImage, "cover");
       }
 
-      await createCalendar(formData);
+      const createdCalendar = await createCalendar(formData) as CreatedCalendarResponse;
+      const createdCalendarId = createdCalendar?.id;
 
       Alert.alert("Success", "Calendar created successfully.");
 
-      router.replace("/(tabs)/calendars");
+      if (createdCalendarId !== undefined && createdCalendarId !== null) {
+        router.replace(`/(tabs)/calendars?selectedCalendarId=${encodeURIComponent(String(createdCalendarId))}`);
+      } else {
+        router.replace("/(tabs)/calendars");
+      }
 
     } catch (error: any) {
-    console.log("FULL ERROR:", error);
+      console.log("FULL ERROR:", error);
 
-    const message = error?.message || "";
+      const backendErrors = error?.data?.errors;
+      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
+        setErrorMessage(String(backendErrors[0]));
+      } else {
+        const message = error?.message || "";
+        setErrorMessage(
+          message && !message.includes("HTTP")
+            ? message
+            : "Failed to publish calendar. Please try again."
+        );
+      }
 
-    if (message.includes("400")) {
-      setErrorMessage(
-        "You can only create one private calendar with the basic plan."
-      );
-    } else {
-      setErrorMessage("Failed to publish calendar. Please try again.");
-    }
-
-    console.error("Publish error:", error);
-  } finally {
+      console.error("Publish error:", error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -333,6 +353,13 @@ export default function CreateScreen() {
           <View
             style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
           >
+            <Pressable
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              disabled={isLoading}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
 
             <Pressable
               style={[
@@ -360,7 +387,6 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
   },
   container: {
     paddingHorizontal: 24,
@@ -537,6 +563,27 @@ const styles = StyleSheet.create({
   },
   buttonGroupDesktop: {
     justifyContent: "space-between",
+  },
+
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  cancelText: {
+    color: "#10464d",
+    fontSize: 18,
+    fontWeight: "bold",
+    fontFamily: Fonts?.rounded,
   },
 
   publishButton: {

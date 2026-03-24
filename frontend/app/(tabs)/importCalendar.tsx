@@ -154,7 +154,6 @@ export default function ImportCalendarScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#fdfbeb",
         justifyContent: "center",
         alignItems: "center",
         padding: 20,

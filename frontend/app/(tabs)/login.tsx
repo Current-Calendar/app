@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,8 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
+import { Ionicons } from '@expo/vector-icons';
 
-const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
@@ -31,19 +31,31 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { login } = useAuth();
+  const { user, login, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && (isAuthenticated || Boolean(user))) {
+      router.replace('/(tabs)/switch-events' as any);
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const onLogin = async () => {
+    if (isAuthenticated || user) {
+      router.replace('/(tabs)/switch-events' as any);
+      return;
+    }
+
     setErrorMsg(null);
     setSuccessMsg(null);
 
@@ -92,17 +104,26 @@ export default function LoginScreen() {
           />
 
           <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={{ position: "relative", justifyContent: "center" }}>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder=""
+              placeholderTextColor="#999"
+              secureTextEntry={!showPassword}
+              style={[styles.input, { paddingRight: 40 }]}
+              autoCapitalize="none"
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={{ position: "absolute", right: 10 }}
+            >
+              <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color={TEXT} />
+            </Pressable>
+          </View>
 
           <Pressable style={styles.forgot}>
-          <Link href="/forgot-password" asChild>
+          <Link href={"/forgot-password" as any} asChild>
             <Pressable>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </Pressable>
@@ -153,7 +174,7 @@ export default function LoginScreen() {
 const W = Dimensions.get("window").width;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   content: {
     flex: 1,

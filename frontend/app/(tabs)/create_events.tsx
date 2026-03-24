@@ -20,8 +20,9 @@ import { useNavigation } from "@react-navigation/native";
 import { useCreateEventApi } from '@/hooks/use-create-event-api';
 import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
 import { useRouter } from "expo-router";
-import apiClient from '@/services/api-client';
+import apiClient, { appendPhoto } from '@/services/api-client';
 import { useLocalSearchParams } from "expo-router";
+import { useAuth } from "@/hooks/use-auth";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -272,6 +273,7 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
   const { date: dateParam } = useLocalSearchParams();
   const router = useRouter();
@@ -334,6 +336,9 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
   // Coordinates
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
@@ -369,8 +374,6 @@ export default function CreateEventsScreen() {
     d.setHours(14, 0, 0, 0);
     return d;
   });
-
-  const [coverUri, setCoverUri] = useState<string | null>(null);
 
   // ====== Pickers ======
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
@@ -418,7 +421,10 @@ export default function CreateEventsScreen() {
       quality: 0.9,
     });
 
-    if (!result.canceled) setCoverUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setCoverUri(result.assets[0].uri);
+      setCoverAsset(result.assets[0]);
+    }
   };
 
   useEffect(() => {
@@ -474,26 +480,50 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    const payload: any = {
-      title: titleTrimmed,
-      description: description?.trim() ?? "",
-      place_name: place?.trim() ?? "",
-      date: toISODate(date),
-      time: toHMS(time),
-      calendars: [Number(selectedCalendar.id)],
-      creator_id: 2, // MOCK por atime
-    };
-
-    // Send coords if available (backend expects latitude/longitude)
-    if (lat != null && lon != null) {
-      payload.latitude = lat;
-      payload.longitude = lon;
+    if (!user) {
+        setFormError("User not authenticated.");
+        return;
     }
+
+    const calendarsIds = [Number(selectedCalendar.id)];
 
     try {
       setPublishing(true);
 
-      await createEvent(payload);
+      if (coverAsset) {
+         const formData = new FormData();
+         formData.append("title", titleTrimmed);
+         formData.append("description", description?.trim() ?? "");
+         formData.append("place_name", place?.trim() ?? "");
+         formData.append("date", toISODate(date));
+         formData.append("time", toHMS(time));
+         formData.append("calendars", JSON.stringify(calendarsIds));
+         formData.append("creator_id", String(user.id));
+
+         if (lat != null && lon != null) {
+            formData.append("latitud", String(lat));
+            formData.append("longitud", String(lon));
+         }
+
+         await appendPhoto(formData, coverAsset, "photo");
+         await createEvent(formData);
+      } else {
+        const payload: any = {
+            title: titleTrimmed,
+            description: description?.trim() ?? "",
+            place_name: place?.trim() ?? "",
+            date: toISODate(date),
+            time: toHMS(time),
+            calendars: calendarsIds,
+            creator_id: user.id,
+        };
+
+        if (lat != null && lon != null) {
+            payload.latitude = lat;
+            payload.longitude = lon;
+        }
+        await createEvent(payload);
+      }
 
       setSuccessModalOpen(true);
     } catch (e: any) {
@@ -562,10 +592,6 @@ export default function CreateEventsScreen() {
                   <Ionicons name="camera" size={28} color={TEXT} />
                 )}
               </Pressable>
-
-              <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /events no recibe imagen)
-              </Text>
             </View>
           </View>
 
@@ -664,14 +690,24 @@ export default function CreateEventsScreen() {
               <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
             </View>
 
-            <Pressable
-              style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
-              onPress={publish}
-              disabled={publishing}
-            >
-              {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
-            </Pressable>
+            <View style={{ flexDirection: "row", justifyContent: "center",alignItems: "center", gap: 12, marginTop: 14 }}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={goBackOrCalendars}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
+                onPress={publish}
+                disabled={publishing}
+              >
+                {publishing
+                  ? <ActivityIndicator color="#EAF7F6" />
+                  : <Text style={styles.publishText}>Publish</Text>}
+              </Pressable>
 
+            </View>
             <View style={{ height: 40 }} />
           </View>
         </View>
@@ -831,7 +867,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   iconBtn: { padding: 6 },
 
@@ -953,19 +989,13 @@ const styles = StyleSheet.create({
   calendarCenterWrap: { marginTop: 12, alignItems: "center", justifyContent: "center" },
 
   publishBtn: {
-    marginTop: 14,
-    alignSelf: "center",
-    width: 170,
+    flex: 1,
     paddingVertical: 12,
     borderRadius: 18,
     backgroundColor: TEAL,
     borderWidth: 2,
     borderColor: "#0B3D3D",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    alignItems: "center",
   },
   publishBtnDisabled: { opacity: 0.65 },
   publishText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900", fontSize: 16 },
@@ -1143,5 +1173,17 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
-  },
+  },cancelBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 18,
+  backgroundColor: "#fff",
+  borderWidth: 2,
+  borderColor: "#10464D",
+  alignItems: "center",
+},cancelText: {
+  color: "#10464D",
+  fontWeight: "900",
+  fontSize: 16,
+},
 });

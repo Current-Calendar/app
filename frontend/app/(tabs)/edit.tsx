@@ -7,6 +7,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { appendPhoto } from '@/services/api-client';
 
 type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
@@ -107,10 +108,7 @@ export default function EditScreen() {
         formData.append("description", calendarData.description);
         formData.append("privacy", selectedPrivacy);
 
-        const filename = newCoverImage.uri.split("/").pop() ?? "cover.jpg";
-        const fetchResponse = await fetch(newCoverImage.uri);
-        const blob = await fetchResponse.blob();
-        formData.append("cover", blob, filename);
+        await appendPhoto(formData, newCoverImage, "cover");
 
         await updateCalendar(Number(calendarId), formData);
       } else {
@@ -286,7 +284,6 @@ export default function EditScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
   },
   container: {
     paddingHorizontal: 24,

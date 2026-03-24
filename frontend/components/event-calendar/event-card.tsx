@@ -6,6 +6,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import type { Event } from "@/app/(tabs)/switch-events";
 import { eventCalendarEventCardStyles } from "@/styles/calendar-styles";
 
@@ -24,6 +25,7 @@ export default function EventCard({
   onComment,
   onSave,
 }: Props) {
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const MAX_IMAGE_WIDTH = 220;
@@ -40,7 +42,14 @@ export default function EventCard({
   return (
     <View style={eventCalendarEventCardStyles.card}>
       <View style={eventCalendarEventCardStyles.userRow}>
-        <Image source={{ uri: event.userAvatar }} style={eventCalendarEventCardStyles.avatar} />
+        <Image
+          source={
+            typeof event.userAvatar === 'string'
+              ? { uri: event.userAvatar }
+              : event.userAvatar
+          }
+          style={eventCalendarEventCardStyles.avatar}
+        />
         <Text style={eventCalendarEventCardStyles.username}>{event.username}</Text>
       </View>
 
@@ -101,6 +110,13 @@ export default function EventCard({
           <Ionicons name="bookmark-outline" size={18} />
           {!isSmallScreen && (
             <Text style={eventCalendarEventCardStyles.actionText}>Save</Text>
+          )}
+        </Pressable>
+
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => router.push(`/chat/${event.id}` as any)}>
+          <Ionicons name="chatbubbles-outline" size={18} />
+          {!isSmallScreen && (
+            <Text style={eventCalendarEventCardStyles.actionText}>Chat</Text>
           )}
         </Pressable>
       </View>

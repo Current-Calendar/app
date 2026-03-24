@@ -4,7 +4,10 @@ import apiClient from '@/services/api-client';
 
 type EventPayload = Record<string, unknown>;
 
-const toBackendEventPayload = (payload: EventPayload): EventPayload => {
+const toBackendEventPayload = (payload: EventPayload | FormData): EventPayload | FormData => {
+  if (payload instanceof FormData) {
+    return payload;
+  }
   const normalized: EventPayload = { ...payload };
 
   if (normalized.latitude != null || normalized.longitude != null) {
