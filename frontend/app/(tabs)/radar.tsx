@@ -10,7 +10,16 @@ import React, { useState, useEffect } from "react";
 import * as Location from "expo-location";
 import apiConfig from "../../constants/api";
 import MapComponent from "../../components/map-component";
-import { useNearbyEvents, Coordinates } from "@/hooks/use-nearby-events";
+
+function normalizeEventList(data: any): any[] {
+  return (
+    (Array.isArray(data) && data) ||
+    (Array.isArray(data?.events) && data.events) ||
+    (Array.isArray(data?.eventos) && data.eventos) ||
+    (Array.isArray(data?.results) && data.results) ||
+    []
+  );
+}
 
 export default function RadarScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -21,7 +30,7 @@ export default function RadarScreen() {
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
+useEffect(() => {
     let cancelled = false;
 
     const loadRadar = async () => {
@@ -32,79 +41,77 @@ export default function RadarScreen() {
       setLocationMessage(null);
       setLoadingStage("Getting your location...");
 
+      if (Platform.OS === "web") {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            if (cancelled) return;
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            setLocation({ latitude: lat, longitude: lon });
+            setLoadingStage("Searching nearby events...");
+
+            try {
+              const radiusCandidatesKm = [5, 15, 35];
+              let eventList: any[] = [];
+
+              for (const radiusKm of radiusCandidatesKm) {
+                if (cancelled) return;
+                setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
+                const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
+                if (response.ok) {
+                  const data = await response.json();
+                  eventList = normalizeEventList(data);
+                  if (eventList.length > 0) break;
+                }
+              }
+              if (!cancelled) setEvents(eventList);
+            } catch (e) {
+              if (!cancelled) setErrorMessage("Error loading events.");
+            } finally {
+              if (!cancelled) setLoading(false);
+            }
+          },
+          (error) => {
+            if (cancelled) return;
+            console.error("Error real de Chrome:", error);
+            setLocationMessage(`Error de geolocalización: ${error.message}`);
+            setLoading(false);
+          }
+        );
+        return;
+      }
+
       try {
-        let lat: number;
-        let lon: number;
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") throw new Error("Permission denied");
 
-        if (Platform.OS === "web") {
-          try {
-            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-              });
-            });
-
-            lat = position.coords.latitude;
-            lon = position.coords.longitude;
-          } catch {
-            throw new Error(
-              "Location is required to show nearby events. Please enable location services and try again."
-            );
-          }
-        } else {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== "granted") {
-            throw new Error(
-              "Location permission is required to show nearby events. Please enable location and try again."
-            );
-          } else {
-            const currentLocation = await Location.getCurrentPositionAsync({});
-            lat = currentLocation.coords.latitude;
-            lon = currentLocation.coords.longitude;
-          }
-        }
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        const lat = currentLocation.coords.latitude;
+        const lon = currentLocation.coords.longitude;
 
         if (cancelled) return;
         setLocation({ latitude: lat, longitude: lon });
-
         setLoadingStage("Searching nearby events...");
-        const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, 5));
-        if (!response.ok) {
-          throw new Error("Could not load nearby events.");
-        }
 
-        const data = await response.json();
-        const eventList =
-          (Array.isArray(data) && data) ||
-          (Array.isArray(data?.events) && data.events) ||
-          (Array.isArray(data?.eventos) && data.eventos) ||
-          (Array.isArray(data?.results) && data.results) ||
-          [];
+        const radiusCandidatesKm = [5, 15, 35];
+        let eventList: any[] = [];
 
-        if (!cancelled) {
-          setEvents(eventList);
-        }
-      } catch (error) {
-        console.error("Error getting location or events:", error);
-        if (!cancelled) {
-          const message =
-            error instanceof Error
-              ? error.message
-              : typeof error === "object" && error !== null && "message" in error
-                ? String((error as { message?: string }).message || "")
-                : "";
-          if (message.toLowerCase().includes("location") || message.toLowerCase().includes("ubicacion")) {
-            setLocationMessage(message || "Getting your location...");
-          } else {
-            setErrorMessage(message || "Error loading Radar.");
+        for (const radiusKm of radiusCandidatesKm) {
+          if (cancelled) return;
+          setLoadingStage(`Searching nearby events (${radiusKm} km)...`);
+          const response = await fetch(apiConfig.endpoints.nearbyEvents(lat, lon, radiusKm));
+          if (response.ok) {
+            const data = await response.json();
+            eventList = normalizeEventList(data);
+            if (eventList.length > 0) break;
           }
         }
+        if (!cancelled) setEvents(eventList);
+      } catch (error) {
+        if (!cancelled) setErrorMessage("Error en móvil.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
 
@@ -147,8 +154,13 @@ export default function RadarScreen() {
         </Text>
         {Platform.OS === "web" ? (
           <View style={styles.guideBox}>
-            <Text style={styles.guideStep}>1. Click the lock icon next to the URL.</Text>
-            <Text style={styles.guideStep}>2. Allow location access for this site.</Text>
+            <Text style={[styles.guideStep, { fontWeight: "700", fontSize: 13, marginBottom: 8 }]}>
+              📍 Location Permission Required
+            </Text>
+            <Text style={styles.guideStep}>1. Make sure you're using HTTPS or localhost</Text>
+            <Text style={styles.guideStep}>2. Click the lock icon next to the URL in Chrome</Text>
+            <Text style={styles.guideStep}>3. Find "Location" and select "Allow"</Text>
+            <Text style={styles.guideStep}>4. Refresh the page and try again</Text>
           </View>
         ) : (
           <Text style={styles.loadingSubtitle}>

@@ -264,6 +264,22 @@ class MockElement(models.Model):
     name = models.CharField(max_length=100)
     geo_point = models.PointField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+class ChatMessage(models.Model):
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='chat_messages')
+    
+    
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    
+    text = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"{self.sender.username} en {self.event.title}: {self.text[:20]}"
     
 class EventAttendance(models.Model):
     STATUS_CHOICES = [

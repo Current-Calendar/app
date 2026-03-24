@@ -60,9 +60,14 @@ export default function CalendarsScreen() {
     const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
 
     const filteredCalendars = backendCalendars.filter((c: any) => {
-      const isPublic = c.privacy === "PUBLIC";
-      const isNotMine = String(c.creator_id) !== String(user?.id);
-      return isPublic && isNotMine;
+      const calendarId = String(c.id);
+      const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
+      const isNotMine = !user?.id || creatorId !== String(user.id);
+      const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
+      const isVisibleByPrivacy =
+        c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+
+      return isVisibleByPrivacy && isNotMine && isNotSubscribed;
     });
 
     const mappedCalendars: Calendar[] = filteredCalendars.map((c: any, index: number) => ({
@@ -79,7 +84,7 @@ export default function CalendarsScreen() {
     }));
 
     setCalendars(mappedCalendars);
-  }, [backendCalendars, user]);
+  }, [backendCalendars, user, hasSession, subscribedCalendarIds]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
@@ -195,7 +200,12 @@ export default function CalendarsScreen() {
             />
           )}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No calendars to display.</Text>
+            <View style={styles.emptyStateWrap}>
+              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+              <Text style={styles.emptySubtext}>
+                You may already follow all available calendars, or none match your privacy access.
+              </Text>
+            </View>
           }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -238,6 +248,20 @@ const styles = StyleSheet.create({
     color: "#10464d",
     opacity: 0.8,
     fontWeight: "600",
+  },
+
+  emptyStateWrap: {
+    marginTop: 40,
+    paddingHorizontal: 10,
+  },
+
+  emptySubtext: {
+    marginTop: 6,
+    textAlign: "center",
+    color: "#4f6f74",
+    opacity: 0.9,
+    lineHeight: 20,
+    fontSize: 13,
   },
 
   authHeader: {
