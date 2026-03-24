@@ -11,11 +11,6 @@ export type FollowUser = {
   total_following?: number;
 };
 
-type FollowListResponse = {
-  count: number;
-  results: FollowUser[];
-};
-
 export const useUserFollows = (userId?: number, enabled = true) => {
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [following, setFollowing] = useState<FollowUser[]>([]);
@@ -28,11 +23,13 @@ export const useUserFollows = (userId?: number, enabled = true) => {
     setError(null);
     try {
       const [followersResp, followingResp] = await Promise.all([
-        apiClient.get<FollowListResponse>(`/users/${userId}/followers/`),
-        apiClient.get<FollowListResponse>(`/users/${userId}/following/`),
+        apiClient.get<FollowUser[] | { results: FollowUser[] }>(`/users/${userId}/followers/`),
+        apiClient.get<FollowUser[] | { results: FollowUser[] }>(`/users/${userId}/following/`),
       ]);
-      setFollowers(followersResp?.results ?? []);
-      setFollowing(followingResp?.results ?? []);
+      const parseList = (resp: FollowUser[] | { results: FollowUser[] } | undefined) =>
+        Array.isArray(resp) ? resp : resp?.results ?? [];
+      setFollowers(parseList(followersResp));
+      setFollowing(parseList(followingResp));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setError('User not found.');
