@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
+import { Holiday } from '@/hooks/use-holidays';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
@@ -22,7 +23,7 @@ const RED_DARK = "#B22222";
 type AttendanceStatus = "pending" | "attending" | "not_attending";
 
 interface EventDetailModalProps {
-  event: CalendarEvent | null;
+  event: CalendarEvent | Holiday | null;
   onClose: () => void;
 }
 
@@ -41,6 +42,7 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
   if (!event) return null;
 
+  const isHoliday = (event as Holiday).isHoliday === true;
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
 
   const handleAttendanceChange = (value: AttendanceStatus) => {
@@ -119,41 +121,43 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                 />
               )}
 
-              <View style={styles.attendanceSection}>
-                <Text style={styles.attendanceLabel}>Attendance</Text>
+              {!isHoliday && (
+                <View style={styles.attendanceSection}>
+                  <Text style={styles.attendanceLabel}>Attendance</Text>
 
-                <Pressable
-                  style={styles.attendanceButton}
-                  onPress={() => setAttendanceMenuOpen((prev) => !prev)}
-                >
-                  <Text style={styles.attendanceButtonText}>
-                    {getAttendanceLabel(currentAttendance)}
-                  </Text>
-                  <Ionicons
-                    name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
-                    size={18}
-                    color={TEXT}
-                  />
-                </Pressable>
+                  <Pressable
+                    style={styles.attendanceButton}
+                    onPress={() => setAttendanceMenuOpen((prev) => !prev)}
+                  >
+                    <Text style={styles.attendanceButtonText}>
+                      {getAttendanceLabel(currentAttendance)}
+                    </Text>
+                    <Ionicons
+                      name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={TEXT}
+                    />
+                  </Pressable>
 
-                {attendanceMenuOpen && (
-                  <View style={styles.dropdown}>
-                    <Pressable
-                      style={styles.dropdownItem}
-                      onPress={() => handleAttendanceChange("attending")}
-                    >
-                      <Text style={styles.dropdownItemText}>I will attend</Text>
-                    </Pressable>
+                  {attendanceMenuOpen && (
+                    <View style={styles.dropdown}>
+                      <Pressable
+                        style={styles.dropdownItem}
+                        onPress={() => handleAttendanceChange("attending")}
+                      >
+                        <Text style={styles.dropdownItemText}>I will attend</Text>
+                      </Pressable>
 
-                    <Pressable
-                      style={styles.dropdownItem}
-                      onPress={() => handleAttendanceChange("not_attending")}
-                    >
-                      <Text style={styles.dropdownItemText}>I will not attend</Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
+                      <Pressable
+                        style={styles.dropdownItem}
+                        onPress={() => handleAttendanceChange("not_attending")}
+                      >
+                        <Text style={styles.dropdownItemText}>I will not attend</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
 
             {!!event.description && (
@@ -172,27 +176,31 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                 <Text style={styles.commentText}>Comments</Text>
               </Pressable>
 
-              <Pressable
-                style={styles.editBtn}
-                onPress={() => {
-                  onClose();
-                  router.push({
-                    pathname: "/edit_events",
-                    params: { id: event.id },
-                  });
-                }}
-              >
-                <Ionicons name="pencil" size={16} color="#EAF7F6" />
-                <Text style={styles.editText}>Edit</Text>
-              </Pressable>
+              {!isHoliday && (
+                <>
+                  <Pressable
+                    style={styles.editBtn}
+                    onPress={() => {
+                      onClose();
+                      router.push({
+                        pathname: "/edit_events",
+                        params: { id: event.id },
+                      });
+                    }}
+                  >
+                    <Ionicons name="pencil" size={16} color="#EAF7F6" />
+                    <Text style={styles.editText}>Edit</Text>
+                  </Pressable>
 
-              <Pressable
-                style={styles.deleteBtn}
-                onPress={() => handleDeleteEvent(event.id)}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.deleteText}>Delete</Text>
-              </Pressable>
+                  <Pressable
+                    style={styles.deleteBtn}
+                    onPress={() => handleDeleteEvent(event.id)}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.deleteText}>Delete</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </Pressable>
         </Pressable>
