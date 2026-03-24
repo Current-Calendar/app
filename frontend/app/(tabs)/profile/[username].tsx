@@ -16,11 +16,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { User } from '../../../types/auth';
 import { useAuth } from '@/hooks/use-auth';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
+import CommentsModalC from '@/components/comments-modal-c';
 import profileStyles from '../../../styles/profile-styles';
 import apiClient from '../../../services/api-client';
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import { ReportModal } from '@/components/report-modal';
+import { Calendar } from '@/types/calendar';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -31,6 +33,8 @@ type OwnProfileCalendarResponse = {
   origin: string;
   creator: string;
   created_at: string;
+  likes_count?: number;
+  liked_by_me?: boolean;
 };
 
 type OwnProfileResponse = {
@@ -71,6 +75,8 @@ const mapCalendarsFromApi = (items: OwnProfileCalendarResponse[]): CalendarData[
     description: item.description ?? undefined,
     cover: item.cover ?? undefined,
     privacy: item.privacy,
+    likes_count: item.likes_count ?? 0,
+    liked_by_me: item.liked_by_me ?? false,
   }));
 
 const toCalendarData = (item: CalendarItem): CalendarData => ({
@@ -78,7 +84,30 @@ const toCalendarData = (item: CalendarItem): CalendarData => ({
   name: item.name,
   description: item.description,
   cover: item.cover,
+  likes_count: (item as any).likes_count ?? 0,
+  liked_by_me: (item as any).liked_by_me ?? false,
 });
+
+const handleLikeInList = async (
+  id: string,
+  setter: React.Dispatch<React.SetStateAction<CalendarData[]>>
+) => {
+  try {
+    const res = await apiClient.post<{ liked: boolean; likes_count: number }>(
+      `/calendars/${id}/like/`
+    );
+    setter((prev) =>
+      prev.map((cal) =>
+        String(cal.id) === id
+          ? { ...cal, liked_by_me: res.liked, likes_count: res.likes_count }
+          : cal
+      )
+    );
+  } catch (error) {
+    Alert.alert('Error', 'Could not like this calendar.');
+    console.error('Like error:', error);
+  }
+};
 
 const ProfileHeader = () => (
   <>
@@ -158,6 +187,8 @@ const OwnProfile = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
 
   useEffect(() => {
     if (!currentUser) { setShownUser(null); return; }
@@ -191,6 +222,28 @@ const OwnProfile = () => {
     fetchOwnProfile();
     return () => { isMounted = false; };
   }, [currentUser, reloadKey]);
+
+  const handleLikeMy = (id: string) => handleLikeInList(id, setMyCalendars);
+  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendars);
+
+  const handleComment = (id: string, list: CalendarData[]) => {
+    const found = list.find((c) => String(c.id) === id);
+    if (found) {
+      setSelectedCalendar({
+        id: found.id as string,
+        name: found.name,
+        description: found.description || '',
+        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        origin: 'CURRENT',
+        creator: '',
+        color: '#10464d',
+        cover: found.cover ?? undefined,
+        likes_count: found.likes_count ?? 0,
+        liked_by_me: found.liked_by_me ?? false,
+      });
+      setCommentsVisible(true);
+    }
+  };
 
   const handleLogout = async () => {
     const message = 'Are you sure you want to log out?';
@@ -282,7 +335,15 @@ const OwnProfile = () => {
         <View style={profileStyles.calendarsWrapper}>
           <CalendarSectionPill title="My calendars" count={myCalendars.length}>
             {myCalendars.length > 0 ? (
-              myCalendars.map((cal) => <CalendarCard key={cal.id} calendar={cal} />)
+              myCalendars.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeMy}
+                  onComment={(id) => handleComment(id, myCalendars)}
+                />
+              ))
             ) : (
               <Text style={profileStyles.emptyText}>No calendars created yet.</Text>
             )}
@@ -290,7 +351,15 @@ const OwnProfile = () => {
 
           <CalendarSectionPill title="Following" count={followingCalendars.length}>
             {followingCalendars.length > 0 ? (
-              followingCalendars.map((cal) => <CalendarCard key={cal.id} calendar={cal} />)
+              followingCalendars.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeFollowing}
+                  onComment={(id) => handleComment(id, followingCalendars)}
+                />
+              ))
             ) : (
               <Text style={profileStyles.emptyText}>
                 {"You're not following any calendars yet."}
@@ -300,13 +369,24 @@ const OwnProfile = () => {
         </View>
 
       </ScrollView>
+
+      <CommentsModalC
+        visible={commentsVisible}
+        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
+        calendar={selectedCalendar}
+      />
     </SafeAreaView>
   );
 };
 
 const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
+  const router = useRouter();
   const { user: currentUser } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  const [followingCalendarsData, setFollowingCalendarsData] = useState<CalendarData[]>([]);
+  const [publicCalendarsData, setPublicCalendarsData] = useState<CalendarData[]>([]);
 
   const {
     userBeingViewed,
@@ -322,6 +402,36 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
     useFollowedCalendars(userBeingViewed?.username, {
       enabled: !!userBeingViewed && !!currentUser,
     });
+
+  useEffect(() => {
+    setFollowingCalendarsData(followingCalendars.map(toCalendarData));
+  }, [followingCalendars]);
+
+  useEffect(() => {
+    setPublicCalendarsData(calendars.map(toCalendarData));
+  }, [calendars]);
+
+  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendarsData);
+  const handleLikePublic = (id: string) => handleLikeInList(id, setPublicCalendarsData);
+
+  const handleComment = (id: string, list: CalendarData[]) => {
+    const found = list.find((c) => String(c.id) === id);
+    if (found) {
+      setSelectedCalendar({
+        id: found.id as string,
+        name: found.name,
+        description: found.description || '',
+        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        origin: 'CURRENT',
+        creator: '',
+        color: '#10464d',
+        cover: found.cover ?? undefined,
+        likes_count: found.likes_count ?? 0,
+        liked_by_me: found.liked_by_me ?? false,
+      });
+      setCommentsVisible(true);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -397,7 +507,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         <View style={profileStyles.calendarsWrapper}>
           <CalendarSectionPill
             title="Calendars I follow"
-            count={followingCalendars.length > 0 ? followingCalendars.length : undefined}
+            count={followingCalendarsData.length > 0 ? followingCalendarsData.length : undefined}
           >
             {!currentUser ? (
               <Text style={profileStyles.emptyText}>
@@ -405,9 +515,15 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
               </Text>
             ) : followingLoading ? (
               <ActivityIndicator size="small" color="#10464d" style={{ marginVertical: 8 }} />
-            ) : followingCalendars.length > 0 ? (
-              followingCalendars.map((cal) => (
-                <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />
+            ) : followingCalendarsData.length > 0 ? (
+              followingCalendarsData.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikeFollowing}
+                  onComment={(id) => handleComment(id, followingCalendarsData)}
+                />
               ))
             ) : (
               <Text style={profileStyles.emptyText}>
@@ -418,11 +534,17 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
 
           <CalendarSectionPill
             title={`${userBeingViewed.username}'s calendars`}
-            count={calendars.length}
+            count={publicCalendarsData.length}
           >
-            {calendars.length > 0 ? (
-              calendars.map((cal: CalendarItem) => (
-                <CalendarCard key={cal.id} calendar={toCalendarData(cal)} />
+            {publicCalendarsData.length > 0 ? (
+              publicCalendarsData.map((cal) => (
+                <CalendarCard
+                  key={cal.id}
+                  calendar={cal}
+                  onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
+                  onLike={handleLikePublic}
+                  onComment={(id) => handleComment(id, publicCalendarsData)}
+                />
               ))
             ) : (
               <Text style={profileStyles.emptyText}>No public calendars yet.</Text>
@@ -438,6 +560,12 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         reportedType="USER"
         reportedId={userBeingViewed.id}
         reportedLabel={userBeingViewed.username}
+      />
+
+      <CommentsModalC
+        visible={commentsVisible}
+        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
+        calendar={selectedCalendar}
       />
     </SafeAreaView>
   );
