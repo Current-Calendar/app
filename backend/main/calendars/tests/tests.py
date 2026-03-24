@@ -156,8 +156,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["privacy"], "PRIVATE")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
@@ -1171,35 +1171,38 @@ class IcsImportTests(APITestCase):
         self.user = User.objects.create_user(username="ics_import_user", email="ics_import@example.com", password="pass1234")
 
     def test_import_valid_ics(self):
+        self.client.force_authenticate(self.user)
         ics_file = SimpleUploadedFile("test.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
         response = self.client.post(
             "/api/v1/calendars/import-ics/",
-            {"file": ics_file, "user": self.user.id},
+            {"file": ics_file},
             format="multipart",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_import_no_file_returns_400(self):
-        response = self.client.post("/api/v1/calendars/import-ics/", {"user": self.user.id}, format="multipart")
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/v1/calendars/import-ics/", {}, format="multipart")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_import_invalid_ics_returns_400(self):
+        self.client.force_authenticate(self.user)
         bad_file = SimpleUploadedFile("bad.ics", b"NOT VALID ICS CONTENT", content_type="text/calendar")
         response = self.client.post(
             "/api/v1/calendars/import-ics/",
-            {"file": bad_file, "user": self.user.id},
+            {"file": bad_file},
             format="multipart",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_import_nonexistent_user_returns_400(self):
+    def test_import_unauthenticated_returns_401(self):
         ics_file = SimpleUploadedFile("test.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
         response = self.client.post(
             "/api/v1/calendars/import-ics/",
-            {"file": ics_file, "user": 99999},
+            {"file": ics_file},
             format="multipart",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class ListMyCalendarsFilterTests(APITestCase):
