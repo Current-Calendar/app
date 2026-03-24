@@ -9,6 +9,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.core.cache import cache
+from main.rs.events import recommend_events
 from ..serializers import EventSerializer
 from utils.storage import get_signed_url
 import json
@@ -463,6 +465,28 @@ def delete_event(request, event_id):
     event.delete()
     return Response({"message": "Event eliminado correctamente"}, status=status.HTTP_204_NO_CONTENT)
 
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def recommended_events(request):
+    try:
+        user_id = request.user.id
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    cache_key = f"recommended_events_{user_id}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
+
+    events = recommend_events(user, limit=30)
+    serializer = EventSerializer(events, many=True)
+
+    cache.set(cache_key, serializer.data, 60 * 5)
+
+    return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def rsvp_event(request, event_id):

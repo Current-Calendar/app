@@ -12,13 +12,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-
+import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../../types/auth';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
-import CommentsModalC from '@/components/comments-modal-c';
+import CommentsModalC from '../../../components/comments-modal-c';
 import profileStyles from '../../../styles/profile-styles';
-import apiClient from '../../../services/api-client';
+import apiClient, { appendPhoto } from '../../../services/api-client';  
+import { useProfileActions } from '@/hooks/use-profile-actions';
+import LogoutModal from '../../../components/logout-modal';
+
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import { ReportModal } from '@/components/report-modal';
@@ -174,7 +177,17 @@ const CalendarSectionPill = ({
 
 const OwnProfile = () => {
   const router = useRouter();
-  const { user: currentUser, logout } = useAuth();
+  const { username } = useLocalSearchParams<{ username: string }>();
+
+  const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const performLogout = async () => {
+    setShowLogoutModal(false); 
+    await logout();            
+    router.replace('/login'); 
+  };
+
+  const isMe = !username || username === currentUser?.username;
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [metrics, setMetrics] = useState<ProfileMetrics>({
@@ -245,22 +258,10 @@ const OwnProfile = () => {
     }
   };
 
-  const handleLogout = async () => {
-    const message = 'Are you sure you want to log out?';
-    if (Platform.OS === 'web') {
-      if (window.confirm(message)) performLogout();
-    } else {
-      Alert.alert('Logout', message, [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes, exit', style: 'destructive', onPress: performLogout },
-      ]);
-    }
+  const handleLogout = () => {
+    setShowLogoutModal(true); 
   };
 
-  const performLogout = async () => {
-    await logout();
-    router.replace('/(auth)/login' as any);
-  };
 
   if (isLoadingProfile) {
     return (
@@ -369,6 +370,13 @@ const OwnProfile = () => {
         </View>
 
       </ScrollView>
+
+      {/* AQUÍ INVOCAMOS TU NUEVO MODAL DE LEGO */}
+      <LogoutModal 
+        visible={showLogoutModal} 
+        onClose={() => setShowLogoutModal(false)} 
+        onConfirm={performLogout} 
+      />
 
       <CommentsModalC
         visible={commentsVisible}
