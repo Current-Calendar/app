@@ -66,6 +66,7 @@ class Calendar(models.Model):
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
     likes_count = models.PositiveIntegerField(default=0)
+    co_owners = models.ManyToManyField('User', related_name='co_owned_calendars', blank=True)
 
     @property
     def num_subscribers(self):
@@ -215,6 +216,8 @@ class Notification(models.Model):
         ('EVENT_SAVED', 'Event Saved'),
         ('EVENT_LIKED', 'Event Liked'),
         ('EVENT_COMMENT', 'Event Comment'),
+        ('EVENT_INVITE', 'Event Invite'),
+        ('CALENDAR_INVITE', 'Calendar Invite'),
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     message = models.TextField()

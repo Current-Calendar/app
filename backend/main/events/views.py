@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
-from ..models import Calendar, Event
+from ..models import Calendar, Event, Notification, EventAttendance, User
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -80,7 +80,7 @@ def create_event(request):
             status=status.HTTP_404_NOT_FOUND,
         )
     for calendar in calendars:
-        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != creator:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != creator and not calendar.co_owners.filter(id=request.user.id).exists():
             return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -249,7 +249,7 @@ def edit_event(request: Request, event_id):
             )
 
     for calendar in calendars:
-        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != user:
+        if calendar.privacy in ("PRIVATE", "PUBLIC") and calendar.creator != user and not calendar.co_owners.filter(id=request.user.id).exists() :
             return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
                 status=status.HTTP_403_FORBIDDEN
             )
@@ -376,7 +376,7 @@ def asign_event_to_calendar(request):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-    if calendar.creator != request.user:
+    if calendar.creator != request.user and not calendar.co_owners.filter(id=request.user.id).exists():
         return Response(
             {"errors": ["No tienes permiso para modificar este calendar."]},
             status = status.HTTP_403_FORBIDDEN
@@ -421,7 +421,7 @@ def deasign_event_from_calendar(request):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=status.HTTP_404_NOT_FOUND)
     
-    if calendar.creator != request.user:
+    if calendar.creator != request.user and not calendar.co_owners.filter(id=request.user.id).exists():
         return Response(
             {"error": "No tienes permiso para modificar este calendar"},
             status=status.HTTP_403_FORBIDDEN
@@ -493,3 +493,36 @@ def rsvp_event(request, event_id):
         'status': attendance.status,
         'respondedAt': responded_at_iso,
     }, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def invite_event(request: Request, event_id: int):
+    event = get_object_or_404(Event, pk=event_id)
+    user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
+
+    if request.user == user_to_invite:
+        return Response(
+            {"error": "Cannot invite yourself"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if event.creator != request.user:
+        return Response(
+            {"error": "Only the event creator can send invitations"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not Notification.objects.filter(
+        recipient=user_to_invite,
+        type="EVENT_INVITE",
+        related_event=event,
+        sender=request.user,
+    ).exists():
+        Notification.objects.create(
+            recipient=user_to_invite,
+            type="EVENT_INVITE",
+            related_event=event,
+            sender=request.user,
+        )
+
+    return Response(status=status.HTTP_204_NO_CONTENT)

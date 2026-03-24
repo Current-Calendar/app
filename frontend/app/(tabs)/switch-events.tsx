@@ -3,12 +3,14 @@ import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
-import EventFeedModal from "@/components/event-feed-modal";
+import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
 import apiClient from "@/services/api-client";
 
 export interface Event {
@@ -46,6 +48,7 @@ export default function EventsScreen() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -106,6 +109,8 @@ export default function EventsScreen() {
         const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
         const cal = calendarMap[Number(calId)];
 
+        const creatorUsername = e.creator_username || e.creator?.username || cal?.creator_username || "unknown";
+
         return {
           id: String(e.id),
           title: e.title || e.titulo || "",
@@ -114,12 +119,15 @@ export default function EventsScreen() {
           date: e.date || e.fecha || "",
           time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
           image: resolveImageUrl(e.photo || e.foto),
-          username: e.creator_username || cal?.creator_username || "unknown",
-          userAvatar: (e.creator_photo && e.creator_photo.trim() !== "")
-            ? e.creator_photo
-            : (cal?.creator_photo && cal.creator_photo.trim() !== ""
-              ? cal.creator_photo
-              : require("../../assets/images/default-user.jpg")),
+          username: creatorUsername,
+          userAvatar: (() => {
+            const creatorPhoto = (e.creator_photo && e.creator_photo.trim() !== "")
+              ? e.creator_photo
+              : (cal?.creator_photo && cal.creator_photo.trim() !== ""
+                ? cal.creator_photo
+                : "");
+            return creatorPhoto || `https://i.pravatar.cc/100?u=${creatorUsername}`;
+          })(),
           calendarId: String(calId || ""),
           calendarName: cal?.name || "General",
           // Temporary mock attendees for frontend testing.
@@ -217,6 +225,13 @@ export default function EventsScreen() {
             </TouchableOpacity>
           </View>
         )}
+        {hasSession && (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
@@ -253,13 +268,17 @@ export default function EventsScreen() {
         <EventFeedModal
           visible={modalVisible}
           onClose={handleCloseModal}
-          event={selectedEvent}
+          event={selectedEvent as FeedEvent}
         />
         <CommentsModal
-        visible={commentsModalVisible}
-        onClose={() => setCommentsModalVisible(false)}
-        event={selectedEvent}
-      />
+          visible={commentsModalVisible}
+          onClose={() => setCommentsModalVisible(false)}
+          event={selectedEvent}
+        />
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
+        />
       </View>
     </View>
   );
@@ -449,6 +468,20 @@ export const styles = StyleSheet.create({
 
     fontSize: 16,
 
+  },
+
+  userHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 
 });

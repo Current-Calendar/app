@@ -10,6 +10,8 @@ const TYPE_ICON: Record<Notification['type'], { name: keyof typeof Ionicons.glyp
   EVENT_SAVED: { name: 'bookmark', color: '#1b5b60' },
   EVENT_LIKED: { name: 'heart', color: '#e53935' },
   EVENT_COMMENT: { name: 'chatbubble', color: '#10464d' },
+  CALENDAR_INVITE: { name: 'mail', color: '#10191a' },
+  EVENT_INVITE: { name: 'mail', color: '#10191a' },
 };
 
 function getInitials(name?: string | null) {

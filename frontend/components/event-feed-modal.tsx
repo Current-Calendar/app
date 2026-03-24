@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -9,6 +9,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/hooks/use-auth";
+import InviteUserModal from "@/components/InviteUserModal";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -71,6 +73,11 @@ function formatResponseDateTime(dateLike?: string) {
 export default function EventFeedModal({ visible, onClose, event }: Props) {
   if (!event) return null;
 
+  const { user } = useAuth();
+  const [inviteVisible, setInviteVisible] = useState(false);
+
+  const isOwner = event.username === user?.username;
+
   const title = event.title?.trim() || "";
   const location = event.location?.trim() || "";
   const username = event.username?.trim() || "";
@@ -80,6 +87,7 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
   const attendees = event.attendees ?? [];
 
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -202,12 +210,30 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
             </View>
           </ScrollView>
 
-          <Pressable onPress={onClose} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Close</Text>
-          </Pressable>
+          <View style={styles.footerActions}>
+            {isOwner && (
+              <Pressable onPress={() => setInviteVisible(true)} style={styles.inviteBtn}>
+                <Ionicons name="person-add-outline" size={18} color={TEAL} />
+                <Text style={styles.inviteBtnText}>Invite</Text>
+              </Pressable>
+            )}
+            <Pressable onPress={onClose} style={styles.closeActionBtn}>
+              <Text style={styles.primaryBtnText}>Close</Text>
+            </Pressable>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
+    
+    {isOwner && event && (
+      <InviteUserModal
+        visible={inviteVisible}
+        onClose={() => setInviteVisible(false)}
+        itemId={event.id}
+        type="event"
+      />
+    )}
+    </>
   );
 }
 
@@ -439,10 +465,44 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  footerActions: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    marginTop: 4,
+    gap: 10,
+  },
+  inviteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#EAF7F6",
+    borderWidth: 2,
+    borderColor: TEAL,
+  },
+  inviteBtnText: {
+    color: TEAL,
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
   primaryBtn: {
     marginHorizontal: 16,
     marginBottom: 16,
     marginTop: 4,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: TEAL,
+    borderWidth: 2,
+    borderColor: "#0B3D3D",
+  },
+  closeActionBtn: {
+    flex: 1,
+    justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: TEAL,

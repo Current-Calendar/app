@@ -34,6 +34,8 @@ export const API_CONFIG = {
     deleteCalendar: (calendarId: number) => buildEndpoint(`calendars/${calendarId}/delete/`),
     ownProfile: buildEndpoint('users/me/'),
     searchUsers: (query: string) => buildEndpoint(`users/search?search=${encodeURIComponent(query)}`),
+    getFollowing: (userId: number | string) => buildEndpoint(`users/${userId}/following/`),
+    editCoOwners: (calendarId: number | string) => buildEndpoint(`calendars/${calendarId}/co_owners/`),
     searchCalendars: (query: string) => buildEndpoint(`calendars/list?q=${encodeURIComponent(query)}`),
     searchEvents: (query: string) => buildEndpoint(`events/list?q=${encodeURIComponent(query)}`),
     nearbyEvents: (lat: number, lon: number, radius: number) => buildEndpoint(`radar/?lat=${lat}&lon=${lon}&radio=${radius}`),
@@ -57,6 +59,11 @@ export const API_CONFIG = {
     comments: (targetType: string, targetId: number) => buildEndpoint(`comments/?target_type=${targetType}&target_id=${targetId}`),
     commentReplies: (id: number) => buildEndpoint(`comments/${id}/replies/`),
     deleteComment: (id: number) => buildEndpoint(`comments/${id}/delete/`),
+    // Invitations & notifications
+    inviteCalendar: (calendarId: string | number) => buildEndpoint(`calendars/${calendarId}/invite/`),
+    inviteEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/invite/`),
+    listNotifications: buildEndpoint('notifications/'),
+    handleNotification: (id: string | number) => buildEndpoint(`notifications/${id}/`),
   },
 };
 
