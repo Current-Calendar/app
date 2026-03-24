@@ -274,6 +274,22 @@ export const calendarCardStyles = StyleSheet.create({
   friendStar: {
     marginLeft: 6,
   },
+  actionsRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 16,
+  marginTop: 10,
+},
+actionButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 5,
+},
+actionText: {
+  color: '#10464d',
+  fontWeight: '600',
+  fontSize: 14,
+},
 });
 
 export const calendarGridStyles = StyleSheet.create({
@@ -772,6 +788,24 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#B33F37',
+  },
+  inviteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#10464d',
+    backgroundColor: '#EAF7F6',
+    borderRadius: 14,
+    paddingVertical: 11,
+    marginTop: 8,
+  },
+  inviteButtonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10464d',
   },
   shareButton: {
     flex: 1,

@@ -41,6 +41,7 @@ ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com'
 # Trust HTTPS from reverse proxies (tunnel, Render, etc.)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+
 ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
 
 SHARE_OG_IMAGE_FALLBACK = os.getenv('SHARE_OG_IMAGE_FALLBACK', '')

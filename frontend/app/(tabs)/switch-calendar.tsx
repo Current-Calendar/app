@@ -16,22 +16,32 @@ import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
+import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
+
 
 export default function CalendarsScreen() {
   const router = useRouter();
+
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
+
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
-  } = useCalendars();
+  } = useRecommendedCalendars();
 
+  if (calendarsError) {
+    Alert.alert('Error', calendarsError);
+  }
+  
   useEffect(() => {
     if (calendarsError) {
       console.error("Error fetching data:", calendarsError);
@@ -129,23 +139,13 @@ export default function CalendarsScreen() {
   const handleSubscribe = async (id: string) => {
     try {
       const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
-
-      setSubscribedCalendarIds((prev) => {
-        if (res.subscribed) {
-          return prev.includes(id) ? prev : [...prev, id];
-        }
-        return prev.filter((calendarId) => calendarId !== id);
-      });
-
       Alert.alert(
-        res.subscribed ? "Subscribed" : "Unsubscribed",
-        res.subscribed
-          ? "You are now subscribed to this calendar."
-          : "You have unsubscribed from this calendar."
+        res.subscribed ? 'Subscribed' : 'Unsubscribed',
+        res.subscribed ? 'You are now subscribed to this calendar.' : 'You have unsubscribed from this calendar.'
       );
     } catch (error) {
-      Alert.alert("Error", "Could not subscribe to this calendar.");
-      console.error("Subscribe error:", error);
+      Alert.alert('Error', 'Could not subscribe to this calendar.');
+      console.error('Subscribe error:', error);
     }
   };
 
@@ -160,7 +160,7 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        {!authLoading && !hasSession && (
+        {!authLoading && !hasSession ? (
           <View style={styles.authHeader}>
             <TouchableOpacity
               style={styles.loginButton}
@@ -182,7 +182,14 @@ export default function CalendarsScreen() {
               <Text style={styles.registerButtonText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
+        ) : (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
+            </TouchableOpacity>
+          </View>
         )}
+
 
         <EventsSwitch />
 
@@ -216,6 +223,11 @@ export default function CalendarsScreen() {
           onClose={handleCloseCommentsModal}
           calendar={selectedCalendar}
         />
+
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
+        />
       </View>
     </View>
   );
@@ -224,7 +236,7 @@ export default function CalendarsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   centered: {
@@ -232,7 +244,7 @@ const styles = StyleSheet.create({
   },
 
   inner: {
-    width: "100%",
+    width: '100%',
     maxWidth: 800,
     flex: 1,
   },
@@ -299,5 +311,18 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 16,
+  },
+  userHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 });
