@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -97,15 +98,21 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {!!event.image && (
-              <View style={styles.coverWrap}>
+            <View style={styles.coverWrap}>
+              {!!event.image ? (
                 <Image
                   source={{ uri: event.image }}
                   style={styles.cover}
                   resizeMode="cover"
                 />
-              </View>
-            )}
+              ) : (
+                <DefaultCalendarCover
+                  style={styles.cover}
+                  label="Evento"
+                  iconSize={52}
+                />
+              )}
+            </View>
 
             <View style={styles.content}>
               {!!title && <Text style={styles.title}>{title}</Text>}
