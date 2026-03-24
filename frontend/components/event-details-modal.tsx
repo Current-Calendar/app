@@ -49,7 +49,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
   const dateStr = formatDate(event?.date);
   const timeStr = formatTime(event?.time);
-  const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
+  const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
 
   const distanceKm = formatDistanceKm(event?.distance_km);
   const hasPhoto = typeof event?.photo === "string" && event.photo.trim().length > 0;
@@ -73,7 +73,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
             ) : (
               <DefaultCalendarCover
                 style={eventDetailsModalStyles.cover}
-                label="Evento"
+                label="Event"
                 iconSize={52}
               />
             )}
@@ -111,7 +111,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
             {!!description && (
               <View style={eventDetailsModalStyles.descWrap}>
-                <Text style={eventDetailsModalStyles.descTitle}>DescripciÃ³n</Text>
+                <Text style={eventDetailsModalStyles.descTitle}>Description</Text>
                 <Text style={eventDetailsModalStyles.descText}>{description}</Text>
               </View>
             )}

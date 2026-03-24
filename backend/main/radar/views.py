@@ -52,9 +52,9 @@ def radar_events(request):
             location__isnull=False,
             date__gte=timezone.now().date()
         )
-        .annotate(distancia=Distance("location", user_location))
+        .annotate(distance=Distance("location", user_location))
         .filter(location__distance_lte=(user_location, D(km=radio)))
-        .order_by("distancia")
+        .order_by("distance")
         .distinct()
     )
 
