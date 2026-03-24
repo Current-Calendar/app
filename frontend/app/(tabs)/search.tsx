@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
+import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
@@ -81,6 +82,7 @@ export default function SearchScreen() {
     const router = useRouter();
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
+    const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
 
     const { results: userResults } = useUserSearch(query);
     const { results: calendars } = useCalendarSearch(query);
@@ -153,6 +155,7 @@ export default function SearchScreen() {
     };
 
     const handleEventSelect = (event: CalendarEvent) => {
+        setActiveEvent(event);
         if (event.calendarId) {
             router.push(`/calendar-view?calendarId=${event.calendarId}`);
             return;
@@ -292,6 +295,8 @@ export default function SearchScreen() {
                     );
                 }}
             />
+
+            <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
         </View>
     );
 }
