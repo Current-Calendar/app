@@ -1,10 +1,13 @@
 import graphene
+import logging
 from graphene_django import DjangoObjectType
 from django.contrib.gis.db.models import PointField
 from django.db.models import Q
 from graphene_django.converter import convert_django_field
 
 from main.models import Event, User, Calendar
+
+logger = logging.getLogger(__name__)
 
 
 class CoordinatesType(graphene.ObjectType):
@@ -83,6 +86,17 @@ class EventType(DjangoObjectType):
             return CoordinatesType(self.location.x, self.location.y)
 
 
+def filter_events(q, week: int | None, month: int | None, year: int | None):
+    if week and 1 <= week <= 53:
+        q = q.filter(date__week=week)
+    if month and 1 <= month <= 12:
+        q = q.filter(date__month=month)
+    if year:
+        q = q.filter(date__year=year)
+
+    return q
+
+
 class Query(graphene.ObjectType):
     all_public_calendars = graphene.List(CalendarType)
 
@@ -103,6 +117,13 @@ class Query(graphene.ObjectType):
     events_of_user = graphene.List(
         EventType,
         id=graphene.ID(required=True),
+        week=graphene.Int(),
+        month=graphene.Int(),
+        year=graphene.Int(),
+    )
+
+    holidays = graphene.List(
+        EventType,
         week=graphene.Int(),
         month=graphene.Int(),
         year=graphene.Int(),
@@ -138,14 +159,7 @@ class Query(graphene.ObjectType):
     ):
         q = Event.objects.select_related("creator").all()
 
-        if week and 1 <= week <= 53:
-            q = q.filter(date__week=week)
-        if month and 1 <= month <= 12:
-            q = q.filter(date__month=month)
-        if year:
-            q = q.filter(date__year=year)
-
-        return q
+        return filter_events(q, week, month, year)
 
     def resolve_event_by_id(self, info, id):
         try:
@@ -163,11 +177,27 @@ class Query(graphene.ObjectType):
     ):
         q = Event.objects.filter(creator_id=id)
 
-        if week and 1 <= week <= 53:
-            q = q.filter(date__week=week)
-        if month and 1 <= month <= 12:
-            q = q.filter(date__month=month)
-        if year:
-            q = q.filter(date__year=year)
+        return filter_events(q, week, month, year)
 
-        return q
+    def resolve_holidays(
+        self,
+        info,
+        week: int | None = None,
+        month: int | None = None,
+        year: int | None = None,
+    ):
+        try:
+            current_user = User.objects.get(username="current")
+        except User.DoesNotExist:
+            logger.warning("No 'current' user found")
+            return Event.objects.none()
+
+        try:
+            calendar = Calendar.objects.get(creator=current_user, name="Holidays")
+        except Calendar.DoesNotExist:
+            logger.warning("Holidays calendar not found")
+            return Event.objects.none()
+
+        events = calendar.events.all()
+
+        return filter_events(events, week, month, year)

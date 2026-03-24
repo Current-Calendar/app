@@ -1,0 +1,434 @@
+{
+  "calendars": [
+    {
+      "key": "holidays",
+      "name": "Holidays",
+      "description": "",
+      "privacy": "PUBLIC",
+      "origin": "CURRENT",
+      "external_id": "source:holidays"
+    }
+  ],
+  "events": [
+    {
+      "calendar_key": "holidays",
+      "title": "Año Nuevo",
+      "description": "",
+      "place_name": "",
+      "date": "2026-01-01",
+      "time": "00:00:00",
+      "external_id": "20260101_3vbh98poaroeiml2idrrotvis4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Reconquista",
+      "description": "",
+      "place_name": "",
+      "date": "2026-01-02",
+      "time": "00:00:00",
+      "external_id": "20260102_e2m9bjd48tj07jll77a41edd48@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Epifanía del Señor",
+      "description": "",
+      "place_name": "",
+      "date": "2026-01-06",
+      "time": "00:00:00",
+      "external_id": "20260106_6tj3usumav1a0qlp8oo302q1m0@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de San Valentín",
+      "description": "",
+      "place_name": "",
+      "date": "2026-02-14",
+      "time": "00:00:00",
+      "external_id": "20260214_h8nv6e6bkfpl1ff9m175kg1k28@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Lunes de Carnaval",
+      "description": "",
+      "place_name": "",
+      "date": "2026-02-16",
+      "time": "00:00:00",
+      "external_id": "20260216_pjoi5450k5dhncu6d856954gms@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Martes de Carnaval",
+      "description": "",
+      "place_name": "",
+      "date": "2026-02-17",
+      "time": "00:00:00",
+      "external_id": "20260217_9um9m8v2gv0vj20ptao4fm6npo@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Miércoles de Ceniza",
+      "description": "",
+      "place_name": "",
+      "date": "2026-02-18",
+      "time": "00:00:00",
+      "external_id": "20260218_dlu35dgsm0of1rajgfg6f5e54s@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día del Padre",
+      "description": "",
+      "place_name": "",
+      "date": "2026-03-19",
+      "time": "00:00:00",
+      "external_id": "20260319_5qi92lbsht59a0luf347ij6054@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "San José",
+      "description": "",
+      "place_name": "",
+      "date": "2026-03-19",
+      "time": "00:00:00",
+      "external_id": "20260319_lf9ciop16g1oa5kdgbnk3s8e64@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Cambio de Horario de Verano",
+      "description": "",
+      "place_name": "",
+      "date": "2026-03-29",
+      "time": "00:00:00",
+      "external_id": "20260329_3ek2vgeajl4nl72u7br1kpnk8o@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Domingo de Ramos",
+      "description": "",
+      "place_name": "",
+      "date": "2026-03-29",
+      "time": "00:00:00",
+      "external_id": "20260329_ehbjl65vnpt60bgb213nbruk04@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Jueves Santo",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-02",
+      "time": "00:00:00",
+      "external_id": "20260402_c419q5k2mfeu3e9lveqqqkjmj4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Viernes Santo",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-03",
+      "time": "00:00:00",
+      "external_id": "20260403_v8fr7mhoiogqcmjon300plr4co@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Sábado Santo",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-04",
+      "time": "00:00:00",
+      "external_id": "20260404_7abk0t0v4lli570f08lsr30sdo@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Domingo de Pascua",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-05",
+      "time": "00:00:00",
+      "external_id": "20260405_rs2ru6o8mqdqlceq1rbv79li00@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Lunes de Pascua",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-06",
+      "time": "00:00:00",
+      "external_id": "20260406_gbugp2auq66d739pl0d8no91ds@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de San Jorge",
+      "description": "",
+      "place_name": "",
+      "date": "2026-04-23",
+      "time": "00:00:00",
+      "external_id": "20260423_s0gb91gagrb4hob1f0q5cu2fm4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día del trabajador",
+      "description": "",
+      "place_name": "",
+      "date": "2026-05-01",
+      "time": "00:00:00",
+      "external_id": "20260501_9kf76lv54cfu4e8kti1bjb4aj4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "El Dia de la Madre",
+      "description": "",
+      "place_name": "",
+      "date": "2026-05-03",
+      "time": "00:00:00",
+      "external_id": "20260503_34i8td9h6vm4m3insp9nl3tnss@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Domingo de Pentecostés",
+      "description": "",
+      "place_name": "",
+      "date": "2026-05-24",
+      "time": "00:00:00",
+      "external_id": "20260524_7kovg089n324es0mn6jt5g7mto@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Lunes de Pentecostés",
+      "description": "",
+      "place_name": "",
+      "date": "2026-05-25",
+      "time": "00:00:00",
+      "external_id": "20260525_bsuqqjo9cisan6nr59lld5c250@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Corpus Christi",
+      "description": "",
+      "place_name": "",
+      "date": "2026-06-04",
+      "time": "00:00:00",
+      "external_id": "20260604_ipokp6hi8npm3us8p41kubbtbk@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "San Juan",
+      "description": "",
+      "place_name": "",
+      "date": "2026-06-24",
+      "time": "00:00:00",
+      "external_id": "20260624_9vs5mvui8uf7cqrm1a1j85ruo8@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Santiago Apóstol",
+      "description": "",
+      "place_name": "",
+      "date": "2026-07-25",
+      "time": "00:00:00",
+      "external_id": "20260725_5rv3ve0dcfg0ms20k1f8g1e1ek@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "La Asunción de la Virgen",
+      "description": "",
+      "place_name": "",
+      "date": "2026-08-15",
+      "time": "00:00:00",
+      "external_id": "20260815_dl7pq2k53m63m8sirj7naij74s@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de la Hispanidad",
+      "description": "",
+      "place_name": "",
+      "date": "2026-10-12",
+      "time": "00:00:00",
+      "external_id": "20261012_pqvlbsf1fgf2l4v5bu7e768go4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Cambio de horario de invierno",
+      "description": "",
+      "place_name": "",
+      "date": "2026-10-25",
+      "time": "00:00:00",
+      "external_id": "20261025_lus14tu81ck4pk7aq7goggafuc@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de Todos los Santos",
+      "description": "",
+      "place_name": "",
+      "date": "2026-11-01",
+      "time": "00:00:00",
+      "external_id": "20261101_v6f3clh93p2h128s0a3isps4m4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de la Constitución Española",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-06",
+      "time": "00:00:00",
+      "external_id": "20261206_mk7q236j206o6hk859ltg1cpv8@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "La Inmaculada Concepción",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-08",
+      "time": "00:00:00",
+      "external_id": "20261208_8qh1u14at7bvdjjoc63nvjhhqc@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Nochebuena",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-24",
+      "time": "00:00:00",
+      "external_id": "20261224_9bl6o949gf9stticrp3uofe1i8@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Navidad",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-25",
+      "time": "00:00:00",
+      "external_id": "20261225_9qr4bskcdrv5d6darcgg06f4j4@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "San Esteban",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-26",
+      "time": "00:00:00",
+      "external_id": "20261226_kdn9pb708f0d3ta68o5ti23ibk@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Día de la Sagrada Familia",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-27",
+      "time": "00:00:00",
+      "external_id": "20261227_lcq64bgpr0u2kaui3gdtvntvfo@google.com",
+      "source": {
+        "type": "ics"
+      }
+    },
+    {
+      "calendar_key": "holidays",
+      "title": "Nochevieja",
+      "description": "",
+      "place_name": "",
+      "date": "2026-12-31",
+      "time": "00:00:00",
+      "external_id": "20261231_dl5lpq79oesm19bba1k0qtp3eg@google.com",
+      "source": {
+        "type": "ics"
+      }
+    }
+  ]
+}
