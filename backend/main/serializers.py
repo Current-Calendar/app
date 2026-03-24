@@ -1,207 +1,397 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from main.models import Evento
+from main.models import Event, EventAttendance
 
-Usuario = get_user_model()
+from .models import Calendar, Notification, Report, ChatMessage
+from utils.storage import get_signed_url
+
+User = get_user_model()
 
 
-class UsuarioRegistroSerializer(serializers.ModelSerializer):
+class UserRegistrationSerializer(serializers.ModelSerializer):
     """
-    Serializer para el registro de nuevos usuarios.
-    Incluye validación de contraseñas y creación segura con hashing.
+    Serializer for new user registration.
+    Includes password validation and secure creation with hashing.
     """
     password = serializers.CharField(
         write_only=True,
         required=True,
         style={'input_type': 'password'},
-        help_text="Contraseña del usuario (mínimo 8 caracteres)"
+        help_text="User password (minimum 8 characters)"
     )
     password2 = serializers.CharField(
         write_only=True,
         required=True,
         style={'input_type': 'password'},
-        help_text="Confirmación de la contraseña"
+        help_text="Password confirmation"
     )
     email = serializers.EmailField(
         required=True,
-        help_text='Email único del usuario'
+        help_text='Unique user email'
     )
 
     class Meta:
-        model = Usuario
-        fields = ('id', 'username', 'email', 'password', 'password2', 'pronombres', 'biografia')
+        model = User
+        fields = ('id', 'username', 'email', 'password', 'password2', 'pronouns', 'bio')
         extra_kwargs = {
-            'pronombres': {'required': False},
-            'biografia': {'required': False}
+            'pronouns': {'required': False},
+            'bio': {'required': False}
         }
 
     def validate_email(self, value):
-        """Verifica que el email no esté registrado."""
-        if Usuario.objects.filter(email=value.lower()).exists():
-            raise serializers.ValidationError("Este email ya está registrado.")
+        """Verifies the email is not already registered."""
+        if User.objects.filter(email=value.lower()).exists():
+            raise serializers.ValidationError("This email is already registered.")
         return value.lower()
-    
+
     def validate_username(self, value):
-        """Verifica que el username no esté registrado y sea válido."""
-        if Usuario.objects.filter(username=value).exists():
-            raise serializers.ValidationError("Este nombre de usuario ya existe.")
-        
+        """Verifies the username is not already registered and is valid."""
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username already exists.")
+
         if not value.replace('_', '').replace('-', '').isalnum():
             raise serializers.ValidationError(
-                "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos."
+                "Username can only contain letters, numbers, hyphens and underscores."
             )
-        
+
         if len(value) < 3:
-            raise serializers.ValidationError("El nombre de usuario debe tener al menos 3 caracteres.")
-        
+            raise serializers.ValidationError("Username must be at least 3 characters long.")
+
         if len(value) > 150:
-            raise serializers.ValidationError("El nombre de usuario no puede tener más de 150 caracteres.")
-        
+            raise serializers.ValidationError("Username cannot exceed 150 characters.")
+
         return value
 
     def validate(self, attrs):
         """
-        Validación a nivel de objeto: 
-        - Verifica que las contraseñas coincidan
-        - Valida la contraseña con contexto del usuario (username, email)
+        Object-level validation:
+        - Verifies passwords match
+        - Validates password with user context (username, email)
         """
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({
-                "password": "Las contraseñas no coinciden."
+                "password": "Passwords do not match."
             })
-        
-        # Crear un objeto usuario temporal para validar la contraseña con contexto
-        # Esto permite que UserAttributeSimilarityValidator funcione correctamente
-        usuario_temp = Usuario(
+
+        # Create a temporary user object to validate the password with context
+        # This allows UserAttributeSimilarityValidator to work correctly
+        temp_user = User(
             username=attrs.get('username'),
             email=attrs.get('email')
         )
-        
-        # Validar la contraseña con los validadores de Django (incluyendo similaridad)
+
+        # Validate the password with Django validators (including similarity check)
         try:
-            validate_password(attrs['password'], user=usuario_temp)
+            validate_password(attrs['password'], user=temp_user)
         except ValidationError as e:
             raise serializers.ValidationError({
                 "password": list(e.messages)
             })
-        
+
         return attrs
 
     def create(self, validated_data):
         """
-        Crea un nuevo usuario usando create_user() para hashear la contraseña con Argon2.
+        Creates a new user using create_user() to hash the password with Argon2.
         """
-        # Eliminar password2 ya que no se almacena
+        # Remove password2 as it is not stored
         validated_data.pop('password2')
-        
-        # Usar create_user para hashear automáticamente
-        usuario = Usuario.objects.create_user(
+
+        # Use create_user to automatically hash the password
+        user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
-            pronombres=validated_data.get('pronombres', ''),
-            biografia=validated_data.get('biografia', '')
+            pronouns=validated_data.get('pronouns', ''),
+            bio=validated_data.get('bio', '')
         )
-        
-        return usuario
+
+        return user
 
 class PublicUserSerializer(serializers.ModelSerializer):
     """
-    Serializer para mostrar información pública del usuario.
-    No incluye email ni password por seguridad.
+    Serializer for displaying public user information.
+    Does not include email or password for security.
     """
-    # 1. Definimos el campo que NO está en el modelo pero queremos calcular al vuelo
     is_following = serializers.SerializerMethodField()
 
     class Meta:
-        model = Usuario
+        model = User
         fields = (
             'id',
             'username',
-            'pronombres',
-            'biografia',
-            'foto',
+            'pronouns',
+            'bio',
+            'photo',
             'link',
-            'total_seguidores',  
-            'total_seguidos',
-            'is_following'       # Esto lo calcula el método de abajo
+            'total_followers',
+            'total_following',
+            'is_following',
         )
         read_only_fields = ('id',)
 
     def get_is_following(self, obj):
-        # Sacamos la 'request' del contexto que envía la vista
         request = self.context.get('request')
-        
-        # Si el usuario está logueado, comprobamos si sigue a este perfil (obj)
         if request and request.user.is_authenticated:
-            # Usamos 'seguidores_set' porque es el related_name que pusiste en tu modelo
-            return obj.seguidores_set.filter(id=request.user.id).exists()
-        
-        # Si no está logueado o no lo sigue, devolvemos False
+            return obj.followers_set.filter(id=request.user.id).exists()
         return False
 
-class UsuarioSerializer(serializers.ModelSerializer):
+class UserDetailSerializer(serializers.ModelSerializer):
     """
-    Serializer para mostrar información del usuario (sin contraseña).
+    Serializer for displaying user information (without password).
     """
 
     class Meta:
-        model = Usuario
+        model = User
         fields = (
             'id',
             'username',
             'email',
-            'pronombres',
-            'biografia',
+            'pronouns',
+            'bio',
+            'photo',
+            'total_followers',
+            'total_following',
+            'subscribed_calendars',
         )
         read_only_fields = ('id', 'date_joined')
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Usuario
-        fields=['foto','email','username','pronombres','link','biografia']
+        model=User
+        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
 
 
-class EventoSerializer(serializers.ModelSerializer):
-    foto = serializers.SerializerMethodField()
-    distancia_km = serializers.SerializerMethodField()
-    latitud = serializers.SerializerMethodField()
-    longitud = serializers.SerializerMethodField()
-    creador_username = serializers.CharField(source='creador.username', read_only=True)
-    calendarios = serializers.SerializerMethodField()
+class EditProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['username', 'photo', 'pronouns', 'link', 'bio']
+
+
+class CalendarSummarySerializer(serializers.ModelSerializer):
+    creator = serializers.CharField(source="creator.username")
+    liked_by_me = serializers.SerializerMethodField()
 
     class Meta:
-        model = Evento
+        model = Calendar
+        fields = (
+            "id",
+            "name",
+            "description",
+            "cover",
+            "privacy",
+            "origin",
+            "creator",
+            "created_at",
+            "likes_count",
+            "liked_by_me",
+            "co_owners",
+        )
+        read_only_fields = ("id", "created_at")
+
+    def get_liked_by_me(self, obj):
+        request = self.context.get('request')
+        liked_calendar_ids = self.context.get('liked_calendar_ids')
+        if liked_calendar_ids is not None:
+            return obj.id in liked_calendar_ids
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(user_id=request.user.id).exists()
+        return False
+
+
+class OwnProfileSerializer(serializers.ModelSerializer):
+    calendars = CalendarSummarySerializer(source="created_calendars", many=True)
+    following_calendars = CalendarSummarySerializer(source="subscribed_calendars", many=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "pronouns",
+            "bio",
+            "link",
+            "photo",
+            "total_followers",
+            "total_following",
+            "calendars",
+            "following_calendars",
+            "co_owned_calendars",
+        )
+        read_only_fields = (
+            "id",
+            "username",
+            "email",
+            "total_followers",
+            "total_following",
+            "calendars",
+            "following_calendars",
+            "co_owned_calendars",
+        )
+
+
+class EventSerializer(serializers.ModelSerializer):
+    photo = serializers.SerializerMethodField()
+    distance_km = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
+    creator_username = serializers.CharField(source='creator.username', read_only=True)
+    creator_photo = serializers.SerializerMethodField()
+    calendars = serializers.SerializerMethodField()
+    attendees = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
         fields = [
-            'id', 'titulo', 'descripcion', 'nombre_lugar',
-            'fecha', 'hora', 'recurrencia', 'id_externo',
-            'calendarios', 'fecha_creacion',
-            'distancia_km', 'latitud', 'longitud',
-            'foto', 'creador_username'
+            'id', 'title', 'description', 'place_name',
+            'date', 'time', 'recurrence', 'external_id',
+            'calendars', 'created_at',
+            'distance_km', 'latitude', 'longitude',
+            'photo', 'creator_username', 'creator_photo', 'attendees'
         ]
 
-    def get_foto(self, obj):
-        if not obj.foto:
-            return None
-        foto_str = str(obj.foto)
-        if foto_str.startswith('http'):
-            return foto_str
-        request = self.context.get('request')
-        if request:
-            return request.build_absolute_uri(obj.foto.url)
-        return foto_str
+    def get_creator_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.creator.photo)
 
-    def get_distancia_km(self, obj):
-        if hasattr(obj, 'distancia') and obj.distancia:
-            return round(obj.distancia.km, 2)
+    def get_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.photo)
+
+    def get_distance_km(self, obj):
+        if hasattr(obj, 'distance') and obj.distance:
+            return round(obj.distance.km, 2)
         return None
 
-    def get_latitud(self, obj):
-        return obj.ubicacion.y if obj.ubicacion else None
+    def get_latitude(self, obj):
+        return obj.location.y if obj.location else None
 
-    def get_longitud(self, obj):
-        return obj.ubicacion.x if obj.ubicacion else None
+    def get_longitude(self, obj):
+        return obj.location.x if obj.location else None
 
-    def get_calendarios(self, obj):
-        return list(obj.calendarios.values_list('id', flat=True))
+    def get_calendars(self, obj):
+        return list(obj.calendars.values_list('id', flat=True))
+    
+    def get_attendees(self, obj):
+        """Devuelve solo asistentes (status=ASSISTING)."""
+        attendances = obj.attendances.filter(status='ASSISTING')
+        return EventAttendeeSerializer(
+            attendances,
+            many=True,
+            context=self.context
+        ).data
+
+class NotificationSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True, default=None)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'recipient', 'sender', 'sender_username', 'type', 
+            'message', 'is_read', 'created_at', 'related_calendar', 'related_event'
+        ]
+        read_only_fields = [
+            'id', 'recipient', 'sender', 'type', 'message', 
+            'created_at', 'related_calendar', 'related_event'
+        ]
+
+    def validate(self, attrs):
+        if self.instance and len(attrs) > 1:
+            for field in attrs.keys():
+                if field != 'is_read':
+                    raise serializers.ValidationError(f"Modification of the '{field}' field is strictly prohibited.")
+        return attrs
+
+    
+class ReportSerializer(serializers.ModelSerializer):
+    reporter_username = serializers.CharField(source='reporter.username', read_only=True)
+
+    class Meta:
+        model = Report
+        fields = [
+            'id', 'reporter', 'reporter_username', 'reported_type', 
+            'reported_calendar', 'reported_event', 'reported_user', 'reason', 
+            'status', 'created_at'
+        ]
+        read_only_fields = ['id', 'reporter', 'status', 'created_at']
+
+    def validate(self, attrs):
+        reported_type = attrs.get('reported_type', getattr(self.instance, 'reported_type', None))
+        reported_user = attrs.get('reported_user', getattr(self.instance, 'reported_user', None))
+        reported_event = attrs.get('reported_event', getattr(self.instance, 'reported_event', None))
+        reported_calendar = attrs.get('reported_calendar', getattr(self.instance, 'reported_calendar', None))
+
+        request = self.context.get('request')
+        user = request.user if request else None
+
+        if not reported_type:
+            raise serializers.ValidationError({"reported_type": "This field is required."})
+        
+        expected_fields = {
+            'USER': 'reported_user',
+            'EVENT': 'reported_event',
+            'CALENDAR': 'reported_calendar'
+        }
+
+        expected_reasons = ['SPAM', 'INAPPROPRIATE_CONTENT', 'HARASSMENT', 'OTHER']
+        reason = attrs.get('reason', getattr(self.instance, 'reason', None))
+        if reason not in expected_reasons:
+            raise serializers.ValidationError({"reason": "Invalid reason for reporting."})
+
+        if reported_type not in expected_fields:
+            raise serializers.ValidationError({"reported_type": "Invalid reported type."})
+        
+        if reported_calendar and reported_calendar.privacy == 'PRIVATE':
+            raise serializers.ValidationError({"reported_calendar": "Cannot report a private calendar."})
+        
+        if reported_event and reported_event.calendars.filter(privacy='PRIVATE').exists():
+            raise serializers.ValidationError({"reported_event": "Cannot report an event that belongs to a private calendar."})
+
+        expected_field = expected_fields[reported_type]
+        
+        if not attrs.get(expected_field):
+             raise serializers.ValidationError({expected_field: f"This field is required when reporting a {reported_type.lower()}."})
+
+        for key in expected_fields.values():
+            if key != expected_field and attrs.get(key) is not None:
+                raise serializers.ValidationError({key: f"Cannot set {key.replace('reported_', '')} when reporting a {reported_type.lower()}."})
+
+        if reported_type == 'USER' and user and reported_user == user:
+            raise serializers.ValidationError({"reported_user": "You cannot report yourself."})
+        
+        return attrs
+    
+class ChatMessageSerializer(serializers.ModelSerializer):
+    
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_photo = serializers.ImageField(source='sender.photo', read_only=True)
+
+    class Meta:
+        model = ChatMessage
+        
+        fields = ['id', 'event', 'sender', 'sender_username', 'sender_photo', 'text', 'timestamp']
+        read_only_fields = ['sender', 'event', 'timestamp']
+class EventAttendeeSerializer(serializers.ModelSerializer):
+    """Serializa asistentes de un evento (solo ASSISTING)."""
+    id = serializers.IntegerField(source='user.id')
+    name = serializers.CharField(source='user.username')
+    avatar = serializers.SerializerMethodField()
+    respondedAt = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = EventAttendance
+        fields = ['id', 'name', 'avatar', 'respondedAt']
+    
+    def get_avatar(self, obj):
+        return get_signed_url(self.context.get('request'), obj.user.photo)
+
+    def get_respondedAt(self, obj):
+        """Devuelve updated_at en ISO 8601 con Z (UTC)."""
+        iso_str = obj.updated_at.isoformat()
+        if '+00:00' in iso_str:
+            iso_str = iso_str.replace('+00:00', 'Z')
+        return iso_str

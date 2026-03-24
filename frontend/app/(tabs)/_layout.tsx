@@ -7,6 +7,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { APP_BACKGROUND } from "@/constants/theme";
 import Sidebar from "../../components/nav_bar/side-bar"
 import BottomBar from "../../components/nav_bar/bottom-bar"
 import TopBar from "../../components/nav_bar/top-bar"
@@ -38,17 +39,17 @@ export default function CustomTabLayout() {
       {/* --- WEB SIDEBAR --- */}
       {isDesktop && <Sidebar expanded={expanded} setExpanded={setExpanded} />}
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
+      {/* --- MAIN CONTENT --- */}
       <View style={styles.content}>
-        {/* TOP BAR (Solo Mobile) */}
+        {/* TOP BAR (Mobile only) */}
         {!isDesktop && (
           <TopBar />
         )}
 
-        {/* Renderiza la pantalla actual */}
+        {/* Renders the current screen */}
         <Slot />
 
-        {/* BOTTOM BAR (Solo Mobile) */}
+        {/* BOTTOM BAR (Mobile only) */}
         {!isDesktop && (
           <BottomBar NavButton={NavButton} />
         )}
@@ -61,10 +62,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
+    backgroundColor: APP_BACKGROUND,
   },
   content: {
     flex: 1,
-    backgroundColor: "#FFFDED",
+    backgroundColor: APP_BACKGROUND,
   },
   navButton: {
     padding: 10,

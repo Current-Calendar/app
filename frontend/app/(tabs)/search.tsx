@@ -6,84 +6,98 @@ import {
     StyleSheet,
     Image,
     Pressable,
+    TouchableOpacity,
 } from "react-native";
 import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import API_CONFIG from '@/constants/api';
+import { useRouter } from "expo-router";
+import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
+import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
 
 // domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
 
+const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+
+function normalizeText(value: unknown): string {
+    return String(value ?? "").trim();
+}
+
+function getMatchIndex(text: string, term: string): number {
+    if (!text || !term) return -1;
+    return text.toLowerCase().indexOf(term.toLowerCase());
+}
+
+function buildDescriptionSnippet(description: string, term: string, maxLength = 100): string {
+    const raw = normalizeText(description);
+    const query = normalizeText(term);
+    if (!raw) return "";
+    if (!query) return raw.length > maxLength ? `${raw.slice(0, maxLength).trim()}...` : raw;
+
+    const matchIndex = getMatchIndex(raw, query);
+    if (matchIndex < 0) {
+        return raw.length > maxLength ? `${raw.slice(0, maxLength).trim()}...` : raw;
+    }
+
+    const contextSize = Math.max(20, Math.floor((maxLength - query.length) / 2));
+    const start = Math.max(0, matchIndex - contextSize);
+    const end = Math.min(raw.length, matchIndex + query.length + contextSize);
+    const prefix = start > 0 ? "..." : "";
+    const suffix = end < raw.length ? "..." : "";
+
+    return `${prefix}${raw.slice(start, end).trim()}${suffix}`;
+}
+
+function renderHighlightedText(text: string, query: string, baseStyle: any, highlightStyle: any) {
+    const source = normalizeText(text);
+    const term = normalizeText(query);
+
+    if (!source) {
+        return <Text style={baseStyle} />;
+    }
+
+    if (!term) {
+        return <Text style={baseStyle}>{source}</Text>;
+    }
+
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")})`, "ig");
+    const parts = source.split(regex);
+
+    return (
+        <Text style={baseStyle}>
+            {parts.map((part, index) => {
+                const isMatch = part.toLowerCase() === term.toLowerCase();
+                return (
+                    <Text key={`${part}-${index}`} style={isMatch ? highlightStyle : undefined}>
+                        {part}
+                    </Text>
+                );
+            })}
+        </Text>
+    );
+}
+
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
+    const router = useRouter();
+    const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
-    const [calendars, setCalendars] = useState<Calendar[]>([]);
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+
+    const { results: userResults } = useUserSearch(query);
+    const { results: calendars } = useCalendarSearch(query);
+    const { results: events } = useEventSearch(query);
+
+    const { followUser: followUserRequest } = useFollowUserAction();
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            if (!query.trim()) {
-                setUsers([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchUsers(query));
-                const data = await response.json();
-                setUsers(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando usuarios:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchUsers, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
-
-    useEffect(() => {
-        const fetchCalendar = async () => {
-            if (!query.trim()) {
-                setCalendars([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchCalendars(query));
-                const data = await response.json();
-                setCalendars(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando calendarios:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchCalendar, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
-
-    useEffect(() => {
-        const fetchEvents = async () => {
-            if (!query.trim()) {
-                setEvents([]);
-                return;
-            }
-
-            try {
-                const response = await fetch(API_CONFIG.endpoints.searchEvents(query));
-                const data = await response.json();
-                setEvents(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error buscando eventos:", error);
-            }
-        };
-
-        const timeoutId = setTimeout(fetchEvents, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query]);
+        setUsers(userResults);
+    }, [userResults]);
 
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
         calendars.forEach((c) => {
-            m[c.id.toString()] = c.nombre;
+            m[c.id.toString()] = c.name;
         });
         return m;
     }, [calendars]);
@@ -95,7 +109,6 @@ export default function SearchScreen() {
 
     const filtered: SearchResult[] = useMemo(() => {
         if (!query.trim()) return [];
-        const q = query.toLowerCase();
 
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
 
@@ -106,17 +119,52 @@ export default function SearchScreen() {
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events]);
 
-    const toggleFollow = (id: string) => {
-        setUsers((prev) =>
-            prev.map((user) =>
-                user.id === id ? { ...user, followed: !user.followed } : user
-            )
-        );
+    const followUser = async (id: string | number) => {
+        const normalizedId = String(id);
+        setLoadingId(normalizedId);
+
+        if (USE_MOCK) {
+            setUsers(prev =>
+                prev.map(u => String(u.id) === normalizedId ? { ...u, followed: !u.followed } : u)
+            );
+            setLoadingId(null);
+            return;
+        }
+
+        try {
+            const data = await followUserRequest(normalizedId);
+
+            setUsers(prev =>
+                prev.map(u =>
+                    String(u.id) === normalizedId ? { ...u, followed: data.followed } : u
+                )
+            );
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoadingId(null);
+        }
+    };
+
+    const handleUserSelect = (username: string) => {
+        router.push(`/profile/${username}`);
+    };
+
+    const handleCalendarSelect = (calendarId: string | number) => {
+        router.push(`/calendar-view?calendarId=${calendarId}`);
+    };
+
+    const handleEventSelect = (event: CalendarEvent) => {
+        setActiveEvent(event);
+        if (event.calendarId) {
+            router.push(`/calendar-view?calendarId=${event.calendarId}`);
+            return;
+        }
+        router.push(`/switch-events`);
     };
 
     return (
         <View style={styles.container}>
-
             {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
@@ -136,15 +184,21 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <View style={styles.userCard}>
+                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
                                 <View style={styles.userInfo}>
                                     <Image
-                                        source={{ uri: user.foto || 'https://i.pravatar.cc/100' }}
+                                        source={
+                                            user.photo && user.photo.trim() !== ""
+                                                ? { uri: user.photo }
+                                                : require('../../assets/images/default-user.jpg')
+                                        }
                                         style={styles.avatar}
                                     />
-                                    <View>
-                                        <Text style={styles.name}>{user.username}</Text>
-                                        <Text style={styles.bio}>{user.biografia}</Text>
+                                    <View style={styles.userTextContainer}>
+                                        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
+                                        <Text style={styles.bio} numberOfLines={2} ellipsizeMode="tail">
+                                            {user.bio}
+                                        </Text>
                                     </View>
                                 </View>
 
@@ -153,57 +207,96 @@ export default function SearchScreen() {
                                         styles.followButton,
                                         user.followed && styles.followingButton,
                                     ]}
-                                    onPress={() => toggleFollow(user.id)}
+                                    onPress={(event) => {
+                                        event.stopPropagation();
+                                        followUser(user.id);
+                                    }}
                                 >
                                     <Text style={styles.followText}>
-                                        {user.followed ? 'Following' : 'Follow'}
+                                        {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
                                     </Text>
                                 </Pressable>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }
 
                     if (item.type === 'calendar') {
                         const cal = item.data as Calendar;
+                        const description = normalizeText(cal.description);
+                        const titleMatches = getMatchIndex(normalizeText(cal.name), query) >= 0;
+                        const descriptionMatches = getMatchIndex(description, query) >= 0;
+                        const descriptionSnippet = buildDescriptionSnippet(description, query);
+
                         return (
-                            <View style={styles.calendarCard}>
-                                {cal.portada && (
-                                    <Image
-                                        source={{ uri: cal.portada }}
-                                        style={styles.calendarCover}
-                                    />
+                            <TouchableOpacity style={styles.calendarCard} onPress={() => handleCalendarSelect(cal.id)}>
+                                {cal.cover && (
+                                    <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
                                 )}
                                 <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName}>{cal.nombre}</Text>
-                                    <Text style={styles.calendarDesc}>{cal.descripcion}</Text>
+                                    <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
+
+                                    {!!descriptionSnippet && (
+                                        <View>
+                                            {renderHighlightedText(
+                                                descriptionSnippet,
+                                                query,
+                                                styles.calendarDesc,
+                                                styles.highlightText
+                                            )}
+                                            {descriptionMatches && !titleMatches && (
+                                                <Text style={styles.matchTag}>Matches description</Text>
+                                            )}
+                                        </View>
+                                    )}
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         );
                     }
 
                     const ev = item.data as CalendarEvent;
+                    const eventDescription = normalizeText(ev.description);
+                    const eventTitleMatches = getMatchIndex(normalizeText(ev.title), query) >= 0;
+                    const eventDescriptionMatches = getMatchIndex(eventDescription, query) >= 0;
+                    const eventDescriptionSnippet = buildDescriptionSnippet(eventDescription, query);
+
                     return (
-                        <View style={styles.eventCard}>
-                            <View style={styles.eventRow}> 
-                                {ev.foto && (
-                                    <Image 
-                                        source={{ uri: ev.foto }} 
-                                        style={styles.eventImage} 
+                        <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev)}>
+                            <View style={styles.eventRow}>
+                                {ev.photo && (
+                                    <Image
+                                        source={{ uri: ev.photo }}
+                                        style={styles.eventImage}
                                     />
                                 )}
                                 <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle}>{ev.titulo}</Text>
-                                    <Text style={styles.eventMeta}>
-                                        {ev.fecha} {ev.hora}
+                                    <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
+                                    <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
+                                        {ev.date} {ev.time}
                                         {ev.calendarId &&
                                             ` • ${calendarMap[ev.calendarId] || ''}`}
                                     </Text>
+
+                                    {!!eventDescriptionSnippet && (
+                                        <View>
+                                            {renderHighlightedText(
+                                                eventDescriptionSnippet,
+                                                query,
+                                                styles.eventDesc,
+                                                styles.highlightText
+                                            )}
+                                            {eventDescriptionMatches && !eventTitleMatches && (
+                                                <Text style={styles.matchTag}>Matches description</Text>
+                                            )}
+                                        </View>
+                                    )}
                                 </View>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     );
                 }}
             />
+
+            <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
         </View>
     );
 }
@@ -212,7 +305,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 16,
-        backgroundColor: "#E8E5D8",
     },
 
     searchContainer: {
@@ -243,6 +335,12 @@ const styles = StyleSheet.create({
     userInfo: {
         flexDirection: "row",
         alignItems: "center",
+        flex: 1,
+    },
+
+    userTextContainer: {
+        flex: 1,
+        flexShrink: 1,
     },
 
     avatar: {
@@ -308,6 +406,8 @@ const styles = StyleSheet.create({
     },
     eventInfo: {
         flexDirection: "column",
+        flex: 1,
+        flexShrink: 1,
     },
     eventTitle: {
         fontWeight: "bold",
@@ -318,6 +418,11 @@ const styles = StyleSheet.create({
         color: "#666",
         marginTop: 2,
     },
+    eventDesc: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+    },
     eventRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -327,5 +432,15 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 8,
         marginRight: 12,
+    },
+    highlightText: {
+        color: "#10464d",
+        fontWeight: "700",
+    },
+    matchTag: {
+        marginTop: 4,
+        fontSize: 11,
+        color: "#10464d",
+        fontWeight: "700",
     },
 });

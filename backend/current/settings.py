@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from logging import config
 import os
 from pathlib import Path
+
+from django.conf.global_settings import STORAGES
 from dotenv import load_dotenv
 from datetime import timedelta
 
@@ -33,15 +35,24 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es']
+
+ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es', 'api-testers.currentcalendar.es']
+
+# Trust HTTPS from reverse proxies (tunnel, Render, etc.)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 ALLOWED_WEBCAL_HOSTS = ["icloud.com", "apple.com"]
+
+SHARE_OG_IMAGE_FALLBACK = os.getenv('SHARE_OG_IMAGE_FALLBACK', '')
 
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_PROJECT_ID = os.getenv('GOOGLE_PROJECT_ID')
 
 GOOGLE_REDIRECT_URIS = os.getenv('GOOGLE_REDIRECT_URIS')
+
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+RESEND_EMAIL_FROM = os.getenv('RESEND_EMAIL_FROM')
 
 GOOGLE_OAUTH2_CLIENT_CONFIG = {
     "web": {
@@ -73,6 +84,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'main',
     'storages',
+    'django.contrib.gis',
 ]
 
 ASGI_APPLICATION = 'current.asgi.application'
@@ -87,7 +99,14 @@ CHANNEL_LAYERS = {
 }
 
 if DEBUG:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 else:
@@ -95,12 +114,23 @@ else:
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')
 
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400',
     }
     AWS_DEFAULT_ACL = 'public-read'
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        "default": {
+            "BACKEND": "utils.storage.PublicMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+    MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 
 GRAPHENE = {
     "SCHEMA": "current.schema.schema"
@@ -111,7 +141,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
 }
 
-AUTH_USER_MODEL = 'main.Usuario'
+AUTH_USER_MODEL = 'main.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -183,8 +213,8 @@ CACHES = {
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'utils.authentication.CsrfExemptSessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'utils.authentication.CsrfExemptSessionAuthentication',
     ],
 }
 
@@ -237,8 +267,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+WHITENOISE_USE_FINDERS = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

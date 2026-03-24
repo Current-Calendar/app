@@ -4,25 +4,35 @@ import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import API_CONFIG from "@/constants/api";
+import { useCalendarActions } from '@/hooks/use-calendar-actions';
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { appendPhoto } from '@/services/api-client';
 
-type PrivacyStatus = 'PRIVADO' | 'AMIGOS' | 'PUBLICO';
+type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
+  const { updateCalendar } = useCalendarActions();
   const params = useLocalSearchParams<{
     id: string;
-    nombre: string;
-    descripcion: string;
-    estado: PrivacyStatus;
+    name: string;
+    description: string;
+    privacy: PrivacyStatus;
+    cover: string;
   }>();
 
-  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.estado ?? 'PRIVADO');
+  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.privacy ?? 'PRIVATE');
   const [isLoading, setIsLoading] = useState(false);
   const [calendarData, setCalendarData] = useState({
-    nombre: params.nombre ?? "",
-    descripcion: params.descripcion ?? "",
+    name: params.name ?? "",
+    description: params.description ?? "",
   });
+
+  // Cover image state: existing URL from server, or new local pick
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(params.cover || null);
+  const [newCoverImage, setNewCoverImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [coverRemoved, setCoverRemoved] = useState(false);
 
   const calendarId = params.id;
 
@@ -32,26 +42,55 @@ export default function EditScreen() {
   const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
     {
       label: "Private",
-      value: "PRIVADO",
+      value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
     },
     {
       label: "Friends",
-      value: "AMIGOS",
+      value: "FRIENDS",
       icon: "people-outline",
       description: "Visible to your friends only",
     },
     {
       label: "Public",
-      value: "PUBLICO",
+      value: "PUBLIC",
       icon: "globe-outline",
       description: "Visible to everyone",
     },
   ];
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Please allow access to your photo library.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setNewCoverImage(result.assets[0]);
+      setCoverRemoved(false);
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setNewCoverImage(null);
+    setExistingCoverUrl(null);
+    setCoverRemoved(true);
+  };
+
+  // Determine what to display as cover
+  const displayCoverUri = newCoverImage?.uri ?? (coverRemoved ? null : existingCoverUrl);
+
   const handleEdit = async () => {
-    if (!calendarData.nombre.trim()) {
+    if (!calendarData.name.trim()) {
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
@@ -63,20 +102,21 @@ export default function EditScreen() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(API_CONFIG.endpoints.editCalendar(Number(calendarId)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          nombre: calendarData.nombre,
-          descripcion: calendarData.descripcion,
-          estado: selectedPrivacy,
-        }),
-      });
+      if (newCoverImage) {
+        const formData = new FormData();
+        formData.append("name", calendarData.name);
+        formData.append("description", calendarData.description);
+        formData.append("privacy", selectedPrivacy);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.errors?.[0] ?? errorData.error ?? 'Unknown error');
+        await appendPhoto(formData, newCoverImage, "cover");
+
+        await updateCalendar(Number(calendarId), formData);
+      } else {
+        await updateCalendar(Number(calendarId), {
+          name: calendarData.name,
+          description: calendarData.description,
+          privacy: selectedPrivacy,
+        });
       }
 
       router.replace('/(tabs)/calendars');
@@ -91,7 +131,7 @@ export default function EditScreen() {
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop]}
+        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop, !isDesktop && { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* FORM CARD */}
@@ -107,6 +147,38 @@ export default function EditScreen() {
             Edit Calendar
           </ThemedText>
 
+          {/* COVER IMAGE */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Cover Image</Text>
+
+            {displayCoverUri ? (
+              <View style={styles.coverPreviewContainer}>
+                <Image
+                  source={{ uri: displayCoverUri }}
+                  style={styles.coverPreview}
+                />
+                <Pressable style={styles.coverRemoveButton} onPress={handleRemoveCover}>
+                  <Ionicons name="close-circle" size={26} color="#fff" />
+                </Pressable>
+                <Pressable style={styles.coverChangeButton} onPress={handlePickImage}>
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.coverChangeText}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable style={styles.coverPickerEmpty} onPress={handlePickImage}>
+                <View style={styles.coverPickerIconWrap}>
+                  <Ionicons name="image-outline" size={28} color="#10464d" />
+                </View>
+                <Text style={styles.coverPickerLabel}>Add a cover image</Text>
+                <Text style={styles.coverPickerSub}>Recommended: 16:9 ratio</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* DIVIDER */}
+          <View style={styles.divider} />
+
           {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Calendar Details</Text>
@@ -114,15 +186,15 @@ export default function EditScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
-              value={calendarData.nombre}
-              onChangeText={(text) => setCalendarData({ ...calendarData, nombre: text })}
+              value={calendarData.name}
+              onChangeText={(text) => setCalendarData({ ...calendarData, name: text })}
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
-              value={calendarData.descripcion}
-              onChangeText={(text) => setCalendarData({ ...calendarData, descripcion: text })}
+              value={calendarData.description}
+              onChangeText={(text) => setCalendarData({ ...calendarData, description: text })}
               multiline
               numberOfLines={3}
             />
@@ -182,35 +254,15 @@ export default function EditScreen() {
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={20} color="#10464d" style={{ marginRight: 12 }} />
             <Text style={styles.infoText}>
-              {selectedPrivacy === "PRIVADO"
+              {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "AMIGOS"
+                : selectedPrivacy === "FRIENDS"
                 ? "Your friends will receive an invitation to view this calendar."
                 : "Anyone with the link can view this calendar."}
             </Text>
           </View>
 
-          {/* DESKTOP BUTTON */}
-          {isDesktop && (
-            <Pressable
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-              onPress={handleEdit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.saveText}>Save Changes</Text>
-              )}
-            </Pressable>
-          )}
-
-        </View>
-      </ScrollView>
-
-      {/* SAVE BUTTON — fixed at bottom on mobile */}
-      {!isDesktop && (
-        <View style={styles.saveContainer}>
+          {/* SAVE BUTTON */}
           <Pressable
             style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
             onPress={handleEdit}
@@ -222,8 +274,9 @@ export default function EditScreen() {
               <Text style={styles.saveText}>Save Changes</Text>
             )}
           </Pressable>
+
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
@@ -231,11 +284,10 @@ export default function EditScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
   },
   container: {
     paddingHorizontal: 24,
-    paddingBottom: 140,
+    paddingBottom: 40,
   },
   containerDesktop: {
     alignItems: "center",
@@ -287,6 +339,72 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#e8e8e8",
     marginVertical: 24,
+  },
+
+  // COVER IMAGE
+  coverPreviewContainer: {
+    borderRadius: 12,
+    overflow: "hidden",
+    height: 160,
+    position: "relative",
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  coverRemoveButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 13,
+  },
+  coverChangeButton: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  coverChangeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  coverPickerEmpty: {
+    borderWidth: 1.5,
+    borderColor: "#c8dfe1",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f5fafa",
+    gap: 6,
+  },
+  coverPickerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#e0eff0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  coverPickerLabel: {
+    fontSize: 14,
+    color: "#10464d",
+    fontWeight: "600",
+  },
+  coverPickerSub: {
+    fontSize: 12,
+    color: "#999",
   },
 
   // PRIVACY SECTION
@@ -369,12 +487,6 @@ const styles = StyleSheet.create({
   },
 
   // BUTTONS
-  saveContainer: {
-    position: "absolute",
-    bottom: 24,
-    left: 24,
-    right: 24,
-  },
   saveButton: {
     flex: 1,
     backgroundColor: "#10464d",

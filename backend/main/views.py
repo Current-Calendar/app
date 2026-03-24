@@ -5,19 +5,24 @@ from icalendar import Calendar
 import os
 import ipaddress
 import socket
+import requests
 from urllib.parse import urlparse
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.gis.geos import Point
-from main.models import MockElement
+from main.models import Calendar as Calendario
+from main.models import Event as Evento
+from main.models import User as Usuario
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, get_object_or_404
 from django.utils import timezone
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.measure import D
+from django.http import HttpResponse
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -27,31 +32,18 @@ from rest_framework.request import Request
 from rest_framework import status, viewsets, mixins
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
-from django.shortcuts import get_object_or_404
-from django.core.cache import cache
-
-from django.contrib.gis.db.models.functions import Distance
-from django.contrib.gis.measure import D
-from django.http import HttpResponse
+from .models import MockElement,Event, ChatMessage
+from .serializers import ChatMessageSerializer
 from .permissions import IsCreator
 
 
 from main.serializers import (
-    UsuarioRegistroSerializer,
-    UsuarioSerializer,
+    UserRegistrationSerializer as UsuarioRegistroSerializer,
+    UserSerializer as UsuarioSerializer,
     UserSerializer,
     PublicUserSerializer,
-    EventoSerializer
+    EventSerializer as EventoSerializer
 )
-
-import requests
-from rest_framework.views import APIView
-from utils.security import get_safe_ip
-
-from main.serializers import UsuarioRegistroSerializer, UsuarioSerializer,UserSerializer
-
-from main.models import MockElement, Calendario, Evento, Usuario
-from rest_framework.decorators import api_view, permission_classes
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -131,28 +123,29 @@ class EventViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
 
 
 
-@api_view(['GET'])
-def hola_mundo(request):
+
+@api_view(["GET"])
+def hello_world(request):
     cache_key = "sevilla_point_data"
-    cached_data = cache.get(cache_key)    
+    cached_data = cache.get(cache_key)
     if cached_data:
         return Response({
             "source": "Redis (Cache)",
             "data": cached_data
         }, headers={"Access-Control-Allow-Origin": "*"})
 
-    pnt = Point(-5.9926, 37.3861)    
+    pnt = Point(-5.9926, 37.3861)
     obj, created = MockElement.objects.get_or_create(
-        nombre="La Giralda Mock",
-        defaults={'punto_geografico': pnt}
+        name="La Giralda Mock",
+        defaults={'geo_point': pnt}
     )
 
     result = {
         "id": obj.id,
-        "nombre": obj.nombre,
-        "coordenadas": {
-            "longitude": obj.punto_geografico.x,
-            "latitude": obj.punto_geografico.y
+        "name": obj.name,
+        "coordinates": {
+            "longitude": obj.geo_point.x,
+            "latitude": obj.geo_point.y
         },
         "created_in_db": created,
         "timestamp": str(obj.created_at)
@@ -161,134 +154,45 @@ def hola_mundo(request):
     cache.set(cache_key, result, 60)
 
     return Response({
-        "source": "PostgreSQL (Base de Datos)",
+        "source": "PostgreSQL (Database)",
         "data": result
     }, headers={"Access-Control-Allow-Origin": "*"})
- 
 
-
-
-def google_authorization(request):
-    """Autorización de Google para obtener acceso a la API de Google Calendar."""
-    flow = google_auth_oauthlib_flow.Flow.from_client_config(
-        settings.GOOGLE_OAUTH2_CLIENT_CONFIG,
-        scopes=['https://www.googleapis.com/auth/calendar.readonly'])
-    flow.redirect_uri = GOOGLE_REDIRECT_URIS
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true')
-    request.session['oauth_state'] = state
-    return redirect(authorization_url)
-
-def credentials_to_dict(credentials):
-    """Convierte el objeto Credentials a un diccionario serializable."""
-    return {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
-    }
-
-def google_oauth2callback(request):
-    """Callback de Google después de la autorización."""
-    state = request.session.get('oauth_state')
-    flow = google_auth_oauthlib_flow.Flow.from_client_config(
-        settings.GOOGLE_OAUTH2_CLIENT_CONFIG,
-        scopes=['https://www.googleapis.com/auth/calendar.readonly'],
-        state=state)
-    
-    flow.redirect_uri = GOOGLE_REDIRECT_URIS
-    
-    authorization_response = request.build_absolute_uri()
-    flow.fetch_token(authorization_response=authorization_response)
-
-    credentials = flow.credentials
-    request.session['google_credentials'] = credentials_to_dict(credentials)
-
-    return redirect('import_google_calendar')
-
-@api_view(['GET', 'POST'])
-def import_google_calendar(request):
-    """Endpoint para importar eventos del calendario de Google."""
-    momento_actual = timezone.now().isoformat()
-    events = []
-    usuario_creador = Usuario.objects.filter().first()
-    estado_solicitado = 'AMIGOS'
-    raw_credentials = request.session.get('google_credentials')
-    if not raw_credentials:
-        return Response({"error": "No hay credenciales de Google en sesión"}, status=400)
-
-    # Rebuild Credentials object from stored dict
-    if isinstance(raw_credentials, dict):
-        google_credentials = Credentials(**raw_credentials)
-    else:
-        google_credentials = raw_credentials
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def event_chat_history(request, event_id):
+    """
+    Devuelve el historial de mensajes de un evento específico.
+    Solo usuarios logueados pueden pedirlo.
+    """
     try:
-        service = build('calendar', 'v3', credentials=google_credentials)
+       
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        return Response({"error": "Evento no encontrado"}, status=404)
 
-        events_result = service.events().list(calendarId='primary', singleEvents=True, maxResults=2500, timeMin=momento_actual, orderBy='startTime').execute()
-        events = events_result.get('items', [])
-
-        calendar = Calendario.objects.create(
-            nombre="Calendario de Google",
-            descripcion="Calendario importado desde Google Calendar",
-            estado=estado_solicitado,
-            creador=usuario_creador,
-            origen='GOOGLE',
-            id_externo=service.calendarList().get(calendarId='primary').execute().get('id'),
-        )
-
-        for event in events:
-            start = event['start'].get('dateTime', event['start'].get('date'))
-            end = event['end'].get('dateTime', event['end'].get('date'))
-
-            evento = Evento.objects.create(
-                titulo=event.get('summary', 'Sin título'),
-                descripcion=event.get('description', ''),
-                fecha=start[:10],
-                hora=start[11:19] if 'T' in start else '00:00:00',
-                id_externo=event['id'],
-                creador=usuario_creador,
-            )
-            evento.calendarios.add(calendar)
     
-    except Exception as e:
-        print(f"Error al importar eventos: {e}")
-
-    return Response({"message": "Eventos importados exitosamente", "count": len(events)}, headers={"Access-Control-Allow-Origin": "*"})
-
-@api_view(['POST'])
-def iOS_calendar_import(request):
-    """Endpoint para importar eventos desde iOS Calendar."""
-
-    webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
-    user_id = request.data.get('user')
-    estado_solicitado = request.data.get('estado', 'PRIVADO') 
-    usuario_creador = Usuario.objects.filter(id=user_id).first()
-
-    if not webcal_url:
-        return Response({"error": "webcal_url es requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
-
-    if webcal_url.startswith("webcal://"):
-        http_url = webcal_url.replace("webcal://", "https://", 1)
-    else:
-        http_url = webcal_url
+    messages = ChatMessage.objects.filter(event=event).order_by('timestamp')[:50]
     
    
-    is_safe, reason = _is_safe_calendar_url(http_url)
+    serializer = ChatMessageSerializer(messages, many=True)
+    return Response(serializer.data)
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def import_ios_calendar(request):
+    http_url = request.data.get('url')
+    estado_solicitado = request.data.get('estado', 'PRIVADO')
+    usuario_creador = request.user
+    
+    if not http_url:
+        return Response({"error": "URL requerida"}, status=400)
+        
+    is_safe, error_msg = _is_safe_calendar_url(http_url)
     if not is_safe:
-        return Response({"error": f"URL no permitida: {reason}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
-
-  
-    safe_ip = get_safe_ip(http_url)
-    if not safe_ip:
-        return Response({"error": "La URL apunta a un destino no permitido por motivos de seguridad"}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": error_msg}, status=400)
 
     try:
-    
         response = requests.get(http_url, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=False)  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests
         response.raise_for_status()
 
@@ -1180,4 +1084,3 @@ def radar_events(request):
     )
 
     return Response(serializer.data, status=status.HTTP_200_OK)
-

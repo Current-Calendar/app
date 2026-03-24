@@ -17,7 +17,12 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
-import apiClient from '@/services/api-client';
+import { useCreateEventApi } from '@/hooks/use-create-event-api';
+import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
+import { useRouter } from "expo-router";
+import apiClient, { appendPhoto } from '@/services/api-client';
+import { useLocalSearchParams } from "expo-router";
+import { useAuth } from "@/hooks/use-auth";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -27,59 +32,21 @@ const TEAL_DARK = "#0F4E4F";
 const WHITE = "#FFFFFF";
 const RED = "#FF3B30";
 
-// ========= API CONFIG =========
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE ?? "http://localhost:8000").replace(
-  /\/$/,
-  ""
-);
-const API_V1 = `${API_BASE_URL}/api/v1`;
-
-// ========= NOMINATIM (OpenStreetMap) =========
-// Docs: https://nominatim.org/release-docs/latest/api/Search/
-const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
-const NOMINATIM_LIMIT = 6;
 const PLACE_DEBOUNCE_MS = 350;
 
 type CalendarItem = { id: string; name: string; image?: any };
-
-type PlaceSuggestion = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-};
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-// DRF suele aceptar mejor HH:MM:SS
+// DRF usually accepts HH:MM:SS format better
 const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
-  name: String(raw?.nombre ?? raw?.name ?? raw?.titulo ?? "Calendar"),
+  name: String(raw?.name ?? raw?.title ?? "Calendar"),
 });
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_V1}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers ?? {}),
-    },
-    ...options,
-  });
-
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-
-  if (!res.ok) {
-    const errMsg =
-      data?.errors?.join("\n") || data?.detail || `Error ${res.status}: ${res.statusText}`;
-    throw new Error(errMsg);
-  }
-  return data as T;
-}
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTH_NAMES = [
@@ -131,7 +98,7 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
     const firstDowMondayBased = (first.getDay() + 6) % 7;
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
-    const cells: Array<{ date: Date | null; label: string }> = [];
+    const cells: { date: Date | null; label: string }[] = [];
     for (let i = 0; i < firstDowMondayBased; i++) cells.push({ date: null, label: "" });
     for (let d = 1; d <= daysInMonth; d++)
       cells.push({ date: new Date(viewYear, viewMonth, d), label: String(d) });
@@ -306,14 +273,18 @@ const miniStyles = StyleSheet.create({
 // =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const { loadMyCalendars, createEvent } = useCreateEventApi();
+  const { date: dateParam } = useLocalSearchParams();
+  const router = useRouter();
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate("calendars");
+    else router.replace("/(tabs)/calendars");
   };
 
   const goToRoot = () => {
-    navigation.navigate("calendars");
+    router.replace(`/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`);
   };
 
   const { width } = useWindowDimensions();
@@ -333,12 +304,12 @@ export default function CreateEventsScreen() {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await apiFetch<any>("/calendarios/list", { method: "GET" });
+      const data: any = await loadMyCalendars();
 
       const list =
         (Array.isArray(data) && data) ||
         (Array.isArray(data?.results) && data.results) ||
-        (Array.isArray(data?.calendarios) && data.calendarios) ||
+        (Array.isArray(data?.calendars) && data.calendars) ||
         (Array.isArray(data?.data) && data.data) ||
         [];
 
@@ -347,7 +318,7 @@ export default function CreateEventsScreen() {
       setCalendars(mapped);
       if (!selectedCalendar && mapped.length > 0) setSelectedCalendar(mapped[0]);
     } catch (e: any) {
-      setCalError(e?.message ?? "Error cargando calendarios");
+      setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
       setSelectedCalendar(null);
     } finally {
@@ -365,20 +336,34 @@ export default function CreateEventsScreen() {
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
 
-  // Coordenadas
+  const [coverUri, setCoverUri] = useState<string | null>(null);
+  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  // Coordinates
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
 
   // Autocomplete (Nominatim)
-  const [placeLoading, setPlaceLoading] = useState(false);
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [placeFocused, setPlaceFocused] = useState(false);
+  const keepCoordinatesOnNextPlaceChangeRef = useRef(false);
 
-  // Para no relanzar búsqueda cuando el usuario selecciona una sugerencia
-  const suppressNextSearchRef = useRef(false);
+  const {
+    suggestions,
+    loading: placeLoading,
+    error: placeError,
+  } = usePlaceSearch(place, {
+    enabled: placeFocused,
+    delayMs: PLACE_DEBOUNCE_MS,
+    limit: 6,
+  });
 
   const [date, setDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
@@ -389,8 +374,6 @@ export default function CreateEventsScreen() {
     d.setHours(14, 0, 0, 0);
     return d;
   });
-
-  const [coverUri, setCoverUri] = useState<string | null>(null);
 
   // ====== Pickers ======
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
@@ -438,100 +421,40 @@ export default function CreateEventsScreen() {
       quality: 0.9,
     });
 
-    if (!result.canceled) setCoverUri(result.assets[0].uri);
+    if (!result.canceled) {
+      setCoverUri(result.assets[0].uri);
+      setCoverAsset(result.assets[0]);
+    }
   };
 
-  // ========= Nominatim search (debounced) =========
   useEffect(() => {
-    if (suppressNextSearchRef.current) {
-      suppressNextSearchRef.current = false;
+    if (keepCoordinatesOnNextPlaceChangeRef.current) {
+      keepCoordinatesOnNextPlaceChangeRef.current = false;
       return;
     }
 
-    // si el usuario escribe manualmente, invalidamos coords (hasta que elija sugerencia)
+    // si el user escribe manualmente, invalidamos coords (hasta que elija sugerencia)
     setLat(null);
     setLon(null);
-
-    const q = place.trim();
-    setPlaceError(null);
-
-    if (!q || q.length < 3) {
-      setSuggestions([]);
-      setPlaceLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      try {
-        setPlaceLoading(true);
-
-        const url =
-          `${NOMINATIM_SEARCH_URL}` +
-          `?q=${encodeURIComponent(q)}` +
-          `&format=json` +
-          `&addressdetails=1` +
-          `&limit=${NOMINATIM_LIMIT}`;
-
-        // Nominatim recomienda identificarse con un User-Agent;
-        // en web no se puede setear, pero en móvil sí.
-        const headers: Record<string, string> = {
-          Accept: "application/json",
-        };
-        if (Platform.OS !== "web") {
-          headers["User-Agent"] = "CurrentApp/1.0 (ISPP project)";
-        }
-
-        const res = await fetch(url, { headers });
-        const data = (await res.json()) as any[];
-
-        if (cancelled) return;
-
-        const mapped: PlaceSuggestion[] = (Array.isArray(data) ? data : [])
-          .map((x) => ({
-            place_id: Number(x?.place_id ?? 0),
-            display_name: String(x?.display_name ?? ""),
-            lat: String(x?.lat ?? ""),
-            lon: String(x?.lon ?? ""),
-          }))
-          .filter((x) => x.place_id && x.display_name && x.lat && x.lon);
-
-        setSuggestions(mapped);
-      } catch (e: any) {
-        if (cancelled) return;
-        setSuggestions([]);
-        setPlaceError(e?.message ?? "Error buscando ubicaciones");
-      } finally {
-        if (!cancelled) setPlaceLoading(false);
-      }
-    }, PLACE_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
   }, [place]);
 
   const selectSuggestion = (s: PlaceSuggestion) => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = true;
     setPlace(s.display_name);
 
     const latNum = Number(s.lat);
     const lonNum = Number(s.lon);
     setLat(Number.isFinite(latNum) ? latNum : null);
     setLon(Number.isFinite(lonNum) ? lonNum : null);
-
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   const clearPlace = () => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = false;
     setPlace("");
     setLat(null);
     setLon(null);
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   // ====== Submit + Modal éxito ======
@@ -547,40 +470,64 @@ export default function CreateEventsScreen() {
   const publish = async () => {
     setFormError(null);
 
-    const titulo = title.trim();
-    if (!titulo) {
+    const titleTrimmed = title.trim();
+    if (!titleTrimmed) {
       setFormError("El título es obligatorio.");
       return;
     }
     if (!selectedCalendar?.id) {
-      setFormError("Selecciona un calendario.");
+      setFormError("Selecciona un calendar.");
       return;
     }
 
-    const payload: any = {
-      titulo,
-      descripcion: description?.trim() ?? "",
-      nombre_lugar: place?.trim() ?? "",
-      fecha: toISODate(date),
-      hora: toHMS(time),
-      calendarios: [Number(selectedCalendar.id)],
-      creador_id: 2, // MOCK por ahora
-    };
-
-    // 👇 Enviar coords si existen (backend espera latitud/longitud)
-    if (lat != null && lon != null) {
-      payload.latitud = lat;
-      payload.longitud = lon;
+    if (!user) {
+        setFormError("User not authenticated.");
+        return;
     }
+
+    const calendarsIds = [Number(selectedCalendar.id)];
 
     try {
       setPublishing(true);
 
-      await apiClient.post<any>('/eventos', payload);
+      if (coverAsset) {
+         const formData = new FormData();
+         formData.append("title", titleTrimmed);
+         formData.append("description", description?.trim() ?? "");
+         formData.append("place_name", place?.trim() ?? "");
+         formData.append("date", toISODate(date));
+         formData.append("time", toHMS(time));
+         formData.append("calendars", JSON.stringify(calendarsIds));
+         formData.append("creator_id", String(user.id));
+
+         if (lat != null && lon != null) {
+            formData.append("latitud", String(lat));
+            formData.append("longitud", String(lon));
+         }
+
+         await appendPhoto(formData, coverAsset, "photo");
+         await createEvent(formData);
+      } else {
+        const payload: any = {
+            title: titleTrimmed,
+            description: description?.trim() ?? "",
+            place_name: place?.trim() ?? "",
+            date: toISODate(date),
+            time: toHMS(time),
+            calendars: calendarsIds,
+            creator_id: user.id,
+        };
+
+        if (lat != null && lon != null) {
+            payload.latitude = lat;
+            payload.longitude = lon;
+        }
+        await createEvent(payload);
+      }
 
       setSuccessModalOpen(true);
     } catch (e: any) {
-      setFormError(e?.message ?? "No se pudo crear el evento");
+      setFormError(e?.message ?? "No se pudo crear el event");
     } finally {
       setPublishing(false);
     }
@@ -645,10 +592,6 @@ export default function CreateEventsScreen() {
                   <Ionicons name="camera" size={28} color={TEXT} />
                 )}
               </Pressable>
-
-              <Text style={styles.helperText}>
-                (No se envía aún: el endpoint /eventos no recibe imagen)
-              </Text>
             </View>
           </View>
 
@@ -747,14 +690,24 @@ export default function CreateEventsScreen() {
               <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
             </View>
 
-            <Pressable
-              style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
-              onPress={publish}
-              disabled={publishing}
-            >
-              {publishing ? <ActivityIndicator color="#EAF7F6" /> : <Text style={styles.publishText}>Publish</Text>}
-            </Pressable>
+            <View style={{ flexDirection: "row", justifyContent: "center",alignItems: "center", gap: 12, marginTop: 14 }}>
+              <Pressable
+                style={styles.cancelBtn}
+                onPress={goBackOrCalendars}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
+                onPress={publish}
+                disabled={publishing}
+              >
+                {publishing
+                  ? <ActivityIndicator color="#EAF7F6" />
+                  : <Text style={styles.publishText}>Publish</Text>}
+              </Pressable>
 
+            </View>
             <View style={{ height: 40 }} />
           </View>
         </View>
@@ -786,7 +739,7 @@ export default function CreateEventsScreen() {
                     <Text style={styles.modalItemText}>{item.name}</Text>
                   </Pressable>
                 )}
-                ListEmptyComponent={<Text style={styles.helperText}>No hay calendarios. Crea uno primero.</Text>}
+                ListEmptyComponent={<Text style={styles.helperText}>No hay calendars. Crea uno primero.</Text>}
               />
             )}
           </View>
@@ -801,8 +754,8 @@ export default function CreateEventsScreen() {
               <Ionicons name="checkmark" size={28} color={WHITE} />
             </View>
 
-            <Text style={styles.successTitle}>¡Listo!</Text>
-            <Text style={styles.successBody}>Evento creado correctamente</Text>
+            <Text style={styles.successTitle}>Ready!</Text>
+            <Text style={styles.successBody}>Event created successfully</Text>
 
             <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
               <Text style={styles.successBtnText}>OK</Text>
@@ -914,7 +867,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   iconBtn: { padding: 6 },
 
@@ -1036,19 +989,13 @@ const styles = StyleSheet.create({
   calendarCenterWrap: { marginTop: 12, alignItems: "center", justifyContent: "center" },
 
   publishBtn: {
-    marginTop: 14,
-    alignSelf: "center",
-    width: 170,
+    flex: 1,
     paddingVertical: 12,
     borderRadius: 18,
     backgroundColor: TEAL,
     borderWidth: 2,
     borderColor: "#0B3D3D",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    alignItems: "center",
   },
   publishBtnDisabled: { opacity: 0.65 },
   publishText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900", fontSize: 16 },
@@ -1226,5 +1173,17 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
-  },
+  },cancelBtn: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 18,
+  backgroundColor: "#fff",
+  borderWidth: 2,
+  borderColor: "#10464D",
+  alignItems: "center",
+},cancelText: {
+  color: "#10464D",
+  fontWeight: "900",
+  fontSize: 16,
+},
 });

@@ -1,0 +1,25 @@
+[run]
+source = .
+
+omit =
+    manage.py
+    */asgi.py
+    */wsgi.py
+    
+    */migrations/*
+    
+    */tests/*
+    */tests.py
+    */test_*.py
+    
+    *venv*
+    *.venv*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    
+    def __str__
+    def __repr__
+    
+    if __name__ == .__main__.:

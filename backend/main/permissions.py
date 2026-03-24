@@ -1,9 +1,12 @@
-from rest_framework.request import Request
-from rest_framework.permissions import BasePermission
+from rest_framework import permissions
 
-from .models import Evento
-
-
-class IsCreator(BasePermission):
-    def has_object_permission(self, request: Request, view, obj: Evento):
-        return obj.creador == request.user
+class IsCreator(permissions.BasePermission):
+    """
+    Permiso personalizado de seguridad: 
+    Solo el creador original del objeto puede modificarlo o borrarlo.
+    """
+    def has_object_permission(self, request, view, obj):
+        
+        if hasattr(obj, 'creador'):
+            return obj.creador == request.user
+        return False

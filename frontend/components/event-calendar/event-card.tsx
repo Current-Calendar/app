@@ -3,11 +3,12 @@ import {
   Text,
   Image,
   Pressable,
-  StyleSheet,
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import type { Event } from "@/app/(tabs)/switch-events";
+import { eventCalendarEventCardStyles } from "@/styles/calendar-styles";
 
 interface Props {
   event: Event;
@@ -24,6 +25,7 @@ export default function EventCard({
   onComment,
   onSave,
 }: Props) {
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const MAX_IMAGE_WIDTH = 220;
@@ -38,69 +40,83 @@ export default function EventCard({
   const imageHeight = imageWidth * 0.7;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.userRow}>
-        <Image source={{ uri: event.userAvatar }} style={styles.avatar} />
-        <Text style={styles.username}>{event.username}</Text>
+    <View style={eventCalendarEventCardStyles.card}>
+      <View style={eventCalendarEventCardStyles.userRow}>
+        <Image
+          source={
+            typeof event.userAvatar === 'string'
+              ? { uri: event.userAvatar }
+              : event.userAvatar
+          }
+          style={eventCalendarEventCardStyles.avatar}
+        />
+        <Text style={eventCalendarEventCardStyles.username}>{event.username}</Text>
       </View>
 
-      <Pressable style={styles.body} onPress={() => onOpen(event.id)}>
+      <Pressable style={eventCalendarEventCardStyles.body} onPress={() => onOpen(event.id)}>
         <View
           style={[
-            styles.imageWrapper,
+            eventCalendarEventCardStyles.imageWrapper,
             { width: imageWidth, height: imageHeight },
           ]}
         >
-          <Image source={{ uri: event.image }} style={styles.image} />
+          <Image source={{ uri: event.image }} style={eventCalendarEventCardStyles.image} />
         </View>
 
-        <View style={styles.content}>
-          <Text style={styles.title}>{event.title}</Text>
+        <View style={eventCalendarEventCardStyles.content}>
+          <Text style={eventCalendarEventCardStyles.title}>{event.title}</Text>
 
-          <View style={styles.calendarBadge}>
+          <View style={eventCalendarEventCardStyles.calendarBadge}>
             <Ionicons name="calendar" size={14} color="#fff" />
-            <Text style={styles.calendarBadgeText}>{event.calendarName}</Text>
+            <Text style={eventCalendarEventCardStyles.calendarBadgeText}>{event.calendarName}</Text>
           </View>
 
           <Text
-            style={styles.description}
+            style={eventCalendarEventCardStyles.description}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
             {event.description}
           </Text>
 
-          <View style={styles.metaRow}>
+          <View style={eventCalendarEventCardStyles.metaRow}>
             <Ionicons name="calendar-outline" size={16} />
-            <Text style={styles.metaText}>{event.date}</Text>
+            <Text style={eventCalendarEventCardStyles.metaText}>{event.date}</Text>
           </View>
 
-          <View style={styles.metaRow}>
+          <View style={eventCalendarEventCardStyles.metaRow}>
             <Ionicons name="location-outline" size={16} />
-            <Text style={styles.metaText}>{event.location}</Text>
+            <Text style={eventCalendarEventCardStyles.metaText}>{event.location}</Text>
           </View>
         </View>
       </Pressable>
 
-      <View style={styles.actions}>
-        <Pressable style={styles.actionButton} onPress={() => onLike(event.id)}>
+      <View style={eventCalendarEventCardStyles.actions}>
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onLike(event.id)}>
           <Ionicons name="heart-outline" size={18} />
           {!isSmallScreen && (
-            <Text style={styles.actionText}>Like</Text>
+            <Text style={eventCalendarEventCardStyles.actionText}>Like</Text>
           )}
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => onComment(event.id)}>
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onComment(event.id)}>
           <Ionicons name="chatbubble-outline" size={18} />
           {!isSmallScreen && (
-            <Text style={styles.actionText}>Comment</Text>
+            <Text style={eventCalendarEventCardStyles.actionText}>Comment</Text>
           )}
         </Pressable>
 
-        <Pressable style={styles.actionButton} onPress={() => onSave(event.id)}>
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onSave(event.id)}>
           <Ionicons name="bookmark-outline" size={18} />
           {!isSmallScreen && (
-            <Text style={styles.actionText}>Save</Text>
+            <Text style={eventCalendarEventCardStyles.actionText}>Save</Text>
+          )}
+        </Pressable>
+
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => router.push(`/chat/${event.id}` as any)}>
+          <Ionicons name="chatbubbles-outline" size={18} />
+          {!isSmallScreen && (
+            <Text style={eventCalendarEventCardStyles.actionText}>Chat</Text>
           )}
         </Pressable>
       </View>
@@ -108,95 +124,3 @@ export default function EventCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#f2f2f2",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#f4b6b6",
-    padding: 20,
-    marginBottom: 20,
-  },
-  userRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-    gap: 10,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-  },
-  username: {
-    fontWeight: "600",
-  },
-  body: {
-    flexDirection: "row",
-    gap: 20,
-    marginBottom: 2,
-  },
-  imageWrapper: {
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  description: {
-    color: "#555",
-    marginBottom: 8,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  metaText: {
-    fontSize: 13,
-    color: "#333",
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 40,
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-  },
-  calendarBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#10464d",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginBottom: 6,
-  },
-  calendarBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: "600",
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  actionText: {
-    fontSize: 14,
-  },
-});

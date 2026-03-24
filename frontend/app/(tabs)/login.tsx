@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 
-const BG = "#E8E5D8";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
@@ -31,7 +30,13 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { login } = useAuth();
+  const { user, login, isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && (isAuthenticated || Boolean(user))) {
+      router.replace('/(tabs)/switch-events' as any);
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -44,6 +49,11 @@ export default function LoginScreen() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const onLogin = async () => {
+    if (isAuthenticated || user) {
+      router.replace('/(tabs)/switch-events' as any);
+      return;
+    }
+
     setErrorMsg(null);
     setSuccessMsg(null);
 
@@ -56,12 +66,12 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      login(username, password);
+      await login(u, password);
 
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
-    } catch {
-      setErrorMsg("Error iniciando sesión.");
+    } catch (error) {
+      setErrorMsg("User o contraseña incorrectos.");
     } finally {
       setLoading(false);
     }
@@ -102,7 +112,11 @@ export default function LoginScreen() {
           />
 
           <Pressable style={styles.forgot}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
+          <Link href="/forgot-password" asChild>
+            <Pressable>
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          </Link>
           </Pressable>
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
@@ -149,7 +163,7 @@ export default function LoginScreen() {
 const W = Dimensions.get("window").width;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1 },
 
   content: {
     flex: 1,

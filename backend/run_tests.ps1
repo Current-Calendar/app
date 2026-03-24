@@ -15,7 +15,7 @@ Write-Host "Ejecutando tests..." -ForegroundColor Yellow
 Write-Host ""
 
 # Ejecutar tests con verbose
-python manage.py test main.tests.RegistroUsuarioTests --verbosity=2
+python manage.py test main.tests_graphql.GraphQLTests --verbosity=2
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
