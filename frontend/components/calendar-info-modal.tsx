@@ -66,7 +66,14 @@ export function CalendarInfoModal({
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
-  const isOwner = user && localCalendar.creator === user.username;
+  const isOwnerOrCoOwner =
+  user &&
+  (
+    localCalendar.creator === user.username ||
+    (localCalendar.co_owners ?? []).some(
+      (co: any) => co.username === user.username
+    )
+  );
   const hasCalendarCover =
         typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
 
@@ -161,7 +168,7 @@ export function CalendarInfoModal({
         </View>
 
         <View style={calendarInfoModalStyles.actions}>
-             {isOwner && (
+             {isOwnerOrCoOwner && (
                         <TouchableOpacity
                             style={calendarInfoModalStyles.inviteButton}
                             onPress={() => setInviteVisible(true)}
@@ -177,15 +184,15 @@ export function CalendarInfoModal({
                             </Text>
                         </TouchableOpacity>
                     )}
-          <TouchableOpacity
+          { isOwnerOrCoOwner && <TouchableOpacity
             style={calendarInfoModalStyles.editButton}
             onPress={() => onEdit?.(localCalendar)}
             activeOpacity={0.75}
           >
             <Ionicons name="pencil" size={16} color="#fff" />
             <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
-          </TouchableOpacity>
-                    {isOwner && (
+          </TouchableOpacity>}
+                    {isOwnerOrCoOwner && (
                         <TouchableOpacity
                             style={calendarInfoModalStyles.shareButton}
                             onPress={() => setShowCoOwners(true)}
@@ -207,7 +214,7 @@ export function CalendarInfoModal({
             </TouchableOpacity>
           )}
 
-          {onDelete && (
+          {isOwnerOrCoOwner && onDelete && (
             <TouchableOpacity
               style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
               onPress={handleDeletePress}
@@ -238,7 +245,7 @@ export function CalendarInfoModal({
         onCalendarUpdated={handleCalendarUpdated}
       />
 
-            {isOwner && (
+            {isOwnerOrCoOwner && (
                 <InviteUserModal
                     visible={inviteVisible}
                     onClose={() => setInviteVisible(false)}
