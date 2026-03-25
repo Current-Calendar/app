@@ -13,8 +13,6 @@ from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.contrib.auth.password_validation import validate_password, ValidationError
 from main.models import User
-from main.calendars.views import import_google_calendar
-from main.calendars.views import import_google_calendar
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -87,11 +85,6 @@ def google_oauth2callback(request):
 
     credentials = flow.credentials
     request.session['google_credentials'] = credentials_to_dict(credentials)
-
-    try:
-        import_google_calendar(request)
-    except Exception:
-        pass
 
     frontend_url = settings.FRONTEND_URL.rstrip('/')
     return redirect(f"{frontend_url}/calendars")
