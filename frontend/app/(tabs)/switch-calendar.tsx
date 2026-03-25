@@ -16,8 +16,6 @@ import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
-import InvitationsModal from "@/components/InvitationsModal";
-import { Ionicons } from "@expo/vector-icons";
 import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
 
 
@@ -31,7 +29,6 @@ export default function CalendarsScreen() {
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [invitationsVisible, setInvitationsVisible] = useState(false);
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
@@ -137,17 +134,27 @@ export default function CalendarsScreen() {
   };
 
   const handleSubscribe = async (id: string) => {
-    try {
-      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
-      Alert.alert(
-        res.subscribed ? 'Subscribed' : 'Unsubscribed',
-        res.subscribed ? 'You are now subscribed to this calendar.' : 'You have unsubscribed from this calendar.'
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Could not subscribe to this calendar.');
-      console.error('Subscribe error:', error);
+  try {
+    const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+    
+    if (res.subscribed) {
+      // 1. Actualizamos los IDs suscritos para mantener la coherencia global
+      setSubscribedCalendarIds((prev) => [...prev, id]);
+
+      // 2. Reactividad: Filtramos el calendario de la lista actual para que "desaparezca"
+      // ya que al estar suscrito, deja de ser una "recomendación".
+      setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
+
+      Alert.alert("¡Listo!", "Te has suscrito correctamente.");
+    } else {
+      // Caso poco común en esta pantalla: si se desuscribiera
+      setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
     }
-  };
+  } catch (error) {
+    Alert.alert("Error", "No se pudo procesar la suscripción.");
+    console.error("Subscribe error:", error);
+  }
+};
 
   if (loadingCalendars) {
     return (
@@ -182,13 +189,7 @@ export default function CalendarsScreen() {
               <Text style={styles.registerButtonText}>Sign Up</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.userHeader}>
-            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#10464d" />
-            </TouchableOpacity>
-          </View>
-        )}
+        ) : null}
 
 
         <EventsSwitch />
@@ -224,10 +225,6 @@ export default function CalendarsScreen() {
           calendar={selectedCalendar}
         />
 
-        <InvitationsModal
-          visible={invitationsVisible}
-          onClose={() => setInvitationsVisible(false)}
-        />
       </View>
     </View>
   );
@@ -311,18 +308,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
     fontSize: 16,
-  },
-  userHeader: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  notificationBtn: {
-    padding: 8,
-    backgroundColor: "#EAF7F6",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
   },
 });
