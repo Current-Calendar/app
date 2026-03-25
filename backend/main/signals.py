@@ -2,7 +2,7 @@ from django.db.models import F
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
-from main.models import Calendar, CalendarLike
+from main.models import Calendar, CalendarLike, Event, EventLike, EventSave, Notification
 
 
 @receiver(post_save, sender=CalendarLike)
@@ -18,6 +18,37 @@ def increment_calendar_likes_count(sender, instance, created, **kwargs):
 def decrement_calendar_likes_count(sender, instance, **kwargs):
     Calendar.objects.filter(pk=instance.calendar_id, likes_count__gt=0).update(
         likes_count=F("likes_count") - 1
+    )
+
+
+@receiver(post_save, sender=EventLike)
+def increment_event_likes_count(sender, instance, created, **kwargs):
+    if not created:
+        return
+    Event.objects.filter(pk=instance.event_id).update(
+        likes_count=F("likes_count") + 1
+    )
+
+
+@receiver(post_delete, sender=EventLike)
+def decrement_event_likes_count(sender, instance, **kwargs):
+    Event.objects.filter(pk=instance.event_id, likes_count__gt=0).update(
+        likes_count=F("likes_count") - 1
+    )
+
+
+@receiver(post_save, sender=EventSave)
+def notify_event_saved(sender, instance, created, **kwargs):
+    if not created:
+        return
+    if instance.user == instance.event.creator:
+        return
+    Notification.objects.create(
+        recipient=instance.event.creator,
+        sender=instance.user,
+        type='EVENT_SAVED',
+        message=f"{instance.user.username} saved your event '{instance.event.title}'.",
+        related_event=instance.event,
     )
 
 
