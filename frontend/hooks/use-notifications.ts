@@ -77,7 +77,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   const markAsRead = useCallback(async (id: number) => {
     if (!isAuthenticated) return;
-    
+
     try {
       await apiClient.patch(`/notifications/${id}/read/`);
       setNotifications(prev =>
@@ -89,6 +89,19 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     }
   }, [isAuthenticated]);
 
+  const handleInvite = useCallback(async (id: number, action: 'accept' | 'decline') => {
+    if (!isAuthenticated) return;
+    try {
+      const inviteStatus = action === 'accept' ? 'ACCEPT' : 'DECLINE';
+      await apiClient.post(`/notifications/${id}/`, { status: inviteStatus });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      console.error('Error handling invite:', err);
+      setError(err as Error);
+      throw err;
+    }
+  }, [isAuthenticated]);
+
   return {
     notifications,
     loading,
@@ -96,6 +109,7 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     unreadCount,
     markAllAsRead,
     markAsRead,
+    handleInvite,
     refetch: fetchNotifications,
   };
 }

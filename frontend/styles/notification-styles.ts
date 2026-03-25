@@ -127,4 +127,34 @@ export const notificationItemStyles = StyleSheet.create({
     backgroundColor: '#10464d',
     alignSelf: 'center',
   },
+  inviteActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  inviteBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteBtnDecline: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#EB8C85',
+  },
+  inviteBtnDeclineText: {
+    color: '#B33F37',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  inviteBtnAccept: {
+    backgroundColor: '#10464d',
+  },
+  inviteBtnAcceptText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
 });

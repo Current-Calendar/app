@@ -5,14 +5,14 @@ import { NotificationItem } from '@/components/notification-item';
 import { notificationsPageStyles as s } from '@/styles/notification-styles';
 
 export default function NotificationsScreen() {
-  const { notifications, markAllAsRead, markAsRead } = useNotifications();
+  const { notifications, markAllAsRead, markAsRead, handleInvite } = useNotifications();
 
   useEffect(() => {
     return () => { markAllAsRead(); };
   }, []);
 
-  const newOnes  = notifications.filter(n => !n.read);
-  const previous = notifications.filter(n => n.read);
+  const newOnes  = notifications.filter(n => !n.is_read);
+  const previous = notifications.filter(n => n.is_read);
 
   const sections = [
     ...(newOnes.length  ? [{ title: 'New',           data: newOnes  }] : []),
@@ -36,12 +36,12 @@ export default function NotificationsScreen() {
       )}
       <SectionList
         sections={sections}
-        keyExtractor={item => item.id}
+        keyExtractor={item => String(item.id)}
         renderSectionHeader={({ section }) => (
           <Text style={s.sectionLabel}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
-          <NotificationItem item={item} onPress={markAsRead} />
+          <NotificationItem item={item} onPress={markAsRead} onInviteAction={handleInvite} />
         )}
         stickySectionHeadersEnabled={false}
       />
