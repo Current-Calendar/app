@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +35,7 @@ export default function CommentsModal({
   onClose,
   event,
 }: any) {
+  const { width, height } = useWindowDimensions();
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<CommentItem | null>(null);
@@ -49,6 +51,9 @@ export default function CommentsModal({
 
   const currentUserId = apiClient.user?.id ? Number(apiClient.user.id) : null;
   const hasImage = !!event?.image && String(event.image).trim() !== "";
+  const isCompactLayout = width < 980;
+  const isSmallLayout = width < 640;
+  const showSideImage = hasImage && !isCompactLayout;
 
   useEffect(() => {
     if (visible && event) {
@@ -403,6 +408,12 @@ export default function CommentsModal({
             style={[
               styles.container,
               !hasImage && styles.containerNoImage,
+              isCompactLayout && styles.containerCompact,
+              isSmallLayout && styles.containerSmall,
+              !showSideImage && styles.containerStacked,
+              {
+                maxHeight: Math.min(height * 0.94, 820),
+              },
             ]}
             onPress={() => setOpenMenuId(null)}
           >
@@ -413,7 +424,10 @@ export default function CommentsModal({
             {hasImage && (
               <Image
                 source={{ uri: event.image }}
-                style={styles.image}
+                style={[
+                  styles.image,
+                  !showSideImage && styles.imageStacked,
+                ]}
               />
             )}
 
@@ -421,6 +435,7 @@ export default function CommentsModal({
               style={[
                 styles.right,
                 !hasImage && styles.rightNoImage,
+                !showSideImage && styles.rightStacked,
               ]}
             >
               <View style={styles.header}>
@@ -448,7 +463,9 @@ export default function CommentsModal({
               </View>
 
               <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
+                style={styles.keyboardAvoiding}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
               >
                 {replyTo && (
                   <View style={styles.replyingRow}>
@@ -538,6 +555,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
+    paddingVertical: 20,
   },
 
   container: {
@@ -554,6 +572,21 @@ const styles = StyleSheet.create({
     minWidth: 420,
     maxWidth: 700,
     height: "75%",
+  },
+
+  containerCompact: {
+    width: "92%",
+    minWidth: 0,
+    height: "86%",
+  },
+
+  containerSmall: {
+    width: "96%",
+    height: "92%",
+  },
+
+  containerStacked: {
+    flexDirection: "column",
   },
 
   closeBtn: {
@@ -578,6 +611,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
 
+  imageStacked: {
+    width: "100%",
+    height: 160,
+  },
+
   right: {
     width: "55%",
     paddingHorizontal: 14,
@@ -589,6 +627,11 @@ const styles = StyleSheet.create({
 
   rightNoImage: {
     width: "100%",
+  },
+
+  rightStacked: {
+    width: "100%",
+    flex: 1,
   },
 
   header: {
@@ -613,6 +656,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 10,
     backgroundColor: BG,
+    minHeight: 0,
+  },
+
+  keyboardAvoiding: {
+    flexShrink: 0,
   },
 
   commentsList: {

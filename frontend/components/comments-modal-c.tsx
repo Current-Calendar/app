@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -28,13 +29,13 @@ const WHITE = "#FFFFFF";
 const BORDER = "#EAEAEA";
 const MUTED = "#7A7468";
 const DANGER = "#C75146";
-const FALLBACK_IMAGE = "https://picsum.photos/seed/calendar-comments/800/800";
 
 export default function CommentsModalC({
   visible,
   onClose,
   calendar,
 }: any) {
+  const { width, height } = useWindowDimensions();
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<CommentItem | null>(null);
@@ -49,6 +50,9 @@ export default function CommentsModalC({
   const [loadingRepliesByRoot, setLoadingRepliesByRoot] = useState<Record<number, boolean>>({});
 
   const currentUserId = apiClient.user?.id ? Number(apiClient.user.id) : null;
+  const isCompactLayout = width < 980;
+  const isSmallLayout = width < 640;
+  const showSideImage = !isCompactLayout;
 
   useEffect(() => {
     if (visible && calendar) {
@@ -399,7 +403,18 @@ export default function CommentsModalC({
     <>
       <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
         <Pressable style={styles.overlay} onPress={() => setOpenMenuId(null)}>
-          <Pressable style={styles.container} onPress={() => setOpenMenuId(null)}>
+          <Pressable
+            style={[
+              styles.container,
+              isCompactLayout && styles.containerCompact,
+              isSmallLayout && styles.containerSmall,
+              !showSideImage && styles.containerStacked,
+              {
+                maxHeight: Math.min(height * 0.94, 820),
+              },
+            ]}
+            onPress={() => setOpenMenuId(null)}
+          >
             <Pressable onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeText}>✕</Text>
             </Pressable>
@@ -407,18 +422,27 @@ export default function CommentsModalC({
             {calendar?.cover ? (
             <Image
                 source={{ uri: calendar.cover }}
-                style={styles.image}
+                style={[
+                  styles.image,
+                  !showSideImage && styles.imageStacked,
+                ]}
             />
             ) : (
             <View
                 style={[
                 styles.image,
+                !showSideImage && styles.imageStacked,
                 { backgroundColor: calendar?.color || "#ccc" },
                 ]}
             />
             )}
 
-            <View style={styles.right}>
+            <View
+              style={[
+                styles.right,
+                !showSideImage && styles.rightStacked,
+              ]}
+            >
               <View style={styles.header}>
                 <Text style={styles.title} numberOfLines={2}>
                   {calendar?.name || "Comments"}
@@ -444,7 +468,9 @@ export default function CommentsModalC({
               </View>
 
               <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
+                style={styles.keyboardAvoiding}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 18 : 0}
               >
                 {replyTo && (
                   <View style={styles.replyingRow}>
@@ -534,6 +560,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
+    paddingVertical: 20,
   },
 
   container: {
@@ -543,6 +570,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 14,
     overflow: "hidden",
+  },
+
+  containerCompact: {
+    width: "92%",
+    height: "86%",
+  },
+
+  containerSmall: {
+    width: "96%",
+    height: "92%",
+  },
+
+  containerStacked: {
+    flexDirection: "column",
   },
 
   closeBtn: {
@@ -567,6 +608,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#ddd",
   },
 
+  imageStacked: {
+    width: "100%",
+    height: 160,
+  },
+
   right: {
     width: "55%",
     paddingHorizontal: 14,
@@ -574,6 +620,11 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     justifyContent: "space-between",
     backgroundColor: BG,
+  },
+
+  rightStacked: {
+    width: "100%",
+    flex: 1,
   },
 
   header: {
@@ -598,6 +649,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 10,
     backgroundColor: BG,
+    minHeight: 0,
+  },
+
+  keyboardAvoiding: {
+    flexShrink: 0,
   },
 
   commentsList: {
