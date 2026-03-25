@@ -137,7 +137,7 @@ export default function CalendarViewScreen() {
               <Text style={styles.reportBtnText}>Report</Text>
             </Pressable>
           </View>
-          <Text style={styles.subtitle}>by {calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
+          <Text style={styles.subtitle}>by {calendar.creator_username || calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
 
           <View style={styles.headerBlock}>
             <CalendarHeader

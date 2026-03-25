@@ -517,8 +517,9 @@ class GoogleOAuthIntegrationTests(APITestCase):
         self.assertTrue(response["Location"].startswith("https://accounts.google.com"))
         self.assertEqual(self.client.session.get("oauth_state"), "state-123")
 
+    @patch("main.auth.views.import_google_calendar")
     @patch("main.auth.views.google_auth_oauthlib_flow.Flow.from_client_config")
-    def test_google_oauth_callback_stores_credentials(self, mock_from_client_config):
+    def test_google_oauth_callback_stores_credentials(self, mock_from_client_config, mock_import):
         flow = MagicMock()
         flow.credentials = MagicMock(
             token="access-token",
@@ -529,6 +530,7 @@ class GoogleOAuthIntegrationTests(APITestCase):
             scopes=["https://www.googleapis.com/auth/calendar.readonly"],
         )
         mock_from_client_config.return_value = flow
+        mock_import.return_value = None
 
         session = self.client.session
         session["oauth_state"] = "state-abc"
@@ -536,7 +538,8 @@ class GoogleOAuthIntegrationTests(APITestCase):
 
         response = self.client.get("/api/v1/auth/oauth2callback/?code=fake-code&state=state-abc")
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertIn("/api/v1/calendars/import-google-calendar/", response["Location"])
+        self.assertIn("/calendars", response["Location"])
+        mock_import.assert_called_once()
 
         saved_credentials = self.client.session.get("google_credentials")
         self.assertIsNotNone(saved_credentials)
