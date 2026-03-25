@@ -653,7 +653,7 @@ def _do_google_calendar_import(user, raw_credentials):
     calendar = Calendar.objects.create(
         name="Calendar de Google",
         description="Calendar importado desde Google Calendar",
-        privacy='FRIENDS',
+        privacy='PRIVATE',
         creator=user,
         origin='GOOGLE',
         external_id=primary_id,
