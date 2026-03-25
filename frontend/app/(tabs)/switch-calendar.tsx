@@ -134,17 +134,27 @@ export default function CalendarsScreen() {
   };
 
   const handleSubscribe = async (id: string) => {
-    try {
-      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
-      Alert.alert(
-        res.subscribed ? 'Subscribed' : 'Unsubscribed',
-        res.subscribed ? 'You are now subscribed to this calendar.' : 'You have unsubscribed from this calendar.'
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Could not subscribe to this calendar.');
-      console.error('Subscribe error:', error);
+  try {
+    const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+    
+    if (res.subscribed) {
+      // 1. Actualizamos los IDs suscritos para mantener la coherencia global
+      setSubscribedCalendarIds((prev) => [...prev, id]);
+
+      // 2. Reactividad: Filtramos el calendario de la lista actual para que "desaparezca"
+      // ya que al estar suscrito, deja de ser una "recomendación".
+      setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
+
+      Alert.alert("¡Listo!", "Te has suscrito correctamente.");
+    } else {
+      // Caso poco común en esta pantalla: si se desuscribiera
+      setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
     }
-  };
+  } catch (error) {
+    Alert.alert("Error", "No se pudo procesar la suscripción.");
+    console.error("Subscribe error:", error);
+  }
+};
 
   if (loadingCalendars) {
     return (
