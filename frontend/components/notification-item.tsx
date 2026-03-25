@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Notification } from '@/hooks/use-notifications';
 import { notificationItemStyles as s } from '@/styles/notification-styles';
@@ -35,21 +35,38 @@ function formatTime(dateString: string) {
   return `Received ${Math.floor(diff / 86400)} d ago`;
 }
 
+const INVITE_TYPES = new Set<Notification['type']>(['CALENDAR_INVITE', 'EVENT_INVITE']);
+
 type Props = {
   item: Notification;
   onPress: (id: number) => void;
+  onInviteAction?: (id: number, action: 'accept' | 'decline') => Promise<void>;
 };
 
-export function NotificationItem({ item, onPress }: Props) {
+export function NotificationItem({ item, onPress, onInviteAction }: Props) {
   const icon = TYPE_ICON[item.type];
+  const [processing, setProcessing] = useState<'accept' | 'decline' | null>(null);
+  const isInvite = INVITE_TYPES.has(item.type);
 
   const actorName = 'User';
+
+  const handleInviteAction = async (action: 'accept' | 'decline') => {
+    if (!onInviteAction || processing) return;
+    setProcessing(action);
+    try {
+      await onInviteAction(item.id, action);
+    } catch {
+      Alert.alert('Error', `Could not ${action} the invitation.`);
+    } finally {
+      setProcessing(null);
+    }
+  };
 
   return (
     <TouchableOpacity
       style={[s.row, !item.is_read && s.rowUnread]}
-      onPress={() => onPress(item.id)}
-      activeOpacity={0.7}
+      onPress={() => !isInvite && onPress(item.id)}
+      activeOpacity={isInvite ? 1 : 0.7}
     >
       <View style={s.avatarWrap}>
         <View style={s.avatar}>
@@ -64,9 +81,33 @@ export function NotificationItem({ item, onPress }: Props) {
       <View style={s.body}>
         <Text style={s.message}>{item.message}</Text>
         <Text style={s.time}>{formatTime(item.created_at)}</Text>
+
+        {isInvite && onInviteAction && (
+          <View style={s.inviteActions}>
+            <TouchableOpacity
+              style={[s.inviteBtn, s.inviteBtnDecline]}
+              onPress={() => handleInviteAction('decline')}
+              disabled={processing !== null}
+            >
+              <Text style={s.inviteBtnDeclineText}>Decline</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.inviteBtn, s.inviteBtnAccept]}
+              onPress={() => handleInviteAction('accept')}
+              disabled={processing !== null}
+            >
+              {processing === 'accept' ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={s.inviteBtnAcceptText}>Accept</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
-      {!item.is_read && <View style={s.unreadDot} />}
+      {!item.is_read && !isInvite && <View style={s.unreadDot} />}
     </TouchableOpacity>
   );
 }
