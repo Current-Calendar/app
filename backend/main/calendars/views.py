@@ -639,6 +639,11 @@ def _do_google_calendar_import(user, raw_credentials):
 
     service = build('calendar', 'v3', credentials=google_credentials)
 
+    primary_id = service.calendarList().get(calendarId='primary').execute().get('id')
+
+    if Calendar.objects.filter(creator=user, origin='GOOGLE', external_id=primary_id).exists():
+        return 0
+
     events_result = service.events().list(
         calendarId='primary', singleEvents=True,
         maxResults=2500, timeMin=momento_actual, orderBy='startTime'
@@ -651,7 +656,7 @@ def _do_google_calendar_import(user, raw_credentials):
         privacy='FRIENDS',
         creator=user,
         origin='GOOGLE',
-        external_id=service.calendarList().get(calendarId='primary').execute().get('id'),
+        external_id=primary_id,
     )
 
     for event in events:

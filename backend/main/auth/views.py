@@ -62,7 +62,8 @@ def google_authorization(request):
     flow.redirect_uri = GOOGLE_REDIRECT_URIS
     authorization_url, state = flow.authorization_url(
         access_type='offline',
-        include_granted_scopes='true')
+        include_granted_scopes='true',
+        prompt='select_account')
     request.session['oauth_state'] = state
     return redirect(authorization_url)
 
