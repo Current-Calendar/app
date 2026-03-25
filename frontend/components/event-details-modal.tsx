@@ -98,7 +98,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
             {!!distanceKm && (
               <View style={eventDetailsModalStyles.rowSub}>
-                <Text style={eventDetailsModalStyles.subText}>A {distanceKm} de ti</Text>
+                <Text style={eventDetailsModalStyles.subText}>{distanceKm} away</Text>
               </View>
             )}
 

@@ -112,8 +112,8 @@ export default function EventsScreen() {
             date: e.date || e.fecha || "",
             time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
             image: resolveImageUrl(e.photo || e.foto),
-            username: cal?.creator || "unknown",
-            userAvatar: "https://i.pravatar.cc/100?u=" + (cal?.creator || "unknown"),
+            username: e.creator_username || cal?.creator || "unknown",
+            userAvatar: e.creator_photo || null,
             calendarId: String(e.calendars[0] || ""),
             calendarName: cal?.name || "General",
             // Temporary mock attendees for frontend testing.
