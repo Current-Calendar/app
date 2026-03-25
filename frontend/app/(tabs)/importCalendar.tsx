@@ -86,20 +86,6 @@ export default function ImportCalendarScreen() {
                         </View>
                     </Pressable>
 
-                    <Pressable
-                        style={styles.option}
-                        onPress={handleICS}
-                    >
-                        <View style={[styles.iconCircle, { backgroundColor: "#eae0ff" }]}>
-                            <MaterialCommunityIcons name="file" size={22} color="#10464d" />
-                        </View>
-                        <View style={styles.optionTextContainer}>
-                            <Text style={styles.optionTitle}>Archivo .ICS</Text>
-                            <Text style={styles.optionDescription}>
-                                Subir archivo desde tu dispositivo
-                            </Text>
-                        </View>
-                    </Pressable>
 
                     <Modal
                         transparent
