@@ -22,6 +22,7 @@ import { captureRef } from "react-native-view-shot";
 
 import { useCalendars } from '@/hooks/use-calendars';
 import { useEventsList } from '@/hooks/use-events';
+import { useHolidays } from '@/hooks/use-holidays';
 import { useCalendarTransfer } from '@/hooks/use-calendar-transfer';
 import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
@@ -84,6 +85,7 @@ export default function CalendarScreen() {
         error: eventsError,
         refetch: refetchEvents,
     } = useEventsList();
+    const holidays = useHolidays([year, year + 1]);
     const fetchData = async () => {
         try {
             setLoadingCalendars(true);
@@ -285,8 +287,12 @@ export default function CalendarScreen() {
         if (selectedEventType) {
             list = list.filter((e) => e.type === selectedEventType);
         }
-        return list;
-    }, [events, selectedCalendarId, selectedEventType]);
+        // Holidays are global: not filtered by selectedCalendarId (sentinel 'holidays' never matches a real ID).
+        // Only hidden when an active type filter explicitly excludes them.
+        const visibleHolidays =
+            !selectedEventType || selectedEventType === 'holiday' ? holidays : [];
+        return [...list, ...visibleHolidays];
+    }, [events, holidays, selectedCalendarId, selectedEventType]);
 
     const eventsOfSelectedDay = useMemo(() => {
         if (!selectedDay) return [];
