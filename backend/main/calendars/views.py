@@ -155,8 +155,11 @@ def delete_calendar(request, calendar_id):
 def edit_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
-    if calendar.creator != request.user:
-        return Response({'error': 'You do not have permission to edit this calendar.'}, status=status.HTTP_403_FORBIDDEN)
+    if calendar.creator != request.user and request.user not in calendar.co_owners.all():
+        return Response(
+        {'error': 'You do not have permission to edit this calendar.'},
+        status=status.HTTP_403_FORBIDDEN
+    )
 
     ESTADOS_VALIDOS = {'PRIVATE', 'FRIENDS', 'PUBLIC'}
     campos_editables = ['name', 'privacy', 'description']
