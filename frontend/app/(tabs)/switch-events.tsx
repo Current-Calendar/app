@@ -9,8 +9,6 @@ import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
-import InvitationsModal from "@/components/InvitationsModal";
-import { Ionicons } from "@expo/vector-icons";
 import apiClient from "@/services/api-client";
 
 export interface Event {
@@ -51,7 +49,6 @@ export default function EventsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [invitationsVisible, setInvitationsVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -213,13 +210,6 @@ export default function EventsScreen() {
             </TouchableOpacity>
           </View>
         )}
-        {hasSession && (
-          <View style={styles.userHeader}>
-            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#10464d" />
-            </TouchableOpacity>
-          </View>
-        )}
 
         <EventsSwitch />
 
@@ -262,10 +252,6 @@ export default function EventsScreen() {
           visible={commentsModalVisible}
           onClose={() => setCommentsModalVisible(false)}
           event={selectedEvent}
-        />
-        <InvitationsModal
-          visible={invitationsVisible}
-          onClose={() => setInvitationsVisible(false)}
         />
       </View>
     </View>
@@ -458,18 +444,5 @@ export const styles = StyleSheet.create({
 
   },
 
-  userHeader: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  notificationBtn: {
-    padding: 8,
-    backgroundColor: "#EAF7F6",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-  },
 
 });

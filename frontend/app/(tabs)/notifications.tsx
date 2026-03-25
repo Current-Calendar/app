@@ -4,6 +4,8 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { NotificationItem } from '@/components/notification-item';
 import { notificationsPageStyles as s } from '@/styles/notification-styles';
 
+const INVITE_TYPES = new Set(['CALENDAR_INVITE', 'EVENT_INVITE']);
+
 export default function NotificationsScreen() {
   const { notifications, markAllAsRead, markAsRead, handleInvite } = useNotifications();
 
@@ -11,12 +13,13 @@ export default function NotificationsScreen() {
     return () => { markAllAsRead(); };
   }, []);
 
-  const newOnes  = notifications.filter(n => !n.is_read);
-  const previous = notifications.filter(n => n.is_read);
+  const invitations = notifications.filter(n => INVITE_TYPES.has(n.type));
+  const regular     = notifications.filter(n => !INVITE_TYPES.has(n.type));
+  const hasUnread   = notifications.some(n => !n.is_read);
 
   const sections = [
-    ...(newOnes.length  ? [{ title: 'New',           data: newOnes  }] : []),
-    ...(previous.length ? [{ title: 'Previous',        data: previous }] : []),
+    ...(invitations.length ? [{ title: 'Invitations', data: invitations }] : []),
+    ...(regular.length     ? [{ title: 'Notifications', data: regular   }] : []),
   ];
 
   if (notifications.length === 0) {
@@ -29,7 +32,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={s.container}>
-      {newOnes.length > 0 && (
+      {hasUnread && (
         <TouchableOpacity style={s.markReadBtn} onPress={markAllAsRead}>
           <Text style={s.markReadLabel}>Mark every notification as read</Text>
         </TouchableOpacity>
