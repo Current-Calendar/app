@@ -699,7 +699,7 @@ export default function CalendarScreen() {
                     </View>
                 </Animated.View>
             )}
-            {isDesktop && !selectedDay && optionAnimations.map((anim, index) => {
+            {!selectedDay && optionAnimations.map((anim, index) => {
                 const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
                 const opacity = anim;
                 const fabBottom = isDesktop ? 30 : BOTTOM_BAR_HEIGHT;
