@@ -212,7 +212,7 @@ export default function SearchScreen() {
                                         followUser(user.id);
                                     }}
                                 >
-                                    <Text style={styles.followText}>
+                                    <Text style={[styles.followText, user.followed && styles.followingText]}>
                                         {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
                                     </Text>
                                 </Pressable>
@@ -367,12 +367,16 @@ const styles = StyleSheet.create({
     },
 
     followingButton: {
-        backgroundColor: "#fffded",
+        backgroundColor: "#10464d",
     },
 
     followText: {
         color: "#fff",
         fontWeight: "600",
+    },
+
+    followingText: {
+        color: "#fff",
     },
 
     calendarCard: {

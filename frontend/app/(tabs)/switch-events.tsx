@@ -9,8 +9,6 @@ import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
-import InvitationsModal from "@/components/InvitationsModal";
-import { Ionicons } from "@expo/vector-icons";
 import apiClient from "@/services/api-client";
 
 export interface Event {
@@ -25,6 +23,9 @@ export interface Event {
   userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
+  likes_count: number;
+  liked_by_me: boolean;
+  saved_by_me: boolean;
   attendees?: {
     id: string;
     name: string;
@@ -51,7 +52,6 @@ export default function EventsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
-  const [invitationsVisible, setInvitationsVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -116,23 +116,15 @@ export default function EventsScreen() {
             userAvatar: e.creator_photo || null,
             calendarId: String(e.calendars[0] || ""),
             calendarName: cal?.name || "General",
-            // Temporary mock attendees for frontend testing.
-            // Backend should replace this with real attendees data per event.
-            attendees: index % 2 === 0
-              ? [
-                {
-                  id: "1",
-                  name: "Rocío",
-                  respondedAt: "2026-03-17T18:42:00Z",
-                  avatar: "https://i.pravatar.cc/100?u=rocio",
-                },
-                {
-                  id: "2",
-                  name: "Lucía",
-                  respondedAt: "2026-03-17T19:05:00Z",
-                  avatar: "https://i.pravatar.cc/100?u=lucia",
-                },
-              ]
+            likes_count: e.likes_count ?? 0,
+            liked_by_me: e.liked_by_me ?? false,
+            saved_by_me: e.saved_by_me ?? false,
+            attendees: Array.isArray(e.attendees)
+              ? e.attendees.map((a: any) => ({
+                  name: a.username || a.name || "",
+                  respondedAt: a.responded_at || a.respondedAt || "",
+                  avatar: a.photo || a.avatar || undefined,
+                }))
               : [],
           };
         }).filter((evt: Event) => evt.id && evt.title);
@@ -152,6 +144,36 @@ export default function EventsScreen() {
   const errorMessage = calendarsError || eventsError;
 
   // Handlers de UI
+  const handleSave = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ saved: boolean }>(`/events/${id}/save/`);
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, saved_by_me: res.saved } : e
+        )
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not save this event.");
+      console.error("Save error:", error);
+    }
+  };
+
+  const handleLike = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(`/events/${id}/like/`);
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count }
+            : e
+        )
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not like this event.");
+      console.error("Like error:", error);
+    }
+  };
+
   const handleOpenEvent = (id: string) => {
     const found = events.find((e) => e.id === id);
     if (found) {
@@ -213,13 +235,6 @@ export default function EventsScreen() {
             </TouchableOpacity>
           </View>
         )}
-        {hasSession && (
-          <View style={styles.userHeader}>
-            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
-              <Ionicons name="notifications-outline" size={24} color="#10464d" />
-            </TouchableOpacity>
-          </View>
-        )}
 
         <EventsSwitch />
 
@@ -230,15 +245,15 @@ export default function EventsScreen() {
             <EventCard
               event={item}
               onOpen={handleOpenEvent}
-              onLike={(id) => console.log("Like:", id)}
+              onLike={handleLike}
+              onSave={handleSave}
               onComment={(id) => {
-              const found = events.find((e) => e.id === id);
-              if (found) {
-                setSelectedEvent(found);
-                setCommentsModalVisible(true);
-              }
-            }}
-              onSave={(id) => console.log("Save:", id)}
+                const found = events.find((e) => e.id === id);
+                if (found) {
+                  setSelectedEvent(found);
+                  setCommentsModalVisible(true);
+                }
+              }}
             />
           )}
           ListEmptyComponent={
@@ -262,10 +277,6 @@ export default function EventsScreen() {
           visible={commentsModalVisible}
           onClose={() => setCommentsModalVisible(false)}
           event={selectedEvent}
-        />
-        <InvitationsModal
-          visible={invitationsVisible}
-          onClose={() => setInvitationsVisible(false)}
         />
       </View>
     </View>
@@ -458,18 +469,5 @@ export const styles = StyleSheet.create({
 
   },
 
-  userHeader: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  notificationBtn: {
-    padding: 8,
-    backgroundColor: "#EAF7F6",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#10464d",
-  },
 
 });

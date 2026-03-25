@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
+import apiClient from '@/services/api-client';
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -20,19 +21,25 @@ const TEAL = "#1F6A6A";
 const RED = "#D64545";
 const RED_DARK = "#B22222";
 
-type AttendanceStatus = "pending" | "attending" | "not_attending";
+type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING";
 
 interface EventDetailModalProps {
   event: CalendarEvent | null;
   onClose: () => void;
+  canManageActions?: boolean;
 }
 
-export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+export function EventDetailModal({
+  event,
+  onClose,
+  canManageActions = false,
+}: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
 
   useEffect(() => {
@@ -51,12 +58,17 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
 
-  const handleAttendanceChange = (value: AttendanceStatus) => {
-    setAttendanceByEvent((prev) => ({
-      ...prev,
-      [event.id]: value,
-    }));
+  const handleAttendanceChange = async (value: AttendanceStatus) => {
     setAttendanceMenuOpen(false);
+    setAttendanceLoading(true);
+    try {
+      await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
+      setAttendanceByEvent((prev) => ({ ...prev, [event.id]: value }));
+    } catch (error) {
+      console.error("Error updating attendance:", error);
+    } finally {
+      setAttendanceLoading(false);
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -71,11 +83,9 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
 
   const getAttendanceLabel = (value: AttendanceStatus) => {
     switch (value) {
-      case "pending":
-        return "Pending";
-      case "attending":
+      case "ASSISTING":
         return "I will attend";
-      case "not_attending":
+      case "NOT_ASSISTING":
         return "I will not attend";
       default:
         return "Pending";
@@ -137,11 +147,11 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                 <Text style={styles.attendanceLabel}>Attendance</Text>
 
                 <Pressable
-                  style={styles.attendanceButton}
-                  onPress={() => setAttendanceMenuOpen((prev) => !prev)}
+                  style={[styles.attendanceButton, attendanceLoading && { opacity: 0.6 }]}
+                  onPress={() => !attendanceLoading && setAttendanceMenuOpen((prev) => !prev)}
                 >
                   <Text style={styles.attendanceButtonText}>
-                    {getAttendanceLabel(currentAttendance)}
+                    {attendanceLoading ? "Saving..." : getAttendanceLabel(currentAttendance)}
                   </Text>
                   <Ionicons
                     name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
@@ -154,14 +164,14 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                   <View style={styles.dropdown}>
                     <Pressable
                       style={styles.dropdownItem}
-                      onPress={() => handleAttendanceChange("attending")}
+                      onPress={() => handleAttendanceChange("ASSISTING")}
                     >
                       <Text style={styles.dropdownItemText}>I will attend</Text>
                     </Pressable>
 
                     <Pressable
                       style={styles.dropdownItem}
-                      onPress={() => handleAttendanceChange("not_attending")}
+                      onPress={() => handleAttendanceChange("NOT_ASSISTING")}
                     >
                       <Text style={styles.dropdownItemText}>I will not attend</Text>
                     </Pressable>
@@ -186,27 +196,31 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                 <Text style={styles.commentText}>Comments</Text>
               </Pressable>
 
-              <Pressable
-                style={styles.editBtn}
-                onPress={() => {
-                  onClose();
-                  router.push({
-                    pathname: "/edit_events",
-                    params: { id: event.id },
-                  });
-                }}
-              >
-                <Ionicons name="pencil" size={16} color="#EAF7F6" />
-                <Text style={styles.editText}>Edit</Text>
-              </Pressable>
+              {canManageActions && (
+                <>
+                  <Pressable
+                    style={styles.editBtn}
+                    onPress={() => {
+                      onClose();
+                      router.push({
+                        pathname: "/edit_events",
+                        params: { id: event.id },
+                      });
+                    }}
+                  >
+                    <Ionicons name="pencil" size={16} color="#EAF7F6" />
+                    <Text style={styles.editText}>Edit</Text>
+                  </Pressable>
 
-              <Pressable
-                style={styles.deleteBtn}
-                onPress={() => handleDeleteEvent(event.id)}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.deleteText}>Delete</Text>
-              </Pressable>
+                  <Pressable
+                    style={styles.deleteBtn}
+                    onPress={() => handleDeleteEvent(event.id)}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.deleteText}>Delete</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </Pressable>
         </Pressable>

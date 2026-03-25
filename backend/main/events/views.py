@@ -3,10 +3,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
-from ..models import Calendar, Event, Notification, EventAttendance, User
+from ..models import Calendar, Event, EventLike, EventSave, Notification, EventAttendance, User
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
@@ -478,9 +478,13 @@ def delete_event(request, event_id):
     except Event.DoesNotExist:
         return Response({"error": "Event no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-    if event.creator != request.user:
+    can_delete = event.calendars.filter(
+        Q(creator=request.user) | Q(co_owners=request.user)
+    ).exists()
+
+    if not can_delete:
         return Response(
-            {"error": "No tienes permiso para borrar este event porque no eres el creator."}, 
+            {"error": "No tienes permiso para borrar este event."},
             status=status.HTTP_403_FORBIDDEN
         )
 
@@ -509,6 +513,83 @@ def recommended_events(request):
     cache.set(cache_key, serializer.data, 60 * 5)
 
     return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
+def _can_like_event(user, event: Event) -> bool:
+    """User can like an event if they can access at least one of its calendars."""
+    for calendar in event.calendars.all():
+        if calendar.privacy == "PUBLIC":
+            return True
+        if calendar.creator == user:
+            return True
+        if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
+            return True
+    return False
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_like_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    user = request.user
+
+    with transaction.atomic():
+        like = EventLike.objects.filter(user=user, event=event).first()
+
+        if like:
+            like.delete()
+            liked = False
+        else:
+            if not _can_like_event(user, event):
+                return Response(
+                    {"errors": ["No tienes permiso para dar me gusta a este evento."]},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            try:
+                EventLike.objects.create(user=user, event=event)
+            except IntegrityError:
+                pass
+            liked = True
+
+    event.refresh_from_db(fields=['likes_count'])
+    return Response(
+        {
+            "event_id": event_id,
+            "liked": liked,
+            "likes_count": event.likes_count,
+            "liked_by_me": liked,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_save_event(request, event_id):
+    event = get_object_or_404(Event, id=event_id)
+    user = request.user
+
+    with transaction.atomic():
+        save = EventSave.objects.filter(user=user, event=event).first()
+
+        if save:
+            save.delete()
+            saved = False
+        else:
+            try:
+                EventSave.objects.create(user=user, event=event)
+            except IntegrityError:
+                pass
+            saved = True
+
+    return Response(
+        {
+            "event_id": event_id,
+            "saved": saved,
+            "saved_by_me": saved,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def rsvp_event(request, event_id):
@@ -569,6 +650,7 @@ def invite_event(request: Request, event_id: int):
             type="EVENT_INVITE",
             related_event=event,
             sender=request.user,
+            message=f"@{request.user.username} has invited you to the event \"{event.title}\".",
         )
 
     return Response(status=status.HTTP_204_NO_CONTENT)

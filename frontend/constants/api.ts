@@ -66,6 +66,7 @@ export const API_CONFIG = {
     inviteEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/invite/`),
     listNotifications: buildEndpoint('notifications/'),
     handleNotification: (id: string | number) => buildEndpoint(`notifications/${id}/`),
+    rsvpEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/rsvp/`),
   },
 };
 

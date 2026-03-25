@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from main.models import Event, EventAttendance
+from main.models import Event, EventAttendance, EventLike, EventSave
 
 from .models import Calendar, Notification, Report, ChatMessage
 from utils.storage import get_signed_url
@@ -175,6 +175,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
     liked_by_me = serializers.SerializerMethodField()
 
+    likes_count = serializers.IntegerField(source='likes.count', read_only=True)
     class Meta:
         model = Calendar
         fields = (
@@ -245,6 +246,8 @@ class EventSerializer(serializers.ModelSerializer):
     creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()
+    liked_by_me = serializers.SerializerMethodField()
+    saved_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -253,7 +256,8 @@ class EventSerializer(serializers.ModelSerializer):
             'date', 'time', 'recurrence', 'external_id',
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
-            'photo', 'creator_username', 'creator_photo', 'attendees'
+            'photo', 'creator_username', 'creator_photo', 'attendees',
+            'likes_count', 'liked_by_me', 'saved_by_me',
         ]
 
     def get_creator_photo(self, obj):
@@ -285,19 +289,48 @@ class EventSerializer(serializers.ModelSerializer):
             context=self.context
         ).data
 
+    def get_liked_by_me(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return EventLike.objects.filter(user=request.user, event=obj).exists()
+
+    def get_saved_by_me(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return EventSave.objects.filter(user=request.user, event=obj).exists()
+
 class NotificationSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source='sender.username', read_only=True, default=None)
+    sender_photo = serializers.SerializerMethodField()
+    related_calendar_name = serializers.SerializerMethodField()
+    related_event_title = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
         fields = [
-            'id', 'recipient', 'sender', 'sender_username', 'type', 
-            'message', 'is_read', 'created_at', 'related_calendar', 'related_event'
+            'id', 'recipient', 'sender', 'sender_username', 'sender_photo', 'type',
+            'message', 'is_read', 'created_at',
+            'related_calendar', 'related_calendar_name',
+            'related_event', 'related_event_title',
         ]
         read_only_fields = [
-            'id', 'recipient', 'sender', 'type', 'message', 
-            'created_at', 'related_calendar', 'related_event'
+            'id', 'recipient', 'sender', 'type', 'message',
+            'created_at', 'related_calendar', 'related_event',
         ]
+
+    def get_sender_photo(self, obj):
+        if not obj.sender:
+            return None
+        request = self.context.get('request')
+        return get_signed_url(request, obj.sender.photo)
+
+    def get_related_calendar_name(self, obj):
+        return obj.related_calendar.name if obj.related_calendar_id else None
+
+    def get_related_event_title(self, obj):
+        return obj.related_event.title if obj.related_event_id else None
 
     def validate(self, attrs):
         if self.instance and len(attrs) > 1:
