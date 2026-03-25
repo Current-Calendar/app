@@ -7,25 +7,24 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { User } from '../../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import CommentsModalC from '../../../components/comments-modal-c';
 import profileStyles from '../../../styles/profile-styles';
-import apiClient, { appendPhoto } from '../../../services/api-client';  
-import { useProfileActions } from '@/hooks/use-profile-actions';
+import apiClient from '../../../services/api-client';
 import LogoutModal from '../../../components/logout-modal';
 
 import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
 import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import { ReportModal } from '@/components/report-modal';
 import { Calendar } from '@/types/calendar';
+import FollowListModal from '../../../components/follow-list-modal';
+import { useUserFollows } from '@/hooks/use-user-follows';
 
 type OwnProfileCalendarResponse = {
   id: number;
@@ -128,28 +127,46 @@ const ProfileAvatar = ({ uri }: { uri?: string }) => (
   </View>
 );
 
+const StatBox = ({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  onPress?: () => void;
+}) => {
+  const Wrapper: any = onPress ? TouchableOpacity : View;
+  return (
+    <Wrapper
+      style={profileStyles.statItem}
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+    >
+      <Text style={profileStyles.statNumber}>{value}</Text>
+      <Text style={profileStyles.statLabel}>{label}</Text>
+    </Wrapper>
+  );
+};
+
 const ProfileStats = ({
   calendarsCount,
   totalFollowers,
   totalFollowing,
+  onPressFollowers,
+  onPressFollowing,
 }: {
   calendarsCount: number;
   totalFollowers: number;
   totalFollowing: number;
+  onPressFollowers?: () => void;
+  onPressFollowing?: () => void;
 }) => (
   <View style={profileStyles.statsContainer}>
-    <View style={profileStyles.statItem}>
-      <Text style={profileStyles.statNumber}>{calendarsCount}</Text>
-      <Text style={profileStyles.statLabel}>Calendars</Text>
-    </View>
-    <View style={profileStyles.statItem}>
-      <Text style={profileStyles.statNumber}>{totalFollowers}</Text>
-      <Text style={profileStyles.statLabel}>Followers</Text>
-    </View>
-    <View style={[profileStyles.statItem, profileStyles.statItemLast]}>
-      <Text style={profileStyles.statNumber}>{totalFollowing}</Text>
-      <Text style={profileStyles.statLabel}>Following</Text>
-    </View>
+    <StatBox label="Calendars" value={calendarsCount} />
+    <StatBox label="Followers" value={totalFollowers} onPress={onPressFollowers} />
+    <StatBox label="Following" value={totalFollowing} onPress={onPressFollowing} />
   </View>
 );
 
@@ -179,12 +196,12 @@ const OwnProfile = () => {
   const router = useRouter();
   const { username } = useLocalSearchParams<{ username: string }>();
 
-  const { user: currentUser, logout, setUser: updateUserContext } = useAuth();
+  const { user: currentUser, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const performLogout = async () => {
-    setShowLogoutModal(false); 
-    await logout();            
-    router.replace('/login'); 
+    setShowLogoutModal(false);
+    await logout();
+    router.replace('/login');
   };
 
   const isMe = !username || username === currentUser?.username;
@@ -202,6 +219,11 @@ const OwnProfile = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
+  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
+    shownUser?.id,
+    Boolean(shownUser)
+  );
 
   useEffect(() => {
     if (!currentUser) { setShownUser(null); return; }
@@ -259,9 +281,13 @@ const OwnProfile = () => {
   };
 
   const handleLogout = () => {
-    setShowLogoutModal(true); 
+    setShowLogoutModal(true);
   };
 
+  const openFollowList = (type: 'followers' | 'following') => {
+    setActiveFollowList(type);
+    reloadFollows();
+  };
 
   if (isLoadingProfile) {
     return (
@@ -311,6 +337,8 @@ const OwnProfile = () => {
             calendarsCount={metrics.calendars_count}
             totalFollowers={metrics.total_followers}
             totalFollowing={metrics.total_following}
+            onPressFollowers={() => openFollowList('followers')}
+            onPressFollowing={() => openFollowList('following')}
           />
 
           <View style={profileStyles.buttonsRow}>
@@ -371,11 +399,18 @@ const OwnProfile = () => {
 
       </ScrollView>
 
-      {/* AQUÍ INVOCAMOS TU NUEVO MODAL DE LEGO */}
-      <LogoutModal 
-        visible={showLogoutModal} 
-        onClose={() => setShowLogoutModal(false)} 
-        onConfirm={performLogout} 
+      <FollowListModal
+        visible={Boolean(activeFollowList)}
+        title={activeFollowList === 'followers' ? 'Seguidores' : 'Seguidos'}
+        users={activeFollowList === 'followers' ? followers : following}
+        loading={followsLoading}
+        onClose={() => setActiveFollowList(null)}
+      />
+
+      <LogoutModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={performLogout}
       />
 
       <CommentsModalC
@@ -395,6 +430,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [followingCalendarsData, setFollowingCalendarsData] = useState<CalendarData[]>([]);
   const [publicCalendarsData, setPublicCalendarsData] = useState<CalendarData[]>([]);
+  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
 
   const {
     userBeingViewed,
@@ -410,6 +446,11 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
     useFollowedCalendars(userBeingViewed?.username, {
       enabled: !!userBeingViewed && !!currentUser,
     });
+
+  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
+    userBeingViewed?.id,
+    Boolean(userBeingViewed)
+  );
 
   useEffect(() => {
     setFollowingCalendarsData(followingCalendars.map(toCalendarData));
@@ -439,6 +480,11 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
       });
       setCommentsVisible(true);
     }
+  };
+
+  const openFollowList = (type: 'followers' | 'following') => {
+    setActiveFollowList(type);
+    reloadFollows();
   };
 
   if (isLoading) {
@@ -480,6 +526,8 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
             calendarsCount={userBeingViewed.public_calendars?.length ?? 0}
             totalFollowers={userBeingViewed.total_followers || 0}
             totalFollowing={userBeingViewed.total_following || 0}
+            onPressFollowers={() => openFollowList('followers')}
+            onPressFollowing={() => openFollowList('following')}
           />
 
           <View style={profileStyles.buttonsRow}>
@@ -561,6 +609,14 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         </View>
 
       </ScrollView>
+
+      <FollowListModal
+        visible={Boolean(activeFollowList)}
+        title={activeFollowList === 'followers' ? 'Seguidores' : 'Seguidos'}
+        users={activeFollowList === 'followers' ? followers : following}
+        loading={followsLoading}
+        onClose={() => setActiveFollowList(null)}
+      />
 
       <ReportModal
         open={reportOpen}
