@@ -125,10 +125,17 @@ def recommend_events(user: User, limit=30):
     if len(final_events) < limit:
         ids_to_exclude = already_seen_event_ids | set(recommended_ids.keys())
         needed = limit - len(final_events)
+        friends_ids = user.following.values_list('id', flat=True)
         popular = (
             Event.objects
             .exclude(id__in=ids_to_exclude)
             .filter(date__gte=timezone.now().date())
+            .filter(
+                Q(calendars__privacy='PUBLIC') |
+                Q(calendars__privacy='FRIENDS', calendars__creator__in=friends_ids) |
+                Q(calendars__creator=user)
+            )
+            .distinct()
             .annotate(num_calendars=Count('calendars'))
             .order_by('date', '-num_calendars')
         )[:needed]

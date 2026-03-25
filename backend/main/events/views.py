@@ -302,7 +302,18 @@ def edit_event(request: Request, event_id):
 
 @api_view(['GET'])
 def list_events(request):
-    queryset = Event.objects.all()
+    user = request.user
+    if user.is_authenticated:
+        friends = user.following.all()
+        privacy_filter = (
+            Q(calendars__privacy='PUBLIC') |
+            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends) |
+            Q(calendars__creator=user)
+        )
+    else:
+        privacy_filter = Q(calendars__privacy='PUBLIC')
+
+    queryset = Event.objects.filter(privacy_filter).distinct()
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -331,7 +342,18 @@ def list_events_from_calendar(request):
     Query parameters:
         calendarId (int) -- filter by calendar ID
     """
-    queryset = Event.objects.all().order_by('-created_at')
+    user = request.user
+    if user.is_authenticated:
+        friends = user.following.all()
+        privacy_filter = (
+            Q(calendars__privacy='PUBLIC') |
+            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends) |
+            Q(calendars__creator=user)
+        )
+    else:
+        privacy_filter = Q(calendars__privacy='PUBLIC')
+
+    queryset = Event.objects.filter(privacy_filter).distinct().order_by('-created_at')
     calendar_id = request.GET.get('calendarId')
 
     if calendar_id:
