@@ -26,9 +26,14 @@ type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING";
 interface EventDetailModalProps {
   event: CalendarEvent | null;
   onClose: () => void;
+  canManageActions?: boolean;
 }
 
-export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
+export function EventDetailModal({
+  event,
+  onClose,
+  canManageActions = false,
+}: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
 
@@ -191,27 +196,31 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
                 <Text style={styles.commentText}>Comments</Text>
               </Pressable>
 
-              <Pressable
-                style={styles.editBtn}
-                onPress={() => {
-                  onClose();
-                  router.push({
-                    pathname: "/edit_events",
-                    params: { id: event.id },
-                  });
-                }}
-              >
-                <Ionicons name="pencil" size={16} color="#EAF7F6" />
-                <Text style={styles.editText}>Edit</Text>
-              </Pressable>
+              {canManageActions && (
+                <>
+                  <Pressable
+                    style={styles.editBtn}
+                    onPress={() => {
+                      onClose();
+                      router.push({
+                        pathname: "/edit_events",
+                        params: { id: event.id },
+                      });
+                    }}
+                  >
+                    <Ionicons name="pencil" size={16} color="#EAF7F6" />
+                    <Text style={styles.editText}>Edit</Text>
+                  </Pressable>
 
-              <Pressable
-                style={styles.deleteBtn}
-                onPress={() => handleDeleteEvent(event.id)}
-              >
-                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.deleteText}>Delete</Text>
-              </Pressable>
+                  <Pressable
+                    style={styles.deleteBtn}
+                    onPress={() => handleDeleteEvent(event.id)}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.deleteText}>Delete</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
           </Pressable>
         </Pressable>

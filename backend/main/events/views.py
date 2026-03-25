@@ -478,9 +478,13 @@ def delete_event(request, event_id):
     except Event.DoesNotExist:
         return Response({"error": "Event no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-    if event.creator != request.user:
+    can_delete = event.calendars.filter(
+        Q(creator=request.user) | Q(co_owners=request.user)
+    ).exists()
+
+    if not can_delete:
         return Response(
-            {"error": "No tienes permiso para borrar este event porque no eres el creator."}, 
+            {"error": "No tienes permiso para borrar este event."},
             status=status.HTTP_403_FORBIDDEN
         )
 

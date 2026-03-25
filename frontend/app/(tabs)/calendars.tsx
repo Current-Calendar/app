@@ -47,7 +47,7 @@ function formatSelectedDay(dateKey: string): string {
 }
 
 export default function CalendarScreen() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const { downloadCalendarFile } = useCalendarTransfer();
     const { deleteCalendar } = useCalendarActions();
     const today = new Date();
@@ -295,6 +295,23 @@ export default function CalendarScreen() {
             (event) => event.date?.slice(0, 10) === selectedDay
         );
     }, [filteredEvents, selectedDay]);
+
+    const canManageActiveEvent = useMemo(() => {
+        if (!activeEvent || !user?.username) return false;
+
+        const eventCalendar = calendars.find((calendar) => calendar.id === activeEvent.calendarId);
+        if (!eventCalendar) return false;
+
+        const isOwner =
+            eventCalendar.creator === user.username ||
+            (eventCalendar as any).creator_username === user.username;
+
+        const isCoOwner = Array.isArray((eventCalendar as any).co_owners)
+            ? (eventCalendar as any).co_owners.some((coOwner: any) => coOwner?.username === user.username)
+            : false;
+
+        return isOwner || isCoOwner;
+    }, [activeEvent, calendars, user]);
 
     const removeCalendarFromState = (calendarId: string) => {
         setCalendars((current) => current.filter((item) => item.id !== calendarId));
@@ -610,7 +627,11 @@ export default function CalendarScreen() {
                         />
                     )}
                 </View>
-                <EventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
+                <EventDetailModal
+                    event={activeEvent}
+                    onClose={() => setActiveEvent(null)}
+                    canManageActions={canManageActiveEvent}
+                />
                 <CalendarInfoModal
                     calendar={infoCalendar}
                     onClose={() => setInfoCalendar(null)}

@@ -34,6 +34,13 @@ class EventTests(APITestCase):
             creator=self.user1,
         )
 
+        self.calendar1 = Calendar.objects.create(
+            name="Calendario user1",
+            creator=self.user1,
+            privacy="PRIVATE",
+        )
+        self.event1.calendars.add(self.calendar1)
+
 
     def test_delete_unauthenticated(self):
         self.assertEqual(Event.objects.count(), 1)
@@ -63,6 +70,18 @@ class EventTests(APITestCase):
 
         self.assertEqual(request.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(Event.objects.count(), 1)
+
+    def test_delete_event_as_calendar_co_owner(self):
+        self.assertEqual(Event.objects.count(), 1)
+
+        self.calendar1.co_owners.add(self.user2)
+
+        self.client.force_authenticate(self.user2)
+
+        request = self.client.delete(f"/api/v1/events/{self.event1.pk}/delete/")
+
+        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Event.objects.count(), 0)
 
     def test_delete_not_found_event(self):
         self.assertEqual(Event.objects.count(), 1)
