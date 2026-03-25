@@ -175,6 +175,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
     liked_by_me = serializers.SerializerMethodField()
 
+    likes_count = serializers.IntegerField(source='likes.count', read_only=True)
     class Meta:
         model = Calendar
         fields = (

@@ -100,18 +100,22 @@ export default function CalendarsScreen() {
     router.push(`/calendar-view?calendarId=${id}`);
   };
   
-  const handleLike = async (id: string) => {
+ const handleLike = async (id: string) => {
     try {
     const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
     setCalendars((prev) =>
       prev.map((calendar) => {
         if (calendar.id === id) {
+          
+          
+          const currentLikes = calendar.likes_count ?? 0;
+
           return {
             ...calendar,
             liked_by_me: res.liked,
             likes_count: res.liked 
-              ? calendar.likes_count + 1 
-              : calendar.likes_count - 1,
+              ? currentLikes + 1 
+              : Math.max(0, currentLikes - 1), 
           };
         }
         return calendar;
@@ -156,6 +160,7 @@ export default function CalendarsScreen() {
       </View>
     );
   }
+
 
   return (
     <View style={styles.container}>
