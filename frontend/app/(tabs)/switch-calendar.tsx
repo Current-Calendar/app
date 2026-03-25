@@ -86,7 +86,7 @@ export default function CalendarsScreen() {
       description: c.description || "",
       privacy: c.privacy,
       origin: c.origin,
-      creator: c.creator_username || "unknown",
+      creator: c.creator || "unknown",
       color: COLORS[index % COLORS.length],
       cover: c.cover || null,
       likes_count: c.likes_count,
