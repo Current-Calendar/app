@@ -192,10 +192,19 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const detail =
-        typeof errorData?.detail === 'string'
-          ? errorData.detail
-          : `HTTP ${response.status}`;
+      
+      let detail = `HTTP ${response.status}`;
+      
+      if (typeof errorData?.detail === 'string') {
+        detail = errorData.detail;
+      } else if (Array.isArray(errorData?.errors) && errorData.errors.length > 0) {
+        detail = errorData.errors[0];
+      } else if (typeof errorData?.error === 'string') {
+        detail = errorData.error;
+      } else if (typeof errorData?.message === 'string') {
+        detail = errorData.message;
+      }
+      
       throw new ApiError(detail, response.status, errorData);
     }
 
