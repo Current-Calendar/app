@@ -116,23 +116,12 @@ export default function EventsScreen() {
             userAvatar: e.creator_photo || null,
             calendarId: String(e.calendars[0] || ""),
             calendarName: cal?.name || "General",
-            // Temporary mock attendees for frontend testing.
-            // Backend should replace this with real attendees data per event.
-            attendees: index % 2 === 0
-              ? [
-                {
-                  id: "1",
-                  name: "Rocío",
-                  respondedAt: "2026-03-17T18:42:00Z",
-                  avatar: "https://i.pravatar.cc/100?u=rocio",
-                },
-                {
-                  id: "2",
-                  name: "Lucía",
-                  respondedAt: "2026-03-17T19:05:00Z",
-                  avatar: "https://i.pravatar.cc/100?u=lucia",
-                },
-              ]
+            attendees: Array.isArray(e.attendees)
+              ? e.attendees.map((a: any) => ({
+                  name: a.username || a.name || "",
+                  respondedAt: a.responded_at || a.respondedAt || "",
+                  avatar: a.photo || a.avatar || undefined,
+                }))
               : [],
           };
         }).filter((evt: Event) => evt.id && evt.title);
