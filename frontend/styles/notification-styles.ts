@@ -98,10 +98,33 @@ export const notificationItemStyles = StyleSheet.create({
   body: {
     flex: 1,
   },
+  senderName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#10464d',
+    marginBottom: 2,
+  },
   message: {
     fontSize: 13,
     color: '#1a1a1a',
     lineHeight: 18,
+  },
+  contextBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    backgroundColor: '#EAF7F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  contextLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10464d',
+    flexShrink: 1,
   },
   actorName: {
     fontWeight: '700',

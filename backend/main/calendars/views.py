@@ -1061,6 +1061,7 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             type="CALENDAR_INVITE",
             related_calendar=calendar,
             sender=request.user,
+            message=f"@{request.user.username} has invited you to join the calendar \"{calendar.name}\".",
         )
 
     return Response(status=status.HTTP_204_NO_CONTENT)

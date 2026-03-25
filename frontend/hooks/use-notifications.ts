@@ -19,8 +19,12 @@ export type Notification = {
   is_read: boolean;
   created_at: string;
   related_calendar?: number | null;
+  related_calendar_name?: string | null;
   related_event?: number | null;
+  related_event_title?: string | null;
   sender?: number | null;
+  sender_username?: string | null;
+  sender_photo?: string | null;
 };
 
 interface UseNotificationsOptions {

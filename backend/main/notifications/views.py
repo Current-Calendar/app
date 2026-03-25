@@ -12,8 +12,8 @@ from django.shortcuts import get_object_or_404
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notifications(request):
-    notifications = request.user.notifications.order_by('-created_at')
-    serializer = NotificationSerializer(notifications, many=True)
+    notifications = request.user.notifications.select_related('sender', 'related_calendar', 'related_event').order_by('-created_at')
+    serializer = NotificationSerializer(notifications, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['PATCH'])

@@ -367,9 +367,7 @@ const styles = StyleSheet.create({
     },
 
     followingButton: {
-        backgroundColor: "#EAF7F6",
-        borderWidth: 1.5,
-        borderColor: "#10464d",
+        backgroundColor: "#10464d",
     },
 
     followText: {
@@ -378,7 +376,7 @@ const styles = StyleSheet.create({
     },
 
     followingText: {
-        color: "#10464d",
+        color: "#fff",
     },
 
     calendarCard: {
