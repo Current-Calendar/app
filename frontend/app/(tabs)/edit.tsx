@@ -24,6 +24,7 @@ export default function EditScreen() {
 
   const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.privacy ?? 'PRIVATE');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [calendarData, setCalendarData] = useState({
     name: params.name ?? "",
     description: params.description ?? "",
@@ -101,6 +102,7 @@ export default function EditScreen() {
     }
 
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       if (newCoverImage) {
         const formData = new FormData();
@@ -120,8 +122,21 @@ export default function EditScreen() {
       }
 
       router.replace('/(tabs)/calendars');
-    } catch (error) {
-      Alert.alert("Error", "Failed to update calendar. Please try again.");
+    } catch (error: any) {
+      console.log("FULL ERROR:", error);
+
+      const backendErrors = error?.data?.errors;
+      if (Array.isArray(backendErrors) && backendErrors.length > 0) {
+        setErrorMessage(String(backendErrors[0]));
+      } else {
+        const message = error?.message || "";
+        setErrorMessage(
+          message && !message.includes("HTTP")
+            ? message
+            : "Failed to update calendar. Please try again."
+        );
+      }
+
       console.error("Edit error:", error);
     } finally {
       setIsLoading(false);
@@ -261,6 +276,13 @@ export default function EditScreen() {
                 : "Anyone with the link can view this calendar."}
             </Text>
           </View>
+
+          {/* ERROR MESSAGE */}
+          {errorMessage && (
+            <Text style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          )}
 
           {/* SAVE BUTTON */}
           <Pressable
@@ -507,5 +529,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     fontFamily: Fonts?.rounded,
+  },
+  errorText: {
+    color: "#d9534f",
+    fontSize: 14,
+    marginBottom: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

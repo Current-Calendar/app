@@ -74,13 +74,8 @@ class Calendar(models.Model):
     labels = models.ManyToManyField(CalendarLabel, related_name='calendars', blank=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['creator'],
-                condition=Q(privacy='PRIVATE'),
-                name='unique_private_calendar_per_user'
-            )
-        ]
+        pass
+    
     likes_count = models.PositiveIntegerField(default=0)
     co_owners = models.ManyToManyField('User', related_name='co_owned_calendars', blank=True)
 

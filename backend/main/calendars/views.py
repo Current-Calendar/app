@@ -164,20 +164,33 @@ def edit_calendar(request, calendar_id):
     ESTADOS_VALIDOS = {'PRIVATE', 'FRIENDS', 'PUBLIC'}
     campos_editables = ['name', 'privacy', 'description']
 
-
+    # Validar cada campo editado
     for campo in campos_editables:
         if campo in request.data:
             valor = request.data[campo]
-            if isinstance(valor, str) and valor.strip() == '':
+            
+            # Validar tipo: todos deben ser strings
+            if not isinstance(valor, str):
                 return Response(
-                    {'error': f"El campo '{campo}' no puede ser una cadena vacía."},
+                    {'errors': [f"El campo '{campo}' debe ser texto."]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            
+            # 'description' es opcional, así que se permite vacía
+            # 'name' y 'privacy' no pueden estar vacías
+            if campo != 'description' and valor.strip() == '':
+                return Response(
+                    {'errors': [f"El campo '{campo}' no puede ser una cadena vacía."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            # Validar valores específicos para 'privacy'
             if campo == 'privacy' and valor not in ESTADOS_VALIDOS:
                 return Response(
-                    {'error': f"El privacy '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."},
+                    {'errors': [f"El privacy '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."]},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            
             setattr(calendar, campo, valor)
 
     if 'cover' in request.FILES:
@@ -189,7 +202,28 @@ def edit_calendar(request, calendar_id):
             calendar.cover.delete(save=False)
         calendar.cover = None
 
-    calendar.save()
+    try:
+        calendar.full_clean()
+        with transaction.atomic():
+            calendar.save()
+    except ValidationError as exc:
+        raw_messages = []
+        if hasattr(exc, "message_dict"):
+            for field_errors in exc.message_dict.values():
+                raw_messages.extend(field_errors)
+        if not raw_messages and getattr(exc, "messages", None):
+            raw_messages.extend(exc.messages)
+        
+        return Response(
+            {'errors': raw_messages or ["Datos inválidos."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except IntegrityError:
+        return Response(
+            {'errors': ['No se pudo actualizar el calendario por una restricción de datos.']},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
     return Response({
         'id': calendar.id,
         'name': calendar.name,
