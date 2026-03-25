@@ -41,7 +41,8 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-asset"
+      "expo-asset",
+      "@stripe/stripe-react-native"
     ],
     "experiments": {
       "typedRoutes": true,
