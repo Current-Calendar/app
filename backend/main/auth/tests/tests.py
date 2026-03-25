@@ -459,3 +459,172 @@ class UsuarioPasswordResetTests(APITestCase):
         response = self.client.get(self.VALIDATE_URL, {"token": token})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data["valid"])
+
+
+
+class AuthTokenIntegrationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="jwt_user",
+            email="jwt_user@example.com",
+            password="JwtPass123!",
+        )
+
+    def test_token_obtain_pair_success(self):
+        response = self.client.post(
+            "/api/v1/token/",
+            {"username": "jwt_user", "password": "JwtPass123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+
+    def test_token_refresh_success(self):
+        token_response = self.client.post(
+            "/api/v1/token/",
+            {"username": "jwt_user", "password": "JwtPass123!"},
+            format="json",
+        )
+        refresh = token_response.data["refresh"]
+
+        response = self.client.post(
+            "/api/v1/token/refresh/",
+            {"refresh": refresh},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_token_refresh_invalid_token(self):
+        response = self.client.post(
+            "/api/v1/token/refresh/",
+            {"refresh": "not-a-real-refresh-token"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class GoogleOAuthIntegrationTests(APITestCase):
+    @patch("main.auth.views.google_auth_oauthlib_flow.Flow.from_client_config")
+    def test_google_authorization_redirects_and_sets_state(self, mock_from_client_config):
+        flow = MagicMock()
+        flow.authorization_url.return_value = ("https://accounts.google.com/o/oauth2/auth", "state-123")
+        mock_from_client_config.return_value = flow
+
+        response = self.client.get("/api/v1/auth/google-auth")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertTrue(response["Location"].startswith("https://accounts.google.com"))
+        self.assertEqual(self.client.session.get("oauth_state"), "state-123")
+
+    @patch("main.auth.views.google_auth_oauthlib_flow.Flow.from_client_config")
+    def test_google_oauth_callback_stores_credentials(self, mock_from_client_config):
+        flow = MagicMock()
+        flow.credentials = MagicMock(
+            token="access-token",
+            refresh_token="refresh-token",
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id="client-id",
+            client_secret="client-secret",
+            scopes=["https://www.googleapis.com/auth/calendar.readonly"],
+        )
+        mock_from_client_config.return_value = flow
+
+        session = self.client.session
+        session["oauth_state"] = "state-abc"
+        session.save()
+
+        response = self.client.get("/api/v1/auth/oauth2callback/?code=fake-code&state=state-abc")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("/api/v1/calendars/import-google-calendar/", response["Location"])
+
+        saved_credentials = self.client.session.get("google_credentials")
+        self.assertIsNotNone(saved_credentials)
+        self.assertEqual(saved_credentials["token"], "access-token")
+
+
+
+class JwtAuthEndpointsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="jwt_endpoints_user",
+            email="jwt_endpoints_user@example.com",
+            password="JwtEndpointsPass123!",
+        )
+
+    def test_token_obtain_success(self):
+        response = self.client.post(
+            "/api/v1/token/",
+            {"username": "jwt_endpoints_user", "password": "JwtEndpointsPass123!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
+
+    def test_token_obtain_error(self):
+        response = self.client.post(
+            "/api/v1/token/",
+            {"username": "jwt_endpoints_user", "password": "bad-password"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_token_refresh_success(self):
+        login = self.client.post(
+            "/api/v1/token/",
+            {"username": "jwt_endpoints_user", "password": "JwtEndpointsPass123!"},
+            format="json",
+        )
+        refresh = login.data["refresh"]
+        response = self.client.post(
+            "/api/v1/token/refresh/",
+            {"refresh": refresh},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_token_refresh_error(self):
+        response = self.client.post(
+            "/api/v1/token/refresh/",
+            {"refresh": "invalid-refresh-token"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class GoogleOAuthEndpointsTests(APITestCase):
+    @patch("main.auth.views.google_auth_oauthlib_flow.Flow.from_client_config")
+    def test_google_authorization_sets_state_and_redirects(self, mock_from_client_config):
+        flow = MagicMock()
+        flow.authorization_url.return_value = ("https://accounts.google.com/o/oauth2/auth", "oauth-state-xyz")
+        mock_from_client_config.return_value = flow
+
+        response = self.client.get("/api/v1/auth/google-auth")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertTrue(response["Location"].startswith("https://accounts.google.com"))
+        self.assertEqual(self.client.session.get("oauth_state"), "oauth-state-xyz")
+
+    @patch("main.auth.views.google_auth_oauthlib_flow.Flow.from_client_config")
+    def test_google_callback_stores_credentials_and_redirects(self, mock_from_client_config):
+        flow = MagicMock()
+        flow.credentials = MagicMock(
+            token="oauth-access-token",
+            refresh_token="oauth-refresh-token",
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id="oauth-client-id",
+            client_secret="oauth-client-secret",
+            scopes=["https://www.googleapis.com/auth/calendar.readonly"],
+        )
+        mock_from_client_config.return_value = flow
+
+        session = self.client.session
+        session["oauth_state"] = "oauth-state-xyz"
+        session.save()
+
+        response = self.client.get("/api/v1/auth/oauth2callback/?code=fake&state=oauth-state-xyz")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("/api/v1/calendars/import-google-calendar/", response["Location"])
+        saved = self.client.session.get("google_credentials")
+        self.assertEqual(saved["token"], "oauth-access-token")

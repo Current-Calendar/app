@@ -473,3 +473,135 @@ class GetFollowedCalendarsExtendedTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), [])
+
+
+class OwnProfileIntegrationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="me_user",
+            email="me_user@example.com",
+            password="MePass123!",
+        )
+        self.calendar = Calendar.objects.create(
+            name="My Own Profile Calendar",
+            privacy="PUBLIC",
+            creator=self.user,
+        )
+
+    def test_get_own_profile_requires_authentication(self):
+        response = self.client.get("/api/v1/users/me/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_own_profile_success(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/users/me/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "me_user")
+        self.assertIn("calendars", response.data)
+        calendar_names = [c["name"] for c in response.data["calendars"]]
+        self.assertIn("My Own Profile Calendar", calendar_names)
+
+
+
+class UsersByUsernameAndFollowedCalendarsIntegrationTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner_profile",
+            email="owner_profile@example.com",
+            password="OwnerPass123!",
+        )
+        self.viewer = User.objects.create_user(
+            username="viewer_profile",
+            email="viewer_profile@example.com",
+            password="ViewerPass123!",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="Owner Public Calendar",
+            privacy="PUBLIC",
+            creator=self.owner,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Owner Private Calendar",
+            privacy="PRIVATE",
+            creator=self.owner,
+        )
+        self.viewer.subscribed_calendars.add(self.public_calendar)
+        self.viewer.subscribed_calendars.add(self.private_calendar)
+
+    def test_get_user_by_username_returns_public_calendars_only(self):
+        response = self.client.get(f"/api/v1/users/by-username/{self.owner.username}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], self.owner.username)
+        names = [c["name"] for c in response.data["public_calendars"]]
+        self.assertIn("Owner Public Calendar", names)
+        self.assertNotIn("Owner Private Calendar", names)
+
+    def test_get_user_by_username_nonexistent_returns_404(self):
+        response = self.client.get("/api/v1/users/by-username/does_not_exist_123/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_followed_calendars_returns_only_public(self):
+        response = self.client.get(f"/api/v1/users/{self.viewer.pk}/followed_calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data]
+        self.assertIn("Owner Public Calendar", names)
+        self.assertNotIn("Owner Private Calendar", names)
+
+    def test_get_followed_calendars_nonexistent_user_returns_404(self):
+        response = self.client.get("/api/v1/users/999999/followed_calendars/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+
+class PerfilUsuarioEndpointsTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="perfil_owner",
+            email="perfil_owner@example.com",
+            password="PerfilOwnerPass123!",
+        )
+        self.viewer = User.objects.create_user(
+            username="perfil_viewer",
+            email="perfil_viewer@example.com",
+            password="PerfilViewerPass123!",
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="Perfil Public Calendar",
+            privacy="PUBLIC",
+            creator=self.owner,
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Perfil Private Calendar",
+            privacy="PRIVATE",
+            creator=self.owner,
+        )
+        self.viewer.subscribed_calendars.add(self.public_calendar)
+        self.viewer.subscribed_calendars.add(self.private_calendar)
+
+    def test_get_me_requires_auth(self):
+        response = self.client.get("/api/v1/users/me/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_me_ok(self):
+        self.client.force_authenticate(self.viewer)
+        response = self.client.get("/api/v1/users/me/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], "perfil_viewer")
+
+    def test_get_by_username_ok_and_only_public_calendars(self):
+        response = self.client.get(f"/api/v1/users/by-username/{self.owner.username}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data["public_calendars"]]
+        self.assertIn("Perfil Public Calendar", names)
+        self.assertNotIn("Perfil Private Calendar", names)
+
+    def test_get_by_username_404(self):
+        response = self.client.get("/api/v1/users/by-username/no_user_404/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_followed_calendars_only_public(self):
+        response = self.client.get(f"/api/v1/users/{self.viewer.pk}/followed_calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data]
+        self.assertIn("Perfil Public Calendar", names)
+        self.assertNotIn("Perfil Private Calendar", names)
