@@ -747,6 +747,43 @@ export const calendarInfoModalStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  actionsCompact: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    rowGap: 10,
+    columnGap: 8,
+    marginTop: 8,
+  },
+  compactActionWrap: {
+    width: 56,
+    alignItems: 'center',
+  },
+  compactActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 0,
+  },
+  compactActionButtonInvite: {
+    borderColor: '#10464d',
+    backgroundColor: '#EAF7F6',
+  },
+  compactActionButtonEdit: {
+    borderColor: '#10464d',
+    backgroundColor: '#10464d',
+  },
+  compactActionButtonNeutral: {
+    borderColor: '#10464d',
+    backgroundColor: '#fff',
+  },
+  compactActionButtonDanger: {
+    borderColor: '#EB8C85',
+    backgroundColor: '#eb8c8514',
+  },
   editButton: {
     flex: 1,
     flexDirection: 'row',

@@ -26,6 +26,7 @@ export function ShareCalendarModal({ calendar, onClose }: ShareCalendarModalProp
 
     const shareBaseUrl = process.env.EXPO_PUBLIC_SHARE_BASE_URL ?? API_CONFIG.rootBaseURL;
     const shareUrl = `${shareBaseUrl}/share/calendar/${calendar.id}/`;
+    console.log('Creator:', calendar.creator);
 
     const handleNativeShare = async () => {
         try {

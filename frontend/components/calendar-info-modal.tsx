@@ -7,6 +7,7 @@ import {
   Platform,
   TouchableOpacity,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
@@ -48,10 +49,13 @@ export function CalendarInfoModal({
   onCalendarUpdated,
   isDeleting = false,
 }: CalendarInfoModalProps) {
-    const { user } = useAuth();
-    const [inviteVisible, setInviteVisible] = useState(false);
-    const [showShare, setShowShare] = useState(false);
-    const [showCoOwners, setShowCoOwners] = useState(false);
+  const { width } = useWindowDimensions();
+  const isCompactActions = width < 540;
+  const actionIconSize = isCompactActions ? 22 : 16;
+  const { user } = useAuth();
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [showShare, setShowShare] = useState(false);
+  const [showCoOwners, setShowCoOwners] = useState(false);
 
   const [localCalendar, setLocalCalendar] = useState<Calendar | null>(calendar);
 
@@ -66,6 +70,7 @@ export function CalendarInfoModal({
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
+  const isOwner = user?.username === localCalendar.creator;
   const isOwnerOrCoOwner =
   user &&
   (
@@ -135,7 +140,7 @@ export function CalendarInfoModal({
 
       {hasCalendarCover ? (
                 <Image
-                    source={{ uri: localCalendar.cover.trim() }}
+              source={{ uri: String(localCalendar.cover).trim() }}
                     style={calendarInfoModalStyles.coverImage}
                     resizeMode="cover"
                 />
@@ -167,69 +172,167 @@ export function CalendarInfoModal({
           </View>
         </View>
 
-        <View style={calendarInfoModalStyles.actions}>
-             {isOwnerOrCoOwner && (
-                        <TouchableOpacity
-                            style={calendarInfoModalStyles.inviteButton}
-                            onPress={() => setInviteVisible(true)}
-                            activeOpacity={0.75}
-                        >
-                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
-                            <Text
-                                style={calendarInfoModalStyles.inviteButtonLabel}
-                                numberOfLines={1}
-                                adjustsFontSizeToFit
-                            >
-                                Invite to calendar
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-          { isOwnerOrCoOwner && <TouchableOpacity
-            style={calendarInfoModalStyles.editButton}
-            onPress={() => onEdit?.(localCalendar)}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="pencil" size={16} color="#fff" />
-            <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
-          </TouchableOpacity>}
-                    {isOwnerOrCoOwner && (
-                        <TouchableOpacity
-                            style={calendarInfoModalStyles.shareButton}
-                            onPress={() => setShowCoOwners(true)}
-                            activeOpacity={0.75}
-                        >
-                            <Ionicons name="person-add-outline" size={16} color="#10464d" />
-                            <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
-                        </TouchableOpacity>
-                    )}
-
-          {localCalendar.privacy !== 'PRIVATE' && (
-            <TouchableOpacity
-              style={calendarInfoModalStyles.shareButton}
-              onPress={() => setShowShare(true)}
-              activeOpacity={0.75}
-            >
-              <Ionicons name="share-social-outline" size={16} color="#10464d" />
-              <Text style={calendarInfoModalStyles.shareButtonLabel}>Share</Text>
-            </TouchableOpacity>
+        <View
+          style={[
+            calendarInfoModalStyles.actions,
+            isCompactActions && calendarInfoModalStyles.actionsCompact,
+          ]}
+        >
+          {isOwnerOrCoOwner && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonInvite,
+                  ]}
+                  onPress={() => setInviteVisible(true)}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Invite to calendar"
+                >
+                  <Ionicons name="person-add-outline" size={actionIconSize} color="#10464d" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={calendarInfoModalStyles.inviteButton}
+                onPress={() => setInviteVisible(true)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="person-add-outline" size={actionIconSize} color="#10464d" />
+                <Text
+                  style={calendarInfoModalStyles.inviteButtonLabel}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  Invite to calendar
+                </Text>
+              </TouchableOpacity>
+            )
           )}
 
-          {isOwnerOrCoOwner && onDelete && (
-            <TouchableOpacity
-              style={[calendarInfoModalStyles.deleteButton, isDeleting && calendarInfoModalStyles.deleteButtonDisabled]}
-              onPress={handleDeletePress}
-              disabled={isDeleting}
-              activeOpacity={0.75}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color="#B33F37" />
-              ) : (
-                <Ionicons name="trash-outline" size={16} color="#B33F37" />
-              )}
-              <Text style={calendarInfoModalStyles.deleteButtonLabel}>
-                {isDeleting ? 'Deleting...' : 'Delete calendar'}
-              </Text>
-            </TouchableOpacity>
+          {isOwnerOrCoOwner && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonEdit,
+                  ]}
+                  onPress={() => onEdit?.(localCalendar)}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Edit calendar"
+                >
+                  <Ionicons name="pencil" size={actionIconSize} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={calendarInfoModalStyles.editButton}
+                onPress={() => onEdit?.(localCalendar)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="pencil" size={actionIconSize} color="#fff" />
+                <Text style={calendarInfoModalStyles.editButtonLabel}>Edit calendar</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {isOwnerOrCoOwner && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonNeutral,
+                  ]}
+                  onPress={() => setShowCoOwners(true)}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Add co-owner"
+                >
+                  <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={calendarInfoModalStyles.shareButton}
+                onPress={() => setShowCoOwners(true)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
+                <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {localCalendar.privacy !== 'PRIVATE' && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonNeutral,
+                  ]}
+                  onPress={() => setShowShare(true)}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Share calendar"
+                >
+                  <Ionicons name="share-social-outline" size={actionIconSize} color="#10464d" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={calendarInfoModalStyles.shareButton}
+                onPress={() => setShowShare(true)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="share-social-outline" size={actionIconSize} color="#10464d" />
+                <Text style={calendarInfoModalStyles.shareButtonLabel}>Share</Text>
+              </TouchableOpacity>
+            )
+          )}
+
+          {isOwner && onDelete && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonDanger,
+                    isDeleting && calendarInfoModalStyles.deleteButtonDisabled,
+                  ]}
+                  onPress={handleDeletePress}
+                  disabled={isDeleting}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Delete calendar"
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator size="small" color="#B33F37" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={actionIconSize} color="#B33F37" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  calendarInfoModalStyles.deleteButton,
+                  isDeleting && calendarInfoModalStyles.deleteButtonDisabled,
+                ]}
+                onPress={handleDeletePress}
+                disabled={isDeleting}
+                activeOpacity={0.75}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#B33F37" />
+                ) : (
+                  <Ionicons name="trash-outline" size={actionIconSize} color="#B33F37" />
+                )}
+                <Text style={calendarInfoModalStyles.deleteButtonLabel}>
+                  {isDeleting ? 'Deleting...' : 'Delete calendar'}
+                </Text>
+              </TouchableOpacity>
+            )
           )}
         </View>
 
