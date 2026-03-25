@@ -13,6 +13,7 @@ from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.contrib.auth.password_validation import validate_password, ValidationError
 from main.models import User
+from main.calendars.views import _do_google_calendar_import
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -47,6 +48,14 @@ def register_user(request):
 
 def google_authorization(request):
     """Autorización de Google para obtener acceso a la API de Google Calendar."""
+    token = request.GET.get('token')
+    if token:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            request.session['importing_user_id'] = payload.get('user_id')
+        except jwt.InvalidTokenError:
+            pass
+
     flow = google_auth_oauthlib_flow.Flow.from_client_config(
         settings.GOOGLE_OAUTH2_CLIENT_CONFIG,
         scopes=['https://www.googleapis.com/auth/calendar.readonly'])
@@ -84,7 +93,16 @@ def google_oauth2callback(request):
     flow.fetch_token(authorization_response=authorization_response)
 
     credentials = flow.credentials
-    request.session['google_credentials'] = credentials_to_dict(credentials)
+    raw_credentials = credentials_to_dict(credentials)
+    request.session['google_credentials'] = raw_credentials
+
+    user_id = request.session.get('importing_user_id')
+    if user_id:
+        try:
+            user = User.objects.get(id=user_id)
+            _do_google_calendar_import(user, raw_credentials)
+        except Exception as e:
+            print(f"Error importando Google Calendar: {e}")
 
     frontend_url = settings.FRONTEND_URL.rstrip('/')
     return redirect(f"{frontend_url}/calendars")

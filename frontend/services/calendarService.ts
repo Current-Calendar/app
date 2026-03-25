@@ -90,7 +90,8 @@ export async function importGoogleCalendar() {
     const importUrl = `${API_URL}calendars/import-google-calendar/`;
 
     if (Platform.OS === 'web') {
-      window.location.href = authUrl;
+      const token = apiClient.getAccessToken();
+      window.location.href = token ? `${authUrl}?token=${token}` : authUrl;
       return;
     }
 

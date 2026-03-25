@@ -628,57 +628,62 @@ def list_my_calendars(request):
     return Response(results, status=status.HTTP_200_OK)
 
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def import_google_calendar(request):
-    """Endpoint para importar eventos del calendar de Google."""
+def _do_google_calendar_import(user, raw_credentials):
+    """Lógica de importación de Google Calendar desacoplada de la request HTTP."""
     momento_actual = timezone.now().isoformat()
-    events = []
-    user_creator = request.user
-    privacy_solicitado = 'FRIENDS'
-    raw_credentials = request.session.get('google_credentials')
-    if not raw_credentials:
-        return Response({"error": "No hay credenciales de Google en sesión"}, status=400)
 
-    # Rebuild Credentials object from stored dict
     if isinstance(raw_credentials, dict):
         google_credentials = Credentials(**raw_credentials)
     else:
         google_credentials = raw_credentials
 
-    try:
-        service = build('calendar', 'v3', credentials=google_credentials)
+    service = build('calendar', 'v3', credentials=google_credentials)
 
-        events_result = service.events().list(calendarId='primary', singleEvents=True, maxResults=2500, timeMin=momento_actual, orderBy='startTime').execute()
-        events = events_result.get('items', [])
+    events_result = service.events().list(
+        calendarId='primary', singleEvents=True,
+        maxResults=2500, timeMin=momento_actual, orderBy='startTime'
+    ).execute()
+    events = events_result.get('items', [])
 
-        calendar = Calendar.objects.create(
-            name="Calendar de Google",
-            description="Calendar importado desde Google Calendar",
-            privacy=privacy_solicitado,
-            creator=user_creator,
-            origin='GOOGLE',
-            external_id=service.calendarList().get(calendarId='primary').execute().get('id'),
+    calendar = Calendar.objects.create(
+        name="Calendar de Google",
+        description="Calendar importado desde Google Calendar",
+        privacy='FRIENDS',
+        creator=user,
+        origin='GOOGLE',
+        external_id=service.calendarList().get(calendarId='primary').execute().get('id'),
+    )
+
+    for event in events:
+        start = event['start'].get('dateTime', event['start'].get('date'))
+        created_event = Event.objects.create(
+            title=event.get('summary', 'Sin título'),
+            description=event.get('description', ''),
+            date=start[:10],
+            time=start[11:19] if 'T' in start else '00:00:00',
+            external_id=event['id'],
+            creator=user,
         )
+        created_event.calendars.add(calendar)
 
-        for event in events:
-            start = event['start'].get('dateTime', event['start'].get('date'))
-            end = event['end'].get('dateTime', event['end'].get('date'))
+    return len(events)
 
-            event = Event.objects.create(
-                title=event.get('summary', 'Sin título'),
-                description=event.get('description', ''),
-                date=start[:10],
-                time=start[11:19] if 'T' in start else '00:00:00',
-                external_id=event['id'],
-                creator=user_creator,
-            )
-            event.calendars.add(calendar)
-    
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def import_google_calendar(request):
+    """Endpoint para importar eventos del calendar de Google."""
+    raw_credentials = request.session.get('google_credentials')
+    if not raw_credentials:
+        return Response({"error": "No hay credenciales de Google en sesión"}, status=400)
+
+    try:
+        count = _do_google_calendar_import(request.user, raw_credentials)
     except Exception as e:
         print(f"Error al importar eventos: {e}")
+        return Response({"error": str(e)}, status=500, headers={"Access-Control-Allow-Origin": "*"})
 
-    return Response({"message": "Eventos importados exitosamente", "count": len(events)}, headers={"Access-Control-Allow-Origin": "*"})
+    return Response({"message": "Eventos importados exitosamente", "count": count}, headers={"Access-Control-Allow-Origin": "*"})
 
 
 @api_view(['POST'])
