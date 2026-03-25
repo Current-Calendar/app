@@ -122,6 +122,7 @@ class Event(models.Model):
     calendars = models.ManyToManyField(Calendar, related_name='events')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
     created_at = models.DateTimeField(default=timezone.now)
+    likes_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return f"{self.title} - {self.date}"
@@ -144,6 +145,34 @@ class Event(models.Model):
         uid = self.external_id or f"event-{self.pk}@current"
         event.add('uid', uid)
         return event
+
+
+class EventLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_likes')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'event'], name='unique_event_like_per_user')
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} -> {self.event_id}"
+
+
+class EventSave(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='event_saves')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='saves')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'event'], name='unique_event_save_per_user')
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} -> {self.event_id}"
 
 
 class Comment(models.Model):
