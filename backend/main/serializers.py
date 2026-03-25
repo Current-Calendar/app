@@ -287,17 +287,34 @@ class EventSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     sender_username = serializers.CharField(source='sender.username', read_only=True, default=None)
+    sender_photo = serializers.SerializerMethodField()
+    related_calendar_name = serializers.SerializerMethodField()
+    related_event_title = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
         fields = [
-            'id', 'recipient', 'sender', 'sender_username', 'type', 
-            'message', 'is_read', 'created_at', 'related_calendar', 'related_event'
+            'id', 'recipient', 'sender', 'sender_username', 'sender_photo', 'type',
+            'message', 'is_read', 'created_at',
+            'related_calendar', 'related_calendar_name',
+            'related_event', 'related_event_title',
         ]
         read_only_fields = [
-            'id', 'recipient', 'sender', 'type', 'message', 
-            'created_at', 'related_calendar', 'related_event'
+            'id', 'recipient', 'sender', 'type', 'message',
+            'created_at', 'related_calendar', 'related_event',
         ]
+
+    def get_sender_photo(self, obj):
+        if not obj.sender:
+            return None
+        request = self.context.get('request')
+        return get_signed_url(request, obj.sender.photo)
+
+    def get_related_calendar_name(self, obj):
+        return obj.related_calendar.name if obj.related_calendar_id else None
+
+    def get_related_event_title(self, obj):
+        return obj.related_event.title if obj.related_event_id else None
 
     def validate(self, attrs):
         if self.instance and len(attrs) > 1:

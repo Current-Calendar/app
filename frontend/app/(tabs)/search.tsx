@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     },
 
     followingButton: {
-        backgroundColor: "#fffded",
+        backgroundColor: "#10464d",
     },
 
     followText: {

@@ -569,6 +569,7 @@ def invite_event(request: Request, event_id: int):
             type="EVENT_INVITE",
             related_event=event,
             sender=request.user,
+            message=f"@{request.user.username} has invited you to the event \"{event.title}\".",
         )
 
     return Response(status=status.HTTP_204_NO_CONTENT)

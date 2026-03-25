@@ -104,8 +104,8 @@ const profileStyles = StyleSheet.create({
         fontWeight: '600',
         color: '#10464d',
     },
-    actionButtonAlt: { backgroundColor: '#e0e0e0' },
-    actionButtonTextAlt: { color: '#262626' },
+    actionButtonAlt: { backgroundColor: '#10464d' },
+    actionButtonTextAlt: { color: '#fff' },
 
     logoutButton: {
         backgroundColor: 'transparent',
