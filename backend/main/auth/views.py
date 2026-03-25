@@ -90,7 +90,7 @@ def google_oauth2callback(request):
     import_google_calendar(request)
 
     frontend_url = settings.FRONTEND_URL.rstrip('/')
-    return redirect(f"{frontend_url}calendars")
+    return redirect(f"{frontend_url}/calendars")
 
 def send_password_reset_email(user, reset_url):
     """Send password reset email to user"""
