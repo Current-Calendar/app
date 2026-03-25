@@ -106,13 +106,35 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
         </View>
         <SidebarItem icon="person" label={profileLabel} href={profileHref} />
 
-        <CreateMenuModal
-          visible={menuVisible}
-          onClose={closeMenu}
-          onNewEvent={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
-          onNewCalendar={() => navigateTo("/create")}
-          onImportCalendar={() => { closeMenu(); setImportVisible(true); }}
-        />
+      <CreateMenuModal
+  visible={menuVisible}
+  onClose={closeMenu}
+  onNewEvent={() => {
+    if (isAuthenticated) {
+      navigateTo(`/create_events?date=${getTodayFormatted()}`);
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+  onNewCalendar={() => {
+    if (isAuthenticated) {
+      navigateTo("/create");
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+  onImportCalendar={() => {
+    if (isAuthenticated) {
+      closeMenu();
+      setImportVisible(true);
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+/>
       </View>
 
       <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
