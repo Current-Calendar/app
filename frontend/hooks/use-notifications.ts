@@ -7,7 +7,10 @@ export type NotificationType =
   | 'CALENDAR_FOLLOW' 
   | 'EVENT_SAVED' 
   | 'EVENT_LIKED' 
+  | 'CALENDAR_INVITE'
+  | 'EVENT_INVITE' 
   | 'EVENT_COMMENT';
+  
 
 export type Notification = {
   id: number;

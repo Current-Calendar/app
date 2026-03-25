@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navBottomBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
-
+import { useAuth } from "@/hooks/use-auth";
 interface Props {
   NavButton: any;
 }
@@ -13,6 +13,8 @@ export default function BottomBar({ NavButton }: Props) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
   const [importVisible, setImportVisible] = useState(false);
+  const { isAuthenticated } = useAuth();
+  
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -39,13 +41,35 @@ export default function BottomBar({ NavButton }: Props) {
       <NavButton icon="people"  />
       <NavButton icon="compass" href="/radar" />
 
-      <CreateMenuModal
-        visible={menuVisible}
-        onClose={closeMenu}
-        onNewEvent={() => navigateTo(`/create_events?date=${getTodayFormatted()}`)}
-        onNewCalendar={() => navigateTo("/create")}
-        onImportCalendar={() => { closeMenu(); setImportVisible(true); }}
-      />
+     <CreateMenuModal
+  visible={menuVisible}
+  onClose={closeMenu}
+  onNewEvent={() => {
+    if (isAuthenticated) {
+      navigateTo(`/create_events?date=${getTodayFormatted()}`);
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+  onNewCalendar={() => {
+    if (isAuthenticated) {
+      navigateTo("/create");
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+  onImportCalendar={() => {
+    if (isAuthenticated) {
+      closeMenu();
+      setImportVisible(true);
+    } else {
+      closeMenu();
+      router.push("/login");
+    }
+  }}
+/>
 
       <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
     </View>

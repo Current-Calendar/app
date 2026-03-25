@@ -13,6 +13,7 @@ import { Holiday } from '@/hooks/use-holidays';
 import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
+import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -41,6 +42,13 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
   }, [event]);
 
   if (!event) return null;
+  const eventImageRaw =
+    typeof (event as any).photo === "string" && (event as any).photo.trim().length > 0
+      ? (event as any).photo.trim()
+      : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
+        ? (event as any).image.trim()
+        : "";
+  const hasEventImage = eventImageRaw.length > 0;
 
   const isHoliday = (event as Holiday).isHoliday === true;
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
@@ -93,11 +101,17 @@ export function EventDetailModal({ event, onClose }: EventDetailModalProps) {
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
 
-            {event.photo && (
+            {hasEventImage ? (
               <Image
-                source={{ uri: event.photo }}
+                source={{ uri: eventImageRaw }}
                 style={styles.image}
                 resizeMode="cover"
+              />
+            ) : (
+              <DefaultCalendarCover
+                style={styles.image}
+                label="Evento"
+                iconSize={52}
               />
             )}
 

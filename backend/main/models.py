@@ -44,6 +44,12 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+class CalendarLabel(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class Calendar(models.Model):
     PRIVACY_CHOICES = [
         ('PRIVATE', 'Private'),
@@ -65,7 +71,18 @@ class Calendar(models.Model):
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
+    labels = models.ManyToManyField(CalendarLabel, related_name='calendars', blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['creator'],
+                condition=Q(privacy='PRIVATE'),
+                name='unique_private_calendar_per_user'
+            )
+        ]
     likes_count = models.PositiveIntegerField(default=0)
+    co_owners = models.ManyToManyField('User', related_name='co_owned_calendars', blank=True)
 
     @property
     def num_subscribers(self):
@@ -215,6 +232,8 @@ class Notification(models.Model):
         ('EVENT_SAVED', 'Event Saved'),
         ('EVENT_LIKED', 'Event Liked'),
         ('EVENT_COMMENT', 'Event Comment'),
+        ('EVENT_INVITE', 'Event Invite'),
+        ('CALENDAR_INVITE', 'Calendar Invite'),
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     message = models.TextField()
@@ -262,6 +281,22 @@ class MockElement(models.Model):
     name = models.CharField(max_length=100)
     geo_point = models.PointField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+class ChatMessage(models.Model):
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='chat_messages')
+    
+    
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    
+    text = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"{self.sender.username} en {self.event.title}: {self.text[:20]}"
     
 class EventAttendance(models.Model):
     STATUS_CHOICES = [

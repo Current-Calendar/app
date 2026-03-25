@@ -52,26 +52,12 @@ def radar_events(request):
             location__isnull=False,
             date__gte=timezone.now().date()
         )
-        .annotate(distancia=Distance("location", user_location))
+        .annotate(distance=Distance("location", user_location))
         .filter(location__distance_lte=(user_location, D(km=radio)))
-        .order_by("distancia")
+        .order_by("distance")
         .distinct()
     )
 
-    resultados = [
-        {
-            "id": event.id,
-            "title": event.title,
-            "description": event.description,
-            "place_name": event.place_name,
-            "date": event.date,
-            "time": event.time,
-            "distancia_km": round(event.distancia.km, 2),
-            "latitud": event.location.y if event.location else None,
-            "longitud": event.location.x if event.location else None,
-        }
-        for event in events
-    ]
     serializer = EventSerializer(
         events, 
         many=True, 

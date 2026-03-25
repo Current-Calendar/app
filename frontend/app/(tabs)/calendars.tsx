@@ -91,10 +91,11 @@ export default function CalendarScreen() {
             setLoadingCalendars(true);
             setCalendarsError(null);
 
-            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData] = await Promise.all([
-                apiClient.get<any[]>('/calendars/my-calendars/'),
-                apiClient.get<any[]>('/calendars/subscribed/'),
-                apiClient.get<any[]>('/calendars/friends-calendars/'),
+            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData, coOwnedCalendarsData] = await Promise.all([
+            apiClient.get<any[]>('/calendars/my-calendars/'),
+            apiClient.get<any[]>('/calendars/subscribed/'),
+            apiClient.get<any[]>('/calendars/friends-calendars/'),
+            apiClient.get<any[]>('/calendars/co_owned/'),
             ]);
 
             const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
@@ -102,31 +103,42 @@ export default function CalendarScreen() {
             const mergedCalendarsMap = new Map<number, any>();
 
             myCalendarsData.forEach((calendar: any) => {
-                mergedCalendarsMap.set(calendar.id, calendar);
+            mergedCalendarsMap.set(calendar.id, calendar);
             });
 
             subscribedCalendarsData.forEach((calendar: any) => {
-                mergedCalendarsMap.set(calendar.id, calendar);
+            mergedCalendarsMap.set(calendar.id, calendar);
             });
 
             friendsCalendarsData.forEach((calendar: any) => {
-                mergedCalendarsMap.set(calendar.id, calendar);
+            mergedCalendarsMap.set(calendar.id, calendar);
+            });
+
+            coOwnedCalendarsData.forEach((calendar: any) => {
+            mergedCalendarsMap.set(calendar.id, calendar);
             });
 
             const mergedCalendars = Array.from(mergedCalendarsMap.values());
 
             const mappedCalendars: Calendar[] = mergedCalendars.map((c: any, index: number) => ({
-                id: String(c.id),
-                name: c.name,
-                description: c.description || '',
-                cover: c.cover || undefined,
-                privacy: c.privacy,
-                origin: c.origin,
-                creator: c.creator_username || 'unknown',
-                color: COLORS[index % COLORS.length],
+            id: String(c.id),
+            name: c.name,
+            description: c.description || '',
+            cover: c.cover || undefined,
+            privacy: c.privacy,
+            origin: c.origin,
+            creator: c.creator_username || 'unknown',
+            creator_username: c.creator_username,
+            color: COLORS[index % COLORS.length],
+            co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
             }));
 
             setCalendars(mappedCalendars);
+
+            setInfoCalendar((prev) => {
+            if (!prev) return prev;
+            return mappedCalendars.find((c) => c.id === prev.id) ?? prev;
+            });
 
             await refetchEvents();
         } catch (e) {
@@ -135,7 +147,58 @@ export default function CalendarScreen() {
         } finally {
             setLoadingCalendars(false);
         }
-    };
+        };
+
+    const updateCalendarInState = (updatedCalendar: any) => {
+        setCalendars((current) =>
+            current.map((calendar) => {
+            if (calendar.id !== String(updatedCalendar.id)) return calendar;
+
+            return {
+                ...calendar,
+                ...updatedCalendar,
+                id: String(updatedCalendar.id ?? calendar.id),
+                name: updatedCalendar.name ?? calendar.name,
+                description: updatedCalendar.description ?? calendar.description ?? '',
+                cover: updatedCalendar.cover ?? calendar.cover,
+                privacy: updatedCalendar.privacy ?? calendar.privacy,
+                origin: updatedCalendar.origin ?? calendar.origin,
+                creator: updatedCalendar.creator ?? calendar.creator,
+                creator_id: updatedCalendar.creator_id ?? (calendar as any).creator_id,
+                creator_username:
+                updatedCalendar.creator_username ?? (calendar as any).creator_username,
+                color: calendar.color,
+                co_owners: Array.isArray(updatedCalendar.co_owners)
+                ? updatedCalendar.co_owners
+                : ((calendar as any).co_owners ?? []),
+            } as Calendar;
+            })
+        );
+
+        setInfoCalendar((current) => {
+            if (!current || current.id !== String(updatedCalendar.id)) return current;
+
+            return {
+            ...current,
+            ...updatedCalendar,
+            id: String(updatedCalendar.id ?? current.id),
+            name: updatedCalendar.name ?? current.name,
+            description: updatedCalendar.description ?? current.description ?? '',
+            cover: updatedCalendar.cover ?? current.cover,
+            privacy: updatedCalendar.privacy ?? current.privacy,
+            origin: updatedCalendar.origin ?? current.origin,
+            creator: updatedCalendar.creator ?? current.creator,
+            creator_id: updatedCalendar.creator_id ?? (current as any).creator_id,
+            creator_username:
+                updatedCalendar.creator_username ?? (current as any).creator_username,
+            color: current.color,
+            co_owners: Array.isArray(updatedCalendar.co_owners)
+                ? updatedCalendar.co_owners
+                : ((current as any).co_owners ?? []),
+            } as Calendar;
+        });
+        };
+
     useEffect(() => {
         void fetchData();
     }, []);
@@ -439,7 +502,7 @@ export default function CalendarScreen() {
         <View style={styles.screenWrapper}>
             <ScrollView
                 style={styles.container}
-                contentContainerStyle={styles.contentContainer}
+                contentContainerStyle={!isDesktop ? styles.contentContainerMobile : styles.contentContainer}
                 showsVerticalScrollIndicator={false}
             >
                 <View style={styles.toolbar}>
@@ -558,21 +621,22 @@ export default function CalendarScreen() {
                     calendar={infoCalendar}
                     onClose={() => setInfoCalendar(null)}
                     onDelete={handleDeleteCalendar}
+                    onCalendarUpdated={updateCalendarInState}
                     onEdit={(calendar) => {
                         setInfoCalendar(null);
                         router.push({
-                            pathname: '/(tabs)/edit',
-                            params: {
-                                id: calendar.id,
-                                name: calendar.name,
-                                description: calendar.description ?? '',
-                                privacy: calendar.privacy,
-                                cover: calendar.cover ?? '',
-                            },
+                        pathname: '/(tabs)/edit',
+                        params: {
+                            id: calendar.id,
+                            name: calendar.name,
+                            description: calendar.description ?? '',
+                            privacy: calendar.privacy,
+                            cover: calendar.cover ?? '',
+                        },
                         });
                     }}
                     isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
-                />
+                    />
             </ScrollView>
 
             {/* DESKTOP: scrim + animated bottom sheet */}
@@ -700,6 +764,12 @@ const styles = StyleSheet.create({
     contentContainer: {
         flexGrow: 1,
         paddingBottom: 100,
+        paddingTop: 8,
+    },
+    contentContainerMobile: {
+        flexGrow: 1,
+        paddingBottom: 100,
+        paddingTop: 12,
     },
     toolbar: {
         flexDirection: 'row',
@@ -763,7 +833,8 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     filterBlock: {
-        marginBottom: 8,
+        marginBottom: 12,
+        paddingHorizontal: 4,
     },
     // Mobile inline add-event banner
     mobileBanner: {

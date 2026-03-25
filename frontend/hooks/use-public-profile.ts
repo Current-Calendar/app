@@ -68,7 +68,6 @@ export const useUserProfile = (userId?: string) => {
             return;
         }
 
-        // Wait for auth to finish loading before making API calls
         if (authLoading) {
             return;
         }
@@ -202,7 +201,7 @@ export const useUserProfile = (userId?: string) => {
                     });
                     setIsFollowing(false);
                     setUserNotFound(false);
-                    setFollowError('Inicia sesión para ver información completa y seguir a este usuario.');
+                    setFollowError('Log in to see full information and follow this user.');
                 }
             } catch (error) {
                 console.error(error);
@@ -217,12 +216,12 @@ export const useUserProfile = (userId?: string) => {
         fetchData();
     }, [userId, authLoading]);
 
-    // ----- Follow toggle (usa el ID numérico del usuario visto) -----
+    // ----- Follow toggle -----
     const handleFollowToggle = async () => {
         if (!userBeingViewed?.id) return;
 
         if (!currentUser) {
-            setFollowError('Inicia sesión para seguir a este usuario.');
+            setFollowError('Log in to follow this user.');
             return;
         }
 
@@ -234,23 +233,46 @@ export const useUserProfile = (userId?: string) => {
         }
 
         const previousState = isFollowing;
+        const delta = previousState ? -1 : 1;
         setFollowError(null);
         setIsFollowing(!previousState);
+        setUserBeingViewed((prev) =>
+            prev
+                ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) + delta) }
+                : prev
+        );
 
         try {
-            const data = await apiClient.post<{ followed: boolean }>(`/users/${targetId}/follow/`, {});
+            const data = await apiClient.post<{ followed: boolean; target_total_followers?: number; current_total_following?: number }>(`/users/${targetId}/follow/`, {});
 
             if (typeof data?.followed !== 'boolean') {
-                let message = 'No se pudo actualizar el seguimiento. Inténtalo de nuevo.';
-                setFollowError(message);
+                setFollowError('Could not update follow status. Please try again.');
                 setIsFollowing(previousState);
+                setUserBeingViewed((prev) =>
+                    prev
+                        ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) - delta) }
+                        : prev
+                );
                 return;
             }
-            setIsFollowing(Boolean(data.followed));
+            const nextFollowed = Boolean(data.followed);
+            const targetTotal = typeof data.target_total_followers === 'number'
+                ? data.target_total_followers
+                : Math.max(0, (userBeingViewed.total_followers ?? 0) + (nextFollowed ? 1 : -1));
+
+            setIsFollowing(nextFollowed);
+            setUserBeingViewed((prev) =>
+                prev ? { ...prev, total_followers: targetTotal } : prev
+            );
         } catch (error) {
             console.error('Error follow:', error);
             setFollowError('There was a network problem. Check your connection and try again.');
             setIsFollowing(previousState);
+            setUserBeingViewed((prev) =>
+                prev
+                    ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) - delta) }
+                    : prev
+            );
         }
     };
 

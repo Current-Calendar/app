@@ -1,7 +1,9 @@
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
-from main.models import User, Calendar, CalendarLike
+from main.models import User, Calendar, CalendarLike, Notification
+from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest.mock import patch, MagicMock
 
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
@@ -155,8 +157,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["privacy"], "PRIVATE")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
@@ -894,3 +896,575 @@ class ShareCalendarHtmlTests(TestCase):
         """Returns 404 for a nonexistent calendar."""
         response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
         self.assertEqual(response.status_code, 404)
+
+
+class EditCoOwnersTests(APITestCase):
+    ENDPOINT = "/api/v1/calendars/{}/co_owners/"
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="co_creator",
+            email="co_creator@example.com",
+            password="pass1234",
+        )
+        self.co_owner = User.objects.create_user(
+            username="existing_co_owner",
+            email="existing_co_owner@example.com",
+            password="pass1234",
+        )
+        self.old_co_owner = User.objects.create_user(
+            username="old_co_owner",
+            email="old_co_owner@example.com",
+            password="pass1234",
+        )
+        self.new_user = User.objects.create_user(
+            username="new_user",
+            email="new_user@example.com",
+            password="pass1234",
+        )
+        self.outsider = User.objects.create_user(
+            username="outsider_user",
+            email="outsider_user@example.com",
+            password="pass1234",
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Co Owner Calendar",
+            description="Calendar for co-owner tests",
+            privacy="PRIVATE",
+            creator=self.creator,
+        )
+        self.calendar.co_owners.add(self.co_owner, self.old_co_owner)
+
+    def test_creator_replaces_co_owners(self):
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.calendar.refresh_from_db()
+        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
+        self.assertEqual(resulting_ids, {self.new_user.id})
+
+    def test_co_owner_adds_only_without_replacing(self):
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.calendar.refresh_from_db()
+        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
+        self.assertEqual(
+            resulting_ids,
+            {self.co_owner.id, self.old_co_owner.id, self.new_user.id},
+        )
+
+    def test_unauthorized_user_gets_403(self):
+        self.client.force_authenticate(self.outsider)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [self.new_user.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_missing_user_ids_get_400(self):
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self.ENDPOINT.format(self.calendar.id),
+            {"co_owners": [999999]},
+            format="json",
+        )
+
+class SubscribeCalendarTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username="sub_owner", email="sub_owner@example.com", password="pass1234")
+        self.subscriber = User.objects.create_user(username="subscriber", email="subscriber@example.com", password="pass1234")
+        self.calendar = Calendar.objects.create(name="Subscribable Calendar", privacy="PUBLIC", creator=self.owner)
+
+    def test_user_can_subscribe(self):
+        self.client.force_authenticate(self.subscriber)
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/subscribe/")
+        self.assertIn(response.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
+        self.assertTrue(self.subscriber.subscribed_calendars.filter(pk=self.calendar.pk).exists())
+
+    def test_user_can_unsubscribe(self):
+        self.subscriber.subscribed_calendars.add(self.calendar)
+        self.client.force_authenticate(self.subscriber)
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/subscribe/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.subscriber.subscribed_calendars.filter(pk=self.calendar.pk).exists())
+
+    def test_subscribe_nonexistent_calendar_returns_404(self):
+        self.client.force_authenticate(self.subscriber)
+        response = self.client.post("/api/v1/calendars/99999/subscribe/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/subscribe/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ListSubscribedCalendarsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="listsubuser", email="listsub@example.com", password="pass1234")
+        self.other = User.objects.create_user(username="other_sub", email="other_sub@example.com", password="pass1234")
+        self.calendar = Calendar.objects.create(name="Subscribed Cal", privacy="PUBLIC", creator=self.other)
+        self.user.subscribed_calendars.add(self.calendar)
+
+    def test_returns_subscribed_calendars(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/calendars/subscribed/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.json()]
+        self.assertIn("Subscribed Cal", names)
+
+    def test_unsubscribed_calendar_not_in_list(self):
+        Calendar.objects.create(name="Not Subscribed", privacy="PUBLIC", creator=self.other)
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/calendars/subscribed/")
+        names = [c["name"] for c in response.json()]
+        self.assertNotIn("Not Subscribed", names)
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.get("/api/v1/calendars/subscribed/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ListMyCalendarsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="myCalUser", email="mycal@example.com", password="pass1234")
+        self.other = User.objects.create_user(username="otherCalUser", email="othercal@example.com", password="pass1234")
+        Calendar.objects.create(name="My Cal", privacy="PUBLIC", creator=self.user)
+        Calendar.objects.create(name="Other Cal", privacy="PUBLIC", creator=self.other)
+
+    def test_returns_only_own_calendars(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/calendars/my-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.json()]
+        self.assertIn("My Cal", names)
+        self.assertNotIn("Other Cal", names)
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.get("/api/v1/calendars/my-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class PublishCalendarPermissionTests(APITestCase):
+    """Covers calendars/views.py line 33: 403 when not the creator."""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(username="pub_creator", email="pub_creator@example.com", password="pass1234")
+        self.other = User.objects.create_user(username="pub_other", email="pub_other@example.com", password="pass1234")
+        self.calendar = Calendar.objects.create(name="To Publish", privacy="PRIVATE", creator=self.creator)
+
+    def test_non_creator_cannot_publish_returns_403(self):
+        self.client.force_authenticate(self.other)
+        response = self.client.put(f"/api/v1/calendars/{self.calendar.id}/publish/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class EditCalendarEdgeCaseTests(APITestCase):
+    """Covers calendars/views.py lines 90-108: empty field, invalid privacy, remove_cover."""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(username="edit_creator", email="edit_creator@example.com", password="pass1234")
+        self.calendar = Calendar.objects.create(name="Editable", privacy="PUBLIC", creator=self.creator)
+        self.client.force_authenticate(self.creator)
+
+    def test_edit_empty_name_returns_400(self):
+        response = self.client.put(f"/api/v1/calendars/{self.calendar.id}/edit/", {"name": "   "}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_edit_invalid_privacy_returns_400(self):
+        response = self.client.put(f"/api/v1/calendars/{self.calendar.id}/edit/", {"privacy": "INVALIDO"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_remove_cover_sets_cover_to_none(self):
+        response = self.client.patch(f"/api/v1/calendars/{self.calendar.id}/edit/", {"remove_cover": "true"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.calendar.refresh_from_db()
+        self.assertFalse(bool(self.calendar.cover))
+
+
+class SubscribeOwnCalendarTests(APITestCase):
+    """Covers calendars/views.py line 315: subscribe to own calendar → 400."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="sub_own", email="sub_own@example.com", password="pass1234")
+        self.calendar = Calendar.objects.create(name="Own Calendar", privacy="PUBLIC", creator=self.user)
+        self.client.force_authenticate(self.user)
+
+    def test_cannot_subscribe_to_own_calendar(self):
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/subscribe/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ListFriendsCalendarsTests(APITestCase):
+    """Covers calendars/views.py lines 275-306: list_friends_calendars."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="friends_user", email="friends_user@example.com", password="pass1234")
+        self.mutual = User.objects.create_user(username="mutual_user", email="mutual_user@example.com", password="pass1234")
+        self.one_way = User.objects.create_user(username="oneway_user", email="oneway_user@example.com", password="pass1234")
+        self.user.following.add(self.mutual)
+        self.mutual.following.add(self.user)
+        self.user.following.add(self.one_way)
+        self.friends_cal = Calendar.objects.create(name="Friends Cal", privacy="FRIENDS", creator=self.mutual)
+        self.public_cal = Calendar.objects.create(name="Public Cal", privacy="PUBLIC", creator=self.mutual)
+        self.oneway_cal = Calendar.objects.create(name="One Way Cal", privacy="FRIENDS", creator=self.one_way)
+        self.client.force_authenticate(self.user)
+
+    def test_returns_friends_calendars(self):
+        response = self.client.get("/api/v1/calendars/friends-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.json()]
+        self.assertIn("Friends Cal", names)
+
+    def test_does_not_return_public_calendars(self):
+        response = self.client.get("/api/v1/calendars/friends-calendars/")
+        names = [c["name"] for c in response.json()]
+        self.assertNotIn("Public Cal", names)
+
+    def test_does_not_return_one_way_follow_calendars(self):
+        response = self.client.get("/api/v1/calendars/friends-calendars/")
+        names = [c["name"] for c in response.json()]
+        self.assertNotIn("One Way Cal", names)
+
+    def test_returns_empty_when_no_mutual_friends(self):
+        lone = User.objects.create_user(username="lone_user", email="lone@example.com", password="pass1234")
+        self.client.force_authenticate(lone)
+        response = self.client.get("/api/v1/calendars/friends-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+MINIMAL_ICS = (
+    "BEGIN:VCALENDAR\r\n"
+    "VERSION:2.0\r\n"
+    "BEGIN:VEVENT\r\n"
+    "UID:test-uid@example.com\r\n"
+    "SUMMARY:Future Event\r\n"
+    "DTSTART:29991231T120000Z\r\n"
+    "DTEND:29991231T130000Z\r\n"
+    "END:VEVENT\r\n"
+    "END:VCALENDAR\r\n"
+)
+
+
+class IcsImportTests(APITestCase):
+    """Covers calendars/views.py lines 534-617: ics_import."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="ics_import_user", email="ics_import@example.com", password="pass1234")
+
+    def test_import_valid_ics(self):
+        self.client.force_authenticate(self.user)
+        ics_file = SimpleUploadedFile("test.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
+        response = self.client.post(
+            "/api/v1/calendars/import-ics/",
+            {"file": ics_file},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_import_no_file_returns_400(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/v1/calendars/import-ics/", {}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_import_invalid_ics_returns_400(self):
+        self.client.force_authenticate(self.user)
+        bad_file = SimpleUploadedFile("bad.ics", b"NOT VALID ICS CONTENT", content_type="text/calendar")
+        response = self.client.post(
+            "/api/v1/calendars/import-ics/",
+            {"file": bad_file},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_import_unauthenticated_returns_401(self):
+        ics_file = SimpleUploadedFile("test.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
+        response = self.client.post(
+            "/api/v1/calendars/import-ics/",
+            {"file": ics_file},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ListMyCalendarsFilterTests(APITestCase):
+    """Covers list_my_calendars with q and invalid privacy filters."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="myfilter_user", email="myfilter@example.com", password="pass1234")
+        Calendar.objects.create(name="Alpha", privacy="PUBLIC", creator=self.user)
+        Calendar.objects.create(name="Beta", privacy="PRIVATE", creator=self.user)
+        self.client.force_authenticate(self.user)
+
+    def test_filter_by_name(self):
+        response = self.client.get("/api/v1/calendars/my-calendars/", {"q": "Alpha"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.json()]
+        self.assertIn("Alpha", names)
+        self.assertNotIn("Beta", names)
+
+    def test_filter_by_privacy(self):
+        response = self.client.get("/api/v1/calendars/my-calendars/", {"privacy": "PRIVATE"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for c in response.json():
+            self.assertEqual(c["privacy"], "PRIVATE")
+
+    def test_invalid_privacy_returns_400(self):
+        response = self.client.get("/api/v1/calendars/my-calendars/", {"privacy": "INVALIDO"})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+
+class GoogleAndIOSImportIntegrationTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="import_user",
+            email="import_user@example.com",
+            password="ImportPass123!",
+        )
+
+    def test_import_google_without_session_credentials_returns_400(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/calendars/import-google-calendar/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+    @patch("main.calendars.views.build")
+    def test_import_google_with_mocked_service_success(self, mock_build):
+        self.client.force_authenticate(self.user)
+
+        session = self.client.session
+        session["google_credentials"] = {
+            "token": "fake-token",
+            "refresh_token": "fake-refresh",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": "fake-client-id",
+            "client_secret": "fake-client-secret",
+            "scopes": ["https://www.googleapis.com/auth/calendar.readonly"],
+        }
+        session.save()
+
+        fake_service = MagicMock()
+        fake_service.events.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "id": "event-1",
+                    "summary": "Google Event",
+                    "description": "Imported from google",
+                    "start": {"dateTime": "2999-12-31T12:00:00Z"},
+                    "end": {"dateTime": "2999-12-31T13:00:00Z"},
+                }
+            ]
+        }
+        fake_service.calendarList.return_value.get.return_value.execute.return_value = {"id": "primary"}
+        mock_build.return_value = fake_service
+
+        response = self.client.get("/api/v1/calendars/import-google-calendar/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertTrue(Calendar.objects.filter(origin="GOOGLE").exists())
+
+    def test_import_ios_missing_url_returns_400(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            "/api/v1/calendars/import-ios-calendar/",
+            {"user": self.user.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("main.calendars.views._is_safe_calendar_url", return_value=(False, "Host no permitido"))
+    def test_import_ios_unsafe_url_returns_400(self, _mock_safe):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            "/api/v1/calendars/import-ios-calendar/",
+            {"user": self.user.id, "webcal_url": "https://blocked.example.com/feed.ics"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("main.calendars.views.requests.get")
+    @patch("main.calendars.views.get_safe_ip", return_value="1.1.1.1")
+    @patch("main.calendars.views._is_safe_calendar_url", return_value=(True, None))
+    def test_import_ios_valid_ics_returns_200(self, _mock_safe_url, _mock_safe_ip, mock_get):
+        self.client.force_authenticate(self.user)
+
+        fake_response = MagicMock()
+        fake_response.content = MINIMAL_ICS.encode()
+        fake_response.raise_for_status.return_value = None
+        mock_get.return_value = fake_response
+
+        response = self.client.post(
+            "/api/v1/calendars/import-ios-calendar/",
+            {
+                "user": self.user.id,
+                "webcal_url": "https://calendar.example.com/feed.ics",
+                "privacy": "PRIVATE",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("count", response.data)
+        self.assertTrue(Calendar.objects.filter(origin="APPLE").exists())
+
+
+
+class ListSpecialCalendarsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="special_user",
+            email="special_user@example.com",
+            password="SpecialPass123!",
+        )
+        self.friend = User.objects.create_user(
+            username="special_friend",
+            email="special_friend@example.com",
+            password="SpecialFriendPass123!",
+        )
+        self.other = User.objects.create_user(
+            username="special_other",
+            email="special_other@example.com",
+            password="SpecialOtherPass123!",
+        )
+
+        self.mine_public = Calendar.objects.create(name="Mine Public", privacy="PUBLIC", creator=self.user)
+        self.mine_private = Calendar.objects.create(name="Mine Private", privacy="PRIVATE", creator=self.user)
+        self.friend_friends = Calendar.objects.create(name="Friend FRIENDS", privacy="FRIENDS", creator=self.friend)
+        self.friend_public = Calendar.objects.create(name="Friend PUBLIC", privacy="PUBLIC", creator=self.friend)
+
+        self.user.following.add(self.friend)
+        self.friend.following.add(self.user)
+        self.user.subscribed_calendars.add(self.friend_public)
+
+        self.client.force_authenticate(self.user)
+
+    def test_subscribed_endpoint(self):
+        response = self.client.get("/api/v1/calendars/subscribed/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data]
+        self.assertIn("Friend PUBLIC", names)
+
+    def test_friends_calendars_endpoint(self):
+        response = self.client.get("/api/v1/calendars/friends-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.data]
+        self.assertIn("Friend FRIENDS", names)
+
+    def test_my_calendars_endpoint_and_filters(self):
+        response = self.client.get("/api/v1/calendars/my-calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        filtered = self.client.get("/api/v1/calendars/my-calendars/", {"privacy": "PRIVATE"})
+        self.assertEqual(filtered.status_code, status.HTTP_200_OK)
+        for item in filtered.data:
+            self.assertEqual(item["privacy"], "PRIVATE")
+
+        invalid = self.client.get("/api/v1/calendars/my-calendars/", {"privacy": "NOT_VALID"})
+        self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class CalendarImportsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="imports_user",
+            email="imports_user@example.com",
+            password="ImportsPass123!",
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_import_google_without_credentials(self):
+        response = self.client.get("/api/v1/calendars/import-google-calendar/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("main.calendars.views.build")
+    def test_import_google_ok_with_mock(self, mock_build):
+        session = self.client.session
+        session["google_credentials"] = {
+            "token": "fake-token",
+            "refresh_token": "fake-refresh",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": "fake-client-id",
+            "client_secret": "fake-client-secret",
+            "scopes": ["https://www.googleapis.com/auth/calendar.readonly"],
+        }
+        session.save()
+
+        fake_service = MagicMock()
+        fake_service.events.return_value.list.return_value.execute.return_value = {
+            "items": [
+                {
+                    "id": "g-event-1",
+                    "summary": "Google Imported Event",
+                    "description": "from mock",
+                    "start": {"dateTime": "2999-12-31T12:00:00Z"},
+                    "end": {"dateTime": "2999-12-31T13:00:00Z"},
+                }
+            ]
+        }
+        fake_service.calendarList.return_value.get.return_value.execute.return_value = {"id": "primary"}
+        mock_build.return_value = fake_service
+
+        response = self.client.get("/api/v1/calendars/import-google-calendar/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_import_ios_without_url(self):
+        response = self.client.post("/api/v1/calendars/import-ios-calendar/", {"user": self.user.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("main.calendars.views.requests.get")
+    @patch("main.calendars.views.get_safe_ip", return_value="1.1.1.1")
+    @patch("main.calendars.views._is_safe_calendar_url", return_value=(True, None))
+    def test_import_ios_ok(self, _safe_url, _safe_ip, mock_get):
+        fake_response = MagicMock()
+        fake_response.content = MINIMAL_ICS.encode()
+        fake_response.raise_for_status.return_value = None
+        mock_get.return_value = fake_response
+
+        response = self.client.post(
+            "/api/v1/calendars/import-ios-calendar/",
+            {"user": self.user.id, "webcal_url": "https://calendar.example.com/feed.ics"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_import_ics_without_file(self):
+        response = self.client.post("/api/v1/calendars/import-ics/", {"user": self.user.id}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_import_ics_invalid_user(self):
+        ics_file = SimpleUploadedFile("x.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
+        response = self.client.post(
+            "/api/v1/calendars/import-ics/",
+            {"file": ics_file, "user": 999999},
+            format="multipart",
+        )
+        # En la implementaci?n actual, el endpoint ignora el campo 'user' y usa request.user
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_import_ics_success(self):
+        ics_file = SimpleUploadedFile("ok.ics", MINIMAL_ICS.encode(), content_type="text/calendar")
+        response = self.client.post(
+            "/api/v1/calendars/import-ics/",
+            {"file": ics_file, "user": self.user.id, "privacy": "PRIVATE"},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

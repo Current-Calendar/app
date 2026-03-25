@@ -1,0 +1,5497 @@
+{
+  "calendars": [
+    {
+      "key": "ayuntamiento-sevilla-2026",
+      "name": "Ayuntamiento de Sevilla 2026",
+      "description": "Agenda oficial del Ayuntamiento de Sevilla",
+      "privacy": "PUBLIC",
+      "origin": "CURRENT",
+      "external_id": "source:ayuntamiento-sevilla-2026"
+    },
+    {
+      "key": "betis-2026",
+      "name": "Real Betis 2026",
+      "description": "Partidos de Real Betis en 2026",
+      "privacy": "PUBLIC",
+      "origin": "APPLE",
+      "external_id": "source:betis-2026"
+    },
+    {
+      "key": "sevilla-fc-2026",
+      "name": "Sevilla FC 2026",
+      "description": "Partidos de Sevilla FC en 2026",
+      "privacy": "PUBLIC",
+      "origin": "APPLE",
+      "external_id": "source:sevilla-fc-2026"
+    },
+    {
+      "key": "onsevilla-2026",
+      "name": "OnSevilla Sevilla",
+      "description": "Eventos scrapeados desde OnSevilla Sevilla (2026)",
+      "privacy": "PUBLIC",
+      "origin": "CURRENT",
+      "external_id": "source:onsevilla-2026"
+    },
+    {
+      "key": "icas-2026",
+      "name": "ICAS Sevilla",
+      "description": "Eventos scrapeados desde ICAS Sevilla (2026)",
+      "privacy": "PUBLIC",
+      "origin": "CURRENT",
+      "external_id": "source:icas-2026"
+    },
+    {
+      "key": "yuzin-2026",
+      "name": "Yuzin Sevilla",
+      "description": "Eventos scrapeados desde Yuzin Sevilla (2026)",
+      "privacy": "PUBLIC",
+      "origin": "CURRENT",
+      "external_id": "source:yuzin-2026"
+    }
+  ],
+  "events": [
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "APASIONARTE - \"Los colores de la Pasión\"",
+      "description": "",
+      "place_name": "CC Las Sirenas",
+      "date": "2026-03-09",
+      "time": "00:00:00",
+      "external_id": "c676a65445814e68862e066f01a09d07@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EXPOSICIÓN COLECTIVA “LA MUJER EN EL ARTE\"",
+      "description": "",
+      "place_name": "CC Las Sirenas",
+      "date": "2026-03-09",
+      "time": "00:00:00",
+      "external_id": "8c2b3b281cd14b318d1ed7ad371babdd@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EXPOSICIÓN “ESTAMPACIONES JAPONESAS\"",
+      "description": "María Barrera",
+      "place_name": "CC Las Sirenas",
+      "date": "2026-03-09",
+      "time": "00:00:00",
+      "external_id": "18ab78bba4a141969e22845ef78d86fe@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EXPOSICIÓN DE DIBUJO y PINTURA  “El Caballo Español y el Arte Ecuestre Andaluz\" 3ª Ed.",
+      "description": "",
+      "place_name": "CC La Buhaira",
+      "date": "2026-03-16",
+      "time": "00:00:00",
+      "external_id": "b40047edc1634402ac0263ea61dad434@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EXPOSICIÓN: “MATER NATURA\"",
+      "description": "Marta Aguilar",
+      "place_name": "CC Casa de Las Columnas",
+      "date": "2026-03-17",
+      "time": "00:00:00",
+      "external_id": "d985dc739fd048e6b2afd024a3c56594@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ENCUENTRO FERNANDO MURILLO y HÉCTOR SALAZAR",
+      "description": "Dos pintores en la Casa de las Columnas",
+      "place_name": "CC Casa de Las Columnas",
+      "date": "2026-03-19",
+      "time": "00:00:00",
+      "external_id": "6aca76be90114e85ba399bcd04a484d8@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CARLES BLANCH & PEDRO ESTEVAN - Las canciones del Emperador",
+      "description": "",
+      "place_name": "Iglesia de Santa Clara",
+      "date": "2026-03-22",
+      "time": "11:00:00",
+      "external_id": "85144c26927b409f86d475738aa444ff@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MAHAN ESFAHANI - Domenico Scarlatti y la Ilustración española",
+      "description": "",
+      "place_name": "Espacio Turina",
+      "date": "2026-03-22",
+      "time": "19:00:00",
+      "external_id": "6253c71f946f474a908a674c99d7a847@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CONCURSO ESCAPARATES FERIA DE ABRIL 2026 - Distrito Los Remedios",
+      "description": "",
+      "place_name": "Distrito Los Remedios",
+      "date": "2026-03-23",
+      "time": "00:00:00",
+      "external_id": "3369af9120c349119dc3af8ea632d9b7@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CONFERENCIA: “LOS REYES DE LEÓN Y EL ISLAM”",
+      "description": "Joaquín Espejo Maqueda",
+      "place_name": "CC Casa de Las Columnas",
+      "date": "2026-03-24",
+      "time": "18:00:00",
+      "external_id": "5c9e7b9196024421a7975760febba644@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EXPOSICIÓN: BATUR BASLAR \"La composición\"",
+      "description": "",
+      "place_name": "CC La Buhaira",
+      "date": "2026-03-24",
+      "time": "18:30:00",
+      "external_id": "e2bf5314d9844403b6ed7a90b3a9400c@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PROGRAMA “PRIMAVERA SUR 2026”",
+      "description": "Viajes culturales y educativos",
+      "place_name": "Distrito Sur",
+      "date": "2026-03-25",
+      "time": "00:00:00",
+      "external_id": "377006c5fcb245418a15b565efd084bf@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MIGUEL RINCÓN - Lágrimas en el tiempo",
+      "description": "400 años del fallecimiento de John Dowland",
+      "place_name": "Iglesia de Santa Clara",
+      "date": "2026-03-26",
+      "time": "19:00:00",
+      "external_id": "49e5153d2b284c899d9844996d7168e0@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "LOS ELEMENTOS - Colpa, Pentimento e Grazia",
+      "description": "En coproducción con el CNDM",
+      "place_name": "Espacio Turina",
+      "date": "2026-03-27",
+      "time": "19:00:00",
+      "external_id": "9a1fd52c84d64e1ea4aa13bb0e4d58a8@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ORQUESTRA DEL MIRACLE - De pastores y ninfas",
+      "description": "",
+      "place_name": "Espacio Turina",
+      "date": "2026-03-28",
+      "time": "19:00:00",
+      "external_id": "c6b4afec681b43bb82aa738a76700015@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ARCANGELO - Pasión según San Mateo (CONCIERTO DE CLAUSURA)",
+      "description": "En coproducción con el Teatro de la Maestranza",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-03-29",
+      "time": "09:00:00",
+      "external_id": "49632aeac6b447578197d614f2665774@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "XII RUTA PALISTA",
+      "description": "Presentación oficial del cartel anunciador",
+      "place_name": "Casa de la Moneda",
+      "date": "2026-06-20",
+      "time": "08:00:00",
+      "external_id": "92ab0c1de8244a2ab2d6f2493cd4a131@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PREGÓN CANTADO",
+      "description": "",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-09-09",
+      "time": "18:30:00",
+      "external_id": "0402c5924a514339bc4083599c202438@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSÉ MERCÉ, JOSÉ DE LA TOMASA, MARTIRIO, ARCÁNGEL, LA TREMENDITA, BALLET FLAMENCO DE ANDALUCÍA con PATRICIA GUERRERO, ÁNGELES TOLEDANO, EL PERRETE Y MANUEL DE LA TOMASA - El mundo por montera",
+      "description": "Gala XXIV Bienal de Flamenco - Noche única",
+      "place_name": "Plaza de Toros de la Real Maestranza de Caballería de Sevilla",
+      "date": "2026-09-10",
+      "time": "19:30:00",
+      "external_id": "a8a6906d0ef64be39c56f4f14cf60078@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ESPECTÁCULO INFANTIL - Ven a vivir el ritmo flamenco en familia con Tirititrán",
+      "description": "Estreno absoluto",
+      "place_name": "Caixaforum",
+      "date": "2026-09-11",
+      "time": "15:30:00",
+      "external_id": "58a907697efe487a8531958d4ed2b2ae@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ANTONIO REY - Historias de un flamenco",
+      "description": "",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-11",
+      "time": "17:00:00",
+      "external_id": "5934ef04581844a1af410d8cccf51d3c@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "SARA BARAS - Infinita",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-11",
+      "time": "18:00:00",
+      "external_id": "1179f11aa12e46cc9bc86067a6a11d5f@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "TREMENDITA - Menos es más",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-09-11",
+      "time": "20:30:00",
+      "external_id": "3706a434b08f4bc8bd4101b5de62dc9c@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ESPECTÁCULO INFANTIL - Ven a vivir el ritmo flamenco en familia con Tirititrán",
+      "description": "Estreno absoluto",
+      "place_name": "Caixaforum",
+      "date": "2026-09-12",
+      "time": "00:00:00",
+      "external_id": "bdfc86f325844361b17a02fff86ab6e4@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PEDRO EL GRANAÍNO con la colaboración de DANIEL OYARZÁBAL - Pan de oro",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-12",
+      "time": "10:00:00",
+      "external_id": "9925e150837645249ac099f2c2be1602@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CANITO & RAÚL RODRÍGUEZ - La cuerda al aire",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-12",
+      "time": "17:00:00",
+      "external_id": "5254bc63eba347dcbd731000cd8b2f32@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "DORANTES - Fractal Arcano",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-12",
+      "time": "18:00:00",
+      "external_id": "1384eef5865143238916d45d71df13a4@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "SARA BARAS - Infinita",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-12",
+      "time": "18:00:00",
+      "external_id": "563523731ba84302bd5a977864ebf7a7@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ÁNGELES TOLEDANO - La misma sangre del cuerpo",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-12",
+      "time": "20:30:00",
+      "external_id": "9f94062a0e28432b81de43ddd8b7641e@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ESPECTÁCULO INFANTIL - Ven a vivir el ritmo flamenco en familia con Tirititrán",
+      "description": "Estreno absoluto",
+      "place_name": "Caixaforum",
+      "date": "2026-09-13",
+      "time": "00:00:00",
+      "external_id": "736af3c0cf8f44e7acd6596a0c7ad520@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PEDRO EL GRANAÍNO con la colaboración de DANIEL OYARZÁBAL - Pan de oro",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-13",
+      "time": "10:00:00",
+      "external_id": "bafb6cde041d4f1cb5516f28dedd95f6@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSÉ FERMÍN FERNÁNDEZ - Guitarra desnuda",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-13",
+      "time": "17:00:00",
+      "external_id": "1cb5a9a59de74e13a3f36743814204a9@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "SARA BARAS - Infinita",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-13",
+      "time": "18:00:00",
+      "external_id": "334b6c828e7945268d6baf2079c29597@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ANA MORALES - Rapsodia. Fantasía subterránea",
+      "description": "Estreno absoluto",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-09-13",
+      "time": "19:00:00",
+      "external_id": "05352e7c55fa447c82cba58e57feca78@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSÉ MAYA - Lejano",
+      "description": "",
+      "place_name": "Teatro Central",
+      "date": "2026-09-13",
+      "time": "20:30:00",
+      "external_id": "bc2fa52271c742be85c7cb44dd759f36@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ANA MORALES - Rapsodia. Fantasía subterránea",
+      "description": "Estreno absoluto",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-09-14",
+      "time": "19:00:00",
+      "external_id": "926280fcd9a94e499132fca1a7a82abd@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ISRAEL FERNÁNDEZ - De oro y marfil",
+      "description": "",
+      "place_name": "Real Alcázar",
+      "date": "2026-09-14",
+      "time": "19:30:00",
+      "external_id": "32df7d4180e343e9a1731a2d7b233360@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MACARENA LÓPEZ - Sobre todas las cosas",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-14",
+      "time": "20:30:00",
+      "external_id": "e873de8a8a56470da01c308d202e03ec@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "RANCAPINO CHICO - Pizarra",
+      "description": "Estreno absoluto",
+      "place_name": "Real Alcázar",
+      "date": "2026-09-15",
+      "time": "19:30:00",
+      "external_id": "3b021fd516284a6594de8cb51307bdad@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "A ISABEL BAYÓN. DAVID LAGOS, MIGUEL ORTEGA, ANTONIO CAMPOS, INMA RIVERO Y JOSÉ LUIS ORTIZ NUEVO - Epílogo de un cante que se hizo baile. Suite de cantes.",
+      "description": "Noche única",
+      "place_name": "Teatro Central",
+      "date": "2026-09-15",
+      "time": "20:30:00",
+      "external_id": "b5f6f96eb37c4d6fbd577db7675d1ff7@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "LUIS EL ZAMBO, DOLORES AGUJETAS, ANTONIO DE LA MALENA, MANUEL VALENCIA, LAS TATAS DE JEREZ - Xerezanías",
+      "description": "Noche única",
+      "place_name": "Real Alcázar",
+      "date": "2026-09-16",
+      "time": "19:30:00",
+      "external_id": "4d356f55e36247179287623af0bcf5ec@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSÉ DEL TOMATE - Sonanta 3.0",
+      "description": "",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-16",
+      "time": "20:30:00",
+      "external_id": "9d450b8222ca4aafa3dfb63f4a6ed796@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ARCÁNGEL - La copla del cante",
+      "description": "Noche única",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-17",
+      "time": "18:00:00",
+      "external_id": "ea2f0be8ea4b43169c126d669600f5c3@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "REMEDIOS AMAYA, LA FABI, MONTSE CORTÉS y JOSEMI CARMONA - Mujeres Gitanas",
+      "description": "Noche única",
+      "place_name": "Hotel Triana",
+      "date": "2026-09-17",
+      "time": "21:00:00",
+      "external_id": "f1e2cfd16ae944b2b558e2be78699458@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JUAN REQUENA - Requeneando",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-18",
+      "time": "17:00:00",
+      "external_id": "c3dd5dec12124675884b5df929bafc14@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ANTONIO REYES  - Seis cuerdas, seis",
+      "description": "Noche única",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-18",
+      "time": "18:00:00",
+      "external_id": "7ef0eb42f0d9430ca9b578ba169f66fc@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EL DISTINGUIDO, ITOLY DE LOS PALACIOS, NENE ESCALERA, MANUEL ORTA, JOSÉ ÁNGEL CARMONA, ANABEL DE VICO, MIGUEL ORTEGA, JUANELO y EL MISTELA - 75 Aniversario de la Peña El Pozo de las Penas: Uvitas negras",
+      "description": "Noche única",
+      "place_name": "Hotel Triana",
+      "date": "2026-09-18",
+      "time": "21:00:00",
+      "external_id": "a8adbbec919e49c9ba8a15e0179e3005@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ALEJANDRO HURTADO con la colaboración de ENRIQUE SOLINÍS - Devenir de la guitarra",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-19",
+      "time": "10:00:00",
+      "external_id": "44d720ef31774c35b754918f7b6fa286@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MARÍA MARÍN presenta “Las Tres Marías”",
+      "description": "Estreno absoluto",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-19",
+      "time": "17:00:00",
+      "external_id": "cca93c8d9c194b45a0788394071e04c2@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CAÑIZARES & REAL ORQUESTA SINFÓNICA DE SEVILLA (ROSS) - Cañizares sinfónico",
+      "description": "Noche única",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-19",
+      "time": "18:00:00",
+      "external_id": "e7a7f454ad774220bf07ff63e3baac96@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "El BOQUERÓN, CARMEN DE LA JARA, CURRO LUCENA, JAIME “EL PARRÓN”, JOSELETE DE LINARES, JOSÉ SORROCHE, PAQUI CORPAS, EL PECAS, ROMERITO DE JEREZ - Con las guitarras de EDUARDO REBOLLAR Y ANTONIO CARRIÓN - Andalucía en el tiempo",
+      "description": "Noche única",
+      "place_name": "Hotel Triana",
+      "date": "2026-09-19",
+      "time": "21:00:00",
+      "external_id": "c04208308ffa4c5c9347d66a19963f32@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ALEJANDRO HURTADO con la colaboración de ENRIQUE SOLINÍS - Devenir de la guitarra",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-20",
+      "time": "10:00:00",
+      "external_id": "889955d8a8be437195e3cce73f3af93c@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MANUEL DE LA LUZ & MANUEL IMÁN - Manos que hablan",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-20",
+      "time": "17:00:00",
+      "external_id": "1f7a81bac4684dcba161c138850ed86e@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSÉ MERCÉ - Toquen a rebato",
+      "description": "Noche única",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-20",
+      "time": "18:00:00",
+      "external_id": "5f07835f29784a769910079136d5bd83@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "GALA IAJ - Gala final del Circuito Andaluz de Jóvenes Flamencos.",
+      "description": "",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-20",
+      "time": "20:30:00",
+      "external_id": "b43f9414d8b04701a0026bf2647a0be2@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "RAFAEL RIQUENI & TIM RIES - Tunisia",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-21",
+      "time": "18:00:00",
+      "external_id": "25326467c2d94d37aeb418b2f90a11dc@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "OLGA PERICET - Perspectiva sobre un baile sonoro",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-09-21",
+      "time": "20:30:00",
+      "external_id": "c2f211545270427ea6b2977055cf7608@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MANUEL LIÑÁN - Bailaor@. Recital de baile + Artistas invitados",
+      "description": "Noche única",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-22",
+      "time": "18:00:00",
+      "external_id": "8a0872e0028241e9a1ea81acbd95e020@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PABLO MARTÍN CAMINERO - Trilogía. Al toque.",
+      "description": "Estreno absoluto",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-09-22",
+      "time": "19:00:00",
+      "external_id": "1b2a73152ac04541bb01aaf75181e26b@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JOSELITO ACEDO - Patio",
+      "description": "Noche única",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-22",
+      "time": "20:30:00",
+      "external_id": "fbf812e36919462d8af79a02d7ab4e1a@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PABLO MARTÍN CAMINERO con la colaboración de MARÍA MORENO - Trilogía. Al baile.",
+      "description": "Estreno absoluto",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-09-23",
+      "time": "19:00:00",
+      "external_id": "a52512634d2840e4b956851e07e73762@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JUAN TOMÁS DE LA MOLÍA & ÁGUEDA SAAVEDRA - Te atrevo",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-09-23",
+      "time": "20:30:00",
+      "external_id": "a056c910ca4b42e9bc063913acf0441f@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ESPERANZA FERNÁNDEZ, DUQUENDE, JOSÉ VALENCIA, PEPE TORRES Y NAZARET REYES - A canela y clavo",
+      "description": "Noche única",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-24",
+      "time": "18:00:00",
+      "external_id": "0b38644b64314219ba2e4bdb60d80d84@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PABLO MARTÍN CAMINERO  con la colaboración de DAVID CARPIO - Trilogía. Al cante.",
+      "description": "",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-09-24",
+      "time": "19:00:00",
+      "external_id": "20c1dfee6be5494cb5418f01f9513aaf@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "EZEQUIEL BENÍTEZ - Lo que nadie ve",
+      "description": "",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-24",
+      "time": "20:30:00",
+      "external_id": "78b746177d294924af430c6beb3d9506@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "DIEGO DEL MORAO - Más Morao",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-25",
+      "time": "17:00:00",
+      "external_id": "0ca2cea8d96642ddaab9940e1f99b551@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "AURORA VARGAS & JUANA AMAYA - Hazme con los ojos señas",
+      "description": "Noche única",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-25",
+      "time": "18:00:00",
+      "external_id": "8fa2eed0fb3446caac6a34a914c5ad67@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ANDRÉS MARÍN - Desierto",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-09-25",
+      "time": "20:30:00",
+      "external_id": "73c01a5d5aa3480cb9326b515d5d019a@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ENCARNA ANILLO con la colaboración de MIGUEL RINCÓN - Camino de flores",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-26",
+      "time": "10:00:00",
+      "external_id": "5b2e91a213384602a5518e004e6464a8@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "JUAN MEDINA - Fugaz",
+      "description": "",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-26",
+      "time": "17:00:00",
+      "external_id": "1cac137d138541e1a0989e8effaaba60@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ISRAEL GALVÁN - Bolero de blanco y negro",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-26",
+      "time": "18:00:00",
+      "external_id": "b84a9b5ab7b64a8f8875f7c24898ee7a@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "PASTORA GALVÁN - TRIBUsssh!",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-26",
+      "time": "20:30:00",
+      "external_id": "3a87c76f6f8e4d718e19d49ef2c5fa12@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ENCARNA ANILLO con la colaboración de MIGUEL RINCÓN - Camino de flores",
+      "description": "Matiné única",
+      "place_name": "Iglesia de San Luis de los Franceses",
+      "date": "2026-09-27",
+      "time": "10:00:00",
+      "external_id": "0cfb51d26be4423993f88274d40548ad@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "DANI DE MORÓN - Cuadro",
+      "description": "Noche única",
+      "place_name": "Espacio Turina",
+      "date": "2026-09-27",
+      "time": "17:00:00",
+      "external_id": "341432d836e34f608ecb02ad5709fd8b@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MACARENA DE LA TORRE, JUAN DE MAIRENA, LIDIA HERNÁNDEZ con RAFAEL DE UTRERA, CARMEN LOZANO, MANOLO MARÍN, ANA MARÍA BUENO Y FRAN FERNÁNDEZ - Fue tu querer (Sevillanas)",
+      "description": "Noche única",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-27",
+      "time": "18:00:00",
+      "external_id": "6be3a9fd5ee34186ade7da3861a2dd96@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ESTÉVEZ / PAÑOS Y COMPAÑÍA - Doncellas (juerga permanente)",
+      "description": "",
+      "place_name": "Teatro Central",
+      "date": "2026-09-27",
+      "time": "20:30:00",
+      "external_id": "4d022c076eab42919ef84a493255e528@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "FARRUQUITO - Serás Farruquito",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-09-28",
+      "time": "18:00:00",
+      "external_id": "a8e6aa22aaaa4c1b82143fe530f090f6@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MANUEL CUEVAS & MIGUEL DE TENA - Por Vallejo",
+      "description": "Noche única",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-28",
+      "time": "20:30:00",
+      "external_id": "3395b10fa42a48359457227b666140b5@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CÍA. DAVID CORIA - Babel. Torre viva.",
+      "description": "Estreno nacional",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-29",
+      "time": "18:00:00",
+      "external_id": "c7cdc7e054d84c3d89b87acabb7310ea@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "SARA JIMÉNEZ EN COMPAÑIA - La compañía",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-09-29",
+      "time": "20:30:00",
+      "external_id": "0b6af71d259443518204d5aaf65152e7@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MAYTE MARTÍN - Arqueología de lo puro",
+      "description": "Noche única",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-09-30",
+      "time": "18:00:00",
+      "external_id": "2a9d52ec4a264938abbcc0c7c6f41e21@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CAPULLO DE JEREZ & JOSÉ DE LOS CAMARONES - Los flamencos no van a la barbería",
+      "description": "Noche única",
+      "place_name": "Teatro Alameda",
+      "date": "2026-09-30",
+      "time": "20:30:00",
+      "external_id": "d623cdc6848245b29f731e9cd8f1b326@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "MARINA HEREDIA & REAL ORQUESTA SINFÓNICA DE SEVILLA (ROSS) - ¡En libertad! El camino de los gitanos",
+      "description": "",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-10-01",
+      "time": "18:00:00",
+      "external_id": "396b862cb7d7458b9df1b501a1dcfdd2@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "LOS PARRILLA CON DIEGO CARRASCO Y CARRETE DE MÁLAGA - Herencia",
+      "description": "Noche única",
+      "place_name": "Teatro Alameda",
+      "date": "2026-10-01",
+      "time": "20:30:00",
+      "external_id": "9beff603a3544d84a1dc8430990da675@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "ALFONSO LOSA",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Lope de Vega",
+      "date": "2026-10-02",
+      "time": "18:00:00",
+      "external_id": "5d503ea394714b8e85ecee1d7da8283a@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "SANDRA CARRASCO & DAVID DE ARAHAL - Poema de la libertad",
+      "description": "Estreno absoluto",
+      "place_name": "Teatro Central",
+      "date": "2026-10-02",
+      "time": "20:30:00",
+      "external_id": "999dcc814289464eaf0e8cf0fbdf34ac@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "ayuntamiento-sevilla-2026",
+      "title": "CARMEN LINARES con Marina Heredia, María Terremoto, Rafaela Carrasco… - Perlas a millares (30º aniversario de la Antología de la Mujer en el Cante)",
+      "description": "Noche única",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-10-03",
+      "time": "18:00:00",
+      "external_id": "93a8f73324ac48638501058cf5a9149f@www.sevilla.org",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\agenda-actividades.ics"
+      },
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Madrid - Real Betis (5-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-04",
+      "time": "15:15:00",
+      "external_id": "qlfmfjg09bo3dc3e25uhajbqv4@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Oviedo - Real Betis (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-10",
+      "time": "13:00:00",
+      "external_id": "s7mej7gmo08nevv84ehre9320g@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Elche CF [Copa] (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-14",
+      "time": "20:00:00",
+      "external_id": "8m6vi5l3fb4ne67fgpslu1khfs@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Villarreal (2-0)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-17",
+      "time": "20:00:00",
+      "external_id": "gvot43ghb17c1rap763skiep74@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "PAOK Salonika - Real Betis [EL] (2-0)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-22",
+      "time": "17:45:00",
+      "external_id": "qs4glg4r60p55c53gk4jc5douc@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Deportivo Alavés - Real Betis (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-25",
+      "time": "20:00:00",
+      "external_id": "asl885id8r2igp3c3uaads1qjg@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Feyenoord [EL] (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-01-29",
+      "time": "20:00:00",
+      "external_id": "osi1imb7lc6kfi2t4f1n6mhbng@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Valencia (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-02-01",
+      "time": "15:15:00",
+      "external_id": "frreqt1vqj1939p0un9h512o8o@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Atlético Madrid [Copa] (0-5)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-02-05",
+      "time": "20:00:00",
+      "external_id": "apebg39l04mta3gclbslaed7bo@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Atlético Madrid - Real Betis (0-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-02-08",
+      "time": "17:30:00",
+      "external_id": "fdakcovpku05p3vvll4j2u4a4c@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Mallorca - Real Betis (1-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-02-15",
+      "time": "20:00:00",
+      "external_id": "k7unv4ijes8l9qids3ddodmpp8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Rayo Vallecano (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-02-21",
+      "time": "15:15:00",
+      "external_id": "s8kvbjrn0mgtvsh1hl1npusok8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Sevilla FC (2-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-03-01",
+      "time": "17:30:00",
+      "external_id": "4485p0706rebugm3tc7u9l53us@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Getafe - Real Betis (2-0)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-03-08",
+      "time": "15:15:00",
+      "external_id": "nkg486ltchfrglt9emsdt8phu4@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Panathinaikos - Real Betis [EL] (1-0)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-03-12",
+      "time": "17:45:00",
+      "external_id": "irh3n35eic2b49obvjvdch4p04@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Celta de Vigo (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-03-15",
+      "time": "17:30:00",
+      "external_id": "tmob9tsh6js34h07e3gcvqglhg@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Panathinaikos [EL] (4-0)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-03-19",
+      "time": "20:00:00",
+      "external_id": "h27dklfre3dk9hb5idklnt91ig@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Athletic de Bilbao - Real Betis (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-03-22",
+      "time": "17:30:00",
+      "external_id": "ief3st8fsdt00061ss5si8obhc@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Espanyol",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-04",
+      "time": "16:30:00",
+      "external_id": "h7clvfkg5or2bv30428prmsdus@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Sporting Braga - Real Betis [EL]",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-08",
+      "time": "16:45:00",
+      "external_id": "esopeplfqic9ebmqm2i77ep1c8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "CA Osasuna - Real Betis",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-12",
+      "time": "12:00:00",
+      "external_id": "lpqera5r4fsshqa8jen0ar9a5c@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Sporting Braga [EL]",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-16",
+      "time": "19:00:00",
+      "external_id": "2p4bckoh810bmbfsoirpnikkoo@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Girona FC - Real Betis",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-22",
+      "time": "00:00:00",
+      "external_id": "7ql1ojqe78u1obkgsl6vqsk7cg@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Real Madrid",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-04-26",
+      "time": "00:00:00",
+      "external_id": "a06v724dppf5m75es93bqi1860@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Real Oviedo",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-05-03",
+      "time": "00:00:00",
+      "external_id": "h87o0kploia0guni7lpjuqao50@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Sociedad - Real Betis",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-05-10",
+      "time": "00:00:00",
+      "external_id": "4e13ksg2pq2au3h2fs27qgcgr8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Elche CF",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-05-13",
+      "time": "00:00:00",
+      "external_id": "ftii1f59j5mf8kl24rqe6itt80@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "FC Barcelona - Real Betis",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-05-17",
+      "time": "00:00:00",
+      "external_id": "pad4gu2f139m82laf24liks364@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "betis-2026",
+      "title": "Real Betis - Levante",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio de la Cartuja",
+      "date": "2026-05-24",
+      "time": "00:00:00",
+      "external_id": "tjhqlcakr6bt3pnqd1uo1safp8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\betis.ics"
+      },
+      "lat": 37.4179,
+      "lng": -6.0006
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Levante (0-3)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-01-04",
+      "time": "13:00:00",
+      "external_id": "4mf5bk3jcejk2qbe8f6u4ujlk0@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Celta de Vigo (0-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-01-12",
+      "time": "20:00:00",
+      "external_id": "9l778r3349vem0qhbclu1vn4g8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Elche CF - Sevilla FC (2-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-01-19",
+      "time": "20:00:00",
+      "external_id": "0br3ajbhsu3fcmtfrjll76ises@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Athletic de Bilbao (2-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-01-24",
+      "time": "17:30:00",
+      "external_id": "cdvdb1m8rhqoqvec1mol58pgug@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Real Mallorca - Sevilla FC (4-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-02-02",
+      "time": "20:00:00",
+      "external_id": "k2tjr44kpt4k9bckp0jotplv18@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Girona FC (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-02-08",
+      "time": "15:15:00",
+      "external_id": "14qij0hubv839tc947insfglb8@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Deportivo Alavés (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-02-14",
+      "time": "17:30:00",
+      "external_id": "ghm3m68k2f8u1ljgfalt2geskg@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Getafe - Sevilla FC (0-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-02-22",
+      "time": "13:00:00",
+      "external_id": "7i7ctbcathuo00m9cua8bvrssc@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Real Betis - Sevilla FC (2-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-03-01",
+      "time": "17:30:00",
+      "external_id": "feqrqlvjpfvuou45c46puucpbk@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Rayo Vallecano (1-1)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-03-08",
+      "time": "17:30:00",
+      "external_id": "hdvlvif3920gei5qv6g08pfs80@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "FC Barcelona - Sevilla FC (5-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-03-15",
+      "time": "15:15:00",
+      "external_id": "slmnce1pi625sdahm90hesm26g@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Valencia (0-2)",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-03-21",
+      "time": "20:00:00",
+      "external_id": "l3r59vc54ahkarjdnulcjocjhc@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Real Oviedo - Sevilla FC",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-04-05",
+      "time": "16:30:00",
+      "external_id": "8eitnk8ue7gsdk9r9ufjd9162k@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Atlético Madrid",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-04-11",
+      "time": "19:00:00",
+      "external_id": "cujsd28lc8v9nha6208cgk4kos@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Levante - Sevilla FC",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-04-22",
+      "time": "00:00:00",
+      "external_id": "0c6v0p6bnf7f0urkbgcff41894@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "CA Osasuna - Sevilla FC",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-04-26",
+      "time": "00:00:00",
+      "external_id": "nelsnb1jcdrpmg1t023sdapnuk@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Real Sociedad",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-05-03",
+      "time": "00:00:00",
+      "external_id": "fumucmrn57qffkj0m2o039ql8s@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Espanyol",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-05-10",
+      "time": "00:00:00",
+      "external_id": "kd2m2rjvco5rfu2ggikr8nni5s@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Villarreal - Sevilla FC",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-05-13",
+      "time": "00:00:00",
+      "external_id": "bgpc77dhve1s4tgqtlon1e2f78@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Sevilla FC - Real Madrid",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-05-17",
+      "time": "00:00:00",
+      "external_id": "ch38qb4fvs3cree94e0qbmkvvo@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "sevilla-fc-2026",
+      "title": "Celta de Vigo - Sevilla FC",
+      "description": "Calendar not up to date? Check https://fixtur.es/up-to-date",
+      "place_name": "Estadio Sanchez Pizjuan",
+      "date": "2026-05-24",
+      "time": "00:00:00",
+      "external_id": "rp2fic294eporhpnnm5rr8bles@google.com",
+      "source": {
+        "type": "ics",
+        "label": "..\\.ics\\sevilla.ics"
+      },
+      "lat": 37.3841,
+      "lng": -5.9707
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Conciertos de Órgano Ciclo Cuaresmal 2026 Catedral de Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (del 23 al 26 de marzo)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-03-23",
+      "time": "00:00:00",
+      "external_id": "onsevilla:9c5a8b75a668ce17",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: La Cumbia del Pelícano en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (jueves 26 de marzo)",
+      "place_name": "Malandar",
+      "date": "2026-03-26",
+      "time": "00:00:00",
+      "external_id": "onsevilla:78a71db994352034",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Conciertos de guitarra en el Museo de Artes y Costumbres Populares Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 12 de marzo al 14 de mayo)",
+      "place_name": "Museo de Artes y Costumbres Populares",
+      "date": "2026-03-12",
+      "time": "00:00:00",
+      "external_id": "onsevilla:5244b6cfe91d751d",
+      "lat": 37.3721722,
+      "lng": -5.9878714
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Directos del Estadio de la Cartuja de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 27 de febrero al 26 de marzo)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-02-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:af096775440b0c0e",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Marta Soto en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 27 de marzo)",
+      "place_name": "Cartuja Center",
+      "date": "2026-03-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:29de1ec1af21d173",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Canastéreo y O'Cristo en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 27 de marzo)",
+      "place_name": "Malandar",
+      "date": "2026-03-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:6503309634ddf448",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: The Pennytents en FunClub Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 27 de marzo)",
+      "place_name": "FunClub",
+      "date": "2026-03-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:d59ad97a635512e7",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Kiko y Shara en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 28 de marzo)",
+      "place_name": "Cartuja Center",
+      "date": "2026-03-28",
+      "time": "00:00:00",
+      "external_id": "onsevilla:0d9422e621fc1602",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Agoney en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 28 de marzo)",
+      "place_name": "Malandar",
+      "date": "2026-03-28",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ec9d0b2ebf1bb1fa",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Kave Kanem, Sierpes y Holehead en FunClub Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 28 de marzo)",
+      "place_name": "FunClub",
+      "date": "2026-03-28",
+      "time": "00:00:00",
+      "external_id": "onsevilla:c5617ad7739317ea",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Pasión según San Mateo en el Teatro de la Maestranza de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (domingo 29 de marzo)",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-03-29",
+      "time": "00:00:00",
+      "external_id": "onsevilla:063a5dd49aa2c726",
+      "lat": 37.3840732,
+      "lng": -5.9966688
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Festival de Música Antigua de Sevilla FeMÁS 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 6 al 29 de marzo)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-03-06",
+      "time": "00:00:00",
+      "external_id": "onsevilla:458fcb15eb3b2b9d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Danza: Shen Yun 2026 en el Cartuja Center de Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (del 24 al 26 de marzo)",
+      "place_name": "Cartuja Center",
+      "date": "2026-03-24",
+      "time": "00:00:00",
+      "external_id": "onsevilla:2cab15b12fc5dfc8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Espectáculos: funciones del ciclo Estrénate del CICUS Sevilla (marzo 2026)",
+      "description": "Importado desde OnSevilla. Fechas: (del 5 al 27 de marzo)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-03-05",
+      "time": "00:00:00",
+      "external_id": "onsevilla:9322fe430157aafb",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Teatro: La alegría en la Real Fábrica de Artillería de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 26 al 28 de marzo)",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-03-26",
+      "time": "00:00:00",
+      "external_id": "onsevilla:e38f0c486b8e9f10",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Teatro: El peso de Judas en La Fundición de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 19 al 28 de marzo)",
+      "place_name": "Fundición",
+      "date": "2026-03-19",
+      "time": "00:00:00",
+      "external_id": "onsevilla:61e37cf518a1b1f0",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Campamentos de Semana Santa 2026 en Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (del 30 de marzo al 1 de abril)",
+      "place_name": "Sevilla",
+      "date": "2026-03-30",
+      "time": "00:00:00",
+      "external_id": "onsevilla:756929547e1d11b0",
+      "lat": 37.3886303,
+      "lng": -5.9953403
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: pasos en miniatura en la Capilla de la Paz Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 23 de febrero al 27 de marzo)",
+      "place_name": "miniatura en la Capilla de la Paz",
+      "date": "2026-02-23",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ab6737563d08052d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Cayetana. Grande de España en la Casa de Las Dueñas de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 5 de marzo al 31 de agosto)",
+      "place_name": "Casa de Las Dueñas",
+      "date": "2026-03-05",
+      "time": "00:00:00",
+      "external_id": "onsevilla:129b80eebbd3b4ce",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Améfrica en el CAAC de Sevilla 2026-2027",
+      "description": "Importado desde OnSevilla. Fechas: (del 27 de febrero al 10 de enero)",
+      "place_name": "CAAC",
+      "date": "2026-02-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:c821f1f9ba53b93b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Kupinduka en el CAAC de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 19 de marzo al 6 de septiembre)",
+      "place_name": "CAAC",
+      "date": "2026-03-19",
+      "time": "00:00:00",
+      "external_id": "onsevilla:cd8f43501b63fd48",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "X Exposición Fotográfica de Cuaresma en Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 18 de febrero al 1 de abril)",
+      "place_name": "Sevilla",
+      "date": "2026-02-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:92406ab1e870ecf4",
+      "lat": 37.3886303,
+      "lng": -5.9953403
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Los rostros de Cristo en la Catedral de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 7 de febrero al 7 de abril)",
+      "place_name": "Catedral",
+      "date": "2026-02-07",
+      "time": "00:00:00",
+      "external_id": "onsevilla:4eb9f4efdd00a88d",
+      "lat": 37.385915,
+      "lng": -5.9931406
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Coloramas en la Real Fábrica de Artillería de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 27 de febrero al 17 de mayo)",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-02-27",
+      "time": "00:00:00",
+      "external_id": "onsevilla:a6810b89adfc7ef5",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: 40 años en el Archivo Histórico Provincial de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 16 de marzo al 4 de mayo)",
+      "place_name": "Archivo Histórico Provincial",
+      "date": "2026-03-16",
+      "time": "00:00:00",
+      "external_id": "onsevilla:864b015beba76cbd",
+      "lat": 37.3926089,
+      "lng": -5.9888996
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: El nuevo teatro de los Machado en la Fundación Unicaja Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 18 de marzo al 19 de julio)",
+      "place_name": "Fundación Unicaja",
+      "date": "2026-03-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ead0f0622a266ce1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: En el limbo en el Espacio Turina de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 28 de enero al 3 de mayo)",
+      "place_name": "limbo en el Espacio Turina",
+      "date": "2026-01-28",
+      "time": "00:00:00",
+      "external_id": "onsevilla:34d5da4bad2b7615",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Lente y lienzo en el Casino Militar de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 13 de marzo al 28 de abril)",
+      "place_name": "Casino Militar",
+      "date": "2026-03-13",
+      "time": "00:00:00",
+      "external_id": "onsevilla:f7e71e8cc29f1e45",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Podría haber sido de otro modo en el CICUS Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 12 de marzo al 30 de mayo)",
+      "place_name": "CICUS",
+      "date": "2026-03-12",
+      "time": "00:00:00",
+      "external_id": "onsevilla:1743c105514b8dc2",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Toda una vida en el Espacio EXZéntrico de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 13 de marzo al 7 de mayo)",
+      "place_name": "Espacio EXZéntrico",
+      "date": "2026-03-13",
+      "time": "00:00:00",
+      "external_id": "onsevilla:41f9aa28492be309",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Altares domésticos en la Galería Zunino de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 10 de marzo al 16 de abril)",
+      "place_name": "Galería Zunino",
+      "date": "2026-03-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ab3ca5b8c39c1ef1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Serrano y la Semana Santa en el Ayuntamiento de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 13 de marzo al 4 de abril)",
+      "place_name": "Ayuntamiento",
+      "date": "2026-03-13",
+      "time": "00:00:00",
+      "external_id": "onsevilla:e7556220643de7d7",
+      "lat": 37.1587087,
+      "lng": -5.9246971
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Háptica. Joan Fontcuberta en la Fundación Unicaja Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 17 de marzo al 19 de julio)",
+      "place_name": "Fundación Unicaja",
+      "date": "2026-03-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:97501daa2eeb8390",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Exposición: Geometric for the people en el Colegio de Arquitectos Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 26 de marzo al 27 de abril)",
+      "place_name": "Colegio de Arquitectos",
+      "date": "2026-03-26",
+      "time": "00:00:00",
+      "external_id": "onsevilla:5d3263e6de6e401b",
+      "lat": 37.3922036,
+      "lng": -5.9901031
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Programación del ciclo Tramos de Cuaresma 2026 en Cajasol Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (del 19 de febrero al 25 de marzo)",
+      "place_name": "Cajasol",
+      "date": "2026-02-19",
+      "time": "00:00:00",
+      "external_id": "onsevilla:47d0221da35ef406",
+      "lat": 37.3875817,
+      "lng": -5.9851305
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Orquesta Joven de Andalucía en el Maestranza de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (lunes 6 de abril)",
+      "place_name": "Maestranza",
+      "date": "2026-04-06",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ae3bc8a1ce1e1c31",
+      "lat": 37.3859587,
+      "lng": -5.9984227
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Chica Sobresalto en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (jueves 9 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-09",
+      "time": "00:00:00",
+      "external_id": "onsevilla:edf1aac654aabe3e",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Paco Montalvo en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 10 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:f3f8fecf08ac9569",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Nolasco en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 10 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:8bcc6cc17740014f",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Vera Fauna en Pandora Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 10 de abril)",
+      "place_name": "Pandora",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:dffe17ffd264efc5",
+      "lat": 37.3914132,
+      "lng": -5.9953027
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: White Queen en Custom Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 10 de abril)",
+      "place_name": "Custom",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:aba6314b58f56cc0",
+      "lat": 37.4084153,
+      "lng": -5.9576952
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Pedro Pastor en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 10 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:9dc3312d7e0d8fd6",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Víctor Manuel en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 11 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-11",
+      "time": "00:00:00",
+      "external_id": "onsevilla:7026186ea836edb0",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: 091 en Custom Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 11 de abril)",
+      "place_name": "Custom",
+      "date": "2026-04-11",
+      "time": "00:00:00",
+      "external_id": "onsevilla:bea120acb7154c74",
+      "lat": 37.4084153,
+      "lng": -5.9576952
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: La sonrisa de Julia en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 11 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-11",
+      "time": "00:00:00",
+      "external_id": "onsevilla:86900f70e5660448",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Bauer en FunClub Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 11 de abril)",
+      "place_name": "FunClub",
+      "date": "2026-04-11",
+      "time": "00:00:00",
+      "external_id": "onsevilla:494d13add8c288f9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Electronic Lunch XXL en el parque Fernando Magallanes de Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 21 de febrero)",
+      "place_name": "parque Fernando Magallanes",
+      "date": "2026-02-21",
+      "time": "00:00:00",
+      "external_id": "onsevilla:385288af8384ea85",
+      "lat": 37.3920017,
+      "lng": -6.0083695
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Jeanette en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (domingo 12 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-12",
+      "time": "00:00:00",
+      "external_id": "onsevilla:cd66ce981c0b6296",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Leo Middea en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (lunes 13 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-13",
+      "time": "00:00:00",
+      "external_id": "onsevilla:d27fd906fafc45c7",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Diego Torres en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (martes 14 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-14",
+      "time": "00:00:00",
+      "external_id": "onsevilla:189459516ef996c7",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Jakub Józef Orliński en el Teatro de la Maestranza de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (miércoles 15 de abril)",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-04-15",
+      "time": "00:00:00",
+      "external_id": "onsevilla:22cd4f32b685baee",
+      "lat": 37.3840732,
+      "lng": -5.9966688
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Ciclo de Conciertos San Telmo Abierto 2026 en Sevilla",
+      "description": "Importado desde OnSevilla. Fechas: (del 20 de marzo al 29 de mayo)",
+      "place_name": "Sevilla",
+      "date": "2026-03-20",
+      "time": "00:00:00",
+      "external_id": "onsevilla:4d173db56ef339f7",
+      "lat": 37.3886303,
+      "lng": -5.9953403
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Marlena en Custom Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 17 de abril)",
+      "place_name": "Custom",
+      "date": "2026-04-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:c4eeed213ea49400",
+      "lat": 37.4084153,
+      "lng": -5.9576952
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Drugos en FunClub Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 17 de abril)",
+      "place_name": "FunClub",
+      "date": "2026-04-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:7b86d2961df68f86",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Ken Stringfellow y Álvaro Suite en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 17 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:ff0b366f8d808b84",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Ters en Malandar Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 18 de abril)",
+      "place_name": "Malandar",
+      "date": "2026-04-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:0402cc1d590573c9",
+      "lat": 37.7238998,
+      "lng": -5.6636618
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Miguelichi López en Custom Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 18 de abril)",
+      "place_name": "Custom",
+      "date": "2026-04-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:36c724c4fb1b8d52",
+      "lat": 37.4084153,
+      "lng": -5.9576952
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Leire Martínez en Pandora Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (sábado 18 de abril)",
+      "place_name": "Pandora",
+      "date": "2026-04-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:156bb8c4a2c906bf",
+      "lat": 37.3914132,
+      "lng": -5.9953027
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Concierto: Derby Motoreta's Burrito Kachimba en el Cartuja Center Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (jueves 30 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-30",
+      "time": "00:00:00",
+      "external_id": "onsevilla:bd1954eab6487455",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Humor: 013 Origen de Juan Amodeo en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 24 de enero al 30 de mayo)",
+      "place_name": "Cartuja Center",
+      "date": "2026-01-24",
+      "time": "00:00:00",
+      "external_id": "onsevilla:7f6ae7498795e034",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Danza: Elements en el Teatro de la Maestranza de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (domingo 12 de abril)",
+      "place_name": "Teatro de la Maestranza",
+      "date": "2026-04-12",
+      "time": "00:00:00",
+      "external_id": "onsevilla:2188e2ddf62802e6",
+      "lat": 37.3840732,
+      "lng": -5.9966688
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Danza: Calentamiento en el Teatro Central de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 10 al 12 de abril)",
+      "place_name": "Teatro Central",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "onsevilla:58cc76fbb8bc1f8d",
+      "lat": 37.4082045,
+      "lng": -5.9959736
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Danza en el CAAC de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 8 de marzo al 8 de noviembre)",
+      "place_name": "CAAC",
+      "date": "2026-03-08",
+      "time": "00:00:00",
+      "external_id": "onsevilla:6a75580e1de5b83d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Humor: Andrés López en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (miércoles 15 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-15",
+      "time": "00:00:00",
+      "external_id": "onsevilla:fff8ad2fcd3080d3",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Humor: Martita de Graná en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (viernes 17 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:8ddbcea10a36ccce",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Danza: Flamenco patrimonio en el Teatro Central de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (17 y 18 de abril)",
+      "place_name": "Teatro Central",
+      "date": "2026-04-17",
+      "time": "00:00:00",
+      "external_id": "onsevilla:7145c5f328d56916",
+      "lat": 37.4082045,
+      "lng": -5.9959736
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Muestra de teatro barroco Casa de la Moneda en La Fundición de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 8 al 18 de abril)",
+      "place_name": "Fundición",
+      "date": "2026-04-08",
+      "time": "00:00:00",
+      "external_id": "onsevilla:415bbb2d1275437e",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Humor: Misión: impro-sible en el Cartuja Center de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (18 y 19 de abril)",
+      "place_name": "Cartuja Center",
+      "date": "2026-04-18",
+      "time": "00:00:00",
+      "external_id": "onsevilla:5a0316d12b334788",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Espectáculos: ciclo Artillera en la Real Fábrica de Artillería de Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 25 de enero al 7 de junio)",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-01-25",
+      "time": "00:00:00",
+      "external_id": "onsevilla:aa3cb7e75392b9ac",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "Flamenco: ciclo EmPEÑAdos por Sevilla 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 1 de febrero al 27 de junio)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-02-01",
+      "time": "00:00:00",
+      "external_id": "onsevilla:afdc72ccf882401a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "onsevilla-2026",
+      "title": "XIV Festival Sevilla Swing! 2026",
+      "description": "Importado desde OnSevilla. Fechas: (del 9 al 12 de abril)",
+      "place_name": "Sevilla (ubicaci?n aproximada)",
+      "date": "2026-04-09",
+      "time": "00:00:00",
+      "external_id": "onsevilla:e0cc581ddd236a97",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "Ciclo: \"Sevilla: Historia y Patrimonio\", con Jesús Pozuelo",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-01-22",
+      "time": "18:30:00",
+      "external_id": "icas:29def02e8aec332c",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "Ciclo Artillera",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-01-24",
+      "time": "10:00:00",
+      "external_id": "icas:e225c896d20a3271",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "Exposición “En el limbo. Arquitectura en espera” de Norberto Gil",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Sala Atín Aya",
+      "date": "2026-01-28",
+      "time": "00:00:00",
+      "external_id": "icas:f86b79042f24b680",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "XLIII Festival de Música Antigua de Sevilla (FeMÀS)",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Espacio Turina",
+      "date": "2026-03-06",
+      "time": "00:00:00",
+      "external_id": "icas:adf5bffe92539839",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "La Alegría, de Marilia Samper",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Real Fábrica de Artillería",
+      "date": "2026-03-26",
+      "time": "00:00:00",
+      "external_id": "icas:3971c13f7ac0613b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "icas-2026",
+      "title": "XIV edición del Festival Sevilla Swing!",
+      "description": "Importado desde ICAS Agenda",
+      "place_name": "Teatro Alameda",
+      "date": "2026-04-10",
+      "time": "00:00:00",
+      "external_id": "icas:c01731a80a5a6d1f",
+      "lat": 37.4019118,
+      "lng": -5.9945602
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la osadía de eva",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Literatura. Ciudad: Sevilla",
+      "place_name": "Cicus",
+      "date": "2026-03-24",
+      "time": "18:00:00",
+      "external_id": "yuzin:8098663493ee4e8d",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "a dos velas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Cine y Audiovisual. Ciudad: Sevilla",
+      "place_name": "Cicus",
+      "date": "2026-03-24",
+      "time": "19:30:00",
+      "external_id": "yuzin:5f96400cbc58737f",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "daniel mata",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Piazza di pezzi",
+      "date": "2026-03-24",
+      "time": "21:00:00",
+      "external_id": "yuzin:6499a900dd9d29aa",
+      "lat": 37.3925354,
+      "lng": -5.9912382
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "martes flamencos la guapetona",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-03-24",
+      "time": "21:00:00",
+      "external_id": "yuzin:e1e39d518baec52e",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-03-25",
+      "time": "18:00:00",
+      "external_id": "yuzin:7b4e9398cd48b408",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "nacionalismo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Cicus",
+      "date": "2026-03-25",
+      "time": "19:00:00",
+      "external_id": "yuzin:d563baf6eda139bc",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "un réquiem humano",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Cero",
+      "date": "2026-03-25",
+      "time": "20:30:00",
+      "external_id": "yuzin:259b0520abc9aa25",
+      "lat": 37.393965,
+      "lng": -5.9877855
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cena flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Madriguera de Mai",
+      "date": "2026-03-25",
+      "time": "21:00:00",
+      "external_id": "yuzin:3a489a211450d48f",
+      "lat": 37.3994151,
+      "lng": -5.9893016
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-03-25",
+      "time": "21:30:00",
+      "external_id": "yuzin:25850924d9cca747",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "flamenco joven",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Galería Taberna Ánima",
+      "date": "2026-03-25",
+      "time": "22:00:00",
+      "external_id": "yuzin:6ccb602faea83019",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sin lugar en la vida ni en la muerte",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Arte y Exposiciones. Ciudad: Sevilla",
+      "place_name": "Espacio 18B",
+      "date": "2026-03-26",
+      "time": "19:00:00",
+      "external_id": "yuzin:e8f15feedd6510d9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "heroidas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Cicus",
+      "date": "2026-03-26",
+      "time": "20:00:00",
+      "external_id": "yuzin:c31e5974d3b703ad",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cineclown",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cero",
+      "date": "2026-03-26",
+      "time": "20:30:00",
+      "external_id": "yuzin:fea0736e85773f53",
+      "lat": 37.393965,
+      "lng": -5.9877855
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "pregunta a un científico",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-03-26",
+      "time": "20:30:00",
+      "external_id": "yuzin:5005f0b280d95a23",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cordelia",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-03-26",
+      "time": "21:00:00",
+      "external_id": "yuzin:5d367d65dfa5e8f9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cumbia del pelícano",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Malandar",
+      "date": "2026-03-26",
+      "time": "21:00:00",
+      "external_id": "yuzin:1694d55161e0f139",
+      "lat": 37.3985597,
+      "lng": -6.0001879
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-03-26",
+      "time": "21:00:00",
+      "external_id": "yuzin:af3fad80ca7ff953",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-03-26",
+      "time": "21:00:00",
+      "external_id": "yuzin:8df1bf45f8e05817",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "manouche á trois",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Galería Taberna Ánima",
+      "date": "2026-03-26",
+      "time": "21:30:00",
+      "external_id": "yuzin:3be9771cd5184489",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-03-26",
+      "time": "23:00:00",
+      "external_id": "yuzin:0f3893060b39978c",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-03-26",
+      "time": "23:30:00",
+      "external_id": "yuzin:ba5f450a406b7ac7",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam jerónimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-03-27",
+      "time": "18:00:00",
+      "external_id": "yuzin:f532a702726324bb",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "el hombre del traje gris",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-03-27",
+      "time": "19:00:00",
+      "external_id": "yuzin:5390927e370679e2",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "los ciegos de maeterlinck",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Cicus",
+      "date": "2026-03-27",
+      "time": "20:00:00",
+      "external_id": "yuzin:911c57e79adf5e98",
+      "lat": 37.3877847,
+      "lng": -5.9894765
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cumbia en el pumarejo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "C.V. Felisa García",
+      "date": "2026-03-27",
+      "time": "20:30:00",
+      "external_id": "yuzin:c727fce2ed10953c",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la guardia",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Auditorio de La Cartuja",
+      "date": "2026-03-27",
+      "time": "21:00:00",
+      "external_id": "yuzin:6fd45a2490cf25b2",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "gunnar halle remedy quartet",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-03-27",
+      "time": "21:30:00",
+      "external_id": "yuzin:2c819c64e773f2ac",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "marta soto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Cartuja Center Cite",
+      "date": "2026-03-27",
+      "time": "21:30:00",
+      "external_id": "yuzin:d80ad2a12661cc66",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "pol 3.14",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala X",
+      "date": "2026-03-27",
+      "time": "21:30:00",
+      "external_id": "yuzin:c0295814870f9e10",
+      "lat": 37.4086676,
+      "lng": -5.990039
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "miguel cabrera",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Even",
+      "date": "2026-03-27",
+      "time": "22:00:00",
+      "external_id": "yuzin:d368764d93e066d5",
+      "lat": 37.4086608,
+      "lng": -5.9898073
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "intercambio de idiomas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-03-27",
+      "time": "22:00:00",
+      "external_id": "yuzin:ce15ec8faf3e76f3",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "bingo musical",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-03-27",
+      "time": "23:00:00",
+      "external_id": "yuzin:e7b1b42e78a43c0c",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-03-28",
+      "time": "18:00:00",
+      "external_id": "yuzin:f30abed6107f547f",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "noche de djs",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-03-28",
+      "time": "20:00:00",
+      "external_id": "yuzin:3e81898edce84573",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la musa eléctrica",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-03-28",
+      "time": "21:00:00",
+      "external_id": "yuzin:119c4991e2563ed8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "garfo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-03-28",
+      "time": "21:30:00",
+      "external_id": "yuzin:33abf2cdf14e62de",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "tertulia flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Galería Taberna Ánima",
+      "date": "2026-03-28",
+      "time": "22:00:00",
+      "external_id": "yuzin:55f72600d3aaaf62",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam de max",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-03-29",
+      "time": "17:00:00",
+      "external_id": "yuzin:03c2794caf409a1d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-03-29",
+      "time": "20:00:00",
+      "external_id": "yuzin:0b93cc0f1f1f6732",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lunes flamencos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Corral de Esquivel",
+      "date": "2026-03-30",
+      "time": "21:30:00",
+      "external_id": "yuzin:15e0e9e43c9e8720",
+      "lat": 37.3998401,
+      "lng": -5.9941038
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sin lugar en la vida ni en la muerte",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Arte y Exposiciones. Ciudad: Sevilla",
+      "place_name": "Espacio 18B",
+      "date": "2026-04-01",
+      "time": "12:00:00",
+      "external_id": "yuzin:2e5dc80369271749",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "clases de tango",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Formación. Ciudad: Sevilla",
+      "place_name": "Espacio ZM y Corralón del Pelícano",
+      "date": "2026-04-01",
+      "time": "12:00:00",
+      "external_id": "yuzin:97344998b77ab553",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "altares domésticos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Arte y Exposiciones. Ciudad: Sevilla",
+      "place_name": "Galería Zunino",
+      "date": "2026-04-01",
+      "time": "17:30:00",
+      "external_id": "yuzin:a4571d4aa7e9573e",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-04-01",
+      "time": "18:00:00",
+      "external_id": "yuzin:261d88af49085451",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cena flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Madriguera de Mai",
+      "date": "2026-04-01",
+      "time": "21:00:00",
+      "external_id": "yuzin:5b248bd9dc7298b5",
+      "lat": 37.3994151,
+      "lng": -5.9893016
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-02",
+      "time": "21:00:00",
+      "external_id": "yuzin:d5106dd1f30b1111",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-02",
+      "time": "23:00:00",
+      "external_id": "yuzin:40cd42b8fb7015cc",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-02",
+      "time": "23:30:00",
+      "external_id": "yuzin:0c3efbc2bdd7bdac",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "viernes de juegos de mesa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-03",
+      "time": "17:00:00",
+      "external_id": "yuzin:7df826707af05926",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam jerónimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-03",
+      "time": "18:00:00",
+      "external_id": "yuzin:83a4748635742b81",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "intercambio de idiomas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-03",
+      "time": "22:00:00",
+      "external_id": "yuzin:b5d8ad52984b8623",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sábados de rol",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-04",
+      "time": "17:00:00",
+      "external_id": "yuzin:aa1f178be66615e9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "noche de djs",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-04",
+      "time": "20:00:00",
+      "external_id": "yuzin:f0f02512a509bc77",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "chustinatra & amigos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-05",
+      "time": "18:00:00",
+      "external_id": "yuzin:222ec8af8fc5bfaa",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-05",
+      "time": "20:00:00",
+      "external_id": "yuzin:548bc4e9ced77b7f",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-05",
+      "time": "22:00:00",
+      "external_id": "yuzin:b30607e53649e6e3",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "the jazz machine",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Gallo Rojo",
+      "date": "2026-04-06",
+      "time": "19:30:00",
+      "external_id": "yuzin:3233ba45398c66b0",
+      "lat": 37.395421,
+      "lng": -5.9917556
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "open mic mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-06",
+      "time": "20:00:00",
+      "external_id": "yuzin:0f6d9f8f5f167464",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lunes flamencos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Corral de Esquivel",
+      "date": "2026-04-06",
+      "time": "21:30:00",
+      "external_id": "yuzin:63ecd556dfa147a2",
+      "lat": 37.3998401,
+      "lng": -5.9941038
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-06",
+      "time": "22:00:00",
+      "external_id": "yuzin:edaba9da853ce04e",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivialaso",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-07",
+      "time": "20:00:00",
+      "external_id": "yuzin:ecc0ff866b769737",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "percepciones andaluzas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Arte y Exposiciones. Ciudad: Sevilla",
+      "place_name": "Galería Taberna Ánima",
+      "date": "2026-04-07",
+      "time": "21:00:00",
+      "external_id": "yuzin:77074ad8abe21610",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "david m león",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Piazza di pezzi",
+      "date": "2026-04-07",
+      "time": "21:00:00",
+      "external_id": "yuzin:474950b39ec90ebb",
+      "lat": 37.3925354,
+      "lng": -5.9912382
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "martes flamencos la guapetona",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-07",
+      "time": "21:00:00",
+      "external_id": "yuzin:e3bba31df86b4457",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-04-08",
+      "time": "18:00:00",
+      "external_id": "yuzin:8639b3a0cc601234",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "un tal quijote",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-08",
+      "time": "20:00:00",
+      "external_id": "yuzin:f067221c88bd9767",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "ensemble de música contemporánea",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-08",
+      "time": "20:00:00",
+      "external_id": "yuzin:d75c210dd187867a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "the jam-tonic",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Gallo Rojo",
+      "date": "2026-04-08",
+      "time": "20:00:00",
+      "external_id": "yuzin:a50598d6f08758b8",
+      "lat": 37.395421,
+      "lng": -5.9917556
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la juntiña",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-08",
+      "time": "20:30:00",
+      "external_id": "yuzin:d86da7c1449807e0",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto tregua",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-08",
+      "time": "21:00:00",
+      "external_id": "yuzin:a454c868872ce109",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cena flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Madriguera de Mai",
+      "date": "2026-04-08",
+      "time": "21:00:00",
+      "external_id": "yuzin:b69b288528da9088",
+      "lat": 37.3994151,
+      "lng": -5.9893016
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-08",
+      "time": "22:00:00",
+      "external_id": "yuzin:5072cbf01ccdeef4",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "social swing",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Gallo Rojo",
+      "date": "2026-04-09",
+      "time": "19:00:00",
+      "external_id": "yuzin:f0e926850d3230b4",
+      "lat": 37.395421,
+      "lng": -5.9917556
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "orquesta barroca de sevilla",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-09",
+      "time": "20:00:00",
+      "external_id": "yuzin:e22a55e6a7d2c40e",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivialaso especial cine",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-09",
+      "time": "20:00:00",
+      "external_id": "yuzin:d5c3416351296485",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cineclown",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cero",
+      "date": "2026-04-09",
+      "time": "20:30:00",
+      "external_id": "yuzin:7545c1217ad75bff",
+      "lat": 37.393965,
+      "lng": -5.9877855
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "alfonso del valle & van moustache",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Lady Drama",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:b5b2a6863bd4ad03",
+      "lat": 37.3850593,
+      "lng": -5.9957587
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:fb33e928ceea619d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lunes",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:ceb448daa88c52b9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:abc1325818214327",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "adriano zanetti",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Magia. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:2bf336c360e9973f",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jarana en triana",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Humor. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-09",
+      "time": "21:00:00",
+      "external_id": "yuzin:d0a9805d6701f0ff",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "raquel power y maestro arregui",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-09",
+      "time": "21:30:00",
+      "external_id": "yuzin:6be5b8a293967429",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-09",
+      "time": "23:00:00",
+      "external_id": "yuzin:e5615e582309b8a2",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-09",
+      "time": "23:30:00",
+      "external_id": "yuzin:528c621cd7496154",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "viernes de juegos de mesa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-10",
+      "time": "17:00:00",
+      "external_id": "yuzin:9efd31cae2803f73",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "carsise",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-10",
+      "time": "17:30:00",
+      "external_id": "yuzin:979fc77b8b50f355",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam jerónimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-10",
+      "time": "18:00:00",
+      "external_id": "yuzin:2da534434c850ad4",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "bad jam",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Gallo Rojo",
+      "date": "2026-04-10",
+      "time": "19:30:00",
+      "external_id": "yuzin:552ca8fba346eec0",
+      "lat": 37.395421,
+      "lng": -5.9917556
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "al son de la rocalla",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-10",
+      "time": "20:00:00",
+      "external_id": "yuzin:3fda5605235c8d39",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "big band c.s.m. manuel castillo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-10",
+      "time": "20:00:00",
+      "external_id": "yuzin:826baf7635c7d919",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "calentamiento",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Danza. Ciudad: Sevilla",
+      "place_name": "Teatro Central",
+      "date": "2026-04-10",
+      "time": "20:30:00",
+      "external_id": "yuzin:0c185962786006e5",
+      "lat": 37.4082045,
+      "lng": -5.9959736
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "gran final lia",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-10",
+      "time": "21:00:00",
+      "external_id": "yuzin:db20231757869de1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "rafa sánchez",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Auditorio de La Cartuja",
+      "date": "2026-04-10",
+      "time": "21:00:00",
+      "external_id": "yuzin:4c83598db904d056",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "reptilia + del revés",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Fun Club",
+      "date": "2026-04-10",
+      "time": "21:30:00",
+      "external_id": "yuzin:6745dc3f91f56972",
+      "lat": 37.3978192,
+      "lng": -5.9933726
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "kaleidoscope",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-10",
+      "time": "21:30:00",
+      "external_id": "yuzin:d4b1347bf4c539a4",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "homenaje a robe",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-10",
+      "time": "21:30:00",
+      "external_id": "yuzin:4db7ce749674ce31",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "intercambio de idiomas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-10",
+      "time": "22:00:00",
+      "external_id": "yuzin:02f43490c788ea61",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "bingo musical",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-10",
+      "time": "23:00:00",
+      "external_id": "yuzin:6b61f259102969b2",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "macarena y rocío",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-11",
+      "time": "12:00:00",
+      "external_id": "yuzin:37c514fca27e2de0",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sábados de rol",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-11",
+      "time": "17:00:00",
+      "external_id": "yuzin:5e80099ad7620348",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "david surex",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-11",
+      "time": "17:30:00",
+      "external_id": "yuzin:25a64698e009f4bf",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "yuraq sisa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: En familia. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-11",
+      "time": "18:00:00",
+      "external_id": "yuzin:cffc6f1338599ab1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "momo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Long Rock",
+      "date": "2026-04-11",
+      "time": "19:00:00",
+      "external_id": "yuzin:5d22e7d01f1ff1e3",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "celestina, la tragiclownmedia",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-11",
+      "time": "20:00:00",
+      "external_id": "yuzin:983cd8220699ba74",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "quartet gerhard",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-11",
+      "time": "20:00:00",
+      "external_id": "yuzin:70ffd60922543940",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "noche de djs",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-11",
+      "time": "20:00:00",
+      "external_id": "yuzin:4177db68a0820981",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivialaso",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-11",
+      "time": "20:00:00",
+      "external_id": "yuzin:7e839d55dc129af9",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "bauer",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Fun Club",
+      "date": "2026-04-11",
+      "time": "21:00:00",
+      "external_id": "yuzin:0874818f2caaebf8",
+      "lat": 37.3978192,
+      "lng": -5.9933726
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "renny jackson",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-11",
+      "time": "21:30:00",
+      "external_id": "yuzin:776c86c198725f5d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la estación 2.0",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-11",
+      "time": "21:30:00",
+      "external_id": "yuzin:9eeb9bb990374343",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "transeúnte",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-11",
+      "time": "22:00:00",
+      "external_id": "yuzin:91838317cc83819e",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "orquesta sinfónica de sevilla",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-12",
+      "time": "12:00:00",
+      "external_id": "yuzin:8bb4ff9edc082678",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "3, 2, 1…",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Magia. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-12",
+      "time": "12:00:00",
+      "external_id": "yuzin:2b3cd55f231178fe",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "mundo chillón",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-12",
+      "time": "12:30:00",
+      "external_id": "yuzin:36632c396a13ce2e",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session assejazz",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-12",
+      "time": "13:30:00",
+      "external_id": "yuzin:e5b0d1f964ecabbe",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "marta santamaría",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-12",
+      "time": "17:30:00",
+      "external_id": "yuzin:447b6cb9cab6a59b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "ruleta musical",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-12",
+      "time": "18:00:00",
+      "external_id": "yuzin:25a1b4e3ce0f6716",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "leonardo garcía",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-12",
+      "time": "18:00:00",
+      "external_id": "yuzin:cf3c596fbd6fb49a",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "chustinatra & amigos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-12",
+      "time": "18:00:00",
+      "external_id": "yuzin:0009c0291e87e968",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam casa del blues",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-12",
+      "time": "19:00:00",
+      "external_id": "yuzin:a5169877d75fde20",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-12",
+      "time": "20:00:00",
+      "external_id": "yuzin:ddd8f9a5ab70cb4a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "hot club sevilla",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Gallo Rojo",
+      "date": "2026-04-12",
+      "time": "20:00:00",
+      "external_id": "yuzin:e471e25a36a15e0e",
+      "lat": 37.395421,
+      "lng": -5.9917556
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-12",
+      "time": "22:00:00",
+      "external_id": "yuzin:3a17dea102c93138",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivialaso",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-13",
+      "time": "20:00:00",
+      "external_id": "yuzin:a02981d14a73a08b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "open mic mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-13",
+      "time": "20:00:00",
+      "external_id": "yuzin:9c25e3bfbb70381d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lunes flamencos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Corral de Esquivel",
+      "date": "2026-04-13",
+      "time": "21:30:00",
+      "external_id": "yuzin:60bfc8ddf689147e",
+      "lat": 37.3998401,
+      "lng": -5.9941038
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-13",
+      "time": "22:00:00",
+      "external_id": "yuzin:a33c9e1e1c1e7ec4",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cervantes en la ficción",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Charlas, Conferencias y Encuentros. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-14",
+      "time": "19:30:00",
+      "external_id": "yuzin:3a9338294a8d6800",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "fiona",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Piazza di pezzi",
+      "date": "2026-04-14",
+      "time": "21:00:00",
+      "external_id": "yuzin:ade1b48c247491fc",
+      "lat": 37.3925354,
+      "lng": -5.9912382
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "power cabaret",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-14",
+      "time": "21:30:00",
+      "external_id": "yuzin:26735b079ae78783",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-14",
+      "time": "23:00:00",
+      "external_id": "yuzin:0dd4dbfcca965f60",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-04-15",
+      "time": "18:00:00",
+      "external_id": "yuzin:c3f5f278e87d2730",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "teje tu tela en el laurel dorado",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Cero",
+      "date": "2026-04-15",
+      "time": "20:30:00",
+      "external_id": "yuzin:dcc82c14934c328b",
+      "lat": 37.393965,
+      "lng": -5.9877855
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la juntiña",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-15",
+      "time": "20:30:00",
+      "external_id": "yuzin:0b6e208cc617717d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "poetry slam sevilla",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-15",
+      "time": "20:30:00",
+      "external_id": "yuzin:fe4c398a757c2334",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cena flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Madriguera de Mai",
+      "date": "2026-04-15",
+      "time": "21:00:00",
+      "external_id": "yuzin:69b0335cad001581",
+      "lat": 37.3994151,
+      "lng": -5.9893016
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-15",
+      "time": "22:00:00",
+      "external_id": "yuzin:0d9753453e7c6c27",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "van moustache",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-16",
+      "time": "17:30:00",
+      "external_id": "yuzin:e52ffc26395655d7",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivial studio ghibli",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-16",
+      "time": "19:00:00",
+      "external_id": "yuzin:0fbcaaa760e9c27e",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "los Últimos cómicos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-16",
+      "time": "20:00:00",
+      "external_id": "yuzin:8257a0aef4694a37",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la spagna",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-16",
+      "time": "20:00:00",
+      "external_id": "yuzin:d7a94b8288924627",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cineclown",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cero",
+      "date": "2026-04-16",
+      "time": "20:30:00",
+      "external_id": "yuzin:12d97e965402e3a4",
+      "lat": 37.393965,
+      "lng": -5.9877855
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam voicestudio",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-16",
+      "time": "20:30:00",
+      "external_id": "yuzin:fe0cb0502dfd5478",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-16",
+      "time": "21:00:00",
+      "external_id": "yuzin:dcada45a28314560",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "todo por los jajas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Humor. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-16",
+      "time": "21:00:00",
+      "external_id": "yuzin:a0ff17680cb7c415",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la dhákira",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Literatura. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-16",
+      "time": "21:00:00",
+      "external_id": "yuzin:b8b66d93e21976c4",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-16",
+      "time": "23:00:00",
+      "external_id": "yuzin:a5dd7b5986a74fe8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-16",
+      "time": "23:30:00",
+      "external_id": "yuzin:9ab4600d3440c60c",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "viernes de juegos de mesa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-17",
+      "time": "17:00:00",
+      "external_id": "yuzin:40a6cfd72749af2b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "fonome",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-17",
+      "time": "17:30:00",
+      "external_id": "yuzin:9e0b0947571724b1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "taller de barro y vino",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Espacio Furia",
+      "date": "2026-04-17",
+      "time": "18:00:00",
+      "external_id": "yuzin:56c89cffb56fc32c",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "eve rosenbloom vidal",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Danza. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-17",
+      "time": "18:00:00",
+      "external_id": "yuzin:bc5ab4b5253a3f87",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam jerónimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-17",
+      "time": "18:00:00",
+      "external_id": "yuzin:4b0a84d6d5d8aa31",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "flamenco patrimonio",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Danza. Ciudad: Sevilla",
+      "place_name": "Teatro Central",
+      "date": "2026-04-17",
+      "time": "20:30:00",
+      "external_id": "yuzin:4e585b9ac177f2dd",
+      "lat": 37.4082045,
+      "lng": -5.9959736
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "drugos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Fun Club",
+      "date": "2026-04-17",
+      "time": "21:00:00",
+      "external_id": "yuzin:f4a35e1f66482633",
+      "lat": 37.3978192,
+      "lng": -5.9933726
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "primos chicos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-17",
+      "time": "21:00:00",
+      "external_id": "yuzin:536975aedce4b507",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "yiorgos bereris trio",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-17",
+      "time": "21:30:00",
+      "external_id": "yuzin:5e96e7bf2b9546ab",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "prohibido pisar el césped",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-17",
+      "time": "21:30:00",
+      "external_id": "yuzin:42fcf8beb61f097b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "mario el mago",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Magia. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-17",
+      "time": "21:30:00",
+      "external_id": "yuzin:f4f2bbdaebfe07dc",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "intercambio de idiomas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-17",
+      "time": "22:00:00",
+      "external_id": "yuzin:d4c5dd05da73bcfc",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-17",
+      "time": "23:30:00",
+      "external_id": "yuzin:1d555c6f094befca",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sábados de rol",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-18",
+      "time": "17:00:00",
+      "external_id": "yuzin:7d738d74c76266f8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sugar",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Humor. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-18",
+      "time": "18:00:00",
+      "external_id": "yuzin:583154d70188d44b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "bajocuerda",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-18",
+      "time": "18:30:00",
+      "external_id": "yuzin:acae7c8e5b6cb5bd",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "rinconete y cortadillo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-18",
+      "time": "20:00:00",
+      "external_id": "yuzin:96e3e27a1f13f53d",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "noche de djs",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-18",
+      "time": "20:00:00",
+      "external_id": "yuzin:7dacea4b236b7d17",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "grex",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Fun Club",
+      "date": "2026-04-18",
+      "time": "21:00:00",
+      "external_id": "yuzin:5e8bee20e6e08e1c",
+      "lat": 37.3978192,
+      "lng": -5.9933726
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "inmobiliaria el musical",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-18",
+      "time": "21:00:00",
+      "external_id": "yuzin:1ed6bf14a65db48a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cc syndicate",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-18",
+      "time": "21:30:00",
+      "external_id": "yuzin:8048e45f6c41ba19",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sin lucro de Ánimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-18",
+      "time": "22:00:00",
+      "external_id": "yuzin:94330b32239699e4",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "groove route 4",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-18",
+      "time": "23:30:00",
+      "external_id": "yuzin:a2d44b5540aaf81a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "petit comité",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Magia. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-19",
+      "time": "12:00:00",
+      "external_id": "yuzin:c523e083c3564a40",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session assejazz",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-19",
+      "time": "13:30:00",
+      "external_id": "yuzin:239e541b3b407a75",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam de max",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-19",
+      "time": "17:30:00",
+      "external_id": "yuzin:2e44e79ee8e90620",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "juan josé amador",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-19",
+      "time": "17:30:00",
+      "external_id": "yuzin:3d8c9d760d52c2fe",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "ecos de feria",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-19",
+      "time": "18:00:00",
+      "external_id": "yuzin:149d45aa4dd96bb4",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "chustinatra & amigos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-19",
+      "time": "18:00:00",
+      "external_id": "yuzin:63bf0cabe8aa479e",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "compañía la sicodramática",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala ZM",
+      "date": "2026-04-19",
+      "time": "19:00:00",
+      "external_id": "yuzin:c98d00825d1a1e2d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "assejazz big band",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-19",
+      "time": "20:00:00",
+      "external_id": "yuzin:26b741d25d48184b",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-19",
+      "time": "20:00:00",
+      "external_id": "yuzin:ab4a410a1f293e9d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-19",
+      "time": "22:00:00",
+      "external_id": "yuzin:fc624daf17274e30",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "open mic mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-20",
+      "time": "20:00:00",
+      "external_id": "yuzin:ab1e7eb344cd6464",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lunes flamencos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Corral de Esquivel",
+      "date": "2026-04-20",
+      "time": "21:30:00",
+      "external_id": "yuzin:27ac816ed333ab5c",
+      "lat": 37.3998401,
+      "lng": -5.9941038
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-20",
+      "time": "22:00:00",
+      "external_id": "yuzin:c8fc15f59a8329b0",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-21",
+      "time": "23:00:00",
+      "external_id": "yuzin:a181ec3e3528b235",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-04-22",
+      "time": "18:00:00",
+      "external_id": "yuzin:d4452b1a89d8e307",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "cena flamenca",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Madriguera de Mai",
+      "date": "2026-04-22",
+      "time": "21:00:00",
+      "external_id": "yuzin:c316697dc618cf5e",
+      "lat": 37.3994151,
+      "lng": -5.9893016
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-23",
+      "time": "21:00:00",
+      "external_id": "yuzin:8ab3baf67ddccb16",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-23",
+      "time": "23:00:00",
+      "external_id": "yuzin:c10ab7211729f050",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-23",
+      "time": "23:30:00",
+      "external_id": "yuzin:5f40d38e0ae47b72",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "viernes de juegos de mesa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-24",
+      "time": "17:00:00",
+      "external_id": "yuzin:5e25a13d78285da1",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam jerónimo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-24",
+      "time": "18:00:00",
+      "external_id": "yuzin:53e835ac9adba861",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "algarve jazz collective",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-24",
+      "time": "21:30:00",
+      "external_id": "yuzin:494e47f5ce8f66bc",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "intercambio de idiomas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-24",
+      "time": "22:00:00",
+      "external_id": "yuzin:5e294e00b819e154",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "sábados de rol",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Asociación El Dirigible",
+      "date": "2026-04-25",
+      "time": "17:00:00",
+      "external_id": "yuzin:6fa50315593bdd53",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam de max",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Griot Small Paradise",
+      "date": "2026-04-25",
+      "time": "18:30:00",
+      "external_id": "yuzin:83e1756fa9c86afe",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "noche de djs",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-25",
+      "time": "20:00:00",
+      "external_id": "yuzin:8453c6b4c745c58a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "tetrad quartet",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-25",
+      "time": "21:30:00",
+      "external_id": "yuzin:497383ce11fb2e56",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session assejazz",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-26",
+      "time": "13:30:00",
+      "external_id": "yuzin:0f37d2f0af86b1dd",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "chustinatra & amigos",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-26",
+      "time": "18:00:00",
+      "external_id": "yuzin:882bfd9794618748",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-26",
+      "time": "20:00:00",
+      "external_id": "yuzin:66db82a9bbd82483",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-26",
+      "time": "22:00:00",
+      "external_id": "yuzin:2c0aaeda00dd8df7",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "open mic mutante",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-27",
+      "time": "20:00:00",
+      "external_id": "yuzin:245607bf321081d5",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-27",
+      "time": "22:00:00",
+      "external_id": "yuzin:a763123ab3ae3721",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "trivialaso",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-28",
+      "time": "20:00:00",
+      "external_id": "yuzin:f79d02e581171a83",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "daniel mata",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Piazza di pezzi",
+      "date": "2026-04-28",
+      "time": "21:00:00",
+      "external_id": "yuzin:d7fa04d99b41ddd7",
+      "lat": 37.3925354,
+      "lng": -5.9912382
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "martes flamencos la guapetona",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-28",
+      "time": "21:00:00",
+      "external_id": "yuzin:912d9b6fd6d7a8de",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "Íntima flamenco",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "CasaLa Teatro",
+      "date": "2026-04-29",
+      "time": "18:00:00",
+      "external_id": "yuzin:bbd99f541fec351a",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "lucrezia, portraits de femme",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Espacio Turina",
+      "date": "2026-04-29",
+      "time": "20:00:00",
+      "external_id": "yuzin:6d1de65e1ce0847f",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la juntiña",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-29",
+      "time": "20:30:00",
+      "external_id": "yuzin:31614245896839a4",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto tregua",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-29",
+      "time": "21:00:00",
+      "external_id": "yuzin:6e8f4257dbb7248d",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "micro abierto",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-29",
+      "time": "22:00:00",
+      "external_id": "yuzin:5d27a51fc0bfdff3",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "primavera en verso 2026",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Literatura. Ciudad: Sevilla",
+      "place_name": "Casala Teatro",
+      "date": "2026-04-30",
+      "time": "12:00:00",
+      "external_id": "yuzin:a5c3d9a5e5fe3d96",
+      "lat": 37.3856022,
+      "lng": -6.0037948
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "clases de tango",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Formación. Ciudad: Sevilla",
+      "place_name": "Espacio ZM y Corralón del Pelícano",
+      "date": "2026-04-30",
+      "time": "12:00:00",
+      "external_id": "yuzin:c3e90fd338c08650",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "inmunología",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Charlas, Conferencias y Encuentros. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-30",
+      "time": "19:30:00",
+      "external_id": "yuzin:720298d3c34f0da1",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la grulla de manchuria",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-04-30",
+      "time": "20:30:00",
+      "external_id": "yuzin:38fdaca5e88df0fd",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "vieja tortuga + rojim",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Sala Long Rock",
+      "date": "2026-04-30",
+      "time": "20:30:00",
+      "external_id": "yuzin:1de31343192f801d",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "flexibles por naturaleza",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-30",
+      "time": "20:30:00",
+      "external_id": "yuzin:fb413b655d0b61d0",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la jam del brum",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Brum Drink House",
+      "date": "2026-04-30",
+      "time": "21:00:00",
+      "external_id": "yuzin:705cd457349e5b3a",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jota p & grupo",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Assejazz",
+      "date": "2026-04-30",
+      "time": "21:00:00",
+      "external_id": "yuzin:c9dd0ed89dee1dbb",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jam session",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-30",
+      "time": "21:00:00",
+      "external_id": "yuzin:1fb26e9ac7f1cf0a",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "a tope de risas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Humor. Ciudad: Sevilla",
+      "place_name": "Sala Cuatrogatos",
+      "date": "2026-04-30",
+      "time": "21:00:00",
+      "external_id": "yuzin:925f1cf0a81adfd8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "raquel power y maestro arregui",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Selvático",
+      "date": "2026-04-30",
+      "time": "21:30:00",
+      "external_id": "yuzin:14027f09dc314ef8",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "marcos peñalosa",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "La Tregua",
+      "date": "2026-04-30",
+      "time": "22:30:00",
+      "external_id": "yuzin:a26f291b4e10b4fd",
+      "lat": 37.3802843,
+      "lng": -6.0059
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "jueves de reinas",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Bar Mutante",
+      "date": "2026-04-30",
+      "time": "23:00:00",
+      "external_id": "yuzin:d513a626ba2eff3e",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "karaoke",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "La Sra. Pop",
+      "date": "2026-04-30",
+      "time": "23:30:00",
+      "external_id": "yuzin:57f6f8c29ed58c07",
+      "lat": 37.396975,
+      "lng": -5.9935372
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la grulla de manchuria",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-05-01",
+      "time": "20:30:00",
+      "external_id": "yuzin:e6b99c1d852ae0ed",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "la grulla de manchuria",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Artes Escénicas. Ciudad: Sevilla",
+      "place_name": "La Fundición",
+      "date": "2026-05-07",
+      "time": "20:30:00",
+      "external_id": "yuzin:74d46370e291226b",
+      "lat": 37.030919,
+      "lng": -5.5719336
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "taller de barro y vino",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Experiencias. Ciudad: Sevilla",
+      "place_name": "Espacio Furia",
+      "date": "2026-05-15",
+      "time": "18:00:00",
+      "external_id": "yuzin:43c0b074be5ac5a2",
+      "lat": 37.3891,
+      "lng": -5.9845
+    },
+    {
+      "calendar_key": "yuzin-2026",
+      "title": "alis + la buena nueva",
+      "description": "Importado desde Yuzin Sevilla. Tipo: Música. Ciudad: Sevilla",
+      "place_name": "Fun Club",
+      "date": "2026-05-30",
+      "time": "21:00:00",
+      "external_id": "yuzin:76d96c0e7beb4d7c",
+      "lat": 37.3978192,
+      "lng": -5.9933726
+    }
+  ]
+}

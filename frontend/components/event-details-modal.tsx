@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { eventDetailsModalStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 const TEXT = "#10464D";
 
@@ -48,9 +49,10 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
   const dateStr = formatDate(event?.date);
   const timeStr = formatTime(event?.time);
-  const when = `${dateStr}${timeStr ? ` Â· ${timeStr}` : ""}`;
+  const when = `${dateStr}${timeStr ? ` · ${timeStr}` : ""}`;
 
   const distanceKm = formatDistanceKm(event?.distance_km);
+  const hasPhoto = typeof event?.photo === "string" && event.photo.trim().length > 0;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -61,15 +63,21 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
             <Ionicons name="close" size={18} color={TEXT} />
           </Pressable>
 
-          {event.photo ? (
-            <View style={eventDetailsModalStyles.coverWrap}>
+          <View style={eventDetailsModalStyles.coverWrap}>
+            {hasPhoto ? (
               <Image
-                source={{ uri: event.photo }}
+                source={{ uri: event.photo.trim() }}
                 style={eventDetailsModalStyles.cover}
                 resizeMode="cover"
               />
-            </View>
-          ) : null}
+            ) : (
+              <DefaultCalendarCover
+                style={eventDetailsModalStyles.cover}
+                label="Event"
+                iconSize={52}
+              />
+            )}
+          </View>
 
           <View style={eventDetailsModalStyles.content}>
             {!!title && <Text style={eventDetailsModalStyles.title}>{title}</Text>}
@@ -90,7 +98,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
             {!!distanceKm && (
               <View style={eventDetailsModalStyles.rowSub}>
-                <Text style={eventDetailsModalStyles.subText}>A {distanceKm} de ti</Text>
+                <Text style={eventDetailsModalStyles.subText}>{distanceKm} away</Text>
               </View>
             )}
 
@@ -103,7 +111,7 @@ export default function EventDetailsModal({ visible, onClose, event }: Props) {
 
             {!!description && (
               <View style={eventDetailsModalStyles.descWrap}>
-                <Text style={eventDetailsModalStyles.descTitle}>DescripciÃ³n</Text>
+                <Text style={eventDetailsModalStyles.descTitle}>Description</Text>
                 <Text style={eventDetailsModalStyles.descText}>{description}</Text>
               </View>
             )}

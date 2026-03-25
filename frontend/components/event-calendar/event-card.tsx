@@ -6,8 +6,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import type { Event } from "@/app/(tabs)/switch-events";
 import { eventCalendarEventCardStyles } from "@/styles/calendar-styles";
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 
 interface Props {
   event: Event;
@@ -24,6 +26,7 @@ export default function EventCard({
   onComment,
   onSave,
 }: Props) {
+  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const MAX_IMAGE_WIDTH = 220;
@@ -36,6 +39,8 @@ export default function EventCard({
   );
 
   const imageHeight = imageWidth * 0.7;
+  const hasEventImage =
+    typeof event.image === "string" && event.image.trim().length > 0;
 
   return (
     <View style={eventCalendarEventCardStyles.card}>
@@ -58,7 +63,18 @@ export default function EventCard({
             { width: imageWidth, height: imageHeight },
           ]}
         >
-          <Image source={{ uri: event.image }} style={eventCalendarEventCardStyles.image} />
+          {hasEventImage ? (
+            <Image
+              source={{ uri: event.image.trim() }}
+              style={eventCalendarEventCardStyles.image}
+            />
+          ) : (
+            <DefaultCalendarCover
+              style={eventCalendarEventCardStyles.image}
+              label="Evento"
+              iconSize={24}
+            />
+          )}
         </View>
 
         <View style={eventCalendarEventCardStyles.content}>
@@ -108,6 +124,13 @@ export default function EventCard({
           <Ionicons name="bookmark-outline" size={18} />
           {!isSmallScreen && (
             <Text style={eventCalendarEventCardStyles.actionText}>Save</Text>
+          )}
+        </Pressable>
+
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => router.push(`/chat/${event.id}` as any)}>
+          <Ionicons name="chatbubbles-outline" size={18} />
+          {!isSmallScreen && (
+            <Text style={eventCalendarEventCardStyles.actionText}>Chat</Text>
           )}
         </Pressable>
       </View>

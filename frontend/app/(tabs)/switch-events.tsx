@@ -1,14 +1,17 @@
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType } from "react-native";
+import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
-import EventFeedModal from "@/components/event-feed-modal";
+import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
+import InvitationsModal from "@/components/InvitationsModal";
+import { Ionicons } from "@expo/vector-icons";
+import apiClient from "@/services/api-client";
 
 export interface Event {
   id: string;
@@ -35,15 +38,20 @@ export default function EventsScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
 
+  
+
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
   const { events: backendEvents, loading: loadingEvents, error: eventsError, refetch } = useEventsList();
 
   // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [invitationsVisible, setInvitationsVisible] = useState(false);
 
   // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
@@ -53,59 +61,93 @@ export default function EventsScreen() {
     return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
   };
 
+  useEffect(() => {
+    const fetchSubscribedCalendars = async () => {
+      if (!hasSession) {
+        setSubscribedCalendarIds([]);
+        return;
+      }
+
+      try {
+        const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
+        const dataArray = Array.isArray(subscribedData)
+          ? subscribedData
+          : (subscribedData as any)?.data || [];
+
+        setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
+      } catch (error) {
+        console.error("Error fetching subscribed calendars for events feed:", error);
+        setSubscribedCalendarIds([]);
+      }
+    };
+
+    void fetchSubscribedCalendars();
+  }, [hasSession]);
+
   // Mapeo y transformación de datos
   useEffect(() => {
-    if (backendCalendars.length > 0 || backendEvents.length > 0) {
-      const calendarMap: Record<number, any> = {};
-      backendCalendars.forEach((c: any) => {
-        calendarMap[Number(c.id)] = c;
-      });
+    if (authLoading) return;
 
-      const mappedEvents: Event[] = backendEvents.map((e: any, index: number) => {
-        const calId = Array.isArray(e.calendars) ? e.calendars[0] : e.calendars;
-        const cal = calendarMap[Number(calId)];
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [calData, evData] = await Promise.all([
+          apiClient.get<any[]>("/recommendations/calendars/"),
+          apiClient.get<any[]>("/recommendations/events/"),
+        ]);
 
-        return {
-          id: String(e.id),
-          title: e.title || e.titulo || "",
-          description: e.description || e.descripcion || "",
-          location: e.place_name || e.nombre_lugar || "",
-          date: e.date || e.fecha || "",
-          time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
-          image: resolveImageUrl(e.photo || e.foto),
-          username: e.creator_username || cal?.creator_username || "unknown",
-          userAvatar: (e.creator_photo && e.creator_photo.trim() !== "")
-            ? e.creator_photo
-            : (cal?.creator_photo && cal.creator_photo.trim() !== ""
-              ? cal.creator_photo
-              : require("../../assets/images/default-user.jpg")),
-          calendarId: String(calId || ""),
-          calendarName: cal?.name || "General",
-          // Temporary mock attendees for frontend testing.
-          // Backend should replace this with real attendees data per event.
-          attendees: index % 2 === 0
-            ? [
-              {
-                id: "1",
-                name: "Rocío",
-                respondedAt: "2026-03-17T18:42:00Z",
-                avatar: "https://i.pravatar.cc/100?u=rocio",
-              },
-              {
-                id: "2",
-                name: "Lucía",
-                respondedAt: "2026-03-17T19:05:00Z",
-                avatar: "https://i.pravatar.cc/100?u=lucia",
-              },
-            ]
-            : [],
-        };
-      }).filter((evt: Event) => evt.id && evt.title);
+        // Map calendars for easy lookup
+        const calendarMap: Record<number, any> = {};
+        calData.forEach((c: any) => {
+          calendarMap[Number(c.id)] = c;
+        });
+
+        const mappedEvents: Event[] = evData.map((e: any, index: number) => {
+          const cal = calendarMap[e.calendars[0]];
+          return {
+            id: String(e.id),
+            title: e.title || e.titulo || "",
+            description: e.description || e.descripcion || "",
+            location: e.place_name || e.nombre_lugar || "",
+            date: e.date || e.fecha || "",
+            time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+            image: resolveImageUrl(e.photo || e.foto),
+            username: e.creator_username || cal?.creator || "unknown",
+            userAvatar: e.creator_photo || null,
+            calendarId: String(e.calendars[0] || ""),
+            calendarName: cal?.name || "General",
+            // Temporary mock attendees for frontend testing.
+            // Backend should replace this with real attendees data per event.
+            attendees: index % 2 === 0
+              ? [
+                {
+                  id: "1",
+                  name: "Rocío",
+                  respondedAt: "2026-03-17T18:42:00Z",
+                  avatar: "https://i.pravatar.cc/100?u=rocio",
+                },
+                {
+                  id: "2",
+                  name: "Lucía",
+                  respondedAt: "2026-03-17T19:05:00Z",
+                  avatar: "https://i.pravatar.cc/100?u=lucia",
+                },
+              ]
+              : [],
+          };
+        }).filter((evt: Event) => evt.id && evt.title);
 
       setEvents(mappedEvents);
-    }
-  }, [backendCalendars, backendEvents]);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        Alert.alert("Error", "Could not load events.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    void fetchData();
+  }, [authLoading]);
   // Manejo de errores
   const errorMessage = calendarsError || eventsError;
 
@@ -171,6 +213,13 @@ export default function EventsScreen() {
             </TouchableOpacity>
           </View>
         )}
+        {hasSession && (
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => setInvitationsVisible(true)} style={styles.notificationBtn}>
+              <Ionicons name="notifications-outline" size={24} color="#10464d" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <EventsSwitch />
 
@@ -192,7 +241,14 @@ export default function EventsScreen() {
               onSave={(id) => console.log("Save:", id)}
             />
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No events to display.</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyStateWrap}>
+              <Text style={styles.emptyText}>No recommended events right now.</Text>
+              <Text style={styles.emptySubtext}>
+                There are no events from calendars you do not own or follow that you can currently access.
+              </Text>
+            </View>
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -200,13 +256,17 @@ export default function EventsScreen() {
         <EventFeedModal
           visible={modalVisible}
           onClose={handleCloseModal}
-          event={selectedEvent}
+          event={selectedEvent as FeedEvent}
         />
         <CommentsModal
-        visible={commentsModalVisible}
-        onClose={() => setCommentsModalVisible(false)}
-        event={selectedEvent}
-      />
+          visible={commentsModalVisible}
+          onClose={() => setCommentsModalVisible(false)}
+          event={selectedEvent}
+        />
+        <InvitationsModal
+          visible={invitationsVisible}
+          onClose={() => setInvitationsVisible(false)}
+        />
       </View>
     </View>
   );
@@ -308,6 +368,30 @@ export const styles = StyleSheet.create({
 
   },
 
+  emptyStateWrap: {
+
+    marginTop: 40,
+
+    paddingHorizontal: 10,
+
+  },
+
+  emptySubtext: {
+
+    marginTop: 6,
+
+    textAlign: "center",
+
+    color: "#4f6f74",
+
+    opacity: 0.9,
+
+    lineHeight: 20,
+
+    fontSize: 13,
+
+  },
+
 
 
   authHeader: {
@@ -372,6 +456,20 @@ export const styles = StyleSheet.create({
 
     fontSize: 16,
 
+  },
+
+  userHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  notificationBtn: {
+    padding: 8,
+    backgroundColor: "#EAF7F6",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
   },
 
 });
