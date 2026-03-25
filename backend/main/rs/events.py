@@ -1,5 +1,5 @@
 import shelve
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 from main.models import User, Calendar, Event
 from main.rs.utils import tokenize, compute_item_similarities
@@ -116,6 +116,12 @@ def recommend_events(user: User, limit=30):
         Event.objects
         .filter(id__in=sorted_ids)
         .filter(date__gte=timezone.now().date())
+        .filter(
+            Q(calendars__privacy='PUBLIC') |
+            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends_ids) |
+            Q(calendars__creator=user)
+        )
+        .distinct()
         .prefetch_related('calendars__labels')
         .select_related('creator')
     )
@@ -125,7 +131,6 @@ def recommend_events(user: User, limit=30):
     if len(final_events) < limit:
         ids_to_exclude = already_seen_event_ids | set(recommended_ids.keys())
         needed = limit - len(final_events)
-        friends_ids = user.following.values_list('id', flat=True)
         popular = (
             Event.objects
             .exclude(id__in=ids_to_exclude)
