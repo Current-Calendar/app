@@ -23,6 +23,9 @@ export interface Event {
   userAvatar: string | ImageSourcePropType;
   calendarId: string;
   calendarName: string;
+  likes_count: number;
+  liked_by_me: boolean;
+  saved_by_me: boolean;
   attendees?: {
     id: string;
     name: string;
@@ -113,6 +116,9 @@ export default function EventsScreen() {
             userAvatar: e.creator_photo || null,
             calendarId: String(e.calendars[0] || ""),
             calendarName: cal?.name || "General",
+            likes_count: e.likes_count ?? 0,
+            liked_by_me: e.liked_by_me ?? false,
+            saved_by_me: e.saved_by_me ?? false,
             attendees: Array.isArray(e.attendees)
               ? e.attendees.map((a: any) => ({
                   name: a.username || a.name || "",
@@ -138,6 +144,36 @@ export default function EventsScreen() {
   const errorMessage = calendarsError || eventsError;
 
   // Handlers de UI
+  const handleSave = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ saved: boolean }>(`/events/${id}/save/`);
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, saved_by_me: res.saved } : e
+        )
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not save this event.");
+      console.error("Save error:", error);
+    }
+  };
+
+  const handleLike = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(`/events/${id}/like/`);
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === id
+            ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count }
+            : e
+        )
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not like this event.");
+      console.error("Like error:", error);
+    }
+  };
+
   const handleOpenEvent = (id: string) => {
     const found = events.find((e) => e.id === id);
     if (found) {
@@ -209,15 +245,15 @@ export default function EventsScreen() {
             <EventCard
               event={item}
               onOpen={handleOpenEvent}
-              onLike={(id) => console.log("Like:", id)}
+              onLike={handleLike}
+              onSave={handleSave}
               onComment={(id) => {
-              const found = events.find((e) => e.id === id);
-              if (found) {
-                setSelectedEvent(found);
-                setCommentsModalVisible(true);
-              }
-            }}
-              onSave={(id) => console.log("Save:", id)}
+                const found = events.find((e) => e.id === id);
+                if (found) {
+                  setSelectedEvent(found);
+                  setCommentsModalVisible(true);
+                }
+              }}
             />
           )}
           ListEmptyComponent={

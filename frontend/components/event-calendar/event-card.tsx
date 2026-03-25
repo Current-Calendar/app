@@ -15,16 +15,16 @@ interface Props {
   event: Event;
   onOpen: (id: string) => void;
   onLike: (id: string) => void;
-  onComment: (id: string) => void;
   onSave: (id: string) => void;
+  onComment: (id: string) => void;
 }
 
 export default function EventCard({
   event,
   onOpen,
   onLike,
-  onComment,
   onSave,
+  onComment,
 }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -107,9 +107,11 @@ export default function EventCard({
 
       <View style={eventCalendarEventCardStyles.actions}>
         <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onLike(event.id)}>
-          <Ionicons name="heart-outline" size={18} />
+          <Ionicons name={event.liked_by_me ? "heart" : "heart-outline"} size={18} />
           {!isSmallScreen && (
-            <Text style={eventCalendarEventCardStyles.actionText}>Like</Text>
+            <Text style={eventCalendarEventCardStyles.actionText}>
+              {event.likes_count > 0 ? event.likes_count : "Like"}
+            </Text>
           )}
         </Pressable>
 
@@ -121,7 +123,7 @@ export default function EventCard({
         </Pressable>
 
         <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onSave(event.id)}>
-          <Ionicons name="bookmark-outline" size={18} />
+          <Ionicons name={event.saved_by_me ? "bookmark" : "bookmark-outline"} size={18} />
           {!isSmallScreen && (
             <Text style={eventCalendarEventCardStyles.actionText}>Save</Text>
           )}
