@@ -1,4 +1,5 @@
 .env
+!backend/main/tests/load/.env
 venv/
 
 *.pyc

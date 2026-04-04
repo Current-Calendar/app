@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 from datetime import date, time
 from django.db import connection
-from main.models import User, Calendar, Event, MockElement
+from main.models import User, Calendar, Event, Comment, MockElement
 
 class Command(BaseCommand):
     help = 'Generates initial test data for the Current application (PostgreSQL)'
@@ -163,6 +163,13 @@ class Command(BaseCommand):
         MockElement.objects.create(
             name="Madrid Test Point",
             geo_point=Point(-3.7038, 40.4168, srid=4326)
+        )
+
+        self.stdout.write('Creating test comments...')
+        Comment.objects.create(
+            author=user2,
+            body='Looking forward to this event!',
+            event=event_tech
         )
 
         self.stdout.write(self.style.SUCCESS('Test data generated successfully! PostgreSQL sequences reset.'))
