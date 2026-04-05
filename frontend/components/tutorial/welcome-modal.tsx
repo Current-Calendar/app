@@ -24,7 +24,6 @@ export function WelcomeModal() {
     <Modal visible={showWelcome} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={[styles.card, { width: cardWidth }]}>
-          {/* Decorative bubbles */}
           <View style={styles.bubbles} pointerEvents="none">
             <View style={[styles.bubble, { top: 10, left: 14, width: 10, height: 10 }]} />
             <View style={[styles.bubble, { top: 22, left: 28, width: 6, height: 6 }]} />
@@ -32,7 +31,6 @@ export function WelcomeModal() {
             <View style={[styles.bubble, { top: 26, right: 30, width: 5, height: 5 }]} />
           </View>
 
-          {/* Icon */}
           <View style={styles.iconWrap}>
             <Ionicons name="calendar" size={32} color="#ffffff" />
           </View>

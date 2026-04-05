@@ -22,9 +22,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     key: "switch-calendar",
     route: "/(tabs)/switch-calendar",
     icon: "calendar",
-    title: "Switch Calendar",
+    title: "Calendars and Events",
     description:
-      "Use this to filter your view. See everything at once, or focus on a specific calendar you follow.",
+      "Here you can see different calendars to follow and recommended events.",
   },
   {
     key: "search",
@@ -45,7 +45,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     key: "create",
     icon: "add-circle",
-    route: "",
+    route: "/(tabs)/calendars",
     spotlight: true,
     title: "Create",
     description:
