@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,46 +8,20 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTutorial, ButtonLayout } from "@/context/tutorial-context";
+import { useTutorial } from "@/context/tutorial-context";
 
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 const BOTTOM_BAR_HEIGHT = 64;
-const SPOTLIGHT_PADDING = 14; // extra glow around the button
 
 export function TutorialOverlay() {
-  const { isActive, currentStep, steps, nextStep, prevStep, endTutorial, createButtonLayout } =
-    useTutorial();
-  const { width, height } = useWindowDimensions();
+  const { isActive, currentStep, steps, nextStep, prevStep, endTutorial } = useTutorial();
+  const { width } = useWindowDimensions();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
-
-  // We need state (not just ref) to trigger a re-render once the button position is known
-  const [btnLayout, setBtnLayout] = useState<ButtonLayout | null>(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-
-    const step = steps[currentStep];
-
-    // On the spotlight step, poll the ref until the layout is available
-    if (step.spotlight) {
-      let attempts = 0;
-      const interval = setInterval(() => {
-        if (createButtonLayout.current) {
-          setBtnLayout({ ...createButtonLayout.current });
-          clearInterval(interval);
-        }
-        if (++attempts > 20) clearInterval(interval); // give up after ~1s
-      }, 50);
-      return () => clearInterval(interval);
-    } else {
-      setBtnLayout(null);
-    }
-  }, [isActive, currentStep]);
 
   useEffect(() => {
     if (isActive) {
@@ -69,68 +43,14 @@ export function TutorialOverlay() {
   const isFirst = currentStep === 0;
   const isLast = currentStep === steps.length - 1;
   const cardWidth = Math.min(width - 32, 420);
-  const showSpotlight = step.spotlight && btnLayout;
-
-  // Spotlight cutout geometry (with padding)
-  const sp = showSpotlight
-    ? {
-        x: btnLayout!.x - SPOTLIGHT_PADDING,
-        y: btnLayout!.y - SPOTLIGHT_PADDING,
-        w: btnLayout!.width + SPOTLIGHT_PADDING * 2,
-        h: btnLayout!.height + SPOTLIGHT_PADDING * 2,
-      }
-    : null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* ── Spotlight backdrop: four dark rects around the button ── */}
-      {showSpotlight && sp && (
+      <View style={styles.container} pointerEvents="box-none">
         <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}
-          pointerEvents="none"
-        >
-          {/* top */}
-          <View style={[styles.darkRect, { top: 0, left: 0, right: 0, height: sp.y }]} />
-          {/* bottom */}
-          <View style={[styles.darkRect, { top: sp.y + sp.h, left: 0, right: 0, bottom: 0 }]} />
-          {/* left */}
-          <View style={[styles.darkRect, { top: sp.y, left: 0, width: sp.x, height: sp.h }]} />
-          {/* right */}
-          <View
-            style={[
-              styles.darkRect,
-              { top: sp.y, left: sp.x + sp.w, right: 0, height: sp.h },
-            ]}
-          />
-          {/* glowing border around the button */}
-          <View
-            style={[
-              styles.spotlightBorder,
-              {
-                left: sp.x,
-                top: sp.y,
-                width: sp.w,
-                height: sp.h,
-                borderRadius: sp.w / 2,
-              },
-            ]}
-          />
-        </Animated.View>
-      )}
-
-      {/* ── Tooltip card ── */}
-      <View
-        style={[styles.container, showSpotlight && { bottom: BOTTOM_BAR_HEIGHT + sp!.h + 16 }]}
-        pointerEvents="box-none"
-      >
-        <Animated.View
-          style={[
-            styles.card,
-            { width: cardWidth, opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
+          style={[styles.card, { width: cardWidth, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
           pointerEvents="box-none"
         >
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconWrap}>
               <Ionicons name={step.icon as any} size={18} color="#ffffff" />
@@ -145,7 +65,6 @@ export function TutorialOverlay() {
             </Pressable>
           </View>
 
-          {/* Dots */}
           <View style={styles.dots}>
             {steps.map((_, i) => (
               <View key={i} style={[styles.dot, i === currentStep && styles.dotActive]} />
@@ -155,7 +74,6 @@ export function TutorialOverlay() {
           <Text style={styles.title}>{step.title}</Text>
           <Text style={styles.description}>{step.description}</Text>
 
-          {/* Buttons */}
           <View style={styles.buttons}>
             <Pressable
               onPress={prevStep}
@@ -185,20 +103,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     zIndex: 999,
-  },
-  darkRect: {
-    position: "absolute",
-    backgroundColor: "rgba(10, 40, 40, 0.78)",
-  },
-  spotlightBorder: {
-    position: "absolute",
-    borderWidth: 2.5,
-    borderColor: "rgba(242, 163, 166, 0.9)", // PINK glow
-    shadowColor: "#F2A3A6",
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
   },
   card: {
     backgroundColor: "#ffffff",
