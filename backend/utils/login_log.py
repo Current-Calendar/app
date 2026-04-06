@@ -13,6 +13,6 @@ def log_user_login(request,user):
     ip_address = get_client_ip(request)
 
     LoginLog.objects.create(
-        user=request.user,
+        user=user,
         ip_address=ip_address or "0.0.0.0",
     )

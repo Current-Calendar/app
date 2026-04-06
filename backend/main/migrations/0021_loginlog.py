@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0019_remove_calendar_unique_private_calendar_per_user'),
+        ('main', '0020_user_plan'),
     ]
 
     operations = [

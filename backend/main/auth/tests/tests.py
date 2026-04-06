@@ -2,14 +2,13 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.urls import reverse
 from django.contrib.auth.hashers import check_password
-from main.models import User
+from main.models import User,LoginLog
 from django.conf import settings
 from datetime import datetime, timedelta
 import jwt
 from unittest.mock import patch, MagicMock
 from django.core.cache import cache
 from django.test import TestCase
-
 
 def _make_token(email, expired=False, no_email=False):
     """Helper to build a JWT for tests without hitting the real endpoint."""
@@ -628,3 +627,93 @@ class GoogleOAuthEndpointsTests(APITestCase):
         self.assertIn("/calendars", response["Location"])
         saved = self.client.session.get("google_credentials")
         self.assertEqual(saved["token"], "oauth-access-token")
+class LoginLogTests(APITestCase):
+    
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="test_user",
+            password="123",
+            email="test@test.com"
+        )
+        self.admin_user=User.objects.create_superuser(
+            username="admin_user",
+            password="123",
+            email="admin@test.com"
+        )
+    def test_login_log(self):
+        self.client.post("/api/v1/token/",data={
+            "username":"test_user",
+            "password":"123"},
+            remote_addr="127.0.0.1")
+        logs=LoginLog.objects.filter(user=self.user)
+        self.assertEqual(logs.count(), 1)
+        self.assertEqual(logs[0].user, self.user)
+        self.assertEqual(logs[0].ip_address, "127.0.0.1")
+    def test_login_log_admin(self):
+        self.client.post(
+            "/admin/login/",
+            data={
+                "username": "admin_user",
+                "password": "123",
+                "next": "/admin/" # Django admin suele requerir este campo
+            },
+            REMOTE_ADDR="127.0.0.1"
+        )
+        logs=LoginLog.objects.filter(user=self.admin_user)
+        self.assertEqual(logs.count(), 1)
+        self.assertEqual(logs[0].user, self.admin_user)
+        self.assertEqual(logs[0].ip_address, "127.0.0.1")
+    def test_failed_login_create_no_log(self):
+        self.client.post("/api/v1/token",data={
+            "username":"test_user",
+            "password":"incorrect_password"})
+        logs=LoginLog.objects.filter(user=self.user)
+        self.assertEqual(logs.count(), 0)
+    def test_failed_admin_login_create_no_log(self):
+        self.client.login(username="admin_user", password="incorrect_password")
+        logs=LoginLog.objects.filter(user=self.admin_user)
+        self.assertEqual(logs.count(), 0)
+
+class LoginLogAdminTests(TestCase):
+    def setUp(self):
+        self.client.defaults["REMOTE_ADDR"] = "127.0.0.1"
+        self.admin_user = User.objects.create_superuser(
+            username="admin_user",
+            password="123",
+            email="admin@test.com",
+        )
+        self.normal_user = User.objects.create_user(
+            username="test_user",
+            password="123",
+            email="test@test.com",
+        )
+
+        self.log = LoginLog.objects.create(
+            user=self.normal_user,
+            ip_address="127.0.0.1",
+        )
+
+        self.client.force_login(self.admin_user)
+
+    def test_admin_changelist_get_works(self):
+        url = reverse("admin:main_loginlog_changelist")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "127.0.0.1")
+        self.assertContains(response, "test_user")
+
+    def test_admin_add_is_blocked(self):
+        url = reverse("admin:main_loginlog_add")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(LoginLog.objects.count(), 2)
+
+    def test_admin_delete_is_blocked(self):
+        url = reverse("admin:main_loginlog_delete", args=[self.log.pk])
+        response = self.client.post(url, {"post": "yes"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(LoginLog.objects.filter(pk=self.log.pk).exists())
+        self.assertEqual(LoginLog.objects.count(), 2)
