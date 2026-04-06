@@ -129,6 +129,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'bio',
             'photo',
             'link',
+            'plan',
             'total_followers',
             'total_following',
             'is_following',
@@ -155,16 +156,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'pronouns',
             'bio',
             'photo',
+            'plan',
             'total_followers',
             'total_following',
             'subscribed_calendars',
+            'plan',
         )
         read_only_fields = ('id', 'date_joined')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
-        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
+        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars','plan']
 
 
 class EditProfileSerializer(serializers.ModelSerializer):
@@ -221,6 +224,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "bio",
             "link",
             "photo",
+            "plan",
             "total_followers",
             "total_following",
             "calendars",

@@ -14,10 +14,16 @@ def calendar_cover_path(instance, filename):
     return f'calendar_covers/{uuid.uuid4()}{ext}'
 
 class User(AbstractUser):
+    PLAN_CHOICES = [
+        ('FREE', 'Free'),
+        ('STANDARD', 'Standard'),
+        ('BUSINESS', 'Business'),
+    ]
     email = models.EmailField(unique=True)
     pronouns = models.CharField(max_length=150, blank=True)
     bio = models.TextField(blank=True)
     link = models.URLField(blank=True)
+    plan = models.CharField(max_length=20, default='FREE', choices=PLAN_CHOICES)
     photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
     following = models.ManyToManyField('self', symmetrical=False, related_name='followers_set', blank=True)
     subscribed_calendars = models.ManyToManyField('Calendar', related_name='subscribers', blank=True)

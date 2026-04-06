@@ -49,6 +49,7 @@ type OwnProfileResponse = {
   bio?: string | null;
   link?: string | null;
   photo?: string | null;
+  plan: string;
   total_followers: number;
   total_following: number;
   calendars: OwnProfileCalendarResponse[];
@@ -68,6 +69,7 @@ const mapUserFromApi = (payload: OwnProfileResponse): User => ({
   bio: payload.bio ?? undefined,
   pronouns: payload.pronouns ?? undefined,
   photo: payload.photo ?? undefined,
+  plan: payload.plan,
 });
 
 const mapCalendarsFromApi = (items: OwnProfileCalendarResponse[]): CalendarData[] =>
@@ -322,7 +324,18 @@ const OwnProfile = () => {
         <View style={profileStyles.profileSection}>
           <ProfileAvatar uri={shownUser.photo} />
 
-          <Text style={profileStyles.name}>{shownUser.username}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <Text style={profileStyles.name}>{shownUser.username}</Text>
+            {shownUser.plan === "STANDARD" ? (
+              <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
+                <Ionicons name="star" size={14} color="#fff" />
+              </View>
+            ) : shownUser.plan === "BUSINESS" ? (
+              <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
+                <Ionicons name="star" size={14} color="#fff" />
+              </View>
+            ) : null}
+          </View>
           {shownUser.pronouns ? (
             <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
           ) : null}
@@ -513,7 +526,19 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         <View style={profileStyles.profileSection}>
           <ProfileAvatar uri={userBeingViewed.photo} />
 
-          <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
+            {userBeingViewed.plan === "STANDARD" ? (
+              <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
+                <Ionicons name="star" size={14} color="#fff" />
+              </View>
+            ) : userBeingViewed.plan === "BUSINESS" ? (
+              <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
+                <Ionicons name="star" size={14} color="#fff" />
+              </View>
+            ) : null}
+
+          </View>
           {userBeingViewed.pronouns ? (
             <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
           ) : null}

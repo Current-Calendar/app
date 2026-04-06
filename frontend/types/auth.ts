@@ -5,6 +5,7 @@ export interface User {
   photo?: string;
   pronouns?: string;
   bio?: string;
+  plan: string;
 }
 
 export interface TokenResponse {
