@@ -10,6 +10,7 @@ from rest_framework.request import Request
 from rest_framework import status
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from main.entitlements import get_user_features
 from main.models import Calendar, Event, User, Notification, CalendarLike
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
@@ -662,7 +663,6 @@ def list_my_calendars(request):
 
     return Response(results, status=status.HTTP_200_OK)
 
-
 def _do_google_calendar_import(user, raw_credentials):
     """Lógica de importación de Google Calendar desacoplada de la request HTTP."""
     momento_actual = timezone.now().isoformat()
@@ -675,6 +675,13 @@ def _do_google_calendar_import(user, raw_credentials):
     service = build('calendar', 'v3', credentials=google_credentials)
 
     primary_id = service.calendarList().get(calendarId='primary').execute().get('id')
+
+    user_features = get_user_features(user)
+    private_calendar_count = Calendar.objects.filter(creator=user, privacy='PRIVATE').count()
+    max_private_calendars = user_features['max_private_calendars']
+
+    if private_calendar_count >= max_private_calendars:
+        return -1
 
     if Calendar.objects.filter(creator=user, origin='GOOGLE', external_id=primary_id).exists():
         return 0
@@ -719,6 +726,8 @@ def import_google_calendar(request):
 
     try:
         count = _do_google_calendar_import(request.user, raw_credentials)
+        if count == -1:
+            return Response({"error": "Has alcanzado el límite de calendars privados permitidos. Elimina alguno para importar este calendar."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
     except Exception as e:
         print(f"Error al importar eventos: {e}")
         return Response({"error": str(e)}, status=500, headers={"Access-Control-Allow-Origin": "*"})
@@ -727,7 +736,7 @@ def import_google_calendar(request):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanCreateCalendar])
 def iOS_calendar_import(request):
     """Endpoint para importar eventos desde iOS Calendar."""
 
@@ -827,7 +836,6 @@ def _is_safe_calendar_url(raw_url: str):
     if not host:
         return False, "URL sin host"
 
-    # Host allowlist check (suffix based to allow subdomains)
     if ALLOWED_WEBCAL_HOSTS and not any(host == allowed or host.endswith(f".{allowed}") for allowed in ALLOWED_WEBCAL_HOSTS):
         return False, "Host no permitido"
 
@@ -845,7 +853,7 @@ def _is_safe_calendar_url(raw_url: str):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanCreateCalendar])
 def ics_import(request):
     """Endpoint para importar eventos desde un archivo ICS subido por el user."""
     if 'file' not in request.FILES:

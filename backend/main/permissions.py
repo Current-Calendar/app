@@ -40,8 +40,13 @@ class CanChangePrivacy(permissions.BasePermission):
 
         if request.method not in ['PUT', 'PATCH']:
             return True
+        
+        original_calendar_privacy = Calendar.objects.filter(id=view.kwargs.get('calendar_id')).values_list('privacy', flat=True).first()
 
         new_privacy = request.data.get('privacy')
+        if new_privacy is None or new_privacy == original_calendar_privacy:
+            return True
+        
         if new_privacy not in ['PUBLIC', 'PRIVATE']:
             return True
 
