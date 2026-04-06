@@ -228,6 +228,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+    "TOKEN_OBTAIN_SERIALIZER": "main.serializers.CustomTokenObtainPairSerializer",
 }
 
 PASSWORD_HASHERS = [

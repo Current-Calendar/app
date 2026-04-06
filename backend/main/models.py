@@ -1,7 +1,7 @@
 import datetime
 import os
 import uuid
-
+from django.conf import settings
 from icalendar import Event as ICalEvent
 from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
@@ -342,3 +342,24 @@ class EventAttendance(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.event.title} ({self.status})"
+
+class LoginLog(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="login_logs",
+        verbose_name="Usuario",
+    )
+    ip_address = models.GenericIPAddressField(verbose_name="Dirección IP")
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha/Hora",
+    )
+
+    class Meta:
+        verbose_name = "Registro de inicio de sesión"
+        verbose_name_plural = "Registros de inicio de sesión"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} - {self.ip_address} - {self.created_at}"

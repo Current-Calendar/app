@@ -4,7 +4,9 @@ from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event, EventAttendance, EventLike, EventSave
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from utils.login_log import get_client_ip
+from main.models import LoginLog
 from .models import Calendar, Notification, Report, ChatMessage
 from utils.storage import get_signed_url
 
@@ -428,3 +430,14 @@ class EventAttendeeSerializer(serializers.ModelSerializer):
         if '+00:00' in iso_str:
             iso_str = iso_str.replace('+00:00', 'Z')
         return iso_str
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        request = self.context.get("request")
+        LoginLog.objects.create(
+            user=self.user,
+            ip_address=get_client_ip(request),
+        )
+
+        return data
