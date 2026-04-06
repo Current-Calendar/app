@@ -1,32 +1,50 @@
-import shelve
+import os
+import redis
+import json
 from django.db.models import Count, Q
 from django.utils import timezone
 from main.models import User, Calendar, Event
 from main.rs.utils import tokenize, compute_item_similarities
 
-SHELF_NAME = 'dataRS_events.dat'
+redis_client = redis.Redis(
+    host=os.getenv('REDIS_HOST', 'localhost'),
+    port=int(os.getenv('REDIS_PORT', 6379)),
+    password=os.getenv('REDIS_PASSWORD', None),
+    db=3,
+    socket_timeout=2
+)
+
 
 def load_events_similarities():
-    shelf = shelve.open(SHELF_NAME)
-
     print("Extrayendo características de los eventos...")
     events_features = get_all_events_features()
 
-    print("Calculando matriz de similitud...")
-    shelf['similarities'] = compute_item_similarities(events_features)
+    print("Calculando matriz de similitud de eventos...")
+    similarities = compute_item_similarities(events_features)
 
-    shelf.close()
-    print("Similitudes calculadas y guardadas")
+    print("Guardando matriz de eventos en Redis...")
+    try:
+        pipe = redis_client.pipeline()
+        pipe.delete('rs_events_similarities')  # ¡Clave única para eventos!
+        for event_id, sim_list in similarities.items():
+            pipe.hset('rs_events_similarities', str(event_id), json.dumps(sim_list))
+
+        pipe.execute()
+        print("Similitudes de EVENTOS calculadas y guardadas con éxito en Redis.")
+    except Exception as e:
+        print(f"Error guardando similitudes de eventos en Redis: {e}")
 
 
 def get_similar_events(event_id, top_n=5):
-    shelf = shelve.open(SHELF_NAME)
-    if 'similarities' not in shelf or event_id not in shelf['similarities']:
-        shelf.close()
-        return []
-    sim_ids_scores = shelf['similarities'][event_id]
-    shelf.close()
-    return sim_ids_scores[:top_n]
+    """Fallback por si se llama desde otra parte del código"""
+    try:
+        raw_data = redis_client.hget('rs_events_similarities', str(event_id))
+        if raw_data:
+            sim_ids_scores = json.loads(raw_data)
+            return sim_ids_scores[:top_n]
+    except Exception:
+        pass
+    return []
 
 
 def get_all_events_features():
@@ -80,38 +98,43 @@ def recommend_events(user: User, limit=30):
     """
 
     followed_calendars = user.subscribed_calendars.prefetch_related('events')
-    already_seen_event_ids = set(
+    already_seen_event_ids = list(
         Event.objects
-            .filter(calendars__in=followed_calendars)
-            .values_list('id', flat=True)
+        .filter(calendars__in=followed_calendars)
+        .values_list('id', flat=True)
     )
 
     recommended_ids = {}
 
-    for event_id in already_seen_event_ids:
-        similares = get_similar_events(event_id, top_n=5)
-        for sim_id, score in similares:
-            if sim_id not in already_seen_event_ids:
-                recommended_ids[sim_id] = recommended_ids.get(sim_id, 0) + score
+    if already_seen_event_ids:
+        try:
+            keys = [str(eid) for eid in already_seen_event_ids]
+            raw_data = redis_client.hmget('rs_events_similarities', keys)
 
+            for item in raw_data:
+                if item:
+                    similares = json.loads(item)
+                    for sim_id, score in similares[:5]:
+                        if sim_id not in already_seen_event_ids:
+                            recommended_ids[sim_id] = recommended_ids.get(sim_id, 0) + score
+        except Exception as e:
+            print(f"Error leyendo de Redis RS Eventos: {e}")
 
-    friends_ids = user.following.values_list('id', flat=True)
-    friends_calendars = (
-        Calendar.objects
-        .filter(subscribers__id__in=friends_ids)
-        .exclude(privacy='PRIVATE')
-        .distinct()
-    )
-    friends_events = (
-        Event.objects
-        .filter(calendars__in=friends_calendars)
-        .exclude(id__in=already_seen_event_ids)
-        .distinct()
-    )
-    for event in friends_events:
-        recommended_ids[event.id] = recommended_ids.get(event.id, 0) + 0.5
+    friends_ids = list(user.following.values_list('id', flat=True))
+    if friends_ids:
+        friends_events_ids = (
+            Event.objects
+            .filter(calendars__subscribers__id__in=friends_ids)
+            .filter(calendars__privacy='PUBLIC')
+            .exclude(id__in=already_seen_event_ids)
+            .values_list('id', flat=True)
+            .distinct()
+        )
+        for eid in friends_events_ids:
+            recommended_ids[eid] = recommended_ids.get(eid, 0) + 0.5
 
     sorted_ids = sorted(recommended_ids, key=recommended_ids.get, reverse=True)
+
     final_events = list(
         Event.objects
         .filter(id__in=sorted_ids)
@@ -125,11 +148,12 @@ def recommend_events(user: User, limit=30):
         .prefetch_related('calendars__labels')
         .select_related('creator')
     )
+
     id_to_event = {e.id: e for e in final_events}
     final_events = [id_to_event[i] for i in sorted_ids if i in id_to_event]
 
     if len(final_events) < limit:
-        ids_to_exclude = already_seen_event_ids | set(recommended_ids.keys())
+        ids_to_exclude = set(already_seen_event_ids) | set(recommended_ids.keys())
         needed = limit - len(final_events)
         popular = (
             Event.objects

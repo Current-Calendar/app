@@ -340,7 +340,7 @@ def _get_liked_calendar_ids(user, queryset):
 
 
 def _serialize_co_owners(calendar: Calendar):
-    return list(calendar.co_owners.values("id", "username"))
+    return [{"id": co.id, "username": co.username} for co in calendar.co_owners.all()]
 
 
 def _can_like_calendar(user, calendar: Calendar) -> bool:
