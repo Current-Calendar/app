@@ -22,4 +22,4 @@ COPY .env.dev.example .env
 RUN python manage.py collectstatic --noinput
 RUN rm .env
 
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate && gunicorn current.asgi:application -k uvicorn.workers.UvicornWorker --timeout 300 --workers 3 --bind 0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py collectstatic --noinput && python manage.py migrate && gunicorn current.asgi:application -k uvicorn.workers.UvicornWorker --timeout 300 --workers 1 --bind 0.0.0.0:8000"]
