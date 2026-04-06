@@ -24,6 +24,7 @@ from urllib.parse import urlparse
 from django.core.cache import cache
 from main.rs.calendars import recommend_calendars
 from main.serializers import CalendarSummarySerializer
+from main.permissions import CanChangePrivacy, CanCreateCalendar, CanAddFavoriteCalendar
 
 REQUEST_TIMEOUT_SECONDS = 5
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -151,7 +152,7 @@ def delete_calendar(request, calendar_id):
 
 
 @api_view(['PUT', 'PATCH','GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanChangePrivacy])
 def edit_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
@@ -235,7 +236,7 @@ def edit_calendar(request, calendar_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanCreateCalendar])
 def create_calendar(request):
     data = request.data
     creator = request.user
@@ -469,7 +470,7 @@ def list_co_owned_calendars(request):
     return Response(results, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanAddFavoriteCalendar])
 def subscribe_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
     user = request.user
