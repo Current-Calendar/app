@@ -22,11 +22,10 @@ class UsuarioAdmin(UserAdmin):
     )
     filter_horizontal = ('following', 'subscribed_calendars') 
 
-    list_display = ('username', 'email', 'is_staff', 'total_following')    
+    list_display = ('username', 'email', 'last_login', 'is_staff', 'total_following')    
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'reported_type', 'status', 'created_at')
     list_filter  = ('reported_type', 'status', 'created_at')
-
 
