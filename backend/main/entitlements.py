@@ -2,7 +2,7 @@ import math
 
 class Planes:
     FREE = 'FREE'
-    STANDARD = 'STANDARD',
+    STANDARD = 'STANDARD'
     BUSINESS = 'BUSINESS'
 
 PLAN_FEATURES = {

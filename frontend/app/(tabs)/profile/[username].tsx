@@ -326,8 +326,12 @@ const OwnProfile = () => {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Text style={profileStyles.name}>{shownUser.username}</Text>
-            {shownUser.plan !== "FREE" ? (
+            {shownUser.plan === "STANDARD" ? (
               <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
+                <Ionicons name="star" size={14} color="#fff" />
+              </View>
+            ) : shownUser.plan === "BUSINESS" ? (
+              <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
                 <Ionicons name="star" size={14} color="#fff" />
               </View>
             ) : null}

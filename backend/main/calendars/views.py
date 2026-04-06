@@ -498,32 +498,6 @@ def subscribe_calendar(request, calendar_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def subscribe_calendar(request, calendar_id):
-    calendar = get_object_or_404(Calendar, id=calendar_id)
-    user = request.user
-
-    if calendar.creator == user:
-        return Response(
-            {'error': 'No puedes suscribirte a tu propio calendario.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if user.subscribed_calendars.filter(id=calendar_id).exists():
-        user.subscribed_calendars.remove(calendar)
-        return Response({'subscribed': False, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
-    else:
-        user.subscribed_calendars.add(calendar)
-        Notification.objects.create(
-            recipient=calendar.creator,
-            sender=user,
-            type= 'CALENDAR_FOLLOW',
-            message=f"{user.username} has subscribed to '{calendar.name}'.",
-            related_calendar=calendar
-        )
-        return Response({'subscribed': True, 'calendar_id': calendar_id}, status=status.HTTP_200_OK)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def toggle_like_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
     user = request.user
