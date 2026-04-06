@@ -343,17 +343,22 @@ const OwnProfile = () => {
 
           <View style={profileStyles.buttonsRow}>
             <TouchableOpacity
-              style={profileStyles.actionButton}
-              onPress={() => router.push('/(tabs)/profile/profileEdit' as any)}
-            >
-              <Text style={profileStyles.actionButtonText}>Edit profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[profileStyles.actionButton, profileStyles.logoutButton]}
               onPress={handleLogout}
             >
               <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
                 Log out
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                profileStyles.actionButton,
+                profileStyles.logoutButton,
+              ]}
+              onPress={() => router.push('/settings' as any)}
+            >
+              <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
+                Settings
               </Text>
             </TouchableOpacity>
           </View>
