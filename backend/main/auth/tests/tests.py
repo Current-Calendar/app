@@ -9,7 +9,7 @@ import jwt
 from unittest.mock import patch, MagicMock
 from django.core.cache import cache
 from django.test import TestCase
-
+from unittest.mock import patch
 def _make_token(email, expired=False, no_email=False):
     """Helper to build a JWT for tests without hitting the real endpoint."""
     if no_email:
@@ -694,8 +694,10 @@ class LoginLogAdminTests(TestCase):
         )
 
         self.client.force_login(self.admin_user)
-
-    def test_admin_changelist_get_works(self):
+    # Este patch intercepta la función de Django que busca el estático y falla
+    @patch('django.contrib.staticfiles.storage.staticfiles_storage.url')
+    def test_admin_changelist_get_works(self,mock_static_url):
+        mock_static_url.return_value = '/static/dummy.css'
         url = reverse("admin:main_loginlog_changelist")
         response = self.client.get(url)
 
