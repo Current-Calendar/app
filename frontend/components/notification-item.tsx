@@ -62,7 +62,7 @@ export function NotificationItem({ item, onPress, onInviteAction }: Props) {
     try {
       await onInviteAction(item.id, action);
     } catch {
-      Alert.alert('Error', `Could not ${action} the invitation.`);
+      // The parent component will handle the error display
     } finally {
       setProcessing(null);
     }
