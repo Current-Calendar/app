@@ -40,6 +40,16 @@ const profileStyles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
+    
+    premiumBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#eb8c85',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+},
 
     name: {
         textAlign: 'center',

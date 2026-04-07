@@ -13,7 +13,8 @@ import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useRegister } from "@/hooks/use-register";
 import { ApiError } from "@/services/api-client";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
+import { useTutorial } from "@/context/tutorial-context";
 
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -26,57 +27,51 @@ export default function SignUpScreen() {
   const { registerUser } = useRegister();
   const { width } = useWindowDimensions();
   const formWidth =
-    Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
+    Platform.OS === "web"
+      ? Math.min(width * 0.5, 520)
+      : Math.min(width * 0.92, 420);
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-
-  const[showPassword, setShowPassword] = useState(false);
-  const[showPassword2, setShowPassword2] = useState(false);
-  
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const { setShowWelcome } = useTutorial();
+
   useEffect(() => {
     if (!isLoading && (isAuthenticated || Boolean(user))) {
-      router.replace('/(tabs)/switch-events' as any);
+      router.replace("/(tabs)/switch-events" as any);
     }
   }, [isLoading, isAuthenticated, user, router]);
 
   const getRegisterErrorMessage = (error: unknown) => {
     if (error instanceof ApiError) {
       const data = error.data as Record<string, unknown> | undefined;
-
       const topErrors = data?.errors;
       if (Array.isArray(topErrors) && topErrors.length > 0) {
         return String(topErrors[0]);
       }
-
       const firstFieldWithErrors = Object.entries(data ?? {}).find(
-        ([, value]) => Array.isArray(value) && value.length > 0,
+        ([, value]) => Array.isArray(value) && value.length > 0
       );
       if (firstFieldWithErrors) {
         const [field, value] = firstFieldWithErrors;
         return `${field}: ${String((value as unknown[])[0])}`;
       }
-
       return error.message;
     }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
+    if (error instanceof Error) return error.message;
     return "No connection to API. Check API_BASE / backend running.";
   };
 
   const onSignup = async () => {
     if (isAuthenticated || user) {
-      router.replace('/(tabs)/switch-events' as any);
+      router.replace("/(tabs)/switch-events" as any);
       return;
     }
 
@@ -101,11 +96,13 @@ export default function SignUpScreen() {
         password2,
       });
 
-      setSuccessMsg("Usuario registrado exitosamente");
-
+      setSuccessMsg("Account created successfully!");
       await login(username.trim(), password);
 
-      setTimeout(() => router.push("/"), 400);
+      setTimeout(() => {
+        router.push("/(tabs)/calendars" as any);
+        setTimeout(() => setShowWelcome(true), 400);
+      }, 300);
     } catch (error) {
       setErrorMsg(getRegisterErrorMessage(error));
     } finally {
@@ -115,7 +112,6 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
-
       <View style={styles.content}>
         <Text style={styles.title}>Sign Up</Text>
 
@@ -148,17 +144,17 @@ export default function SignUpScreen() {
               onChangeText={setPassword}
               placeholder=""
               placeholderTextColor="#999"
-              secureTextEntry={!showPassword} 
+              secureTextEntry={!showPassword}
               style={[styles.input, { paddingRight: 40 }]}
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
               style={{ position: "absolute", right: 10 }}
             >
-              <Ionicons 
-                name={showPassword ? "eye-off" : "eye"} 
-                size={24} 
-                color="#10464D" 
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={24}
+                color="#10464D"
               />
             </Pressable>
           </View>
@@ -170,17 +166,17 @@ export default function SignUpScreen() {
               onChangeText={setPassword2}
               placeholder=""
               placeholderTextColor="#999"
-              secureTextEntry={!showPassword2} 
-              style={[styles.input, { paddingRight: 40 }]} 
+              secureTextEntry={!showPassword2}
+              style={[styles.input, { paddingRight: 40 }]}
             />
             <Pressable
               onPress={() => setShowPassword2(!showPassword2)}
               style={{ position: "absolute", right: 10 }}
             >
-              <Ionicons 
-                name={showPassword2 ? "eye-off" : "eye"} 
-                size={24} 
-                color="#10464D" 
+              <Ionicons
+                name={showPassword2 ? "eye-off" : "eye"}
+                size={24}
+                color="#10464D"
               />
             </Pressable>
           </View>
@@ -193,12 +189,10 @@ export default function SignUpScreen() {
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
               <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
               <View style={[styles.bubbleDot, { bottom: 8, left: 14, width: 10, height: 10 }]} />
-
               <View style={[styles.bubbleDot, { top: 8, right: 12 }]} />
               <View style={[styles.bubbleDot, { top: 20, right: 26, width: 6, height: 6 }]} />
               <View style={[styles.bubbleDot, { bottom: 10, right: 16, width: 10, height: 10 }]} />
             </View>
-
             {loading ? (
               <ActivityIndicator color="#EAF7F6" />
             ) : (
@@ -215,7 +209,6 @@ export default function SignUpScreen() {
             </Pressable>
           </Link>
         </View>
-
       </View>
     </View>
   );
@@ -223,11 +216,25 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flex: 1, alignItems: "center", paddingHorizontal: 22, paddingTop: 52 },
-  title: { fontSize: 34, color: TEXT, fontWeight: "800", marginBottom: 18 },
-
+  content: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 52,
+  },
+  title: {
+    fontSize: 34,
+    color: TEXT,
+    fontWeight: "800",
+    marginBottom: 18,
+  },
   form: { marginTop: 6 },
-  label: { fontSize: 14, color: TEXT, opacity: 0.75, marginBottom: 6 },
+  label: {
+    fontSize: 14,
+    color: TEXT,
+    opacity: 0.75,
+    marginBottom: 6,
+  },
   input: {
     height: 40,
     borderWidth: 2,
@@ -236,10 +243,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: "rgba(255,255,255,0.45)",
   },
-
   errorText: { marginTop: 10, color: "#C43B3B", fontWeight: "800" },
   successText: { marginTop: 10, color: "#1F6A6A", fontWeight: "900" },
-
   btn: {
     marginTop: 18,
     alignSelf: "center",
@@ -256,7 +261,6 @@ const styles = StyleSheet.create({
     elevation: 3,
     position: "relative",
     overflow: "hidden",
-    opacity: 1,
   },
   btnBubbles: { position: "absolute", inset: 0 },
   bubbleDot: {
@@ -268,11 +272,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.75)",
     backgroundColor: "rgba(255,255,255,0.08)",
   },
-  btnText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900", letterSpacing: 0.3 },
-
+  btnText: {
+    textAlign: "center",
+    color: "#EAF7F6",
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
   bottomRow: { marginTop: 30, alignItems: "center" },
   bottomText: { color: TEXT, opacity: 0.65, fontSize: 13 },
-  bottomLink: { marginTop: 4, color: PINK, fontSize: 13, fontWeight: "800", textDecorationLine: "underline" },
-
-  apiHint: { marginTop: 16, fontSize: 11, color: TEXT, opacity: 0.45 },
+  bottomLink: {
+    marginTop: 4,
+    color: PINK,
+    fontSize: 13,
+    fontWeight: "800",
+    textDecorationLine: "underline",
+  },
 });

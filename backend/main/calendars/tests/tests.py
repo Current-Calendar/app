@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 CALENDAR_ENDPOINT_CREATE = "/api/v1/calendars/create/"
 PUBLISH_CALENDAR_ENDPOINT = "/api/v1/calendars/{}/publish/"
 ENDPOINT_LIST_CALENDARIOS = "/api/v1/calendars/list/"
+CALENDAR_SUBSCRIBE_ENDPOINT = "/api/v1/calendars/{}/subscribe/"
 
 class CrearCalendarTests(APITestCase):
     """Tests para POST /api/v1/calendars"""
@@ -17,7 +18,15 @@ class CrearCalendarTests(APITestCase):
             username="testuser",
             email="test@example.com",
             password="testpass123",
+            plan ="FREE"
         )
+        self.standard_user = User.objects.create_user(
+            username="standarduser",
+            email="standard@example.com",
+            password="standardpass123",
+            plan="STANDARD"
+        )
+
 
     # ------------------------------------------------------------------
     # Casos exitosos
@@ -157,8 +166,7 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("errors", response.json())
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_users_distintos_pueden_tener_calendario_privado(self):
         """Dos users diferentes pueden tener cada uno su calendar PRIVADO."""
@@ -177,6 +185,81 @@ class CrearCalendarTests(APITestCase):
             }
             response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_create_more_than_limit_private_calendars_standard_user(self):
+        self.client.force_authenticate(self.standard_user)
+
+        for i in range(2):
+            Calendar.objects.create(
+                creator=self.standard_user,
+                name=f"Calendar {i}",
+                privacy="PRIVATE",
+            )
+
+        payload = {
+            "name": "Calendar Extra",
+            "privacy": "PRIVATE",
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    
+    def test_create_more_than_limit_public_calendars_standard_user(self):
+        self.client.force_authenticate(self.standard_user)
+
+        for i in range(2):
+            Calendar.objects.create(
+                creator=self.standard_user,
+                name=f"Calendar {i}",
+                privacy="PUBLIC",
+            )
+
+        payload = {
+            "name": "Calendar Extra",
+            "privacy": "PUBLIC",
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_create_more_than_limit_public_calendars_free_user(self):
+        self.client.force_authenticate(self.user)
+
+        for i in range(2):
+            Calendar.objects.create(
+                creator=self.user,
+                name=f"Calendar {i}",
+                privacy="PUBLIC",
+            )
+
+        payload = {
+            "name": "Calendar Extra",
+            "privacy": "PUBLIC",
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_subscribe_more_than_limit_calendars(self):
+        self.client.force_authenticate(self.user)
+
+        for i in range(10):
+            cal = Calendar.objects.create(
+                creator=self.standard_user,
+                name=f"Calendar {i}",
+                privacy="PUBLIC",
+            )
+            self.user.subscribed_calendars.add(cal)
+
+        cal_extra = Calendar.objects.create(
+                creator=self.standard_user,
+                name=f"Calendar Extra",
+                privacy="PUBLIC",
+            )
+
+        response = self.client.post(CALENDAR_SUBSCRIBE_ENDPOINT.format(cal_extra.id), format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     # ------------------------------------------------------------------
     # Casos de error — valores inválidos
@@ -270,6 +353,25 @@ class CrearCalendarTests(APITestCase):
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("origin", response.json()["errors"][0])
+    
+    def test_error_more_than_limit_calendar(self):
+        self.client.force_authenticate(self.user)
+
+        # Creamos 2 calendars (límite para FREE)
+        for i in range(2):
+            Calendar.objects.create(
+                creator=self.user,
+                name=f"Calendar {i}",
+                privacy="PRIVATE",
+            )
+
+        payload = {
+            "name": "Private Original",
+            "privacy": "PRIVATE"
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
 
     def test_name_se_trimea_correctamente(self):
         self.client.force_authenticate(self.user)

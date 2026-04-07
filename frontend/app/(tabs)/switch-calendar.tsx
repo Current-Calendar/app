@@ -6,6 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Text,
+  Platform,
+  Modal,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
@@ -29,6 +31,8 @@ export default function CalendarsScreen() {
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [errorSubscribeModal, setErrorSubscibeModal] = useState(false);
+  const [subscribeErrorMessage, setSubscribeErrorMessage] = useState("");
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
@@ -154,8 +158,14 @@ export default function CalendarsScreen() {
       // Caso poco común en esta pantalla: si se desuscribiera
       setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
     }
-  } catch (error) {
-    Alert.alert("Error", "No se pudo procesar la suscripción.");
+  } catch (error: any) {
+    const apiError = error.response?.data?.message || error.response?.data?.error || error.message || String(error);
+    if (Platform.OS !== "web") {
+      Alert.alert("Error", apiError);
+    } else {
+      setSubscribeErrorMessage(apiError);
+      setErrorSubscibeModal(true);
+    }
     console.error("Subscribe error:", error);
   }
 };
@@ -229,6 +239,26 @@ export default function CalendarsScreen() {
           onClose={handleCloseCommentsModal}
           calendar={selectedCalendar}
         />
+
+        <Modal
+          visible={errorSubscribeModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setErrorSubscibeModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Free Plan Limit</Text>
+              <Text style={styles.modalMessage}>{subscribeErrorMessage}</Text>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setErrorSubscibeModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
       </View>
     </View>
@@ -311,6 +341,49 @@ const styles = StyleSheet.create({
 
   registerButtonText: {
     color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 24,
+    borderRadius: 12,
+    width: "80%",
+    maxWidth: 400,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#E53935",
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: "#333",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: "#E53935",
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: "#fff",
     fontWeight: "600",
     fontSize: 16,
   },

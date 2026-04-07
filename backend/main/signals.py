@@ -1,8 +1,11 @@
 from django.db.models import F
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
-
+from utils.login_log import log_user_login
 from main.models import Calendar, CalendarLike, Event, EventLike, EventSave, Notification
+from django.contrib.auth.signals import user_logged_in
+
+
 
 
 @receiver(post_save, sender=CalendarLike)
@@ -87,3 +90,9 @@ def cleanup_likes_on_privacy_change(sender, instance, created, **kwargs):
             user__following=instance.creator,
             user__followers_set=instance.creator,
         ).distinct().delete()
+
+
+
+@receiver(user_logged_in)
+def log_admin_login(sender, request, user, **kwargs):
+    log_user_login(request, user)

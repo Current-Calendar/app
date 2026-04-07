@@ -6,6 +6,7 @@ import "react-native-reanimated";
 import { APP_BACKGROUND, Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import AuthProvider from "../context/auth-context";
+import { TutorialProvider } from "@/context/tutorial-context";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -24,14 +25,16 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="new-password" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <TutorialProvider>
+        <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="new-password" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </TutorialProvider>
     </AuthProvider>
   );
 }
