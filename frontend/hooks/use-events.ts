@@ -12,11 +12,19 @@ export function useEventsList(options: UseEventsOptions = {}) {
   const [loading, setLoading] = useState<boolean>(autoFetch);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (ids?: string) => {
+    if (ids !== undefined && ids === '') {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await apiClient.get<any[]>('/events/list');
+      const url = ids 
+        ? `/events/list?calendarIds=${ids}`
+        : '/events/list';
+      const data = await apiClient.get<any[]>(url);
       setEvents(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching events:', err);
