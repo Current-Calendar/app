@@ -1006,11 +1006,11 @@ def export_to_ics(request, calendar_id):
     cal.add('prodid', '-//Current Calendar//')
     cal.add('version', '2.0')
 
-    for event in calendar.eventos.all():
-        event = event.to_ical_event()
-        cal.add_component(event)
+    for event in calendar.events.all():
+        ical_event = event.to_ical_event()
+        cal.add_component(ical_event)
 
-    ics_content = cal.to_ical()
+    ics_content = cal.to_ical().decode('utf-8')
     response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
     response["Access-Control-Allow-Origin"] = "*"
