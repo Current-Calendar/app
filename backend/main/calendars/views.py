@@ -390,6 +390,52 @@ def list_co_owned_calendars(request):
 
     return Response(results, status=status.HTTP_200_OK)
 
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def leave_calendar(request, calendar_id):
+    """
+    Allow a co-owner or viewer to leave a shared calendar.
+    
+    POST/DELETE /api/v1/calendars/<id>/leave/
+    
+    Returns:
+    - 200: Successfully left the calendar
+    - 400: User is the creator or not part of this calendar
+    - 404: Calendar not found
+    """
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+    user = request.user
+    
+    if calendar.creator == user:
+        return Response(
+            {'error': 'You cannot leave your own calendar. Use delete instead.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+        
+    is_co_owner = calendar.co_owners.filter(id=user.id).exists()
+    is_viewer = calendar.viewers.filter(id=user.id).exists()
+    
+    if not is_co_owner and not is_viewer:
+        return Response(
+            {'error': 'You do not have permission to leave this calendar as you are not a co-owner or viewer.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    
+    if is_co_owner:
+        calendar.co_owners.remove(user)
+    if is_viewer:
+        calendar.viewers.remove(user)
+    
+    return Response(
+        {
+            'success': True,
+            'message': 'You have successfully left the calendar.',
+            'calendar_id': calendar.id,
+        },
+        status=status.HTTP_200_OK,
+    )
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, CanAddFavoriteCalendar])
 def subscribe_calendar(request, calendar_id):
