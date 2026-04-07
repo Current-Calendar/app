@@ -4,7 +4,9 @@ from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from main.models import Event, EventAttendance, EventLike, EventSave
-
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from utils.login_log import get_client_ip
+from main.models import LoginLog
 from .models import Calendar, Notification, Report, ChatMessage
 from utils.storage import get_signed_url
 
@@ -127,6 +129,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'bio',
             'photo',
             'link',
+            'plan',
             'total_followers',
             'total_following',
             'is_following',
@@ -153,16 +156,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'pronouns',
             'bio',
             'photo',
+            'plan',
             'total_followers',
             'total_following',
             'subscribed_calendars',
+            'plan',
         )
         read_only_fields = ('id', 'date_joined')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
-        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars']
+        fields=['photo','email','username','pronouns','link','bio','total_followers','total_following','subscribed_calendars','plan']
 
 
 class EditProfileSerializer(serializers.ModelSerializer):
@@ -219,6 +224,7 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "bio",
             "link",
             "photo",
+            "plan",
             "total_followers",
             "total_following",
             "calendars",
@@ -428,3 +434,14 @@ class EventAttendeeSerializer(serializers.ModelSerializer):
         if '+00:00' in iso_str:
             iso_str = iso_str.replace('+00:00', 'Z')
         return iso_str
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        request = self.context.get("request")
+        LoginLog.objects.create(
+            user=self.user,
+            ip_address=get_client_ip(request),
+        )
+
+        return data

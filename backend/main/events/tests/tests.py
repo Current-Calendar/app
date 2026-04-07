@@ -1354,7 +1354,7 @@ class ListEventsTests(APITestCase):
         self.assertEqual(response.data[0]["id"], self.event_a.id)
 
     def test_list_events_filters_by_calendar(self):
-        response = self.client.get("/api/v1/events/list", {"calendarId": self.calendar_b.id})
+        response = self.client.get("/api/v1/events/list", {"calendarIds": [self.calendar_b.id]})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -1408,7 +1408,7 @@ class ListEventsFromCalendarFunctionTests(APITestCase):
         self.assertSetEqual(ids, {self.event_a.id, self.event_b.id})
 
     def test_list_events_from_calendar_filters_by_calendar_id(self):
-        response = self._call_view({"calendarId": self.calendar_a.id})
+        response = self._call_view({"calendarIds": [self.calendar_a.id]})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)

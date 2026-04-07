@@ -209,6 +209,7 @@ CACHES = {
         "LOCATION": redis_location,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "PASSWORD": os.getenv("REDIS_PASSWORD"),
         }
     }
 }
@@ -229,6 +230,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
+    "TOKEN_OBTAIN_SERIALIZER": "main.serializers.CustomTokenObtainPairSerializer",
 }
 
 PASSWORD_HASHERS = [

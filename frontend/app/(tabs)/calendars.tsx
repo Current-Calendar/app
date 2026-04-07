@@ -70,7 +70,6 @@ export default function CalendarScreen() {
     const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
     const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
     const [selectedDay, setSelectedDay] = useState<string | null>(null);
-
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
@@ -83,7 +82,7 @@ export default function CalendarScreen() {
         loading: loadingEvents,
         error: eventsError,
         refetch: refetchEvents,
-    } = useEventsList();
+    } = useEventsList({ autoFetch: false });
     const fetchData = async () => {
         try {
             setLoadingCalendars(true);
@@ -117,6 +116,7 @@ export default function CalendarScreen() {
             });
 
             const mergedCalendars = Array.from(mergedCalendarsMap.values());
+            const ids = mergedCalendars.map((c: any) => c.id).join(',');
 
             const mappedCalendars: Calendar[] = mergedCalendars.map((c: any, index: number) => ({
             id: String(c.id),
@@ -138,7 +138,7 @@ export default function CalendarScreen() {
             return mappedCalendars.find((c) => c.id === prev.id) ?? prev;
             });
 
-            await refetchEvents();
+            await refetchEvents(ids);
         } catch (e) {
             console.error("Error al refrescar calendarios:", e);
             setCalendarsError(e);
