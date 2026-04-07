@@ -1,7 +1,8 @@
 from rest_framework import permissions
 import math
 from .entitlements import get_user_features
-from .models import Calendar
+from .models import Calendar, Notification, User
+from django.shortcuts import get_object_or_404
 
 class CanCreateCalendar(permissions.BasePermission):
     message = "You have reached the maximum amount of calendars allowed for your plan."
@@ -107,3 +108,38 @@ class CanCustomizeCalendars(permissions.BasePermission):
 
         user_features = get_user_features(request.user)
         return user_features['can_customize_calendars']
+
+class CanCoOwnCalendars(permissions.BasePermission):
+    message = "Your current plan does not allow co-owning calendars."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        sender_features = get_user_features(request.user)
+        invitee = get_object_or_404(User, id=request.data.get('user'))
+        invitee_features = get_user_features(invitee)
+        if not sender_features['can_co_own_calendars']:
+            self.message = "Your current plan does not allow co-owning calendars"
+            return False
+        
+        if not invitee_features['can_co_own_calendars']:
+            self.message = "The user you are trying to invite cannot co-own calendars with their current plan"
+            return False
+        
+        return True
+
+class CanAcceptCalendarInvites(permissions.BasePermission):
+    message = "Your current plan does not allow accepting calendar invitations."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        
+        notification = get_object_or_404(Notification, pk=view.kwargs.get('id'))
+        if notification.type != 'CALENDAR_INVITE':
+            return True
+
+        user_features = get_user_features(request.user)
+        return user_features['can_co_own_calendars']
+        

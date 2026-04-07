@@ -1,12 +1,13 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from ..models import Notification, EventAttendance, Calendar
+from ..models import Notification, EventAttendance, Calendar, CalendarInvitation
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from ..serializers import NotificationSerializer
 from django.shortcuts import get_object_or_404
+from ..permissions import CanAcceptCalendarInvites
 
 
 @api_view(['GET'])
@@ -30,7 +31,7 @@ def mark_notification_as_read(request, id):
     return Response({"message": "Notification marked as read"})
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, CanAcceptCalendarInvites])
 def handle_invite(request: Request, id: int) -> Response:
     notification: Notification = get_object_or_404(request.user.notifications, pk=id)
 
@@ -64,10 +65,28 @@ def handle_invite(request: Request, id: int) -> Response:
 
         return Response({"message": "Handled event invitation"})
 
-    # otherwise it's a calendar invitation
+    calendar = notification.related_calendar
+    invitation = CalendarInvitation.objects.filter(
+        calendar=calendar,
+        invitee=notification.recipient,
+        sender=notification.sender,
+        accepted=None
+    ).order_by('-created_at').first()
+
     if user_status == "ACCEPT":
-        calendar: Calendar = notification.related_calendar
-        calendar.subscribers.add(notification.recipient)
+        if invitation:
+            if invitation.permission == "EDIT":
+                calendar.co_owners.add(notification.recipient)
+            elif invitation.permission == "VIEW":
+                calendar.viewers.add(notification.recipient)
+            invitation.accepted = True
+            invitation.save()
+        else:
+            calendar.subscribers.add(notification.recipient)
+    else:
+        if invitation:
+            invitation.accepted = False
+            invitation.save()
 
     notification.delete()
 

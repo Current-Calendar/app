@@ -238,33 +238,6 @@ export function CalendarInfoModal({
             )
           )}
 
-          {isOwnerOrCoOwner && (
-            isCompactActions ? (
-              <View style={calendarInfoModalStyles.compactActionWrap}>
-                <TouchableOpacity
-                  style={[
-                    calendarInfoModalStyles.compactActionButton,
-                    calendarInfoModalStyles.compactActionButtonNeutral,
-                  ]}
-                  onPress={() => setShowCoOwners(true)}
-                  activeOpacity={0.75}
-                  accessibilityLabel="Add co-owner"
-                >
-                  <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={calendarInfoModalStyles.shareButton}
-                onPress={() => setShowCoOwners(true)}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
-                <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
-              </TouchableOpacity>
-            )
-          )}
-
           {localCalendar.privacy !== 'PRIVATE' && (
             isCompactActions ? (
               <View style={calendarInfoModalStyles.compactActionWrap}>
