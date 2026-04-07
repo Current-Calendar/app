@@ -108,7 +108,7 @@ const profileStyles = StyleSheet.create({
     actionButtonTextAlt: { color: '#fff' },
 
     logoutButton: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#eb8c85',
         borderWidth: 1.5,
         borderColor: '#10464d',
     },
@@ -116,6 +116,11 @@ const profileStyles = StyleSheet.create({
         color: '#10464d',
         fontWeight: '600',
         fontSize: 14,
+    },
+    settingsButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderColor: '#10464d',
     },
 
     // Separador entre botones y calendarios

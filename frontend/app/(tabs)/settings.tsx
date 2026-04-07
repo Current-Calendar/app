@@ -26,7 +26,7 @@ const SettingsScreen = () => {
           <View style={styles.sectionCard}>
             <TouchableOpacity
               style={[styles.row, styles.rowBorder]}
-              //onPress={() => router.push('/subscription' as any)}
+              onPress={() => router.push('/subscription' as any)}
             >
               <View style={styles.rowLeft}>
                 <View style={styles.iconWrap}>

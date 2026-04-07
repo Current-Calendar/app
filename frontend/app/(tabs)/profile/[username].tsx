@@ -353,7 +353,7 @@ const OwnProfile = () => {
             <TouchableOpacity
               style={[
                 profileStyles.actionButton,
-                profileStyles.logoutButton,
+                profileStyles.settingsButton,
               ]}
               onPress={() => router.push('/settings' as any)}
             >
