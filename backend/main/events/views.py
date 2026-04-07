@@ -315,15 +315,17 @@ def list_events(request):
 
     queryset = Event.objects.filter(privacy_filter).distinct()
 
+    calendar_ids = request.GET.get('calendarIds')
+    if calendar_ids:
+        id_list = [cid.strip() for cid in calendar_ids.split(',') if cid.strip().isdigit()]
+        if id_list:
+            queryset = queryset.filter(calendars__id__in=id_list).distinct()
+
     q = request.GET.get('q', '').strip()
     if q:
         queryset = queryset.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         )
-
-    calendar_id = request.GET.get('calendarId')
-    if calendar_id:
-        queryset = queryset.filter(calendars__id=calendar_id)
 
     queryset = queryset.order_by('-created_at')
 
