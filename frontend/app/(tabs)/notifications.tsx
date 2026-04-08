@@ -1,13 +1,35 @@
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, SectionList } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, SectionList, Alert, Platform, Modal, StyleSheet } from 'react-native';
 import { useNotifications } from '@/hooks/use-notifications';
 import { NotificationItem } from '@/components/notification-item';
 import { notificationsPageStyles as s } from '@/styles/notification-styles';
+import { ApiError } from '@/services/api-client';
 
 const INVITE_TYPES = new Set(['CALENDAR_INVITE', 'EVENT_INVITE']);
 
 export default function NotificationsScreen() {
   const { notifications, markAllAsRead, markAsRead, handleInvite } = useNotifications();
+
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorTitle, setErrorTitle] = useState("Warning");
+
+  const onInviteAction = async (id: number, action: 'accept' | 'decline') => {
+    try {
+      await handleInvite(id, action);
+    } catch (error: any) {
+      const message = error instanceof ApiError && typeof (error.data as any)?.error === 'string'
+        ? (error.data as any).error
+        : error.response?.data?.message || error.response?.data?.error || error.message || `Could not ${action} the invitation right now.`;
+      
+      const isForbidden = error?.response?.status === 403 || error?.status === 403 || (error instanceof ApiError && error.status === 403);
+      const title = isForbidden ? "Free Plan Limit" : "Warning";
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setErrorModalVisible(true);
+      throw error; // Rethrow to let NotificationItem stop its processing indicator
+    }
+  };
 
   useEffect(() => {
     return () => { markAllAsRead(); };
@@ -44,10 +66,39 @@ export default function NotificationsScreen() {
           <Text style={s.sectionLabel}>{section.title}</Text>
         )}
         renderItem={({ item }) => (
-          <NotificationItem item={item} onPress={markAsRead} onInviteAction={handleInvite} />
+          <NotificationItem item={item} onPress={markAsRead} onInviteAction={onInviteAction} />
         )}
         stickySectionHeadersEnabled={false}
       />
+
+      <Modal
+        visible={errorModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setErrorModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.errorModalTitle}>{errorTitle}</Text>
+            <Text style={styles.modalMessage}>{errorMessage}</Text>
+            <TouchableOpacity
+              style={styles.errorModalButton}
+              onPress={() => setErrorModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '80%', maxWidth: 400, alignItems: 'center' },
+  errorModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#E53935', marginBottom: 8 },
+  modalMessage: { fontSize: 15, color: '#333', textAlign: 'center', marginBottom: 20 },
+  errorModalButton: { backgroundColor: '#E53935', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 },
+  modalButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+});

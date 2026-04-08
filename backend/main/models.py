@@ -84,6 +84,7 @@ class Calendar(models.Model):
     
     likes_count = models.PositiveIntegerField(default=0)
     co_owners = models.ManyToManyField('User', related_name='co_owned_calendars', blank=True)
+    viewers = models.ManyToManyField('User', related_name='viewable_calendars', blank=True)
 
     @property
     def num_subscribers(self):
@@ -262,6 +263,7 @@ class Notification(models.Model):
         ('EVENT_SAVED', 'Event Saved'),
         ('EVENT_LIKED', 'Event Liked'),
         ('EVENT_COMMENT', 'Event Comment'),
+        ('CALENDAR_COMMENT', 'Calendar Comment'),
         ('EVENT_INVITE', 'Event Invite'),
         ('CALENDAR_INVITE', 'Calendar Invite'),
     ]
@@ -369,3 +371,14 @@ class LoginLog(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.ip_address} - {self.created_at}"
+
+class CalendarInvitation(models.Model):
+    calendar = models.ForeignKey(Calendar, on_delete=models.CASCADE, related_name='invitations')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_calendar_invitations')
+    invitee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_calendar_invitations')
+    permission = models.CharField(max_length=20, choices=[('VIEW', 'View'), ('EDIT', 'Edit')], default='VIEW')
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted = models.BooleanField(default=None, null=True)
+
+    def __str__(self):
+        return f"Invitation to {self.recipient.username} for {self.calendar.name}"

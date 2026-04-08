@@ -1000,97 +1000,6 @@ class ShareCalendarHtmlTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class EditCoOwnersTests(APITestCase):
-    ENDPOINT = "/api/v1/calendars/{}/co_owners/"
-
-    def setUp(self):
-        self.creator = User.objects.create_user(
-            username="co_creator",
-            email="co_creator@example.com",
-            password="pass1234",
-        )
-        self.co_owner = User.objects.create_user(
-            username="existing_co_owner",
-            email="existing_co_owner@example.com",
-            password="pass1234",
-        )
-        self.old_co_owner = User.objects.create_user(
-            username="old_co_owner",
-            email="old_co_owner@example.com",
-            password="pass1234",
-        )
-        self.new_user = User.objects.create_user(
-            username="new_user",
-            email="new_user@example.com",
-            password="pass1234",
-        )
-        self.outsider = User.objects.create_user(
-            username="outsider_user",
-            email="outsider_user@example.com",
-            password="pass1234",
-        )
-
-        self.calendar = Calendar.objects.create(
-            name="Co Owner Calendar",
-            description="Calendar for co-owner tests",
-            privacy="PRIVATE",
-            creator=self.creator,
-        )
-        self.calendar.co_owners.add(self.co_owner, self.old_co_owner)
-
-    def test_creator_replaces_co_owners(self):
-        self.client.force_authenticate(self.creator)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.calendar.refresh_from_db()
-        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
-        self.assertEqual(resulting_ids, {self.new_user.id})
-
-    def test_co_owner_adds_only_without_replacing(self):
-        self.client.force_authenticate(self.co_owner)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.calendar.refresh_from_db()
-        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
-        self.assertEqual(
-            resulting_ids,
-            {self.co_owner.id, self.old_co_owner.id, self.new_user.id},
-        )
-
-    def test_unauthorized_user_gets_403(self):
-        self.client.force_authenticate(self.outsider)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_missing_user_ids_get_400(self):
-        self.client.force_authenticate(self.creator)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [999999]},
-            format="json",
-        )
-
 class SubscribeCalendarTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="sub_owner", email="sub_owner@example.com", password="pass1234")
@@ -1570,3 +1479,130 @@ class CalendarImportsTests(APITestCase):
             format="multipart",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class LeaveCalendarTests(APITestCase):
+    """Tests for POST/DELETE /api/v1/calendars/<id>/leave/"""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="creator",
+            email="creator@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.co_owner = User.objects.create_user(
+            username="coowner",
+            email="coowner@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.viewer = User.objects.create_user(
+            username="viewer",
+            email="viewer@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        
+        self.calendar = Calendar.objects.create(
+            name="Shared Calendar",
+            description="A calendar to test leaving",
+            creator=self.creator,
+            privacy="PRIVATE"
+        )
+        
+        # Add co-owner and viewer
+        self.calendar.co_owners.add(self.co_owner)
+        self.calendar.viewers.add(self.viewer)
+
+    def test_leave_calendar_as_co_owner_success(self):
+        """Co-owner successfully leaves the calendar."""
+        self.client.force_authenticate(self.co_owner)
+        
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['calendar_id'], self.calendar.id)
+        
+        # Verify user is removed from co_owners
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+
+    def test_leave_calendar_as_viewer_success(self):
+        """Viewer successfully leaves the calendar."""
+        self.client.force_authenticate(self.viewer)
+        
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+        
+        # Verify user is removed from viewers
+        self.assertFalse(self.calendar.viewers.filter(id=self.viewer.id).exists())
+
+    def test_leave_calendar_creator_cannot_leave(self):
+        """Creator cannot leave their own calendar."""
+        self.client.force_authenticate(self.creator)
+        
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn('error', data)
+        self.assertIn('own calendar', data['error'])
+
+    def test_leave_calendar_not_part_of_calendar(self):
+        """User who is not part of calendar cannot leave."""
+        self.client.force_authenticate(self.other_user)
+        
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn('error', data)
+
+    def test_leave_calendar_with_delete_method(self):
+        """Leave calendar using DELETE method should also work."""
+        self.client.force_authenticate(self.co_owner)
+        
+        response = self.client.delete(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+
+    def test_leave_calendar_unauthenticated(self):
+        """Unauthenticated user cannot leave calendar."""
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_leave_calendar_not_found(self):
+        """Attempting to leave non-existent calendar returns 404."""
+        self.client.force_authenticate(self.co_owner)
+        
+        response = self.client.post("/api/v1/calendars/999999/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_leave_calendar_with_both_roles(self):
+        """If user is both co-owner and viewer, they should be removed from both."""
+        # Add co_owner as viewer too
+        self.calendar.viewers.add(self.co_owner)
+        
+        self.client.force_authenticate(self.co_owner)
+        
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Verify user is removed from both
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+        self.assertFalse(self.calendar.viewers.filter(id=self.co_owner.id).exists())

@@ -119,6 +119,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     Does not include email or password for security.
     """
     is_following = serializers.SerializerMethodField()
+    followed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -133,6 +134,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'total_followers',
             'total_following',
             'is_following',
+            'followed',
         )
         read_only_fields = ('id',)
 
@@ -141,6 +143,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.followers_set.filter(id=request.user.id).exists()
         return False
+
+    def get_followed(self, obj):
+        return self.get_is_following(obj)
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """

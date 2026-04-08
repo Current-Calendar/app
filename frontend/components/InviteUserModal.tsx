@@ -37,9 +37,15 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
   const [isSearching, setIsSearching] = useState(false);
   const [invitingUserId, setInvitingUserId] = useState<string | number | null>(null);
 
-  // Debounced search while typing
+  const [selectedUserForCalendar, setSelectedUserForCalendar] = useState<string | number | null>(null);
+  const [privilegeModalVisible, setPrivilegeModalVisible] = useState(false);
+  const [selectedPrivilege, setSelectedPrivilege] = useState<'VIEW' | 'EDIT'>('VIEW');
+
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorTitle, setErrorTitle] = useState("Warning");
+
   useEffect(() => {
-    // Solo buscamos si hay al menos 3 caracteres
     if (searchQuery.trim().length < 3) {
       setResults([]);
       return;
@@ -57,30 +63,59 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
       } finally {
         setIsSearching(false);
       }
-    }, 500); // Wait 500ms after user stops typing
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Function to send the invitation
-  const handleInvite = async (userId: string | number) => {
+  const handleInviteClick = (userId: string | number) => {
+    if (type === 'calendar') {
+      setSelectedUserForCalendar(userId);
+      setSelectedPrivilege('VIEW');
+      setPrivilegeModalVisible(true);
+    } else {
+      handleInvite(userId);
+    }
+  };
+
+  const handleInvite = async (userId: string | number, privilege?: 'VIEW' | 'EDIT') => {
     setInvitingUserId(userId);
     try {
       const endpoint = type === 'calendar'
-        ? API_CONFIG.endpoints.inviteCalendar(itemId)
-        : API_CONFIG.endpoints.inviteEvent(itemId);
+        ? `/calendars/${itemId}/invite/`
+        : `/events/${itemId}/invite/`;
 
-      await apiClient.post(endpoint.replace(API_CONFIG.BaseURL, ''), { user: userId });
+      const body = privilege ? { user: userId, permission: privilege } : { user: userId };
+      await apiClient.post(endpoint, body);
       Alert.alert('Sent!', 'Invitation sent successfully.');
-    } catch (error) {
+    } catch (error: any) {
       const message = error instanceof ApiError && typeof (error.data as any)?.error === 'string'
         ? (error.data as any).error
-        : 'Could not send the invitation right now.';
-      Alert.alert('Error', message);
+        : error.response?.data?.message || error.response?.data?.error || error.message || 'Could not send the invitation right now.';
+      
+      const isForbidden = error?.response?.status === 403 || error?.status === 403 || (error instanceof ApiError && error.status === 403);
+      const title = isForbidden ? "Free Plan Limit" : "Warning";
+
+      if (Platform.OS !== "web") {
+        Alert.alert(title, message);
+      } else {
+        setErrorTitle(title);
+        setErrorMessage(message);
+        setErrorModalVisible(true);
+      }
     } finally {
       setInvitingUserId(null);
     }
   };
+
+  const confirmCalendarInvite = () => {
+    if (selectedUserForCalendar) {
+      handleInvite(selectedUserForCalendar, selectedPrivilege);
+      setPrivilegeModalVisible(false);
+      setSelectedUserForCalendar(null);
+    }
+  };
+
 
   // Renderizado de cada usuario en la lista
   const renderUserItem = ({ item }: { item: UserSearchResult }) => (
@@ -101,7 +136,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
           styles.inviteButton,
           invitingUserId === item.id && styles.inviteButtonDisabled
         ]}
-        onPress={() => handleInvite(item.id)}
+        onPress={() => handleInviteClick(item.id)}
         disabled={invitingUserId === item.id}
       >
         {invitingUserId === item.id ? (
@@ -114,12 +149,13 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
   );
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
-    >
+    <>
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={onClose}
+      >
       <KeyboardAvoidingView 
         style={styles.overlay} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -174,6 +210,74 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
         </View>
       </KeyboardAvoidingView>
     </Modal>
+
+    <Modal
+      visible={privilegeModalVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setPrivilegeModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Privileges</Text>
+          <Text style={styles.modalMessage}>Select the permission level for this user:</Text>
+          
+          <View style={styles.radioGroup}>
+            <TouchableOpacity 
+              style={styles.radioOption} 
+              onPress={() => setSelectedPrivilege('VIEW')}
+            >
+              <View style={[styles.radioCircle, selectedPrivilege === 'VIEW' && styles.radioCircleSelected]} />
+              <Text style={styles.radioText}>View</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.radioOption} 
+              onPress={() => setSelectedPrivilege('EDIT')}
+            >
+              <View style={[styles.radioCircle, selectedPrivilege === 'EDIT' && styles.radioCircleSelected]} />
+              <Text style={styles.radioText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalButtonCancel]}
+              onPress={() => setPrivilegeModalVisible(false)}
+            >
+              <Text style={[styles.modalButtonText, {color: '#131111'}]}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={confirmCalendarInvite}
+            >
+              <Text style={styles.modalButtonText}>Invite</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal
+      visible={errorModalVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setErrorModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.errorModalTitle}>{errorTitle}</Text>
+          <Text style={styles.modalMessage}>{errorMessage}</Text>
+          <TouchableOpacity
+            style={styles.errorModalButton}
+            onPress={() => setErrorModalVisible(false)}
+          >
+            <Text style={styles.modalButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  </>
   );
 };
 
@@ -210,7 +314,24 @@ const styles = StyleSheet.create({
   username: { fontSize: 16, color: '#333', fontWeight: '500' },
   inviteButton: { backgroundColor: '#164E52', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   inviteButtonDisabled: { backgroundColor: '#A0BCC0' },
-  inviteButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' }
+  inviteButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  
+  // Custom Modals styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '80%', maxWidth: 400, alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#111', marginBottom: 8 },
+  errorModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#E53935', marginBottom: 8 },
+  modalMessage: { fontSize: 15, color: '#333', textAlign: 'center', marginBottom: 20 },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
+  modalButton: { backgroundColor: '#164E52', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8, flex: 1, marginHorizontal: 4, alignItems: 'center' },
+  modalButtonCancel: { backgroundColor: '#E5E7EB' },
+  errorModalButton: { backgroundColor: '#E53935', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 },
+  modalButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  radioGroup: { width: '100%', marginBottom: 10 },
+  radioOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  radioCircle: { height: 20, width: 20, borderRadius: 10, borderWidth: 2, borderColor: '#164E52', marginRight: 10, alignItems: 'center', justifyContent: 'center' },
+  radioCircleSelected: { backgroundColor: '#164E52' },
+  radioText: { fontSize: 16, color: '#333' }
 });
 
 export default InviteUserModal;
