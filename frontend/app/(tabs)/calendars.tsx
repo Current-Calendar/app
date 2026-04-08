@@ -198,8 +198,10 @@ export default function CalendarScreen() {
         };
 
     useEffect(() => {
-        void fetchData();
-    }, []);
+        if (isAuthenticated) {
+            void fetchData();
+        }
+    }, [isAuthenticated]);
     useEffect(() => {
         if (calendarsError || eventsError) {
             console.error('Error fetching data:', calendarsError || eventsError);

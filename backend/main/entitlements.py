@@ -39,6 +39,8 @@ PLAN_FEATURES = {
 }
 
 def get_user_features(user):
+    if not user or not getattr(user, 'is_authenticated', False):
+        return PLAN_FEATURES[Planes.FREE]
     return PLAN_FEATURES.get(user.plan, PLAN_FEATURES[Planes.FREE])
 
 
