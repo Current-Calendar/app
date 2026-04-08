@@ -124,6 +124,7 @@ export default function SignUpScreen() {
             placeholderTextColor="#999"
             style={styles.input}
             autoCapitalize="none"
+            testID="register-username-input"
           />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Email Address</Text>
@@ -135,6 +136,7 @@ export default function SignUpScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             style={styles.input}
+            testID="register-email-input"
           />
 
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
@@ -146,6 +148,7 @@ export default function SignUpScreen() {
               placeholderTextColor="#999"
               secureTextEntry={!showPassword}
               style={[styles.input, { paddingRight: 40 }]}
+              testID="register-password-input"
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -168,6 +171,7 @@ export default function SignUpScreen() {
               placeholderTextColor="#999"
               secureTextEntry={!showPassword2}
               style={[styles.input, { paddingRight: 40 }]}
+              testID="register-password2-input"
             />
             <Pressable
               onPress={() => setShowPassword2(!showPassword2)}
@@ -181,10 +185,10 @@ export default function SignUpScreen() {
             </Pressable>
           </View>
 
-          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
-          {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
+          {!!errorMsg && <Text style={styles.errorText} testID="register-error-text">{errorMsg}</Text>}
+          {!!successMsg && <Text style={styles.successText} testID="register-success-text">{successMsg}</Text>}
 
-          <Pressable style={styles.btn} onPress={onSignup} disabled={loading}>
+          <Pressable style={styles.btn} onPress={onSignup} disabled={loading} testID="register-submit-button">
             <View style={styles.btnBubbles} pointerEvents="none">
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
               <View style={[styles.bubbleDot, { top: 18, left: 22, width: 6, height: 6 }]} />
@@ -204,7 +208,7 @@ export default function SignUpScreen() {
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Already have an account?</Text>
           <Link href="/login" asChild>
-            <Pressable>
+            <Pressable testID="go-login-link">
               <Text style={styles.bottomLink}>Login</Text>
             </Pressable>
           </Link>
