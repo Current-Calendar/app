@@ -53,6 +53,17 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const parseErrorMessage = (error: unknown): string => {
+    if (error instanceof ApiError) {
+      if (error.status === 401) return "Credenciales inválidas.";
+      if (typeof error.message === "string" && error.message.trim()) return error.message;
+    }
+    const anyErr = error as any;
+    const detail = anyErr?.data?.detail || anyErr?.detail || anyErr?.message;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    return "No se pudo iniciar sesión. Inténtalo de nuevo.";
+  };
+
   const onLogin = async () => {
     if (isAuthenticated || user) {
       router.replace('/(tabs)/switch-events' as any);
@@ -76,16 +87,7 @@ export default function LoginScreen() {
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
-      if (error instanceof ApiError) {
-        const detail = error.message || "Credenciales inválidas.";
-        const normalizedDetail =
-          detail === "Session expired. Please log in again."
-            ? "Credenciales inválidas."
-            : detail;
-        setErrorMsg(normalizedDetail);
-      } else {
-        setErrorMsg("No se pudo iniciar sesión. Inténtalo de nuevo.");
-      }
+      setErrorMsg(parseErrorMessage(error));
     } finally {
       setLoading(false);
     }
