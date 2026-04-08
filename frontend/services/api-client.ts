@@ -172,8 +172,9 @@ class ApiClient {
       clearTimeout(timeoutId);
     }
 
-    // If 401, first attempt to refresh the token
+    // If 401, try to recover the session; otherwise surface the API error
     if (response.status === 401) {
+      const hasSession = hadAccessToken || Boolean(this.refreshToken);
       let retried = false;
 
       if (this.refreshToken) {
@@ -198,6 +199,7 @@ class ApiClient {
       if (!retried && hadAccessToken) {
         this.user = null;
         await this.clearTokens();
+        this.onAuthFailure?.();
         delete headers['Authorization'];
         const retryController = new AbortController();
         const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
@@ -209,11 +211,8 @@ class ApiClient {
         } finally {
           clearTimeout(retryTimeout);
         }
-      } else {
-        // Refresh failed — tokens are dead, force logout
-        await this.clearTokens();
-        this.onAuthFailure?.();
-        throw new Error('Session expired. Please log in again.');
+      } else if (!hasSession) {
+        // No tokens to refresh; let the standard error handler below capture the message
       }
     }
 

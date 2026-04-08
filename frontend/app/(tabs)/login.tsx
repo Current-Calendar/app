@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Ionicons } from '@expo/vector-icons';
+import { ApiError } from "@/services/api-client";
 
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -32,6 +33,8 @@ export default function LoginScreen() {
   const { width } = useWindowDimensions();
 
   const { user, login, isAuthenticated, isLoading } = useAuth();
+  const usernameRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
     if (!isLoading && (isAuthenticated || Boolean(user))) {
@@ -73,7 +76,16 @@ export default function LoginScreen() {
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
-      setErrorMsg("User o contraseña incorrectos.");
+      if (error instanceof ApiError) {
+        const detail = error.message || "Credenciales inválidas.";
+        const normalizedDetail =
+          detail === "Session expired. Please log in again."
+            ? "Credenciales inválidas."
+            : detail;
+        setErrorMsg(normalizedDetail);
+      } else {
+        setErrorMsg("No se pudo iniciar sesión. Inténtalo de nuevo.");
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +113,10 @@ export default function LoginScreen() {
             placeholderTextColor="#999"
             autoCapitalize="none"
             style={styles.input}
+            ref={usernameRef}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
           />
 
           <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
@@ -113,6 +129,14 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               style={[styles.input, { paddingRight: 40 }]}
               autoCapitalize="none"
+              ref={passwordRef}
+              returnKeyType="done"
+              onSubmitEditing={onLogin}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === "Enter") {
+                  onLogin();
+                }
+              }}
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
