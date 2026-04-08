@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -32,7 +32,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { user, login, isAuthenticated, isLoading } = useAuth();
+  const { login } = useAuth();
   const usernameRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
@@ -47,12 +47,6 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isLoading && !errorMsg && (isAuthenticated || Boolean(user))) {
-      router.replace('/(tabs)/switch-events' as any);
-    }
-  }, [isLoading, isAuthenticated, user, errorMsg, router]);
-
   const parseErrorMessage = (error: unknown): string => {
     if (error instanceof ApiError) {
       if (error.status === 401) return "Credenciales inválidas.";
@@ -65,11 +59,6 @@ export default function LoginScreen() {
   };
 
   const onLogin = async () => {
-    if (isAuthenticated || user) {
-      router.replace('/(tabs)/switch-events' as any);
-      return;
-    }
-
     setErrorMsg(null);
     setSuccessMsg(null);
 
