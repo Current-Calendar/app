@@ -9,7 +9,8 @@ export type NotificationType =
   | 'EVENT_LIKED' 
   | 'CALENDAR_INVITE'
   | 'EVENT_INVITE' 
-  | 'EVENT_COMMENT';
+  | 'EVENT_COMMENT'
+  | 'CALENDAR_COMMENT';
   
 
 export type Notification = {
