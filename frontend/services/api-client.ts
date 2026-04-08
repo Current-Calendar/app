@@ -39,6 +39,18 @@ export class ApiError extends Error {
   }
 }
 
+const NETWORK_ERROR_MESSAGE =
+  'No se pudo conectar con el servidor. Comprueba que el backend está activo e inténtalo de nuevo.';
+
+function toNetworkApiError(error: unknown): ApiError {
+  const message =
+    error instanceof Error && typeof error.message === 'string' && error.message.trim()
+      ? error.message
+      : NETWORK_ERROR_MESSAGE;
+
+  return new ApiError(NETWORK_ERROR_MESSAGE, 0, { cause: message });
+}
+
 class ApiClient {
   user: User | null = null;
 
@@ -168,7 +180,7 @@ class ApiClient {
       if (err?.name === 'AbortError') {
         throw new ApiError('Request timed out. Please try again.', 408, {});
       }
-      throw err;
+      throw toNetworkApiError(err);
     } finally {
       clearTimeout(timeoutId);
     }
@@ -189,7 +201,7 @@ class ApiClient {
             response = await fetch(url, { ...options, headers, signal: retryController.signal });
           } catch (err: any) {
             if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
-            throw err;
+            throw toNetworkApiError(err);
           } finally {
             clearTimeout(retryTimeout);
           }
@@ -208,7 +220,7 @@ class ApiClient {
           response = await fetch(url, { ...options, headers, signal: retryController.signal });
         } catch (err: any) {
           if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
-          throw err;
+          throw toNetworkApiError(err);
         } finally {
           clearTimeout(retryTimeout);
         }

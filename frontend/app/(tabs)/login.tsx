@@ -49,13 +49,22 @@ export default function LoginScreen() {
 
   const parseErrorMessage = (error: unknown): string => {
     if (error instanceof ApiError) {
-      if (error.status === 401) return "Credenciales inválidas.";
+      if (error.status === 401) return "Credenciales invalidas.";
+      if (error.status === 0) {
+        return "No se pudo conectar con el servidor. Comprueba que el backend esta activo e intentalo de nuevo.";
+      }
       if (typeof error.message === "string" && error.message.trim()) return error.message;
     }
     const anyErr = error as any;
     const detail = anyErr?.data?.detail || anyErr?.detail || anyErr?.message;
+    if (
+      typeof detail === "string" &&
+      ["Failed to fetch", "Network request failed", "Load failed"].includes(detail.trim())
+    ) {
+      return "No se pudo conectar con el servidor. Comprueba que el backend esta activo e intentalo de nuevo.";
+    }
     if (typeof detail === "string" && detail.trim()) return detail;
-    return "No se pudo iniciar sesión. Inténtalo de nuevo.";
+    return "No se pudo iniciar sesion. Intentalo de nuevo.";
   };
 
   const onLogin = async () => {
@@ -177,7 +186,7 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>Don’t have an account?</Text>
+          <Text style={styles.bottomText}>Don't have an account?</Text>
           <Link href="/register" asChild>
             <Pressable>
               <Text style={styles.bottomLink}>Sign Up</Text>
@@ -321,3 +330,4 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+
