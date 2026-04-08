@@ -72,15 +72,30 @@ export function CalendarInfoModal({
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
+  const currentUsername = (user?.username ?? '').trim().toLowerCase();
   const isOwner = user?.username === localCalendar.creator;
-  const isOwnerOrCoOwner =
-  user &&
-  (
-    localCalendar.creator === user.username ||
+  const isCoOwner =
+    user &&
+    !isOwner &&
     (localCalendar.co_owners ?? []).some(
-      (co: any) => co.username === user.username
-    )
-  );
+      (co: any) => (co?.username ?? '').trim().toLowerCase() === currentUsername
+    );
+  const isViewerOnly =
+    user &&
+    !isOwner &&
+    !isCoOwner &&
+    (localCalendar.viewers ?? []).some(
+      (viewer: any) => (viewer?.username ?? '').trim().toLowerCase() === currentUsername
+    );
+  const canLeaveCalendar = isCoOwner || isViewerOnly;
+  const isOwnerOrCoOwner =
+    user &&
+    (
+      localCalendar.creator === user.username ||
+      (localCalendar.co_owners ?? []).some(
+        (co: any) => co.username === user.username
+      )
+    );
   const hasCalendarCover =
         typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
 
@@ -143,7 +158,7 @@ export function CalendarInfoModal({
       // Success - close the modal and notify parent
       Alert.alert('Success', `You have left the calendar "${localCalendar.name}".`);
       onClose?.();
-      onCalendarUpdated?.(null); // Trigger parent to refresh calendars list
+      onCalendarUpdated?.({ id: localCalendar.id, left: true });
     } catch (error: any) {
       Alert.alert('Error', error?.message || 'Failed to leave the calendar. Please try again.');
     } finally {
@@ -162,6 +177,9 @@ export function CalendarInfoModal({
     co_owners: Array.isArray(updatedCalendar?.co_owners)
       ? updatedCalendar.co_owners
       : ((localCalendar as any).co_owners ?? []),
+    viewers: Array.isArray(updatedCalendar?.viewers)
+      ? updatedCalendar.viewers
+      : ((localCalendar as any).viewers ?? []),
   } as Calendar;
 
   setLocalCalendar(merged);
@@ -352,7 +370,7 @@ export function CalendarInfoModal({
             )
           )}
 
-          {!isOwner && isOwnerOrCoOwner && (
+          {canLeaveCalendar && (
             isCompactActions ? (
               <View style={calendarInfoModalStyles.compactActionWrap}>
                 <TouchableOpacity

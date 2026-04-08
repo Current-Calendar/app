@@ -280,11 +280,16 @@ def _can_like_calendar(user, calendar: Calendar) -> bool:
 @permission_classes([IsAuthenticated])
 def list_subscribed_calendars(request):
     """
-    List calendars the authenticated user is subscribed to.
+    List calendars the authenticated user is subscribed to, plus calendars where they are co-owner or viewer.
 
     GET /api/v1/calendars/subscribed/
     """
-    queryset = request.user.subscribed_calendars.select_related('creator').prefetch_related('co_owners').order_by('-created_at')
+    from django.db.models import Q
+    
+    # Include subscribed calendars, calendars where user is co-owner, and calendars where user is viewer
+    queryset = Calendar.objects.filter(
+        Q(subscribers=request.user) | Q(co_owners=request.user) | Q(viewers=request.user)
+    ).select_related('creator').prefetch_related('co_owners', 'viewers').order_by('-created_at').distinct()
 
     liked_ids = _get_liked_calendar_ids(request.user, queryset)
 
@@ -303,6 +308,7 @@ def list_subscribed_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+            "viewers": [{"id": viewer.id, "username": viewer.username} for viewer in cal.viewers.all()],
         }
         for cal in queryset
     ]
@@ -363,7 +369,7 @@ def list_co_owned_calendars(request):
     """
     user = request.user
 
-    queryset = Calendar.objects.select_related('creator').filter(
+    queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners', 'viewers').filter(
         Q(co_owners__id=user.id) | Q(viewers__id=user.id)
     ).distinct().order_by('-created_at')
 
@@ -384,6 +390,7 @@ def list_co_owned_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+            "viewers": [{"id": viewer.id, "username": viewer.username} for viewer in cal.viewers.all()],
         }
         for cal in queryset
     ]

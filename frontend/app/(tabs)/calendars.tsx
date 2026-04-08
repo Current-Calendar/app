@@ -129,6 +129,7 @@ export default function CalendarScreen() {
             creator_username: c.creator_username,
             color: COLORS[index % COLORS.length],
             co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
+            viewers: Array.isArray(c.viewers) ? c.viewers : [],
             }));
 
             setCalendars(mappedCalendars);
@@ -148,6 +149,16 @@ export default function CalendarScreen() {
         };
 
     const updateCalendarInState = (updatedCalendar: any) => {
+        if (updatedCalendar?.left && updatedCalendar?.id != null) {
+            const removedId = String(updatedCalendar.id);
+            setCalendars((current) => current.filter((calendar) => calendar.id !== removedId));
+            setEvents((current) => current.filter((event) => event.calendarId !== removedId));
+            setSelectedCalendarId((current) => (current === removedId ? null : current));
+            setActiveEvent((current) => (current?.calendarId === removedId ? null : current));
+            setInfoCalendar((current) => (current?.id === removedId ? null : current));
+            return;
+        }
+
         setCalendars((current) =>
             current.map((calendar) => {
             if (calendar.id !== String(updatedCalendar.id)) return calendar;
@@ -169,6 +180,9 @@ export default function CalendarScreen() {
                 co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((calendar as any).co_owners ?? []),
+                viewers: Array.isArray(updatedCalendar.viewers)
+                ? updatedCalendar.viewers
+                : ((calendar as any).viewers ?? []),
             } as Calendar;
             })
         );
@@ -193,6 +207,9 @@ export default function CalendarScreen() {
             co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((current as any).co_owners ?? []),
+            viewers: Array.isArray(updatedCalendar.viewers)
+                ? updatedCalendar.viewers
+                : ((current as any).viewers ?? []),
             } as Calendar;
         });
         };
