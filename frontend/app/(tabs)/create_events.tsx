@@ -275,7 +275,7 @@ export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
-  const { date: dateParam } = useLocalSearchParams();
+  const { date: dateParam, calendarId: calendarIdParam } = useLocalSearchParams<{ date: string; calendarId: string }>();
   const router = useRouter();
 
   const goBackOrCalendars = () => {
@@ -316,7 +316,12 @@ export default function CreateEventsScreen() {
       const mapped = list.map(mapCalendarFromApi).filter((c: CalendarItem) => c.id);
 
       setCalendars(mapped);
-      if (!selectedCalendar && mapped.length > 0) setSelectedCalendar(mapped[0]);
+      if (!selectedCalendar && mapped.length > 0) {
+        const preSelected = calendarIdParam
+          ? mapped.find((c: CalendarItem) => c.id === String(calendarIdParam)) ?? mapped[0]
+          : mapped[0];
+        setSelectedCalendar(preSelected);
+      }
     } catch (e: any) {
       setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
