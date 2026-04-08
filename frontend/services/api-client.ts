@@ -138,7 +138,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    timeoutMs = 15000
   ): Promise<T> {
     const url = `${API_CONFIG.BaseURL}${endpoint}`;
     const isFormData = options.body instanceof FormData;
@@ -152,10 +153,24 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    let response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new ApiError('Request timed out. Please try again.', 408, {});
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     // If 401, first attempt to refresh the token
     if (response.status === 401) {
@@ -166,10 +181,16 @@ class ApiClient {
 
         if (refreshed && this.accessToken) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
-          response = await fetch(url, {
-            ...options,
-            headers,
-          });
+          const retryController = new AbortController();
+          const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+          try {
+            response = await fetch(url, { ...options, headers, signal: retryController.signal });
+          } catch (err: any) {
+            if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
+            throw err;
+          } finally {
+            clearTimeout(retryTimeout);
+          }
           retried = true;
         }
       }
@@ -178,10 +199,16 @@ class ApiClient {
         this.user = null;
         await this.clearTokens();
         delete headers['Authorization'];
-        response = await fetch(url, {
-          ...options,
-          headers,
-        });
+        const retryController = new AbortController();
+        const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+        try {
+          response = await fetch(url, { ...options, headers, signal: retryController.signal });
+        } catch (err: any) {
+          if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
+          throw err;
+        } finally {
+          clearTimeout(retryTimeout);
+        }
       } else {
         // Refresh failed — tokens are dead, force logout
         await this.clearTokens();

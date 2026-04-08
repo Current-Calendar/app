@@ -1004,11 +1004,17 @@ def recommended_calendars(request):
 
     return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, CanCoOwnCalendars])
+@permission_classes([IsAuthenticated])
 def invite_calendar(request: Request, calendar_id: int) -> Response:
     calendar = get_object_or_404(Calendar, pk=calendar_id)
     user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
     invite_type = request.data.get("permission", "VIEW")
+
+    if invite_type not in ("VIEW", "EDIT"):
+        return Response(
+            {"error": f"Invalid permission type '{invite_type}'"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if request.user == user_to_invite:
         return Response(
@@ -1021,12 +1027,20 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             {"error": "Only the calendar creator can send invitations"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
+    if invite_type == "EDIT":
+        # Only EDIT invitations require the co-ownership plan check
+        perm = CanCoOwnCalendars()
+        perm.request = request
+        if not perm.has_permission(request, None):
+            return Response({"error": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
     if calendar.privacy == "PUBLIC" and invite_type == "VIEW":
         return Response(
             {"error": "Public calendars are already viewable by everyone, no need to invite"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
     existing_invitation = CalendarInvitation.objects.filter(
         calendar=calendar,
         invitee=user_to_invite,
@@ -1038,48 +1052,47 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             {"error": "An active invitation of this type already exists for this user and calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     if invite_type == "EDIT" and calendar.co_owners.filter(id=user_to_invite.id).exists():
         return Response(
             {"error": "User is already a co-owner of the calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     if invite_type == "VIEW" and calendar.viewers.filter(id=user_to_invite.id).exists():
         return Response(
             {"error": "User already has view access to the calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    if invite_type == "EDIT":
-        existing_viewer_invitation = CalendarInvitation.objects.filter(
+
+    with transaction.atomic():
+        if invite_type == "EDIT":
+            CalendarInvitation.objects.filter(
+                calendar=calendar,
+                invitee=user_to_invite,
+                permission="VIEW",
+                accepted=None
+            ).delete()
+
+        CalendarInvitation.objects.create(
             calendar=calendar,
             invitee=user_to_invite,
-            permission="VIEW",
-            accepted=None
-        ).first()
-        if existing_viewer_invitation:
-            existing_viewer_invitation.delete()
-    
-    CalendarInvitation.objects.create(
-        calendar=calendar,
-        invitee=user_to_invite,
-        permission=invite_type,
-        sender=request.user)
+            permission=invite_type,
+            sender=request.user,
+        )
 
-
-    if not Notification.objects.filter(
-        recipient=user_to_invite,
-        type="CALENDAR_INVITE",
-        related_calendar=calendar,
-        sender=request.user,
-    ).exists():
-        Notification.objects.create(
+        if not Notification.objects.filter(
             recipient=user_to_invite,
             type="CALENDAR_INVITE",
             related_calendar=calendar,
             sender=request.user,
-            message=f"@{request.user.username} has invited you to {invite_type.lower()} the calendar \"{calendar.name}\".",
-        )
+        ).exists():
+            Notification.objects.create(
+                recipient=user_to_invite,
+                type="CALENDAR_INVITE",
+                related_calendar=calendar,
+                sender=request.user,
+                message=f"@{request.user.username} has invited you to {invite_type.lower()} the calendar \"{calendar.name}\".",
+            )
 
     return Response(status=status.HTTP_204_NO_CONTENT)
