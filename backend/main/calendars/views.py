@@ -861,7 +861,8 @@ def get_calendar_share_info(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
     share_url = request.build_absolute_uri(f'/share/calendar/{calendar_id}/')
-    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+    deep_link = f"{frontend_url}/calendar-view?calendarId={calendar_id}"
 
     return Response({
         'calendar_id': calendar.id,
@@ -901,7 +902,8 @@ def share_calendar_html(request, calendar_id):
     else:
         visual_cover_url = ''
         og_cover_url = _default_og_image
-    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+    deep_link = f"{frontend_url}/calendar-view?calendarId={calendar_id}"
     page_url = request.build_absolute_uri()
 
     safe_name = html_lib.escape(calendar.name)
