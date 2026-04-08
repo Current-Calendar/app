@@ -149,8 +149,9 @@ export function EventDetailModal({
                 <Pressable
                   style={[styles.attendanceButton, attendanceLoading && { opacity: 0.6 }]}
                   onPress={() => !attendanceLoading && setAttendanceMenuOpen((prev) => !prev)}
+                  testID="event-attendance-button"
                 >
-                  <Text style={styles.attendanceButtonText}>
+                  <Text style={styles.attendanceButtonText} testID="event-attendance-label">
                     {attendanceLoading ? "Saving..." : getAttendanceLabel(currentAttendance)}
                   </Text>
                   <Ionicons
@@ -165,6 +166,7 @@ export function EventDetailModal({
                     <Pressable
                       style={styles.dropdownItem}
                       onPress={() => handleAttendanceChange("ASSISTING")}
+                      testID="event-attendance-assisting-option"
                     >
                       <Text style={styles.dropdownItemText}>I will attend</Text>
                     </Pressable>
@@ -172,6 +174,7 @@ export function EventDetailModal({
                     <Pressable
                       style={styles.dropdownItem}
                       onPress={() => handleAttendanceChange("NOT_ASSISTING")}
+                      testID="event-attendance-not-assisting-option"
                     >
                       <Text style={styles.dropdownItemText}>I will not attend</Text>
                     </Pressable>

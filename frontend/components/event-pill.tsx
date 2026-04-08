@@ -19,6 +19,7 @@ export function EventPill({ event, onPress }: EventPillProps) {
             activeOpacity={0.75}
             onPress={() => onPress?.(event)}
             style={[eventPillStyles.pill, { backgroundColor: bg + '1A', borderLeftColor: bg }]}
+            testID={`event-pill-${event.id}`}
         >
             {event.time && event.time !== '00:00' && (
                 <Text style={[eventPillStyles.time, { color: bg }]} numberOfLines={1}>

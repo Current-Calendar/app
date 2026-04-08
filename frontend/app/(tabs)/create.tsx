@@ -119,11 +119,13 @@ export default function CreateScreen() {
 
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
+      setErrorMessage("Calendar name is required.");
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
 
     if (!user?.username) {
+      setErrorMessage("You must be logged in to create a calendar.");
       Alert.alert("Error", "You must be logged in to create a calendar.");
       return;
     }
@@ -255,6 +257,7 @@ export default function CreateScreen() {
               onChangeText={(text) =>
                 setCalendarData({ ...calendarData, name: text })
               }
+              testID="create-calendar-name-input"
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
@@ -266,6 +269,7 @@ export default function CreateScreen() {
               }
               multiline
               numberOfLines={3}
+              testID="create-calendar-description-input"
             />
           </View>
 
@@ -357,6 +361,7 @@ export default function CreateScreen() {
               style={styles.cancelButton}
               onPress={handleCancel}
               disabled={isLoading}
+              testID="create-calendar-cancel-button"
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
@@ -368,6 +373,7 @@ export default function CreateScreen() {
               ]}
               onPress={handlePublish}
               disabled={isLoading}
+              testID="create-calendar-submit-button"
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" size="small" />
