@@ -36,12 +36,6 @@ export default function LoginScreen() {
   const usernameRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
-  useEffect(() => {
-    if (!isLoading && !errorMsg && (isAuthenticated || Boolean(user))) {
-      router.replace('/(tabs)/switch-events' as any);
-    }
-  }, [isLoading, isAuthenticated, user, errorMsg, router]);
-
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
 
@@ -52,6 +46,12 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && !errorMsg && (isAuthenticated || Boolean(user))) {
+      router.replace('/(tabs)/switch-events' as any);
+    }
+  }, [isLoading, isAuthenticated, user, errorMsg, router]);
 
   const parseErrorMessage = (error: unknown): string => {
     if (error instanceof ApiError) {
@@ -157,7 +157,11 @@ export default function LoginScreen() {
           </Link>
           </Pressable>
 
-          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {!!errorMsg && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          )}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
 
           <Pressable
@@ -272,7 +276,16 @@ const styles = StyleSheet.create({
   forgot: { alignSelf: "flex-end", marginTop: 8, marginBottom: 8 },
   forgotText: { color: "#3A9A9A", fontSize: 12, fontWeight: "700" },
 
-  errorText: { marginTop: 6, color: "#C43B3B", fontWeight: "800" },
+  errorBox: {
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(196,59,59,0.12)",
+    borderColor: "#C43B3B",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  errorText: { color: "#C43B3B", fontWeight: "800" },
   successText: { marginTop: 6, color: TEAL, fontWeight: "900" },
 
   btn: {
