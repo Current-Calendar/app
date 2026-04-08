@@ -37,10 +37,10 @@ export default function LoginScreen() {
   const passwordRef = useRef<TextInput | null>(null);
 
   useEffect(() => {
-    if (!isLoading && (isAuthenticated || Boolean(user))) {
+    if (!isLoading && !errorMsg && (isAuthenticated || Boolean(user))) {
       router.replace('/(tabs)/switch-events' as any);
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [isLoading, isAuthenticated, user, errorMsg, router]);
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -87,6 +87,7 @@ export default function LoginScreen() {
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
+      setSuccessMsg(null);
       setErrorMsg(parseErrorMessage(error));
     } finally {
       setLoading(false);
