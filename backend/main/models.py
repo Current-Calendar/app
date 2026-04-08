@@ -263,6 +263,7 @@ class Notification(models.Model):
         ('EVENT_SAVED', 'Event Saved'),
         ('EVENT_LIKED', 'Event Liked'),
         ('EVENT_COMMENT', 'Event Comment'),
+        ('CALENDAR_COMMENT', 'Calendar Comment'),
         ('EVENT_INVITE', 'Event Invite'),
         ('CALENDAR_INVITE', 'Calendar Invite'),
     ]
