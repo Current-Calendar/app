@@ -101,6 +101,7 @@ urlpatterns = [
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
+    path('silk/', include('silk.urls', namespace='silk'))
 ]
 
 
