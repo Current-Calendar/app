@@ -155,7 +155,7 @@ class CurrentUser(HttpUser):
 
     @task(5)
     def list_calendars(self):
-        possible_privacies = ["PRIVATE", "FRIENDS", "PUBLIC"]
+        possible_privacies = ["PRIVATE", "PUBLIC"]
         self.get_ok(
             "/api/v1/calendars/list/",
             name="GET /api/v1/calendars/list/",
@@ -170,13 +170,6 @@ class CurrentUser(HttpUser):
         self.get_ok(
             "/api/v1/calendars/subscribed/",
             name="GET /api/v1/calendars/subscribed/",
-        )
-
-    @task(2)
-    def list_friends_calendars(self):
-        self.get_ok(
-            "/api/v1/calendars/friends-calendars/",
-            name="GET /api/v1/calendars/friends-calendars/",
         )
 
     @task(2)

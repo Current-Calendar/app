@@ -2,6 +2,7 @@ from rest_framework import permissions
 import math
 from .entitlements import get_user_features
 from .models import Calendar, Notification, User
+from .privacy import normalize_calendar_privacy
 from django.shortcuts import get_object_or_404
 
 class CanCreateCalendar(permissions.BasePermission):
@@ -11,7 +12,7 @@ class CanCreateCalendar(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        requested_privacy = request.data.get('privacy', 'PRIVATE')
+        requested_privacy = normalize_calendar_privacy(request.data.get('privacy', 'PRIVATE'))
         user_features = get_user_features(request.user)
 
         if requested_privacy == 'PUBLIC':
@@ -44,7 +45,7 @@ class CanChangePrivacy(permissions.BasePermission):
         
         original_calendar_privacy = Calendar.objects.filter(id=view.kwargs.get('calendar_id')).values_list('privacy', flat=True).first()
 
-        new_privacy = request.data.get('privacy')
+        new_privacy = normalize_calendar_privacy(request.data.get('privacy'), default=None)
         if new_privacy is None or new_privacy == original_calendar_privacy:
             return True
         

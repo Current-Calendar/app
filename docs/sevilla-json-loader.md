@@ -155,7 +155,7 @@ python manage.py setup_test_users --current-username current --link-calendars
 - `key`: identificador interno del JSON para enlazar eventos
 - `name`: obligatorio
 - `description`: opcional
-- `privacy`: opcional (`PRIVATE`, `FRIENDS`, `PUBLIC`)
+- `privacy`: opcional (`PRIVATE`, `PUBLIC`)
 - `origin`: opcional (`CURRENT`, `GOOGLE`, `APPLE`)
 - `external_id`: opcional pero recomendado para deduplicación
 

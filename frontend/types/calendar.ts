@@ -1,6 +1,6 @@
 // ─── Domain Types (mirrors backend/main/models.py) ─────────────────────────
 
-export type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
+export type PrivacyStatus = 'PRIVATE' | 'PUBLIC';
 
 export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
@@ -15,8 +15,8 @@ export interface Calendar {
     origin: CalendarOrigin;
     creator: string;        // username
     color: string;          // UI-only accent color
-    likes_count: number;
-    liked_by_me: boolean;
+    likes_count?: number;
+    liked_by_me?: boolean;
     co_owners?: { username: string; name: string }[]; // For shared calendars
 }
 

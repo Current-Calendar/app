@@ -16,7 +16,6 @@ import CalendarCard from "@/components/event-calendar/calendar-card";
 import CommentsModalC from "@/components/comments-modal-c";
 import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
-import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
 
@@ -75,8 +74,7 @@ export default function CalendarsScreen() {
       const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
       const isNotMine = !user?.id || creatorId !== String(user.id);
       const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-      const isVisibleByPrivacy =
-        c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+      const isVisibleByPrivacy = c.privacy === "PUBLIC";
 
       return isVisibleByPrivacy && isNotMine && isNotSubscribed;
     });
