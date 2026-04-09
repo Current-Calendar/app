@@ -18,6 +18,7 @@ export interface Calendar {
     likes_count?: number;
     liked_by_me?: boolean;
     co_owners?: { username: string; name: string }[]; // For shared calendars
+    viewers?: { id?: number; username: string; name?: string }[];
 }
 
 export interface CalendarEvent {

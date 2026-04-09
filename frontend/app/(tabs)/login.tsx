@@ -101,6 +101,7 @@ export default function LoginScreen() {
             placeholderTextColor="#999"
             autoCapitalize="none"
             style={styles.input}
+            testID="login-username-input"
           />
 
           <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
@@ -113,6 +114,7 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               style={[styles.input, { paddingRight: 40 }]}
               autoCapitalize="none"
+              testID="login-password-input"
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -137,6 +139,7 @@ export default function LoginScreen() {
             style={[styles.btn, loading && { opacity: 0.75 }]}
             onPress={onLogin}
             disabled={loading}
+            testID="login-submit-button"
           >
             <View style={styles.btnBubbles} pointerEvents="none">
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
@@ -159,7 +162,7 @@ export default function LoginScreen() {
         <View style={styles.bottomRow}>
           <Text style={styles.bottomText}>Don’t have an account?</Text>
           <Link href="/register" asChild>
-            <Pressable>
+            <Pressable testID="go-register-link">
               <Text style={styles.bottomLink}>Sign Up</Text>
             </Pressable>
           </Link>

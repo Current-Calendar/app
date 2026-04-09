@@ -36,7 +36,7 @@ export default function CalendarsScreen() {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
-  } = useRecommendedCalendars();
+  } = useRecommendedCalendars({ enabled: isAuthenticated });
 
   if (calendarsError) {
     Alert.alert('Error', calendarsError);
@@ -50,6 +50,7 @@ export default function CalendarsScreen() {
   }, [calendarsError]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchSubscribedCalendars = async () => {
       try {
         const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
@@ -64,7 +65,7 @@ export default function CalendarsScreen() {
     };
 
     void fetchSubscribedCalendars();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];

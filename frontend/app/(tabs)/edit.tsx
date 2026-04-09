@@ -115,7 +115,7 @@ export default function EditScreen() {
         });
       }
 
-      router.replace('/(tabs)/calendars');
+      router.replace(`/(tabs)/calendars?selectedCalendarId=${calendarId}`);
     } catch (error: any) {
       console.log("FULL ERROR:", error);
 

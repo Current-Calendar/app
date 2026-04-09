@@ -108,14 +108,20 @@ const EditProfileScreen = () => {
     setIsRecoveringPassword(true);
     setRecoverError(null);
     try {
+      const fallbackMessage =
+        'If an account exists with this email, a password reset link has been sent.';
+      const genericErrorMessage = 'Could not send recovery email. Please try again.';
       const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
       });
-      if (!response.ok) throw new Error('Failed to send password recovery email.');
+      const data = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+      if (!response.ok) throw new Error(genericErrorMessage);
       setShowRecoverConfirm(false);
-      Alert.alert('Success', 'Password recovery email sent. Check your inbox.');
+      Alert.alert('Success', data?.message ?? fallbackMessage);
     } catch (error) {
       setRecoverError(error instanceof Error ? error.message : 'Could not send recovery email. Please try again.');
     } finally {

@@ -47,7 +47,7 @@ export default function NotificationsScreen() {
   if (notifications.length === 0) {
     return (
       <View style={[s.container, s.emptyState]}>
-        <Text style={s.emptyText}>No notifications</Text>
+        <Text style={s.emptyText} testID="notifications-empty-text">No notifications</Text>
       </View>
     );
   }

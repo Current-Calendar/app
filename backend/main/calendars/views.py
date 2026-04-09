@@ -284,11 +284,16 @@ def _can_like_calendar(user, calendar: Calendar) -> bool:
 @permission_classes([IsAuthenticated])
 def list_subscribed_calendars(request):
     """
-    List calendars the authenticated user is subscribed to.
+    List calendars the authenticated user is subscribed to, plus calendars where they are co-owner or viewer.
 
     GET /api/v1/calendars/subscribed/
     """
-    queryset = request.user.subscribed_calendars.select_related('creator').prefetch_related('co_owners').order_by('-created_at')
+    from django.db.models import Q
+    
+    # Include subscribed calendars, calendars where user is co-owner, and calendars where user is viewer
+    queryset = Calendar.objects.filter(
+        Q(subscribers=request.user) | Q(co_owners=request.user) | Q(viewers=request.user)
+    ).select_related('creator').prefetch_related('co_owners', 'viewers').order_by('-created_at').distinct()
 
     liked_ids = _get_liked_calendar_ids(request.user, queryset)
 
@@ -307,6 +312,7 @@ def list_subscribed_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+            "viewers": [{"id": viewer.id, "username": viewer.username} for viewer in cal.viewers.all()],
         }
         for cal in queryset
     ]
@@ -323,7 +329,7 @@ def list_co_owned_calendars(request):
     """
     user = request.user
 
-    queryset = Calendar.objects.select_related('creator').filter(
+    queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners', 'viewers').filter(
         Q(co_owners__id=user.id) | Q(viewers__id=user.id)
     ).distinct().order_by('-created_at')
 
@@ -344,6 +350,7 @@ def list_co_owned_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+            "viewers": [{"id": viewer.id, "username": viewer.username} for viewer in cal.viewers.all()],
         }
         for cal in queryset
     ]
@@ -821,7 +828,8 @@ def get_calendar_share_info(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
 
     share_url = request.build_absolute_uri(f'/share/calendar/{calendar_id}/')
-    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+    deep_link = f"{frontend_url}/calendar-view?calendarId={calendar_id}"
 
     return Response({
         'calendar_id': calendar.id,
@@ -861,7 +869,8 @@ def share_calendar_html(request, calendar_id):
     else:
         visual_cover_url = ''
         og_cover_url = _default_og_image
-    deep_link = f"current://calendar-view?calendarId={calendar_id}"
+    frontend_url = settings.FRONTEND_URL.rstrip('/')
+    deep_link = f"{frontend_url}/calendar-view?calendarId={calendar_id}"
     page_url = request.build_absolute_uri()
 
     safe_name = html_lib.escape(calendar.name)
@@ -964,11 +973,17 @@ def recommended_calendars(request):
 
     return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, CanCoOwnCalendars])
+@permission_classes([IsAuthenticated])
 def invite_calendar(request: Request, calendar_id: int) -> Response:
     calendar = get_object_or_404(Calendar, pk=calendar_id)
     user_to_invite = get_object_or_404(User, pk=request.data.get("user"))
     invite_type = request.data.get("permission", "VIEW")
+
+    if invite_type not in ("VIEW", "EDIT"):
+        return Response(
+            {"error": f"Invalid permission type '{invite_type}'"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     if request.user == user_to_invite:
         return Response(
@@ -981,12 +996,20 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             {"error": "Only the calendar creator can send invitations"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
+    if invite_type == "EDIT":
+        # Only EDIT invitations require the co-ownership plan check
+        perm = CanCoOwnCalendars()
+        perm.request = request
+        if not perm.has_permission(request, None):
+            return Response({"error": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
     if calendar.privacy == "PUBLIC" and invite_type == "VIEW":
         return Response(
             {"error": "Public calendars are already viewable by everyone, no need to invite"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
     existing_invitation = CalendarInvitation.objects.filter(
         calendar=calendar,
         invitee=user_to_invite,
@@ -998,48 +1021,47 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             {"error": "An active invitation of this type already exists for this user and calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     if invite_type == "EDIT" and calendar.co_owners.filter(id=user_to_invite.id).exists():
         return Response(
             {"error": "User is already a co-owner of the calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
+
     if invite_type == "VIEW" and calendar.viewers.filter(id=user_to_invite.id).exists():
         return Response(
             {"error": "User already has view access to the calendar"},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    
-    if invite_type == "EDIT":
-        existing_viewer_invitation = CalendarInvitation.objects.filter(
+
+    with transaction.atomic():
+        if invite_type == "EDIT":
+            CalendarInvitation.objects.filter(
+                calendar=calendar,
+                invitee=user_to_invite,
+                permission="VIEW",
+                accepted=None
+            ).delete()
+
+        CalendarInvitation.objects.create(
             calendar=calendar,
             invitee=user_to_invite,
-            permission="VIEW",
-            accepted=None
-        ).first()
-        if existing_viewer_invitation:
-            existing_viewer_invitation.delete()
-    
-    CalendarInvitation.objects.create(
-        calendar=calendar,
-        invitee=user_to_invite,
-        permission=invite_type,
-        sender=request.user)
+            permission=invite_type,
+            sender=request.user,
+        )
 
-
-    if not Notification.objects.filter(
-        recipient=user_to_invite,
-        type="CALENDAR_INVITE",
-        related_calendar=calendar,
-        sender=request.user,
-    ).exists():
-        Notification.objects.create(
+        if not Notification.objects.filter(
             recipient=user_to_invite,
             type="CALENDAR_INVITE",
             related_calendar=calendar,
             sender=request.user,
-            message=f"@{request.user.username} has invited you to {invite_type.lower()} the calendar \"{calendar.name}\".",
-        )
+        ).exists():
+            Notification.objects.create(
+                recipient=user_to_invite,
+                type="CALENDAR_INVITE",
+                related_calendar=calendar,
+                sender=request.user,
+                message=f"@{request.user.username} has invited you to {invite_type.lower()} the calendar \"{calendar.name}\".",
+            )
 
     return Response(status=status.HTTP_204_NO_CONTENT)

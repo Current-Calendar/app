@@ -17,7 +17,7 @@ class EventoAdmin(GISModelAdmin):
 @admin.register(User)
 class UsuarioAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ('Profile', {'fields': ('pronouns', 'bio', 'link', 'photo')}),
+        ('Profile', {'fields': ('pronouns', 'bio', 'link', 'photo','plan')}),
         ('Social',  {'fields': ('following', 'subscribed_calendars')}),
     )
     filter_horizontal = ('following', 'subscribed_calendars') 

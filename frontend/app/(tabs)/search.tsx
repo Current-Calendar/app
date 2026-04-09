@@ -214,6 +214,7 @@ export default function SearchScreen() {
                     value={query}
                     onChangeText={setQuery}
                     style={styles.input}
+                    testID="search-input"
                 />
             </View>
 
@@ -232,6 +233,7 @@ export default function SearchScreen() {
                                     isActive ? styles.tabChipActive : styles.tabChipInactive,
                                 ]}
                                 activeOpacity={0.7}
+                                testID={`search-tab-${tab.type}`}
                             >
                                 <Ionicons
                                     name={tab.icon}
@@ -269,7 +271,7 @@ export default function SearchScreen() {
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <TouchableOpacity style={styles.card} onPress={() => handleUserSelect(user.username)}>
+                            <TouchableOpacity style={styles.card} onPress={() => handleUserSelect(user.username)} testID={`search-user-card-${user.username}`}>
                                 <Image
                                     source={
                                         user.photo && user.photo.trim() !== ""
@@ -294,6 +296,7 @@ export default function SearchScreen() {
                                         event.stopPropagation();
                                         followUser(user.id);
                                     }}
+                                    testID={`search-follow-button-${user.username}`}
                                 >
                                     <Text style={[styles.followText, user.followed && styles.followingText]}>
                                         {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
@@ -312,7 +315,7 @@ export default function SearchScreen() {
                         const calendarColor = cal.color || "#10464d";
                         
                         return (
-                            <TouchableOpacity style={styles.card} onPress={() => handleCalendarSelect(cal.id)}>
+                            <TouchableOpacity style={styles.card} onPress={() => handleCalendarSelect(cal.id)} testID={`search-calendar-card-${cal.id}`}>
                                 {cal.cover ? (
                                     <Image source={{ uri: cal.cover }} style={styles.leftImage} />
                                 ) : (
@@ -359,7 +362,7 @@ export default function SearchScreen() {
                     console.log(JSON.stringify(ev, null, 2));
 
                     return (
-                        <TouchableOpacity style={styles.card} onPress={() => handleEventSelect(ev)}>
+                        <TouchableOpacity style={styles.card} onPress={() => handleEventSelect(ev)} testID={`search-event-card-${ev.id}`}>
                             {ev.photo ? (
                                 <Image source={{ uri: ev.photo }} style={styles.leftImage} />
                             ) : (
