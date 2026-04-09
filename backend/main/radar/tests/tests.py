@@ -135,3 +135,37 @@ class RadarEventsTest(APITestCase):
         response = self.client.get("/api/v1/radar/?lat=abc&lon=xyz")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_lat_returns_400(self):
+        response = self.client.get("/api/v1/radar/?lon=-3.7038")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_lon_returns_400(self):
+        response = self.client.get("/api/v1/radar/?lat=40.4168")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_both_returns_400(self):
+        response = self.client.get("/api/v1/radar/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_custom_radio_parameter(self):
+        response = self.client.get("/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=1")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_creator_sees_own_events(self):
+        self.client.login(username="user1", password="testpass")
+        own_event = Event.objects.create(
+            title="My Own Event",
+            date=date.today(),
+            time=time(16, 0),
+            location=Point(-3.7038, 40.4168),
+            creator=self.user,
+        )
+        own_cal = Calendar.objects.create(
+            name="My Private", privacy="PRIVATE", creator=self.user,
+        )
+        own_event.calendars.add(own_cal)
+
+        response = self.client.get(self.url)
+        titles = [e["title"] for e in response.data]
+        self.assertIn("My Own Event", titles)

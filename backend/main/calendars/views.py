@@ -1006,7 +1006,7 @@ def export_to_ics(request, calendar_id):
     cal.add('prodid', '-//Current Calendar//')
     cal.add('version', '2.0')
 
-    for event in calendar.eventos.all():
+    for event in calendar.events.all():
         event = event.to_ical_event()
         cal.add_component(event)
 

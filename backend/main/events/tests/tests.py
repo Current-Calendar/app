@@ -8,6 +8,7 @@ import tempfile
 import shutil
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
+from unittest.mock import patch
 from main.models import User, Calendar, Event, EventAttendance, Notification
 from main.events.views import list_events_from_calendar
 
@@ -1354,7 +1355,7 @@ class ListEventsTests(APITestCase):
         self.assertEqual(response.data[0]["id"], self.event_a.id)
 
     def test_list_events_filters_by_calendar(self):
-        response = self.client.get("/api/v1/events/list", {"calendarId": self.calendar_b.id})
+        response = self.client.get("/api/v1/events/list", {"calendarIds": str(self.calendar_b.id)})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -1532,3 +1533,137 @@ class CreateEventParsingTests(APITestCase):
         self.assertIsNotNone(event.location)
         self.assertAlmostEqual(event.location.y, 40.4168, places=4)
         self.assertAlmostEqual(event.location.x, -3.7038, places=4)
+
+
+class ToggleLikeEventTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="like_owner", email="like_owner@test.com", password="pass123"
+        )
+        self.liker = User.objects.create_user(
+            username="event_liker", email="event_liker@test.com", password="pass123"
+        )
+        self.stranger = User.objects.create_user(
+            username="event_stranger", email="event_stranger@test.com", password="pass123"
+        )
+        self.public_calendar = Calendar.objects.create(
+            name="Like Public Cal", privacy="PUBLIC", creator=self.owner
+        )
+        self.private_calendar = Calendar.objects.create(
+            name="Like Private Cal", privacy="PRIVATE", creator=self.owner
+        )
+        self.public_event = Event.objects.create(
+            title="Likeable Event",
+            date=date(2026, 8, 1),
+            time=time(12, 0),
+            creator=self.owner,
+        )
+        self.public_event.calendars.add(self.public_calendar)
+
+        self.private_event = Event.objects.create(
+            title="Private Likeable Event",
+            date=date(2026, 8, 2),
+            time=time(13, 0),
+            creator=self.owner,
+        )
+        self.private_event.calendars.add(self.private_calendar)
+
+    def test_like_and_unlike_cycle(self):
+        self.client.force_authenticate(self.liker)
+        response = self.client.post(f"/api/v1/events/{self.public_event.pk}/like/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 1)
+
+        response = self.client.post(f"/api/v1/events/{self.public_event.pk}/like/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["liked"])
+        self.assertEqual(response.data["likes_count"], 0)
+
+    def test_like_private_event_forbidden(self):
+        self.client.force_authenticate(self.stranger)
+        response = self.client.post(f"/api/v1/events/{self.private_event.pk}/like/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_like_unauthenticated(self):
+        response = self.client.post(f"/api/v1/events/{self.public_event.pk}/like/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_like_nonexistent_event(self):
+        self.client.force_authenticate(self.liker)
+        response = self.client.post("/api/v1/events/99999/like/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_owner_can_like_own_event(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(f"/api/v1/events/{self.public_event.pk}/like/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["liked"])
+
+
+class ToggleSaveEventTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="save_user", email="save_user@test.com", password="pass123"
+        )
+        self.calendar = Calendar.objects.create(
+            name="Save Cal", privacy="PUBLIC", creator=self.user
+        )
+        self.event = Event.objects.create(
+            title="Saveable Event",
+            date=date(2026, 8, 5),
+            time=time(14, 0),
+            creator=self.user,
+        )
+        self.event.calendars.add(self.calendar)
+
+    def test_save_and_unsave_cycle(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post(f"/api/v1/events/{self.event.pk}/save/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["saved"])
+        self.assertTrue(response.data["saved_by_me"])
+
+        response = self.client.post(f"/api/v1/events/{self.event.pk}/save/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data["saved"])
+
+    def test_save_unauthenticated(self):
+        response = self.client.post(f"/api/v1/events/{self.event.pk}/save/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_save_nonexistent_event(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.post("/api/v1/events/99999/save/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class RecommendedEventsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rec_ev_user", email="rec_ev@test.com", password="pass123"
+        )
+        self.calendar = Calendar.objects.create(
+            name="Rec Cal", privacy="PUBLIC", creator=self.user
+        )
+        self.event = Event.objects.create(
+            title="Rec Event",
+            date=date(2026, 9, 1),
+            time=time(10, 0),
+            creator=self.user,
+        )
+        self.event.calendars.add(self.calendar)
+
+    def test_recommended_events_unauthenticated(self):
+        response = self.client.get("/api/v1/recommendations/events/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch("main.events.views.recommend_events")
+    @patch("main.events.views.cache")
+    def test_recommended_events_returns_list(self, mock_cache, mock_recommend):
+        mock_cache.get.return_value = None
+        mock_recommend.return_value = Event.objects.filter(pk=self.event.pk)
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/recommendations/events/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)

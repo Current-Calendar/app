@@ -1570,3 +1570,204 @@ class CalendarImportsTests(APITestCase):
             format="multipart",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class ListCoOwnedCalendarsTests(APITestCase):
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="coown_creator", email="coown_creator@example.com", password="pass1234"
+        )
+        self.co_owner = User.objects.create_user(
+            username="coown_user", email="coown_user@example.com", password="pass1234"
+        )
+        self.outsider = User.objects.create_user(
+            username="coown_outsider", email="coown_outsider@example.com", password="pass1234"
+        )
+        self.calendar = Calendar.objects.create(
+            name="CoOwned Cal", privacy="PRIVATE", creator=self.creator
+        )
+        self.calendar.co_owners.add(self.co_owner)
+
+    def test_co_owner_sees_calendar(self):
+        self.client.force_authenticate(self.co_owner)
+        response = self.client.get("/api/v1/calendars/co_owned/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [c["name"] for c in response.json()]
+        self.assertIn("CoOwned Cal", names)
+
+    def test_outsider_sees_empty_list(self):
+        self.client.force_authenticate(self.outsider)
+        response = self.client.get("/api/v1/calendars/co_owned/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.get("/api/v1/calendars/co_owned/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ExportToIcsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="export_user", email="export@example.com", password="pass1234"
+        )
+        self.calendar = Calendar.objects.create(
+            name="Export Cal", privacy="PUBLIC", creator=self.user
+        )
+        from main.models import Event as EventModel
+        self.event = EventModel.objects.create(
+            title="Export Event",
+            date="2026-10-01",
+            time="10:00:00",
+            creator=self.user,
+        )
+        self.event.calendars.add(self.calendar)
+
+    def test_export_returns_ics_content(self):
+        response = self.client.get(f"/api/v1/calendars/{self.calendar.id}/export/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("text/calendar", response["Content-Type"])
+        self.assertIn("BEGIN:VCALENDAR", response.content.decode())
+
+    def test_export_nonexistent_calendar(self):
+        response = self.client.get("/api/v1/calendars/99999/export/")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_export_has_content_disposition(self):
+        response = self.client.get(f"/api/v1/calendars/{self.calendar.id}/export/")
+        self.assertIn("Content-Disposition", response)
+        self.assertIn("attachment", response["Content-Disposition"])
+
+
+class RecommendedCalendarsTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rec_cal_user", email="rec_cal@example.com", password="pass1234"
+        )
+        self.calendar = Calendar.objects.create(
+            name="Rec Calendar", privacy="PUBLIC", creator=self.user
+        )
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.get("/api/v1/recommendations/calendars/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch("main.calendars.views.recommend_calendars")
+    @patch("main.calendars.views.cache")
+    def test_returns_recommended_list(self, mock_cache, mock_recommend):
+        mock_cache.get.return_value = None
+        mock_recommend.return_value = Calendar.objects.filter(pk=self.calendar.pk)
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/recommendations/calendars/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+
+
+class InviteCalendarTests(APITestCase):
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="inv_cal_creator", email="inv_cal_creator@example.com", password="pass1234"
+        )
+        self.invitee = User.objects.create_user(
+            username="inv_cal_invitee", email="inv_cal_invitee@example.com", password="pass1234"
+        )
+        self.other = User.objects.create_user(
+            username="inv_cal_other", email="inv_cal_other@example.com", password="pass1234"
+        )
+        self.public_cal = Calendar.objects.create(
+            name="Invite Public Cal", privacy="PUBLIC", creator=self.creator
+        )
+        self.private_cal = Calendar.objects.create(
+            name="Invite Private Cal", privacy="PRIVATE", creator=self.creator
+        )
+        self.friends_cal = Calendar.objects.create(
+            name="Invite Friends Cal", privacy="FRIENDS", creator=self.creator
+        )
+
+    def test_invite_to_public_calendar_success(self):
+        self.client.force_authenticate(self.creator)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.invitee, type="CALENDAR_INVITE", related_calendar=self.public_cal
+            ).exists()
+        )
+
+    def test_invite_yourself_returns_400(self):
+        self.client.force_authenticate(self.creator)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.creator.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_creator_cannot_invite(self):
+        self.client.force_authenticate(self.other)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invite_to_private_calendar_returns_400(self):
+        self.client.force_authenticate(self.creator)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.private_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invite_non_friend_to_friends_calendar_returns_400(self):
+        self.client.force_authenticate(self.creator)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.friends_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_invite_friend_to_friends_calendar_success(self):
+        self.creator.following.add(self.invitee)
+        self.invitee.following.add(self.creator)
+        self.client.force_authenticate(self.creator)
+        response = self.client.post(
+            f"/api/v1/calendars/{self.friends_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_duplicate_invite_does_not_create_second_notification(self):
+        self.client.force_authenticate(self.creator)
+        self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                recipient=self.invitee, type="CALENDAR_INVITE", related_calendar=self.public_cal
+            ).count(),
+            1,
+        )
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.post(
+            f"/api/v1/calendars/{self.public_cal.id}/invite/",
+            {"user": self.invitee.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

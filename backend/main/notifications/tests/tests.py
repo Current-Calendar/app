@@ -190,4 +190,15 @@ class InvitationNotificationTests(APITestCase):
         self.assertEqual(request.status_code, status.HTTP_200_OK)
         self.assertFalse(Calendar.objects.filter(subscribers__id=self.user3.pk).exists())
         self.assertFalse(Notification.objects.filter(recipient=self.user3, type="CALENDAR_INVITE", related_calendar=self.cal1, sender=self.user1).exists())
+
+    def test_handle_non_invite_notification_returns_400(self):
+        non_invite = Notification.objects.create(
+            recipient=self.user2,
+            sender=self.user1,
+            type='NEW_FOLLOWER',
+            message='User1 started following you.',
+        )
+        self.client.force_authenticate(self.user2)
+        response = self.client.post(f"/api/v1/notifications/{non_invite.pk}/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
     
