@@ -18,7 +18,7 @@ COPY . .
 
 # rest_framework_simplejwt.token_blacklist requiere tener un `SECRET_KEY` configurado en todo momento,
 # así que usamos el de ejemplo y luego lo borrarmos, si no el collectstatic no funciona.
-RUN COPY .env.dev.example .env && \
+RUN cp .env.dev.example .env && \
     python manage.py collectstatic --noinput && \
     rm .env
 
