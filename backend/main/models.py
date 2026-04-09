@@ -39,10 +39,6 @@ class User(AbstractUser):
     @property
     def total_subscribed_calendars(self):
         return self.subscribed_calendars.count()
-
-    def is_friend_with(self, other: "User"):
-        return self.following.filter(pk=other.pk).exists() and other.following.filter(pk=self.pk).exists()
-    
     @property
     def unread_count_for_user(self):
         return Notification.objects.filter(recipient=self, is_read=False).count()
@@ -59,7 +55,6 @@ class CalendarLabel(models.Model):
 class Calendar(models.Model):
     PRIVACY_CHOICES = [
         ('PRIVATE', 'Private'),
-        ('FRIENDS', 'Friends'),
         ('PUBLIC', 'Public'),
     ]
 

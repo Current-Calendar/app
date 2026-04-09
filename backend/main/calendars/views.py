@@ -27,6 +27,7 @@ from django.core.cache import cache
 from main.rs.calendars import recommend_calendars
 from main.serializers import CalendarSummarySerializer
 from main.permissions import CanChangePrivacy, CanCoOwnCalendars, CanCreateCalendar, CanAddFavoriteCalendar, CanAcceptCalendarInvites
+from main.privacy import ACCEPTED_CALENDAR_PRIVACY_VALUES, normalize_calendar_privacy
 
 REQUEST_TIMEOUT_SECONDS = 5
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -88,7 +89,7 @@ def edit_calendar(request, calendar_id):
         status=status.HTTP_403_FORBIDDEN
     )
 
-    ESTADOS_VALIDOS = {'PRIVATE', 'FRIENDS', 'PUBLIC'}
+    ESTADOS_VALIDOS = ACCEPTED_CALENDAR_PRIVACY_VALUES
     campos_editables = ['name', 'privacy', 'description']
 
     for campo in campos_editables:
@@ -113,6 +114,9 @@ def edit_calendar(request, calendar_id):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             
+            if campo == 'privacy':
+                valor = normalize_calendar_privacy(valor)
+
             setattr(calendar, campo, valor)
 
     if 'cover' in request.FILES:
@@ -181,10 +185,10 @@ def create_calendar(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    privacy = data.get('privacy', 'PRIVATE')
-    valid_privacy = {choice[0] for choice in Calendar.PRIVACY_CHOICES}
+    requested_privacy = data.get('privacy', 'PRIVATE')
+    valid_privacy = ACCEPTED_CALENDAR_PRIVACY_VALUES
 
-    if privacy not in valid_privacy:
+    if requested_privacy not in valid_privacy:
         return Response(
             {"errors": [f"El valor de 'privacy' no es válido. Valores permitidos: {', '.join(sorted(valid_privacy))}."]},
             status=status.HTTP_400_BAD_REQUEST
@@ -199,11 +203,13 @@ def create_calendar(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    privacy = normalize_calendar_privacy(requested_privacy)
+
     calendar = Calendar(
         creator=creator,
         name=name,
         description=data.get('description', ''),
-        privacy=data.get('privacy', 'PRIVATE'),
+        privacy=privacy,
         origin=data.get('origin', 'CURRENT'),
         external_id=data.get('external_id'),
     )
@@ -271,8 +277,6 @@ def _can_like_calendar(user, calendar: Calendar) -> bool:
         return True
     if calendar.privacy == "PUBLIC":
         return True
-    if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
-        return True
     return False
 
 
@@ -314,50 +318,6 @@ def list_subscribed_calendars(request):
     ]
 
     return Response(results, status=status.HTTP_200_OK)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def list_friends_calendars(request):
-    """
-    List calendars with privacy FRIENDS created by mutual friends
-    (users that the authenticated user follows and who also follow back).
-
-    GET /api/v1/calendars/friends-calendars/
-    """
-    user = request.user
-
-    mutual_friend_ids = user.following.filter(
-        following=user
-    ).values_list('id', flat=True)
-
-    queryset = Calendar.objects.select_related('creator').filter(
-        creator_id__in=mutual_friend_ids,
-        privacy='FRIENDS'
-    ).order_by('-created_at')
-
-    liked_ids = _get_liked_calendar_ids(user, queryset)
-
-    results = [
-        {
-            "id": cal.id,
-            "name": cal.name,
-            "description": cal.description,
-            "privacy": cal.privacy,
-            "origin": cal.origin,
-            "creator_id": cal.creator_id,
-            "creator_username": cal.creator.username,
-            "creator_photo": get_signed_url(request, cal.creator.photo),
-            "created_at": cal.created_at,
-            "likes_count": cal.likes_count,
-            "liked_by_me": cal.id in liked_ids,
-            "cover": get_signed_url(request, cal.cover),
-            "co_owners": _serialize_co_owners(cal),
-        }
-        for cal in queryset
-    ]
-
-    return Response(results, status=status.HTTP_200_OK)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -514,7 +474,7 @@ def list_calendars(request):
 
     Query parameters:
         q       (str)  -- case-insensitive substring match on calendar name
-        privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
+        privacy  (str)  -- filter by privacy status (PRIVATE | PUBLIC)
     """
     queryset = Calendar.objects.select_related('creator').all()
 
@@ -567,7 +527,7 @@ def list_my_calendars(request):
 
     Query parameters:
         q       (str)  -- case-insensitive substring match on calendar name
-        privacy  (str)  -- filter by privacy status (PRIVATE | FRIENDS | PUBLIC)
+        privacy  (str)  -- filter by privacy status (PRIVATE | PUBLIC)
     """
     queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners').prefetch_related('viewers').filter(creator=request.user)
 
@@ -688,7 +648,7 @@ def iOS_calendar_import(request):
     """Endpoint para importar eventos desde iOS Calendar."""
 
     webcal_url = request.data.get('webcal_url')  # nosemgrep: python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests (validado con _is_safe_calendar_url)
-    privacy_solicitado = request.data.get('privacy', 'PRIVATE')
+    privacy_solicitado = normalize_calendar_privacy(request.data.get('privacy', 'PRIVATE'))
     user_creator = request.user
 
     if not webcal_url:
@@ -814,7 +774,7 @@ def ics_import(request):
         return Response({"error": f"Archivo ICS inválido: {exc}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
 
     momento_actual = timezone.now()
-    privacy_solicitado = request.data.get('privacy', 'PRIVATE')
+    privacy_solicitado = normalize_calendar_privacy(request.data.get('privacy', 'PRIVATE'))
     user_creator = request.user
 
     calendar = Calendar.objects.create(

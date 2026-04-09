@@ -83,18 +83,12 @@ def create_event(request):
         )
     for calendar in calendars:
         is_creator_or_co_owner = calendar.creator == creator or calendar.co_owners.filter(id=creator.id).exists()
-        
+
         if not is_creator_or_co_owner:
-            if calendar.privacy in ("PRIVATE", "PUBLIC"):
-                return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            elif calendar.privacy == "FRIENDS":
-                is_following_calendar = calendar.subscribers.filter(id=creator.pk).exists()
-                if not is_following_calendar or not calendar.creator.is_friend_with(creator):
-                    return Response({"errors": [f"No tienes permiso para añadir events al calendar {calendar.id}."]},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+            return Response(
+                {"errors": [f"No tienes permiso para agregar events al calendar {calendar.id}."]},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
     location = None
     lat = data.get("latitud")
@@ -255,18 +249,11 @@ def edit_event(request: Request, event_id):
 
     for calendar in calendars:
         is_creator_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
-        
+
         if not is_creator_or_co_owner:
-            if calendar.privacy in ("PRIVATE", "PUBLIC"):
-                return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            elif calendar.privacy == "FRIENDS":
-                is_following_calendar = calendar.subscribers.filter(id=user.pk).exists()
-                if not is_following_calendar or not calendar.creator.is_friend_with(user):
-                    return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+            return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
     try:
         event.full_clean()
@@ -310,13 +297,11 @@ def edit_event(request: Request, event_id):
 def list_events(request):
     user = request.user
     if user.is_authenticated:
-        friends = user.following.all()
         privacy_filter = (
             Q(calendars__privacy='PUBLIC') |
-            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends) |
             Q(calendars__creator=user) |
-            Q(calendars__co_owners=user)
-            | Q(calendars__viewers=user)
+            Q(calendars__co_owners=user) |
+            Q(calendars__viewers=user)
         )
     else:
         privacy_filter = Q(calendars__privacy='PUBLIC')
@@ -354,10 +339,8 @@ def list_events_from_calendar(request):
     """
     user = request.user
     if user.is_authenticated:
-        friends = user.following.all()
         privacy_filter = (
             Q(calendars__privacy='PUBLIC') |
-            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends) |
             Q(calendars__creator=user)
         )
     else:
@@ -529,8 +512,6 @@ def _can_like_event(user, event: Event) -> bool:
         if calendar.privacy == "PUBLIC":
             return True
         if calendar.creator == user:
-            return True
-        if calendar.privacy == "FRIENDS" and calendar.creator.is_friend_with(user):
             return True
     return False
 

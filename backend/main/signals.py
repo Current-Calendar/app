@@ -81,15 +81,8 @@ def cleanup_likes_on_privacy_change(sender, instance, created, **kwargs):
 
     likes_qs = CalendarLike.objects.filter(calendar=instance).exclude(user=instance.creator)
 
-    if instance.privacy == "PRIVATE":
+    if instance.privacy != "PUBLIC":
         likes_qs.delete()
-        return
-
-    if instance.privacy == "FRIENDS":
-        likes_qs.exclude(
-            user__following=instance.creator,
-            user__followers_set=instance.creator,
-        ).distinct().delete()
 
 
 

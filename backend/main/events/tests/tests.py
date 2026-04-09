@@ -263,7 +263,7 @@ class DesasignarEventoCalendarTests(APITestCase):
         otro_calendario = Calendar.objects.create(
             name='Otro Calendar',
             creator=self.user,
-            privacy='FRIENDS'
+            privacy='PRIVATE'
         )
 
         response = self.client.delete(self.url, {
@@ -419,8 +419,8 @@ class CrearEventoTests(APITestCase):
         )
         self.calendar3 = Calendar.objects.create(
             creator=self.user3,
-            name="Friends Calendar Test",
-            privacy="FRIENDS",
+            name="Restricted Calendar Test",
+            privacy="PRIVATE",
         )
         self.calendar3.subscribers.add(self.user2)
         self.calendar3.save()
@@ -504,7 +504,7 @@ class CrearEventoTests(APITestCase):
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_friends_calendar(self):
+    def test_private_calendar_with_subscription_is_forbidden(self):
         self.client.force_authenticate(self.user2)
 
         payload = {
@@ -515,9 +515,9 @@ class CrearEventoTests(APITestCase):
         }
 
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_friends_calendar_not_friends(self):
+    def test_private_calendar_without_mutual_follow_is_forbidden(self):
         self.user3.following.remove(self.user2)
         self.user3.save()
 
@@ -533,7 +533,7 @@ class CrearEventoTests(APITestCase):
         response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_friends_calendar_not_following_calendar(self):
+    def test_private_calendar_without_subscription_is_forbidden(self):
         self.calendar3.subscribers.remove(self.user2)
         self.calendar3.save()
 
@@ -610,8 +610,8 @@ class EditEventTests(APITestCase):
         )
         self.calendar4 = Calendar.objects.create(
             creator=self.user3,
-            name="Friends Calendar Test",
-            privacy="FRIENDS",
+            name="Restricted Calendar Test",
+            privacy="PRIVATE",
         )
         self.calendar4.subscribers.add(self.user2)
         self.calendar4.save()
@@ -880,21 +880,21 @@ class EditEventTests(APITestCase):
         response = self.client.put(self.endpoint(), payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_friends_calendar(self):
+    def test_private_calendar_edit_is_forbidden(self):
         self.client.force_authenticate(self.user2)
 
         payload = {
             "title": "Event",
             "date": "2026-03-01",
             "time": "18:00:00",
-            "calendars": [self.calendar3.pk],
+            "calendars": [self.calendar4.pk],
         }
 
         response = self.client.put(self.endpoint(), payload, format="json")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-    def test_friends_calendar_not_following_calendar(self):
+    def test_private_calendar_without_subscription_is_forbidden(self):
         self.calendar4.subscribers.remove(self.user2)
         self.calendar4.save()
 

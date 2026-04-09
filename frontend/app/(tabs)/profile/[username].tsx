@@ -196,7 +196,6 @@ const CalendarSectionPill = ({
 
 const OwnProfile = () => {
   const router = useRouter();
-  const { username } = useLocalSearchParams<{ username: string }>();
 
   const { user: currentUser, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -205,8 +204,6 @@ const OwnProfile = () => {
     await logout();
     router.replace('/login');
   };
-
-  const isMe = !username || username === currentUser?.username;
 
   const [shownUser, setShownUser] = useState<User | null>(null);
   const [metrics, setMetrics] = useState<ProfileMetrics>({
@@ -270,7 +267,7 @@ const OwnProfile = () => {
         id: found.id as string,
         name: found.name,
         description: found.description || '',
-        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        privacy: (found.privacy as 'PRIVATE' | 'PUBLIC') || 'PUBLIC',
         origin: 'CURRENT',
         creator: '',
         color: '#10464d',
@@ -488,7 +485,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         id: found.id as string,
         name: found.name,
         description: found.description || '',
-        privacy: (found.privacy as 'PRIVATE' | 'FRIENDS' | 'PUBLIC') || 'PUBLIC',
+        privacy: (found.privacy as 'PRIVATE' | 'PUBLIC') || 'PUBLIC',
         origin: 'CURRENT',
         creator: '',
         color: '#10464d',
@@ -668,7 +665,6 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
 const ProfileScreen = () => {
   const { username } = useLocalSearchParams<{ username: string }>();
   const { user: currentUser } = useAuth();
-
   const isMe = !username || username === currentUser?.username;
 
   return isMe ? <OwnProfile /> : <PublicProfile targetUsername={username!} />;

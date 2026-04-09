@@ -22,7 +22,6 @@ import apiClient from '@/services/api-client';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
-  FRIENDS: { label: 'Friends', icon: 'people-outline' },
   PUBLIC: { label: 'Public', icon: 'globe-outline' },
 };
 

@@ -26,12 +26,6 @@ def _normalize_target_type(value: str | None) -> str | None:
     return normalized
 
 
-def _is_friend_viewer(owner, viewer) -> bool:
-    if not viewer or not viewer.is_authenticated:
-        return False
-    return owner.is_friend_with(viewer)
-
-
 def can_view_calendar(calendar: Calendar, user) -> bool:
     if calendar.privacy == "PUBLIC":
         return True
@@ -41,8 +35,6 @@ def can_view_calendar(calendar: Calendar, user) -> bool:
         return True
     if calendar.co_owners.filter(id=user.id).exists():
         return True
-    if calendar.privacy == "FRIENDS":
-        return _is_friend_viewer(calendar.creator, user)
     return False
 
 
@@ -59,10 +51,6 @@ def can_view_event(event: Event, user) -> bool:
 
     if calendars.filter(privacy="PRIVATE", creator_id=user.id).exists():
         return True
-
-    for cal in calendars.filter(privacy="FRIENDS"):
-        if _is_friend_viewer(cal.creator, user):
-            return True
 
     return False
 
