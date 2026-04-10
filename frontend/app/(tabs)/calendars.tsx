@@ -205,11 +205,13 @@ export default function CalendarScreen() {
                 : ((current as any).viewers ?? []),
             } as Calendar;
         });
-        };
+    };
 
     useEffect(() => {
         void fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
         if (isAuthenticated) {
             void fetchData();
         }
