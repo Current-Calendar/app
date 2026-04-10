@@ -440,6 +440,11 @@ class EventAttendeeSerializer(serializers.ModelSerializer):
             iso_str = iso_str.replace('+00:00', 'Z')
         return iso_str
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        "no_active_account": "Credenciales inválidas.",
+        "invalid_credentials": "Credenciales inválidas.",
+    }
+
     def validate(self, attrs):
         data = super().validate(attrs)
         

@@ -35,7 +35,20 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
+}
+
+const NETWORK_ERROR_MESSAGE =
+  'No se pudo conectar con el servidor. Comprueba que el backend está activo e inténtalo de nuevo.';
+
+function toNetworkApiError(error: unknown): ApiError {
+  const message =
+    error instanceof Error && typeof error.message === 'string' && error.message.trim()
+      ? error.message
+      : NETWORK_ERROR_MESSAGE;
+
+  return new ApiError(NETWORK_ERROR_MESSAGE, 0, { cause: message });
 }
 
 class ApiClient {
@@ -167,13 +180,14 @@ class ApiClient {
       if (err?.name === 'AbortError') {
         throw new ApiError('Request timed out. Please try again.', 408, {});
       }
-      throw err;
+      throw toNetworkApiError(err);
     } finally {
       clearTimeout(timeoutId);
     }
 
-    // If 401, first attempt to refresh the token
+    // If 401, try to recover the session; otherwise surface the API error
     if (response.status === 401) {
+      const hasSession = hadAccessToken || Boolean(this.refreshToken);
       let retried = false;
 
       if (this.refreshToken) {
@@ -187,7 +201,7 @@ class ApiClient {
             response = await fetch(url, { ...options, headers, signal: retryController.signal });
           } catch (err: any) {
             if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
-            throw err;
+            throw toNetworkApiError(err);
           } finally {
             clearTimeout(retryTimeout);
           }
@@ -198,6 +212,7 @@ class ApiClient {
       if (!retried && hadAccessToken) {
         this.user = null;
         await this.clearTokens();
+        this.onAuthFailure?.();
         delete headers['Authorization'];
         const retryController = new AbortController();
         const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
@@ -205,15 +220,12 @@ class ApiClient {
           response = await fetch(url, { ...options, headers, signal: retryController.signal });
         } catch (err: any) {
           if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
-          throw err;
+          throw toNetworkApiError(err);
         } finally {
           clearTimeout(retryTimeout);
         }
-      } else {
-        // Refresh failed — tokens are dead, force logout
-        await this.clearTokens();
-        this.onAuthFailure?.();
-        throw new Error('Session expired. Please log in again.');
+      } else if (!hasSession) {
+        // No tokens to refresh; let the standard error handler below capture the message
       }
     }
 
