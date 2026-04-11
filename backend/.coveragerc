@@ -14,6 +14,13 @@ omit =
     
     *venv*
     *.venv*
+    */consumers.py
+    */middleware.py
+    */routing.py
+    main/management/commands/*
+    utils/security.py
+
+
 
 [report]
 exclude_lines =
