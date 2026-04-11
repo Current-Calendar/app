@@ -79,33 +79,65 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
   };
 
   const handleInvite = async (userId: string | number, privilege?: 'VIEW' | 'EDIT') => {
-    setInvitingUserId(userId);
-    try {
-      const endpoint = type === 'calendar'
+  setInvitingUserId(userId);
+
+  try {
+    const endpoint =
+      type === 'calendar'
         ? `/calendars/${itemId}/invite/`
         : `/events/${itemId}/invite/`;
 
-      const body = privilege ? { user: userId, permission: privilege } : { user: userId };
-      await apiClient.post(endpoint, body);
-      Alert.alert('Sent!', 'Invitation sent successfully.');
-    } catch (error: any) {
-      const message = error instanceof ApiError && typeof (error.data as any)?.error === 'string'
-        ? (error.data as any).error
-        : error.response?.data?.message || error.response?.data?.error || error.message || 'Could not send the invitation right now.';
-      
-      const isForbidden = error?.response?.status === 403 || error?.status === 403 || (error instanceof ApiError && error.status === 403);
-      const title = isForbidden ? "Free Plan Limit" : "Warning";
+    const body = privilege ? { user: userId, permission: privilege } : { user: userId };
+    await apiClient.post(endpoint, body);
 
-      if (Platform.OS !== "web") {
-        Alert.alert(title, message);
-      } else {
-        setErrorTitle(title);
-        setErrorMessage(message);
-        setErrorModalVisible(true);
-      }
-    } finally {
-      setInvitingUserId(null);
+    if (Platform.OS !== "web") {
+      Alert.alert('Sent!', 'Invitation sent successfully.');
+    } else {
+      setErrorTitle('Success');
+      setErrorMessage('Invitation sent successfully.');
+      setErrorModalVisible(true);
     }
+  } catch (error: any) {
+    const backendError =
+      error instanceof ApiError && typeof (error.data as any)?.error === 'string'
+        ? (error.data as any).error
+        : error?.response?.data?.error || error?.response?.data?.message || error?.message;
+
+    const message =
+      backendError || 'Could not send the invitation right now.';
+
+    const statusCode =
+      error?.response?.status || error?.status || (error instanceof ApiError ? error.status : undefined);
+
+    const isFavoriteLimitError =
+      statusCode === 403 &&
+      typeof message === 'string' &&
+      (
+        message.includes('cannot receive more invitations') ||
+        message.includes('favorite calendars allowed by their plan') ||
+        message.includes('maximum number of favorite calendars')
+      );
+
+    const title = isFavoriteLimitError
+      ? 'Invitation not available'
+      : statusCode === 403
+        ? 'Permission denied'
+        : 'Warning';
+
+    const finalMessage = isFavoriteLimitError
+      ? 'This user cannot receive more invitations because they have already reached the maximum number of favorite calendars allowed by their plan.'
+      : message;
+
+    if (Platform.OS !== "web") {
+      Alert.alert(title, finalMessage);
+    } else {
+      setErrorTitle(title);
+      setErrorMessage(finalMessage);
+      setErrorModalVisible(true);
+    }
+  } finally {
+    setInvitingUserId(null);
+  }
   };
 
   const confirmCalendarInvite = () => {

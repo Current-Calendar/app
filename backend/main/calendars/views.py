@@ -26,7 +26,7 @@ from urllib.parse import urlparse
 from django.core.cache import cache
 from main.rs.calendars import recommend_calendars
 from main.serializers import CalendarSummarySerializer
-from main.permissions import CanChangePrivacy, CanCoOwnCalendars, CanCreateCalendar, CanAddFavoriteCalendar, CanAcceptCalendarInvites
+from main.permissions import CanChangePrivacy, CanCoOwnCalendars, CanCreateCalendar, CanAddFavoriteCalendar, CanAcceptCalendarInvites, CanReceiveCalendarViewInvites
 from main.privacy import ACCEPTED_CALENDAR_PRIVACY_VALUES, normalize_calendar_privacy
 
 REQUEST_TIMEOUT_SECONDS = 5
@@ -330,7 +330,7 @@ def list_co_owned_calendars(request):
     user = request.user
 
     queryset = Calendar.objects.select_related('creator').prefetch_related('co_owners', 'viewers').filter(
-        Q(co_owners__id=user.id) | Q(viewers__id=user.id)
+    co_owners__id=user.id
     ).distinct().order_by('-created_at')
 
     liked_ids = _get_liked_calendar_ids(user, queryset)
@@ -998,8 +998,13 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
         )
 
     if invite_type == "EDIT":
-        # Only EDIT invitations require the co-ownership plan check
         perm = CanCoOwnCalendars()
+        perm.request = request
+        if not perm.has_permission(request, None):
+            return Response({"error": perm.message}, status=status.HTTP_403_FORBIDDEN)
+
+    if invite_type == "VIEW":
+        perm = CanReceiveCalendarViewInvites()
         perm.request = request
         if not perm.has_permission(request, None):
             return Response({"error": perm.message}, status=status.HTTP_403_FORBIDDEN)
@@ -1014,7 +1019,8 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
         calendar=calendar,
         invitee=user_to_invite,
         permission=invite_type,
-        accepted=None).first()
+        accepted=None
+    ).first()
 
     if existing_invitation:
         return Response(

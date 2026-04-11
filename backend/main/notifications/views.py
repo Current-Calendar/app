@@ -8,6 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from ..serializers import NotificationSerializer
 from django.shortcuts import get_object_or_404
 from ..permissions import CanAcceptCalendarInvites
+import math
+from ..entitlements import get_user_features
 
 
 @api_view(['GET'])
@@ -73,25 +75,41 @@ def handle_invite(request: Request, id: int) -> Response:
         accepted=None
     ).order_by('-created_at').first()
 
+    if not invitation:
+        return Response(
+            {"error": "Invitation not found or already handled."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
     if user_status == "ACCEPT":
-        if invitation:
-            if invitation.permission == "EDIT":
-                calendar.co_owners.add(notification.recipient)
-            elif invitation.permission == "VIEW":
-                calendar.viewers.add(notification.recipient)
-            invitation.accepted = True
-            invitation.save()
-        else:
-            calendar.subscribers.add(notification.recipient)
+        if invitation.permission == "EDIT":
+            calendar.co_owners.add(notification.recipient)
+
+        elif invitation.permission == "VIEW":
+            user_features = get_user_features(notification.recipient)
+            favorite_limit = user_features['max_favorite_calendars']
+
+            if favorite_limit != math.inf and notification.recipient.subscribed_calendars.count() >= favorite_limit:
+                return Response(
+                    {
+                        "error": "You cannot accept this invitation because you have already reached the maximum number of favorite calendars allowed by your plan."
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            calendar.viewers.add(notification.recipient)
+            notification.recipient.subscribed_calendars.add(calendar)
+
+        invitation.accepted = True
+        invitation.save()
+
     else:
-        if invitation:
-            invitation.accepted = False
-            invitation.save()
+        invitation.accepted = False
+        invitation.save()
 
     notification.delete()
 
     return Response({"message": "Handled calendar invitation"})
-
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
