@@ -31,7 +31,8 @@ class Command(BaseCommand):
             password='password123',
             pronouns='She/her',
             bio='Full Stack Developer. Passionate about code and the mountains.',
-            photo='perfiles/avatar.png'
+            photo='perfiles/avatar.png',
+            plan = 'STANDARD'
         )
         user2 = User.objects.create_user(
             username='carlos_dev',
