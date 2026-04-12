@@ -22,7 +22,7 @@ const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
-type LegalDocKey = "privacy" | "cookies" | "terms";
+type LegalDocKey = "privacy" | "terms";
 
 type LegalSection = {
   heading: string;
@@ -81,50 +81,6 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
       {
         heading: "7. Retention",
         body: "We will keep your data while you do not request its deletion. After the account is closed, the data will remain blocked for the legal limitation periods to address any potential liabilities.",
-      },
-    ],
-  },
-  cookies: {
-    title: "Cookies Policy",
-    button: "Cookies Policy",
-    content: [
-      {
-        heading: "1. What is a cookie?",
-        body: "A cookie is a small text file stored in your browser when you visit our platform. It allows the system to remember your visit, keep your session open, and analyze how you interact with the website to improve your experience.",
-      },
-      {
-        heading: "2. Cookie controller",
-        body: "Controller: Current development team",
-        bullets: [
-          "Academic project - University of Seville",
-          "Contact: support@currentcalendar.es",
-        ],
-      },
-      {
-        heading: "3. Types of cookies we use",
-        bullets: [
-          "Technical cookies (necessary): Required for the website to function.",
-          "Preference cookies: Remember your settings (such as language or time zone).",
-          "Analytics cookies: Tell us how many people visit and which sections are most popular. They are only enabled if you give consent.",
-        ],
-      },
-      {
-        heading: "4. Cookie inventory",
-        bullets: [
-          "sessionid (First-party): Identify your session. Technical cookie. Session duration.",
-          "csrftoken (First-party): CSRF protection. Technical cookie. Duration: 1 year.",
-          "cookie_consent (First-party): Remember whether you accepted or rejected cookies. Technical cookie. Duration: 6 months.",
-          "_ga (Google): Usage statistics. Analytics cookie. Duration: 2 years.",
-          "_gid (Google): Distinguish users. Analytics cookie. Duration: 24 hours.",
-        ],
-      },
-      {
-        heading: "5. How to manage or withdraw consent",
-        body: "You can change your mind at any time from the platform cookie settings or from your browser privacy settings (Chrome, Firefox, Safari, and Edge).",
-      },
-      {
-        heading: "6. International transfers",
-        body: "When using tools such as Google Analytics, some data may travel to servers in the U.S. We ensure these providers comply with the Data Privacy Framework or have signed the European Union Standard Contractual Clauses.",
       },
     ],
   },
@@ -201,7 +157,6 @@ export default function SignUpScreen() {
   const [showPassword2, setShowPassword2] = useState(false);
   const [activeLegalDoc, setActiveLegalDoc] = useState<LegalDocKey | null>(null);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
-  const [acceptCookies, setAcceptCookies] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -252,8 +207,8 @@ export default function SignUpScreen() {
       setErrorMsg("Passwords do not match.");
       return;
     }
-    if (!acceptPrivacy || !acceptCookies || !acceptTerms) {
-      setErrorMsg("You must accept privacy, cookies, and terms to continue.");
+    if (!acceptPrivacy || !acceptTerms) {
+      setErrorMsg("You must accept privacy and terms to continue.");
       return;
     }
 
@@ -265,7 +220,7 @@ export default function SignUpScreen() {
         password,
         password2,
         accepted_privacy: acceptPrivacy,
-        accepted_cookies: acceptCookies,
+        accepted_cookies: false,
         accepted_terms: acceptTerms,
       });
 
@@ -373,7 +328,6 @@ export default function SignUpScreen() {
                 const isActive = activeLegalDoc === key;
                 const isAccepted =
                   (key === "privacy" && acceptPrivacy) ||
-                  (key === "cookies" && acceptCookies) ||
                   (key === "terms" && acceptTerms);
 
                 return (
@@ -418,19 +372,16 @@ export default function SignUpScreen() {
                   style={[
                     styles.acceptDocButton,
                     ((activeLegalDoc === "privacy" && acceptPrivacy) ||
-                      (activeLegalDoc === "cookies" && acceptCookies) ||
                       (activeLegalDoc === "terms" && acceptTerms)) && styles.acceptDocButtonAccepted,
                   ]}
                   onPress={() => {
                     if (activeLegalDoc === "privacy") setAcceptPrivacy(true);
-                    if (activeLegalDoc === "cookies") setAcceptCookies(true);
                     if (activeLegalDoc === "terms") setAcceptTerms(true);
                   }}
                 >
                   <Text style={styles.acceptDocButtonText}>
                     {(
                       (activeLegalDoc === "privacy" && acceptPrivacy) ||
-                      (activeLegalDoc === "cookies" && acceptCookies) ||
                       (activeLegalDoc === "terms" && acceptTerms)
                     )
                       ? "Accepted"
@@ -440,7 +391,7 @@ export default function SignUpScreen() {
               </View>
             )}
 
-            <Text style={styles.legalHint}>You must accept all three documents to continue.</Text>
+            <Text style={styles.legalHint}>You must accept privacy and terms to continue.</Text>
           </View>
 
           {!!errorMsg && <Text style={styles.errorText} testID="register-error-text">{errorMsg}</Text>}

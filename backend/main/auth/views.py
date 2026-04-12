@@ -26,11 +26,16 @@ LEGAL_VERSIONS = {
 }
 
 
-def _record_legal_acceptance(user, request):
+def _record_legal_acceptance(user, request, accepted_documents=None):
     ip_address = get_client_ip(request)
     user_agent = request.META.get("HTTP_USER_AGENT", "")[:512]
 
-    for document, version in LEGAL_VERSIONS.items():
+    docs_to_record = accepted_documents or LEGAL_VERSIONS.keys()
+
+    for document in docs_to_record:
+        version = LEGAL_VERSIONS.get(document)
+        if not version:
+            continue
         LegalAcceptance.objects.get_or_create(
             user=user,
             document=document,
@@ -58,7 +63,15 @@ def register_user(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        _record_legal_acceptance(user, request)
+        accepted_documents = []
+        if request.data.get('accepted_privacy'):
+            accepted_documents.append(LegalAcceptance.DOCUMENT_PRIVACY)
+        if request.data.get('accepted_terms'):
+            accepted_documents.append(LegalAcceptance.DOCUMENT_TERMS)
+        if request.data.get('accepted_cookies'):
+            accepted_documents.append(LegalAcceptance.DOCUMENT_COOKIES)
+
+        _record_legal_acceptance(user, request, accepted_documents=accepted_documents)
         
         user_serializer = UserSerializer(user)
         
@@ -73,7 +86,7 @@ def register_user(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def accept_legal_documents(request):
-    required_flags = ['accepted_privacy', 'accepted_cookies', 'accepted_terms']
+    required_flags = ['accepted_privacy', 'accepted_terms']
     missing_or_false = [flag for flag in required_flags if not request.data.get(flag)]
 
     if missing_or_false:
@@ -85,7 +98,15 @@ def accept_legal_documents(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    _record_legal_acceptance(request.user, request)
+    accepted_documents = []
+    if request.data.get('accepted_privacy'):
+        accepted_documents.append(LegalAcceptance.DOCUMENT_PRIVACY)
+    if request.data.get('accepted_terms'):
+        accepted_documents.append(LegalAcceptance.DOCUMENT_TERMS)
+    if request.data.get('accepted_cookies'):
+        accepted_documents.append(LegalAcceptance.DOCUMENT_COOKIES)
+
+    _record_legal_acceptance(request.user, request, accepted_documents=accepted_documents)
 
     return Response(
         {

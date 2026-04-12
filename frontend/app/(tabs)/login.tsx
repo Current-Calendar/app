@@ -26,7 +26,7 @@ const TEXT = "#10464D";
 const Otter = require("../../assets/images/Mascota.png");
 const Cloud = require("../../assets/images/nube_login.png");
 
-type LegalDocKey = "privacy" | "cookies" | "terms";
+type LegalDocKey = "privacy" | "terms";
 
 type LegalSection = {
   heading: string;
@@ -85,50 +85,6 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
       {
         heading: "7. Retention",
         body: "We will keep your data while you do not request its deletion. After the account is closed, the data will remain blocked for the legal limitation periods to address any potential liabilities.",
-      },
-    ],
-  },
-  cookies: {
-    title: "Cookies Policy",
-    button: "Cookies Policy",
-    content: [
-      {
-        heading: "1. What is a cookie?",
-        body: "A cookie is a small text file stored in your browser when you visit our platform. It allows the system to remember your visit, keep your session open, and analyze how you interact with the website to improve your experience.",
-      },
-      {
-        heading: "2. Cookie controller",
-        body: "Controller: Current development team",
-        bullets: [
-          "Academic project - University of Seville",
-          "Contact: support@currentcalendar.es",
-        ],
-      },
-      {
-        heading: "3. Types of cookies we use",
-        bullets: [
-          "Technical cookies (necessary): Required for the website to function.",
-          "Preference cookies: Remember your settings (such as language or time zone).",
-          "Analytics cookies: Tell us how many people visit and which sections are most popular. They are only enabled if you give consent.",
-        ],
-      },
-      {
-        heading: "4. Cookie inventory",
-        bullets: [
-          "sessionid (First-party): Identify your session. Technical cookie. Session duration.",
-          "csrftoken (First-party): CSRF protection. Technical cookie. Duration: 1 year.",
-          "cookie_consent (First-party): Remember whether you accepted or rejected cookies. Technical cookie. Duration: 6 months.",
-          "_ga (Google): Usage statistics. Analytics cookie. Duration: 2 years.",
-          "_gid (Google): Distinguish users. Analytics cookie. Duration: 24 hours.",
-        ],
-      },
-      {
-        heading: "5. How to manage or withdraw consent",
-        body: "You can change your mind at any time from the platform cookie settings or from your browser privacy settings (Chrome, Firefox, Safari, and Edge).",
-      },
-      {
-        heading: "6. International transfers",
-        body: "When using tools such as Google Analytics, some data may travel to servers in the U.S. We ensure these providers comply with the Data Privacy Framework or have signed the European Union Standard Contractual Clauses.",
       },
     ],
   },
@@ -203,7 +159,6 @@ export default function LoginScreen() {
   const [activeLegalDoc, setActiveLegalDoc] = useState<LegalDocKey | null>(null);
   const [acceptedDocs, setAcceptedDocs] = useState<Record<LegalDocKey, boolean>>({
     privacy: false,
-    cookies: false,
     terms: false,
   });
   const [loading, setLoading] = useState(false);
@@ -239,8 +194,8 @@ export default function LoginScreen() {
       setErrorMsg("Fill in username and password.");
       return;
     }
-    if (!acceptedDocs.privacy || !acceptedDocs.cookies || !acceptedDocs.terms) {
-      setErrorMsg("You must accept privacy, cookies, and terms to continue.");
+    if (!acceptedDocs.privacy || !acceptedDocs.terms) {
+      setErrorMsg("You must accept privacy and terms to continue.");
       return;
     }
 
@@ -250,7 +205,7 @@ export default function LoginScreen() {
       await login(u, password);
       await apiClient.post("/auth/accept-legal/", {
         accepted_privacy: acceptedDocs.privacy,
-        accepted_cookies: acceptedDocs.cookies,
+        accepted_cookies: false,
         accepted_terms: acceptedDocs.terms,
       });
 
@@ -399,7 +354,7 @@ export default function LoginScreen() {
               </View>
             )}
 
-            <Text style={styles.legalHint}>You must accept all three documents to continue.</Text>
+            <Text style={styles.legalHint}>You must accept privacy and terms to continue.</Text>
           </View>
 
           {!!errorMsg && (

@@ -35,7 +35,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         help_text='Unique user email'
     )
     accepted_privacy = serializers.BooleanField(write_only=True, required=True)
-    accepted_cookies = serializers.BooleanField(write_only=True, required=True)
+    accepted_cookies = serializers.BooleanField(write_only=True, required=False, default=False)
     accepted_terms = serializers.BooleanField(write_only=True, required=True)
 
     class Meta:
@@ -95,10 +95,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if not attrs.get('accepted_privacy'):
             raise serializers.ValidationError({
                 "accepted_privacy": "Privacy policy acceptance is required."
-            })
-        if not attrs.get('accepted_cookies'):
-            raise serializers.ValidationError({
-                "accepted_cookies": "Cookies policy acceptance is required."
             })
         if not attrs.get('accepted_terms'):
             raise serializers.ValidationError({
