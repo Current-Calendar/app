@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTutorial, TUTORIAL_STEPS } from "@/context/tutorial-context";
 import { WelcomeModal } from "@/components/tutorial/welcome-modal";
 import { TutorialOverlay } from "@/components/tutorial/tutorial-overlay";
+import { NotificationsProvider } from "@/context/notification-context";
 
 function InnerLayout() {
   const { width } = useWindowDimensions();
@@ -122,7 +123,11 @@ function InnerLayout() {
 }
 
 export default function CustomTabLayout() {
-  return <InnerLayout />;
+  return (
+    <NotificationsProvider>
+      <InnerLayout />
+    </NotificationsProvider>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -36,6 +36,13 @@ export const notificationsPageStyles = StyleSheet.create({
     color: '#888',
     fontWeight: '600',
   },
+  topBar: {
+    height: 44,
+    justifyContent: 'center',
+  },
+  markReadBtnHidden: {
+    opacity: 0,
+  },
 });
 
 export const notificationItemStyles = StyleSheet.create({
@@ -56,7 +63,9 @@ export const notificationItemStyles = StyleSheet.create({
     elevation: 2,
   },
   rowUnread: {
-    backgroundColor: '#10464d08',
+    backgroundColor: '#eaf7f6',
+    borderLeftWidth: 3,
+    borderLeftColor: '#10464d',
   },
   avatarWrap: {
     position: 'relative',
@@ -175,5 +184,46 @@ export const notificationItemStyles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 13,
+  },
+
+});
+
+export const notificationsModalStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  errorModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E53935',
+    marginBottom: 8,
+  },
+  modalMessage: {
+    fontSize: 15,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorModalButton: {
+    backgroundColor: '#E53935',
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
