@@ -5,13 +5,14 @@ import { Notification } from '@/hooks/use-notifications';
 import { notificationItemStyles as s } from '@/styles/notification-styles';
 
 const TYPE_ICON: Record<Notification['type'], { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  NEW_FOLLOWER:    { name: 'person-add', color: '#1b5b60' },
-  CALENDAR_FOLLOW: { name: 'calendar',   color: '#1b5b60' },
-  EVENT_SAVED:     { name: 'bookmark',   color: '#1b5b60' },
-  EVENT_LIKED:     { name: 'heart',      color: '#e53935' },
-  EVENT_COMMENT:   { name: 'chatbubble', color: '#10464d' },
-  CALENDAR_INVITE: { name: 'mail',       color: '#10191a' },
-  EVENT_INVITE:    { name: 'mail',       color: '#10191a' },
+  NEW_FOLLOWER:     { name: 'person-add', color: '#1b5b60' },
+  CALENDAR_FOLLOW:  { name: 'calendar',   color: '#1b5b60' },
+  EVENT_SAVED:      { name: 'bookmark',   color: '#1b5b60' },
+  EVENT_LIKED:      { name: 'heart',      color: '#e53935' },
+  EVENT_COMMENT:    { name: 'chatbubble', color: '#10464d' },
+  CALENDAR_COMMENT: { name: 'chatbubble', color: '#10464d' },
+  CALENDAR_INVITE:  { name: 'mail',       color: '#10191a' },
+  EVENT_INVITE:     { name: 'mail',       color: '#10191a' },
 };
 
 function getInitials(name?: string | null) {
@@ -52,7 +53,6 @@ export function NotificationItem({ item, onPress, onInviteAction }: Props) {
     try {
       await onInviteAction(item.id, action);
     } catch {
-      Alert.alert('Error', `Could not ${action} the invitation.`);
     } finally {
       setProcessing(null);
     }
@@ -92,7 +92,7 @@ export function NotificationItem({ item, onPress, onInviteAction }: Props) {
         )}
         <Text style={s.time}>{formatTime(item.created_at)}</Text>
 
-        {isInvite && onInviteAction && (
+        {isInvite && onInviteAction && !item.invite_resolved && (
           <View style={s.inviteActions}>
             <TouchableOpacity
               style={[s.inviteBtn, s.inviteBtnDecline]}

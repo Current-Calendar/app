@@ -96,7 +96,7 @@ class InvitationNotificationTests(APITestCase):
             username="user2", email="user2@example.com", password="user2"
         )
         self.user3 = User.objects.create_user(
-            username="user3", email="user3@example.com", password="user3"
+            username="user3", email="user3@example.com", password="user3", plan='STANDARD'
         )
 
         self.cal1 = Calendar.objects.create(

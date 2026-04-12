@@ -69,7 +69,6 @@ urlpatterns = [
     path('api/v1/calendars/create/', calendar_views.create_calendar, name='create_calendar'),
     path('api/v1/calendars/list/', calendar_views.list_calendars, name='list_calendarios'),
     path('api/v1/calendars/subscribed/', calendar_views.list_subscribed_calendars, name='list_subscribed_calendars'),
-    path('api/v1/calendars/friends-calendars/', calendar_views.list_friends_calendars, name='list_friends_calendars'),
     path('api/v1/calendars/my-calendars/', calendar_views.list_my_calendars, name='list_my_calendarios'),
     path('api/v1/calendars/co_owned/', calendar_views.list_co_owned_calendars, name='list_co_owned_calendars'),
     path('api/v1/calendars/import-google-calendar/', calendar_views.import_google_calendar, name='import_google_calendar'),
@@ -77,8 +76,8 @@ urlpatterns = [
     path('api/v1/calendars/import-ics/', calendar_views.ics_import, name='import_ics_calendar'),
     path('api/v1/calendars/<int:calendar_id>/export/', calendar_views.export_to_ics, name='export_to_ics'),
     path('api/v1/calendars/<int:calendar_id>/share/', calendar_views.get_calendar_share_info, name='get_calendar_share_info'),
+    path('api/v1/calendars/<int:calendar_id>/leave/', calendar_views.leave_calendar, name='leave_calendar'),
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
-    path('api/v1/calendars/<int:calendar_id>/co_owners/', calendar_views.edit_co_owners, name='edit_co_owners'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
     path('api/v1/events/<int:event_id>/like/', event_views.toggle_like_event, name='like_event'),
@@ -102,6 +101,7 @@ urlpatterns = [
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
+    path('silk/', include('silk.urls', namespace='silk'))
 ]
 
 

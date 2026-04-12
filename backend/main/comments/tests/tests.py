@@ -369,12 +369,11 @@ class CommentHelpersCoverageTests(APITestCase):
             creator=self.owner,
         )
         self.friends_calendar = Calendar.objects.create(
-            name="Friends cal",
-            privacy="FRIENDS",
+            name="Restricted private cal",
+            privacy="PRIVATE",
             creator=self.owner,
         )
-        self.friends_calendar.subscribers.add(self.friend)
-
+        
         self.event_public = Event.objects.create(
             title="event public",
             date=date(2026, 10, 1),
@@ -384,7 +383,7 @@ class CommentHelpersCoverageTests(APITestCase):
         self.event_public.calendars.add(self.public_calendar)
 
         self.event_friend = Event.objects.create(
-            title="event friend",
+            title="event private restricted",
             date=date(2026, 10, 2),
             time=time(11, 0),
             creator=self.owner,
@@ -394,8 +393,8 @@ class CommentHelpersCoverageTests(APITestCase):
     def test_normalize_target_type_none(self):
         self.assertIsNone(comment_views._normalize_target_type(None))
 
-    def test_is_friend_viewer_anonymous_false(self):
-        self.assertFalse(comment_views._is_friend_viewer(self.owner, AnonymousUser()))
+    def test_can_view_calendar_public_allows_anonymous(self):
+        self.assertTrue(comment_views.can_view_calendar(self.public_calendar, AnonymousUser()))
 
     def test_can_view_calendar_private_requires_auth(self):
         self.assertFalse(comment_views.can_view_calendar(self.private_calendar, None))
@@ -403,8 +402,8 @@ class CommentHelpersCoverageTests(APITestCase):
     def test_can_view_event_public_allows_anonymous(self):
         self.assertTrue(comment_views.can_view_event(self.event_public, None))
 
-    def test_can_view_event_friends_allows_friend(self):
-        self.assertTrue(comment_views.can_view_event(self.event_friend, self.friend))
+    def test_can_view_private_event_denied_for_non_owner(self):
+        self.assertFalse(comment_views.can_view_event(self.event_friend, self.friend))
         self.assertFalse(comment_views.can_view_event(self.event_friend, self.stranger))
 
     def test_decode_cursor_invalid(self):

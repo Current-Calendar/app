@@ -275,7 +275,7 @@ export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
-  const { date: dateParam } = useLocalSearchParams();
+  const { date: dateParam, calendarId: calendarIdParam } = useLocalSearchParams<{ date: string; calendarId: string }>();
   const router = useRouter();
 
   const goBackOrCalendars = () => {
@@ -316,7 +316,12 @@ export default function CreateEventsScreen() {
       const mapped = list.map(mapCalendarFromApi).filter((c: CalendarItem) => c.id);
 
       setCalendars(mapped);
-      if (!selectedCalendar && mapped.length > 0) setSelectedCalendar(mapped[0]);
+      if (!selectedCalendar && mapped.length > 0) {
+        const preSelected = calendarIdParam
+          ? mapped.find((c: CalendarItem) => c.id === String(calendarIdParam)) ?? mapped[0]
+          : mapped[0];
+        setSelectedCalendar(preSelected);
+      }
     } catch (e: any) {
       setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
@@ -572,7 +577,7 @@ export default function CreateEventsScreen() {
                     <ActivityIndicator />
                   </View>
                 ) : (
-                  <Text style={styles.calendarName}>
+                  <Text style={styles.calendarName} testID="create-event-selected-calendar-name">
                     {selectedCalendar?.name ?? (calendars.length ? "Select" : "No calendars")}
                   </Text>
                 )}
@@ -597,10 +602,10 @@ export default function CreateEventsScreen() {
 
           {/* Form */}
           <View style={styles.form}>
-            {!!formError && <Text style={styles.errorText}>{formError}</Text>}
+            {!!formError && <Text style={styles.errorText} testID="create-event-error-text">{formError}</Text>}
 
             <Text style={styles.fieldLabel}>Title:</Text>
-            <TextInput value={title} onChangeText={setTitle} style={styles.input} />
+            <TextInput value={title} onChangeText={setTitle} style={styles.input} testID="create-event-title-input" />
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description:</Text>
             <TextInput
@@ -610,6 +615,7 @@ export default function CreateEventsScreen() {
               multiline
               textAlignVertical="top"
               scrollEnabled
+              testID="create-event-description-input"
             />
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
@@ -627,6 +633,7 @@ export default function CreateEventsScreen() {
                 }}
                 placeholder="Empieza a escribir una dirección..."
                 placeholderTextColor="rgba(16,70,77,0.45)"
+                testID="create-event-place-input"
               />
 
               {!!place && (
@@ -701,6 +708,7 @@ export default function CreateEventsScreen() {
                 style={[styles.publishBtn, publishing && styles.publishBtnDisabled]}
                 onPress={publish}
                 disabled={publishing}
+                testID="create-event-submit-button"
               >
                 {publishing
                   ? <ActivityIndicator color="#EAF7F6" />
@@ -755,9 +763,9 @@ export default function CreateEventsScreen() {
             </View>
 
             <Text style={styles.successTitle}>Ready!</Text>
-            <Text style={styles.successBody}>Event created successfully</Text>
+            <Text style={styles.successBody} testID="create-event-success-text">Event created successfully</Text>
 
-            <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
+            <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot} testID="create-event-success-ok-button">
               <Text style={styles.successBtnText}>OK</Text>
             </Pressable>
 

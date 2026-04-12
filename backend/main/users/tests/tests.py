@@ -305,6 +305,14 @@ class BuscarUsuariosTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["username"], "lucia")
+        self.assertIn("followed", response.json()[0])
+
+    def test_busqueda_incluye_campo_followed(self):
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=antonio")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("followed", response.json()[0])
+        self.assertIn("is_following", response.json()[0])
 
     def test_busqueda_por_pronouns(self):
         response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=ella")

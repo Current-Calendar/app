@@ -16,7 +16,6 @@ import CalendarCard from "@/components/event-calendar/calendar-card";
 import CommentsModalC from "@/components/comments-modal-c";
 import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
-import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
 
@@ -37,7 +36,7 @@ export default function CalendarsScreen() {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
-  } = useRecommendedCalendars();
+  } = useRecommendedCalendars({ enabled: isAuthenticated });
 
   if (calendarsError) {
     Alert.alert('Error', calendarsError);
@@ -51,6 +50,7 @@ export default function CalendarsScreen() {
   }, [calendarsError]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchSubscribedCalendars = async () => {
       try {
         const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
@@ -65,7 +65,7 @@ export default function CalendarsScreen() {
     };
 
     void fetchSubscribedCalendars();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
@@ -75,8 +75,7 @@ export default function CalendarsScreen() {
       const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
       const isNotMine = !user?.id || creatorId !== String(user.id);
       const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-      const isVisibleByPrivacy =
-        c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+      const isVisibleByPrivacy = c.privacy === "PUBLIC";
 
       return isVisibleByPrivacy && isNotMine && isNotSubscribed;
     });

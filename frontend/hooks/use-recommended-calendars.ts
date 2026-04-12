@@ -9,11 +9,15 @@ export interface UseRecommendedCalendarsResult {
   refetch: () => Promise<void>;
 }
 
+interface UseRecommendedCalendarsOptions {
+  enabled?: boolean;
+}
+
 /**
  * Hook to fetch recommended calendars from the backend.
  * Handles response unwrapping and provides loading/error states.
  */
-export function useRecommendedCalendars(): UseRecommendedCalendarsResult {
+export function useRecommendedCalendars({ enabled = true }: UseRecommendedCalendarsOptions = {}): UseRecommendedCalendarsResult {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +53,10 @@ export function useRecommendedCalendars(): UseRecommendedCalendarsResult {
   };
 
   useEffect(() => {
-    void fetchCalendars();
-  }, []);
+    if (enabled) {
+      void fetchCalendars();
+    }
+  }, [enabled]);
 
   return { calendars, loading, error, refetch: fetchCalendars };
 }

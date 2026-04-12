@@ -271,9 +271,6 @@ export const calendarCardStyles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
-  friendStar: {
-    marginLeft: 6,
-  },
   actionsRow: {
   flexDirection: 'row',
   alignItems: 'center',

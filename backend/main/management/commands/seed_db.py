@@ -31,7 +31,8 @@ class Command(BaseCommand):
             password='password123',
             pronouns='She/her',
             bio='Full Stack Developer. Passionate about code and the mountains.',
-            photo='perfiles/avatar.png'
+            photo='perfiles/avatar.png',
+            plan = 'STANDARD'
         )
         user2 = User.objects.create_user(
             username='carlos_dev',
@@ -76,9 +77,9 @@ class Command(BaseCommand):
             external_id='google_123',
             cover='portadas/portada.jpeg'
         )
-        cal_carlos_friends = Calendar.objects.create(
+        cal_carlos_private = Calendar.objects.create(
             name="Carlos Plans",
-            privacy='FRIENDS',
+            privacy='PRIVATE',
             creator=user2
         )
         cal_gym = Calendar.objects.create(
@@ -111,7 +112,7 @@ class Command(BaseCommand):
             photo='eventos/evento.jpg',
             creator=user2
         )
-        event_dinner.calendars.add(cal_carlos_friends, cal_ana_private)
+        event_dinner.calendars.add(cal_carlos_private, cal_ana_private)
 
         event_gym = Event.objects.create(
             title="Intensive Spinning",
@@ -122,7 +123,7 @@ class Command(BaseCommand):
             photo='eventos/evento.jpg',
             creator=user3
         )
-        event_gym.calendars.add(cal_gym, cal_carlos_friends)
+        event_gym.calendars.add(cal_gym, cal_carlos_private)
 
         event_triana = Event.objects.create(
             title="Tapas Tour in Triana",

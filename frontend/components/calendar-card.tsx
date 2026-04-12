@@ -15,7 +15,7 @@ export interface CalendarData {
   name: string;
   description?: string;
   cover?: string;
-  privacy?: 'FRIENDS' | 'PUBLIC' | 'PRIVATE' | string;
+  privacy?: 'PUBLIC' | 'PRIVATE' | string;
   likes_count?: number;
   liked_by_me?: boolean;
 }
@@ -62,15 +62,6 @@ export default function CalendarCard({
             <Text style={calendarCardStyles.cardTitle} numberOfLines={1}>
               {calendar.name}
             </Text>
-
-            {calendar.privacy === 'FRIENDS' && (
-              <Ionicons
-                name="star"
-                size={18}
-                color="#A0D842"
-                style={calendarCardStyles.friendStar}
-              />
-            )}
           </View>
 
           <Text style={calendarCardStyles.cardDesc} numberOfLines={3}>

@@ -21,7 +21,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
 
-type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
+type PrivacyStatus = "PRIVATE" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
 
 interface PublishData {
@@ -70,12 +70,6 @@ export default function CreateScreen() {
       description: "Only you can see this calendar",
     },
     {
-      label: "Friends",
-      value: "FRIENDS",
-      icon: "people-outline",
-      description: "Visible to your friends only",
-    },
-    {
       label: "Public",
       value: "PUBLIC",
       icon: "globe-outline",
@@ -119,11 +113,13 @@ export default function CreateScreen() {
 
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
+      setErrorMessage("Calendar name is required.");
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
 
     if (!user?.username) {
+      setErrorMessage("You must be logged in to create a calendar.");
       Alert.alert("Error", "You must be logged in to create a calendar.");
       return;
     }
@@ -255,6 +251,7 @@ export default function CreateScreen() {
               onChangeText={(text) =>
                 setCalendarData({ ...calendarData, name: text })
               }
+              testID="create-calendar-name-input"
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
@@ -266,6 +263,7 @@ export default function CreateScreen() {
               }
               multiline
               numberOfLines={3}
+              testID="create-calendar-description-input"
             />
           </View>
 
@@ -335,9 +333,7 @@ export default function CreateScreen() {
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                  ? "Your friends will receive an invitation to view this calendar."
-                  : "Anyone with the link can view this calendar."}
+                : "Anyone with the link can view this calendar."}
             </Text>
           </View>
      
@@ -357,6 +353,7 @@ export default function CreateScreen() {
               style={styles.cancelButton}
               onPress={handleCancel}
               disabled={isLoading}
+              testID="create-calendar-cancel-button"
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
@@ -368,6 +365,7 @@ export default function CreateScreen() {
               ]}
               onPress={handlePublish}
               disabled={isLoading}
+              testID="create-calendar-submit-button"
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" size="small" />

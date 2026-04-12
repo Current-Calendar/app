@@ -1,7 +1,7 @@
 import os
 import redis
 import json
-from django.db.models import Count, Q
+from django.db.models import Count
 from main.models import Calendar, User
 from main.rs.utils import tokenize, compute_item_similarities
 
@@ -121,19 +121,6 @@ def recommend_calendars(user: User, limit=30):
         except Exception as e:
             print(f"Error leyendo de Redis RS: {e}")
 
-    friends_ids = list(user.following.values_list('id', flat=True))
-
-    if friends_ids:
-        friends_calendars = (
-            Calendar.objects
-            .filter(subscribers__id__in=friends_ids)
-            .exclude(id__in=already_following)
-            .filter(privacy='PUBLIC')
-            .annotate(friends_following_count=Count('subscribers', filter=Q(subscribers__id__in=friends_ids)))
-            .distinct()
-        )
-        for cal in friends_calendars:
-            recommended_ids[cal.id] = recommended_ids.get(cal.id, 0) + (0.5 * cal.friends_following_count)
 
     sorted_ids = sorted(recommended_ids, key=recommended_ids.get, reverse=True)
 

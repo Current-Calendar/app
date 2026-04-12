@@ -9,7 +9,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
 
-type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
+type PrivacyStatus = 'PRIVATE' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
@@ -46,12 +46,6 @@ export default function EditScreen() {
       value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
-    },
-    {
-      label: "Friends",
-      value: "FRIENDS",
-      icon: "people-outline",
-      description: "Visible to your friends only",
     },
     {
       label: "Public",
@@ -121,7 +115,7 @@ export default function EditScreen() {
         });
       }
 
-      router.replace('/(tabs)/calendars');
+      router.replace(`/(tabs)/calendars?selectedCalendarId=${calendarId}`);
     } catch (error: any) {
       console.log("FULL ERROR:", error);
 
@@ -271,8 +265,6 @@ export default function EditScreen() {
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                ? "Your friends will receive an invitation to view this calendar."
                 : "Anyone with the link can view this calendar."}
             </Text>
           </View>

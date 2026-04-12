@@ -3,7 +3,7 @@ import redis
 import json
 from django.db.models import Count, Q
 from django.utils import timezone
-from main.models import User, Calendar, Event
+from main.models import User, Event
 from main.rs.utils import tokenize, compute_item_similarities
 
 redis_client = redis.Redis(
@@ -91,10 +91,9 @@ def build_feature_set(event):
 
 def recommend_events(user: User, limit=30):
     """
-    Recomienda eventos para un usuario basándose en:
+    Recomienda eventos para un usuario basandose en:
     1. Eventos similares a los de los calendarios que sigue (content-based)
-    2. Eventos de calendarios que siguen sus amigos (social)
-    3. Eventos próximos populares como fallback
+    2. Eventos publicos proximos como fallback
     """
 
     followed_calendars = user.subscribed_calendars.prefetch_related('events')
@@ -120,18 +119,6 @@ def recommend_events(user: User, limit=30):
         except Exception as e:
             print(f"Error leyendo de Redis RS Eventos: {e}")
 
-    friends_ids = list(user.following.values_list('id', flat=True))
-    if friends_ids:
-        friends_events_ids = (
-            Event.objects
-            .filter(calendars__subscribers__id__in=friends_ids)
-            .filter(calendars__privacy='PUBLIC')
-            .exclude(id__in=already_seen_event_ids)
-            .values_list('id', flat=True)
-            .distinct()
-        )
-        for eid in friends_events_ids:
-            recommended_ids[eid] = recommended_ids.get(eid, 0) + 0.5
 
     sorted_ids = sorted(recommended_ids, key=recommended_ids.get, reverse=True)
 
@@ -141,7 +128,6 @@ def recommend_events(user: User, limit=30):
         .filter(date__gte=timezone.now().date())
         .filter(
             Q(calendars__privacy='PUBLIC') |
-            Q(calendars__privacy='FRIENDS', calendars__creator__in=friends_ids) |
             Q(calendars__creator=user)
         )
         .distinct()
@@ -161,7 +147,6 @@ def recommend_events(user: User, limit=30):
             .filter(date__gte=timezone.now().date())
             .filter(
                 Q(calendars__privacy='PUBLIC') |
-                Q(calendars__privacy='FRIENDS', calendars__creator__in=friends_ids) |
                 Q(calendars__creator=user)
             )
             .distinct()
