@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
 type Placement = 'feed' | 'search' | 'events';
+
+const AD_CLIENT = 'ca-pub-XXXXXXXXXXXXXXXX';
 
 const AD_SLOTS: Record<Placement, string> = {
   feed:   'XXXXXXXXXX',
@@ -9,16 +11,15 @@ const AD_SLOTS: Record<Placement, string> = {
   events: 'XXXXXXXXXX',
 };
 
-const AD_CLIENT = 'ca-pub-XXXXXXXXXXXXXXXX';
+const IS_ADSENSE_APPROVED = false; // Cambiar cuando este lo de Adsense
 
 interface AdCardProps {
   placement?: Placement;
 }
 
 export function AdCard({ placement = 'feed' }: AdCardProps) {
-  const insRef = useRef<HTMLElement | null>(null);
-
   useEffect(() => {
+    if (!IS_ADSENSE_APPROVED) return;
     try {
       ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
     } catch (e) {
@@ -26,10 +27,18 @@ export function AdCard({ placement = 'feed' }: AdCardProps) {
     }
   }, []);
 
+  if (!IS_ADSENSE_APPROVED) {
+    return (
+      <View style={styles.placeholder}>
+        <Text style={styles.placeholderLabel}>AD PLACEHOLDER · {placement}</Text>
+        <Text style={styles.placeholderSub}>Aquí aparecerá el anuncio de AdSense</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ins
-        ref={insRef as any}
         className="adsbygoogle"
         style={{ display: 'block' }}
         data-ad-client={AD_CLIENT}
@@ -46,5 +55,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 12,
     minHeight: 100,
+  },
+  placeholder: {
+    marginVertical: 12,
+    marginHorizontal: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#10464d',
+    backgroundColor: '#e8f4f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 90,
+  },
+  placeholderLabel: {
+    color: '#10464d',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  placeholderSub: {
+    color: '#4f6f74',
+    fontSize: 11,
+    marginTop: 4,
   },
 });

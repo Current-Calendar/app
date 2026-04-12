@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
+import apiClient from '@/services/api-client';
 
 export function useAdsConfig() {
   return useQuery({
     queryKey: ['ads-config'],
-    queryFn: async () => {
-      const res = await fetch('/api/ads/config');
-      return res.json();
-    },
-    staleTime: 1000 * 60 * 10, // refresca cada 10 minutos
+    queryFn: () => apiClient.get<{
+      show_ads: boolean;
+      frequency: number;
+      placements: string[];
+    }>('/ads/config/'),
+    staleTime: 1000 * 60 * 10,
   });
 }
