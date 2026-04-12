@@ -247,6 +247,7 @@ export default function CreateScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
+              maxLength={100}
               value={calendarData.name}
               onChangeText={(text) =>
                 setCalendarData({ ...calendarData, name: text })
