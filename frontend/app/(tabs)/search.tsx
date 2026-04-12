@@ -13,11 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
 import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
-
-// domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
+import { AdCard } from '@/components/ads/ad-card';
+import { injectAds, isAdItem } from '@/components/ads/inject-ads';
+import { useAdsConfig } from '@/hooks/use-ads-config';
 
-const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+const USE_MOCK = false;
 
 type TabType = 'all' | 'calendars' | 'events' | 'users';
 
@@ -67,15 +68,10 @@ function renderHighlightedText(text: string, query: string, baseStyle: any, high
     const source = normalizeText(text);
     const term = normalizeText(query);
 
-    if (!source) {
-        return <Text style={baseStyle} />;
-    }
+    if (!source) return <Text style={baseStyle} />;
+    if (!term) return <Text style={baseStyle}>{source}</Text>;
 
-    if (!term) {
-        return <Text style={baseStyle}>{source}</Text>;
-    }
-
-    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")})`, "ig");
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig");
     const parts = source.split(regex);
 
     return (
@@ -103,24 +99,20 @@ export default function SearchScreen() {
     const { results: userResults } = useUserSearch(query);
     const { results: calendars } = useCalendarSearch(query);
     const { results: events } = useEventSearch(query);
-
     const { followUser: followUserRequest } = useFollowUserAction();
+    const { data: adsConfig } = useAdsConfig();
 
     useEffect(() => {
         setUsers(userResults);
     }, [userResults]);
 
     useEffect(() => {
-        if (!query.trim()) {
-            setActiveTab('all');
-        }
+        if (!query.trim()) setActiveTab('all');
     }, [query]);
 
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
-        calendars.forEach((c) => {
-            m[c.id.toString()] = c.name;
-        });
+        calendars.forEach((c) => { m[c.id.toString()] = c.name; });
         return m;
     }, [calendars]);
 
@@ -131,17 +123,14 @@ export default function SearchScreen() {
 
     const allResults: SearchResult[] = useMemo(() => {
         if (!query.trim()) return [];
-
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
         const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
         const eventRes: SearchResult[] = events.map((e) => ({ type: 'event', data: e }));
-
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events]);
 
     const filtered: SearchResult[] = useMemo(() => {
         if (activeTab === 'all') return allResults;
-        
         return allResults.filter(item => {
             if (activeTab === 'calendars') return item.type === 'calendar';
             if (activeTab === 'events') return item.type === 'event';
@@ -164,7 +153,6 @@ export default function SearchScreen() {
 
         try {
             const data = await followUserRequest(normalizedId);
-
             setUsers(prev =>
                 prev.map(u =>
                     String(u.id) === normalizedId ? { ...u, followed: data.followed } : u
@@ -204,9 +192,12 @@ export default function SearchScreen() {
         return 'No results found';
     };
 
+    const listData = adsConfig?.show_ads && filtered.length > 0
+        ? injectAds(filtered, adsConfig.frequency)
+        : filtered;
+
     return (
         <View style={styles.container}>
-            {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
@@ -218,12 +209,10 @@ export default function SearchScreen() {
                 />
             </View>
 
-            {/* TAB PILLS */}
             {showTabs && (
                 <View style={styles.tabStrip}>
                     {TAB_OPTIONS.map((tab) => {
                         const isActive = activeTab === tab.type;
-
                         return (
                             <TouchableOpacity
                                 key={tab.type}
@@ -240,12 +229,7 @@ export default function SearchScreen() {
                                     size={16}
                                     color={isActive ? '#fff' : '#10464d'}
                                 />
-                                <Text
-                                    style={[
-                                        styles.tabLabel,
-                                        { color: isActive ? '#fff' : '#333' },
-                                    ]}
-                                >
+                                <Text style={[styles.tabLabel, { color: isActive ? '#fff' : '#333' }]}>
                                     {tab.label}
                                 </Text>
                             </TouchableOpacity>
@@ -254,12 +238,13 @@ export default function SearchScreen() {
                 </View>
             )}
 
-            {/* RESULTS */}
-            <FlatList<SearchResult>
+            <FlatList
                 style={styles.list}
                 contentContainerStyle={styles.listContent}
-                data={filtered}
-                keyExtractor={(item: any) => `${item.type}-${item.data.id}`}
+                data={listData}
+                keyExtractor={(item: any) =>
+                    isAdItem(item) ? item.id : `${item.type}-${item.data.id}`
+                }
                 ListEmptyComponent={
                     showTabs ? (
                         <View style={styles.emptyContainer}>
@@ -267,11 +252,17 @@ export default function SearchScreen() {
                         </View>
                     ) : null
                 }
-                renderItem={({ item }) => {
+                renderItem={({ item }: any) => {
+                    if (isAdItem(item)) return <AdCard placement="search" />;
+
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <TouchableOpacity style={styles.card} onPress={() => handleUserSelect(user.username)} testID={`search-user-card-${user.username}`}>
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => handleUserSelect(user.username)}
+                                testID={`search-user-card-${user.username}`}
+                            >
                                 <Image
                                     source={
                                         user.photo && user.photo.trim() !== ""
@@ -282,16 +273,10 @@ export default function SearchScreen() {
                                 />
                                 <View style={styles.middleInfo}>
                                     <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
-                                    <Text style={styles.subText} numberOfLines={2} ellipsizeMode="tail">
-                                        {user.bio}
-                                    </Text>
+                                    <Text style={styles.subText} numberOfLines={2} ellipsizeMode="tail">{user.bio}</Text>
                                 </View>
-
                                 <Pressable
-                                    style={[
-                                        styles.followButton,
-                                        user.followed && styles.followingButton,
-                                    ]}
+                                    style={[styles.followButton, user.followed && styles.followingButton]}
                                     onPress={(event) => {
                                         event.stopPropagation();
                                         followUser(user.id);
@@ -313,9 +298,13 @@ export default function SearchScreen() {
                         const descriptionMatches = getMatchIndex(description, query) >= 0;
                         const descriptionSnippet = buildDescriptionSnippet(description, query);
                         const calendarColor = cal.color || "#10464d";
-                        
+
                         return (
-                            <TouchableOpacity style={styles.card} onPress={() => handleCalendarSelect(cal.id)} testID={`search-calendar-card-${cal.id}`}>
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => handleCalendarSelect(cal.id)}
+                                testID={`search-calendar-card-${cal.id}`}
+                            >
                                 {cal.cover ? (
                                     <Image source={{ uri: cal.cover }} style={styles.leftImage} />
                                 ) : (
@@ -323,25 +312,17 @@ export default function SearchScreen() {
                                         <Ionicons name="calendar" size={24} color={calendarColor} />
                                     </View>
                                 )}
-                                
                                 <View style={styles.middleInfo}>
                                     <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
-
                                     {!!descriptionSnippet && (
                                         <View>
-                                            {renderHighlightedText(
-                                                descriptionSnippet,
-                                                query,
-                                                styles.subText,
-                                                styles.highlightText
-                                            )}
+                                            {renderHighlightedText(descriptionSnippet, query, styles.subText, styles.highlightText)}
                                             {descriptionMatches && !titleMatches && (
                                                 <Text style={styles.matchTag}>Matches description</Text>
                                             )}
                                         </View>
                                     )}
                                 </View>
-
                                 {cal.creator_username && (
                                     <View style={styles.rightMeta}>
                                         <Ionicons name="person-circle-outline" size={16} color="#666" />
@@ -359,10 +340,13 @@ export default function SearchScreen() {
                     const eventTitleMatches = getMatchIndex(normalizeText(ev.title), query) >= 0;
                     const eventDescriptionMatches = getMatchIndex(eventDescription, query) >= 0;
                     const eventDescriptionSnippet = buildDescriptionSnippet(eventDescription, query);
-                    console.log(JSON.stringify(ev, null, 2));
 
                     return (
-                        <TouchableOpacity style={styles.card} onPress={() => handleEventSelect(ev)} testID={`search-event-card-${ev.id}`}>
+                        <TouchableOpacity
+                            style={styles.card}
+                            onPress={() => handleEventSelect(ev)}
+                            testID={`search-event-card-${ev.id}`}
+                        >
                             {ev.photo ? (
                                 <Image source={{ uri: ev.photo }} style={styles.leftImage} />
                             ) : (
@@ -370,36 +354,28 @@ export default function SearchScreen() {
                                     <Ionicons name="flag" size={24} color="#a0a0a0" />
                                 </View>
                             )}
-
                             <View style={styles.middleInfo}>
                                 <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
                                 <Text style={styles.subText} numberOfLines={1} ellipsizeMode="tail">
                                     {ev.date} {ev.time}
                                 </Text>
-
                                 {!!eventDescriptionSnippet && (
                                     <View>
-                                        {renderHighlightedText(
-                                            eventDescriptionSnippet,
-                                            query,
-                                            styles.subText,
-                                            styles.highlightText
-                                        )}
+                                        {renderHighlightedText(eventDescriptionSnippet, query, styles.subText, styles.highlightText)}
                                         {eventDescriptionMatches && !eventTitleMatches && (
                                             <Text style={styles.matchTag}>Matches description</Text>
                                         )}
                                     </View>
                                 )}
                             </View>
-
                             {ev.creator_username && (
-                                    <View style={styles.rightMeta}>
-                                        <Ionicons name="person-circle-outline" size={16} color="#666" />
-                                        <Text style={styles.rightMetaText} numberOfLines={1} ellipsizeMode="tail">
-                                            {ev.creator_username}
-                                        </Text>
-                                    </View>
-                                )}
+                                <View style={styles.rightMeta}>
+                                    <Ionicons name="person-circle-outline" size={16} color="#666" />
+                                    <Text style={styles.rightMetaText} numberOfLines={1} ellipsizeMode="tail">
+                                        {ev.creator_username}
+                                    </Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     );
                 }}
@@ -415,7 +391,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
     },
-
     searchContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -426,11 +401,9 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         gap: 8,
     },
-
     input: {
         flex: 1,
     },
-
     tabStrip: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -439,7 +412,6 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         gap: 10,
     },
-
     tabChip: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -448,7 +420,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         gap: 6,
     },
-
     tabChipActive: {
         backgroundColor: '#10464d',
         shadowColor: '#10464d',
@@ -457,7 +428,6 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
     },
-
     tabChipInactive: {
         backgroundColor: '#fff',
         borderWidth: 1,
@@ -468,33 +438,27 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 1,
     },
-
     tabLabel: {
         fontSize: 14,
         fontWeight: '600',
     },
-
     list: {
         flex: 1,
     },
-
     listContent: {
         flexGrow: 1,
         justifyContent: 'flex-start',
         paddingBottom: 20,
     },
-
     emptyContainer: {
         paddingVertical: 40,
         alignItems: 'center',
     },
-
     emptyText: {
         fontSize: 15,
         color: '#888',
         fontStyle: 'italic',
     },
-
     card: {
         borderColor: "#10464d",
         borderWidth: 2,
@@ -505,40 +469,33 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 12,
     },
-
     leftImage: {
         width: 70,
         height: 70,
         borderRadius: 8,
     },
-
     roundedFull: {
         borderRadius: 25,
     },
-
     placeholderIcon: {
         justifyContent: "center",
         alignItems: "center",
     },
-
     middleInfo: {
         flex: 1,
         flexDirection: "column",
         justifyContent: "center",
     },
-
     title: {
         fontWeight: "bold",
         fontSize: 15,
         color: "#1a1a1a",
     },
-
     subText: {
         fontSize: 12,
         color: "#666",
         marginTop: 2,
     },
-
     rightMeta: {
         flexDirection: "row",
         alignItems: "center",
@@ -546,14 +503,12 @@ const styles = StyleSheet.create({
         maxWidth: 90,
         marginRight: 4,
     },
-
     rightMetaText: {
         fontSize: 12,
         color: "#10464d",
         fontWeight: "600",
         flexShrink: 1,
     },
-
     followButton: {
         backgroundColor: "#eb8c85",
         paddingHorizontal: 16,
@@ -561,26 +516,21 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginLeft: 'auto',
     },
-
     followingButton: {
         backgroundColor: "#10464d",
     },
-
     followText: {
         color: "#fff",
         fontWeight: "600",
         fontSize: 13,
     },
-
     followingText: {
         color: "#fff",
     },
-
     highlightText: {
         color: "#10464d",
         fontWeight: "700",
     },
-
     matchTag: {
         marginTop: 4,
         fontSize: 11,

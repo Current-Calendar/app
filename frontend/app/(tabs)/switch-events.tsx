@@ -1,4 +1,13 @@
-import { View, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Text, ImageSourcePropType, Alert } from "react-native";
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Text,
+  ImageSourcePropType,
+  Alert,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useState, useEffect } from "react";
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
@@ -9,6 +18,9 @@ import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
 import apiClient from "@/services/api-client";
+import { AdCard } from '@/components/ads/ad-card';
+import { injectAds, isAdItem } from '@/components/ads/inject-ads';
+import { useAdsConfig } from '@/hooks/use-ads-config';
 
 export interface Event {
   id: string;
@@ -38,12 +50,9 @@ export default function EventsScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const hasSession = isAuthenticated || Boolean(user);
 
-  
-
-  // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
+  const { data: adsConfig } = useAdsConfig();
 
-  // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
   const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -51,7 +60,6 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
 
-  // Helper para resolver URLs de imágenes (Lógica de main)
   const resolveImageUrl = (rawUrl?: string) => {
     if (!rawUrl) return "https://picsum.photos/seed/event/640/360";
     if (/^https?:\/\//.test(rawUrl)) return rawUrl;
@@ -65,24 +73,20 @@ export default function EventsScreen() {
         setSubscribedCalendarIds([]);
         return;
       }
-
       try {
         const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
         const dataArray = Array.isArray(subscribedData)
           ? subscribedData
           : (subscribedData as any)?.data || [];
-
         setSubscribedCalendarIds(dataArray.map((c: any) => String(c.id)));
       } catch (error) {
         console.error("Error fetching subscribed calendars for events feed:", error);
         setSubscribedCalendarIds([]);
       }
     };
-
     void fetchSubscribedCalendars();
   }, [hasSession]);
 
-  // Mapeo y transformación de datos
   useEffect(() => {
     if (authLoading) return;
 
@@ -94,13 +98,12 @@ export default function EventsScreen() {
           apiClient.get<any[]>("/recommendations/events/"),
         ]);
 
-        // Map calendars for easy lookup
         const calendarMap: Record<number, any> = {};
         calData.forEach((c: any) => {
           calendarMap[Number(c.id)] = c;
         });
 
-        const mappedEvents: Event[] = evData.map((e: any, index: number) => {
+        const mappedEvents: Event[] = evData.map((e: any) => {
           const cal = calendarMap[e.calendars[0]];
           return {
             id: String(e.id),
@@ -119,15 +122,15 @@ export default function EventsScreen() {
             saved_by_me: e.saved_by_me ?? false,
             attendees: Array.isArray(e.attendees)
               ? e.attendees.map((a: any) => ({
-                  name: a.username || a.name || "",
-                  respondedAt: a.responded_at || a.respondedAt || "",
-                  avatar: a.photo || a.avatar || undefined,
-                }))
+                name: a.username || a.name || "",
+                respondedAt: a.responded_at || a.respondedAt || "",
+                avatar: a.photo || a.avatar || undefined,
+              }))
               : [],
           };
         }).filter((evt: Event) => evt.id && evt.title);
 
-      setEvents(mappedEvents);
+        setEvents(mappedEvents);
       } catch (error) {
         console.error("Error fetching events:", error);
         Alert.alert("Error", "Could not load events.");
@@ -138,17 +141,14 @@ export default function EventsScreen() {
 
     void fetchData();
   }, [authLoading]);
-  // Manejo de errores
+
   const errorMessage = calendarsError;
 
-  // Handlers de UI
   const handleSave = async (id: string) => {
     try {
       const res = await apiClient.post<{ saved: boolean }>(`/events/${id}/save/`);
       setEvents((prev) =>
-        prev.map((e) =>
-          e.id === id ? { ...e, saved_by_me: res.saved } : e
-        )
+        prev.map((e) => e.id === id ? { ...e, saved_by_me: res.saved } : e)
       );
     } catch (error) {
       Alert.alert("Error", "Could not save this event.");
@@ -161,9 +161,7 @@ export default function EventsScreen() {
       const res = await apiClient.post<{ liked: boolean; likes_count: number }>(`/events/${id}/like/`);
       setEvents((prev) =>
         prev.map((e) =>
-          e.id === id
-            ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count }
-            : e
+          e.id === id ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count } : e
         )
       );
     } catch (error) {
@@ -185,7 +183,6 @@ export default function EventsScreen() {
     setSelectedEvent(null);
   };
 
-  // Vistas de estado (Loading / Error)
   if (loading && events.length === 0) {
     return (
       <View style={styles.loadingScreen}>
@@ -200,17 +197,17 @@ export default function EventsScreen() {
       <View style={styles.loadingScreen}>
         <Text style={styles.errorTitle}>Could not load feed</Text>
         <Text style={styles.loadingText}>{errorMessage.message}</Text>
-        <TouchableOpacity onPress={() => refetch?.()}>
-          <Text style={styles.retryLink}>Retry</Text>
-        </TouchableOpacity>
       </View>
     );
   }
 
+  const listData = adsConfig?.show_ads
+    ? injectAds(events, adsConfig.frequency)
+    : events;
+
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        {/* Header de Autenticación */}
         {!authLoading && !hasSession && (
           <View style={styles.authHeader}>
             <TouchableOpacity
@@ -237,23 +234,27 @@ export default function EventsScreen() {
         <EventsSwitch />
 
         <FlatList
-          data={events}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <EventCard
-              event={item}
-              onOpen={handleOpenEvent}
-              onLike={handleLike}
-              onSave={handleSave}
-              onComment={(id) => {
-                const found = events.find((e) => e.id === id);
-                if (found) {
-                  setSelectedEvent(found);
-                  setCommentsModalVisible(true);
-                }
-              }}
-            />
-          )}
+          data={listData}
+          keyExtractor={(item) => isAdItem(item) ? item.id : (item as Event).id}
+          renderItem={({ item }) => {
+            if (isAdItem(item)) return <AdCard placement="feed" />;
+            const event = item as Event;
+            return (
+              <EventCard
+                event={event}
+                onOpen={handleOpenEvent}
+                onLike={handleLike}
+                onSave={handleSave}
+                onComment={(id) => {
+                  const found = events.find((e) => e.id === id);
+                  if (found) {
+                    setSelectedEvent(found);
+                    setCommentsModalVisible(true);
+                  }
+                }}
+              />
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.emptyStateWrap}>
               <Text style={styles.emptyText}>No recommended events right now.</Text>
@@ -282,190 +283,94 @@ export default function EventsScreen() {
 }
 
 export const styles = StyleSheet.create({
-
   container: {
-
     flex: 1,
-
     alignItems: "center",
-
   },
-
   loadingScreen: {
-
     flex: 1,
-
     backgroundColor: "#E8E5D8",
-
     alignItems: "center",
-
     justifyContent: "center",
-
     paddingHorizontal: 24,
-
   },
-
   loadingText: {
-
     marginTop: 10,
-
     color: "#10464d",
-
     opacity: 0.85,
-
     textAlign: "center",
-
     fontWeight: "600",
-
   },
-
   errorTitle: {
-
     color: "#c75146",
-
     fontWeight: "700",
-
     fontSize: 18,
-
     textAlign: "center",
-
   },
-
   retryLink: {
-
     marginTop: 12,
-
     color: "#10464d",
-
     fontWeight: "700",
-
     textDecorationLine: "underline",
-
   },
-
   inner: {
-
     width: "100%",
-
     maxWidth: 800,
-
     flex: 1,
-
   },
-
   list: {
-
     paddingHorizontal: 16,
-
     paddingBottom: 120,
-
   },
-
-
-
   emptyText: {
-
     marginTop: 40,
-
     textAlign: "center",
-
     color: "#10464d",
-
     opacity: 0.8,
-
     fontWeight: "600",
-
   },
-
   emptyStateWrap: {
-
     marginTop: 40,
-
     paddingHorizontal: 10,
-
   },
-
   emptySubtext: {
-
     marginTop: 6,
-
     textAlign: "center",
-
     color: "#4f6f74",
-
     opacity: 0.9,
-
     lineHeight: 20,
-
     fontSize: 13,
-
   },
-
-
-
   authHeader: {
-
     flexDirection: 'row',
-
     justifyContent: 'center',
-
     paddingHorizontal: 16,
-
     paddingTop: 8,
-
     gap: 12,
-
   },
-
   loginButton: {
-
     flex: 1,
-
     borderWidth: 1.5,
-
     borderColor: '#10464d',
-
     paddingVertical: 10,
-
     borderRadius: 8,
-
     alignItems: 'center',
-
   },
-
   loginButtonText: {
-
     color: '#10464d',
-
     fontWeight: '600',
-
     fontSize: 16,
-
   },
-
   registerButton: {
-
     flex: 1,
-
     backgroundColor: '#10464d',
-
     paddingVertical: 10,
-
     borderRadius: 8,
-
     alignItems: 'center',
-
   },
-
   registerButtonText: {
-
     color: '#FFFFFF',
-
     fontWeight: '600',
-
     fontSize: 16,
-
   },
-
-
 });
