@@ -21,16 +21,21 @@ export default function RootLayout() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
+  const [cookiePreferenceChecked, setCookiePreferenceChecked] = useState(Platform.OS !== "web");
+  const [cookiePreferenceRaw, setCookiePreferenceRaw] = useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
     try {
       const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      setCookiePreferenceRaw(saved);
       if (saved === "accepted" || saved === "rejected") {
         setCookiePreference(saved);
       }
     } catch {
       // Ignore localStorage access errors in restricted browser contexts.
+    } finally {
+      setCookiePreferenceChecked(true);
     }
   }, []);
 
@@ -39,8 +44,19 @@ export default function RootLayout() {
     if (Platform.OS !== "web") return;
     try {
       window.localStorage.setItem(COOKIE_PREFERENCE_KEY, value);
+      setCookiePreferenceRaw(value);
     } catch {
       // Ignore localStorage write errors.
+    }
+  };
+
+  const refreshCookiePreferenceDebug = () => {
+    if (Platform.OS !== "web") return;
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      setCookiePreferenceRaw(saved);
+    } catch {
+      setCookiePreferenceRaw("<storage-error>");
     }
   };
   const lightTheme = {
@@ -61,7 +77,7 @@ export default function RootLayout() {
             <Stack.Screen name="new-password" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
           </Stack>
-          {Platform.OS === "web" && cookiePreference === null && (
+          {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
             <View style={styles.cookieBanner}>
               <View style={styles.cookieTextWrap}>
                 <Text style={styles.cookieTitle}>This website uses cookies</Text>
@@ -93,6 +109,26 @@ export default function RootLayout() {
                   <Text style={styles.cookiePrimaryButtonText}>Accept</Text>
                 </Pressable>
               </View>
+            </View>
+          )}
+          {Platform.OS === "web" && (
+            <View style={styles.cookieDebugBox}>
+              <Text style={styles.cookieDebugTitle}>Cookie debug</Text>
+              <Text style={styles.cookieDebugLine}>
+                key: {COOKIE_PREFERENCE_KEY}
+              </Text>
+              <Text style={styles.cookieDebugLine}>
+                localStorage: {cookiePreferenceRaw ?? "<null>"}
+              </Text>
+              <Text style={styles.cookieDebugLine}>
+                state: {cookiePreference ?? "<null>"}
+              </Text>
+              <Text style={styles.cookieDebugLine}>
+                checked: {cookiePreferenceChecked ? "true" : "false"}
+              </Text>
+              <Pressable style={styles.cookieDebugButton} onPress={refreshCookiePreferenceDebug}>
+                <Text style={styles.cookieDebugButtonText}>Refresh debug</Text>
+              </Pressable>
             </View>
           )}
           <StatusBar style="auto" />
@@ -169,5 +205,44 @@ const styles = StyleSheet.create({
     color: "#d7f0ec",
     fontWeight: "700",
     fontSize: 12,
+  },
+  cookieDebugBox: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 1000,
+    backgroundColor: "rgba(12, 28, 32, 0.92)",
+    borderWidth: 1,
+    borderColor: "#3f6660",
+    borderRadius: 10,
+    padding: 10,
+    minWidth: 220,
+    gap: 2,
+  },
+  cookieDebugTitle: {
+    color: "#f2a3a6",
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+  cookieDebugLine: {
+    color: "#d7f0ec",
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "600",
+  },
+  cookieDebugButton: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#7bb9b3",
+  },
+  cookieDebugButtonText: {
+    color: "#d7f0ec",
+    fontSize: 10,
+    fontWeight: "800",
   },
 });
