@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const notificationsPageStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f6f2',
+    backgroundColor: '#fffded',
   },
   sectionLabel: {
     fontSize: 11,
@@ -45,18 +45,14 @@ export const notificationItemStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
-
     backgroundColor: '#fff',
-
     marginHorizontal: 16,
     marginVertical: 6,
     borderRadius: 14,
-
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-
     elevation: 2,
   },
   rowUnread: {
@@ -91,7 +87,7 @@ export const notificationItemStyles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#f7f6f2',
+    borderColor: '#fffded',
     alignItems: 'center',
     justifyContent: 'center',
   },
