@@ -1,6 +1,6 @@
 import os
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from google_auth_oauthlib import flow as google_auth_oauthlib_flow
@@ -12,11 +12,34 @@ import resend
 from django.core.cache import cache
 from datetime import datetime, timedelta
 from django.contrib.auth.password_validation import validate_password, ValidationError
-from main.models import User
+from main.models import User, LegalAcceptance
 from main.calendars.views import _do_google_calendar_import
+from utils.login_log import get_client_ip
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
+
+LEGAL_VERSIONS = {
+    LegalAcceptance.DOCUMENT_PRIVACY: "2026-04-11",
+    LegalAcceptance.DOCUMENT_COOKIES: "2026-04-11",
+    LegalAcceptance.DOCUMENT_TERMS: "2026-04-12",
+}
+
+
+def _record_legal_acceptance(user, request):
+    ip_address = get_client_ip(request)
+    user_agent = request.META.get("HTTP_USER_AGENT", "")[:512]
+
+    for document, version in LEGAL_VERSIONS.items():
+        LegalAcceptance.objects.get_or_create(
+            user=user,
+            document=document,
+            version=version,
+            defaults={
+                "ip_address": ip_address,
+                "user_agent": user_agent,
+            },
+        )
 
 
 #if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
@@ -35,6 +58,7 @@ def register_user(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        _record_legal_acceptance(user, request)
         
         user_serializer = UserSerializer(user)
         
@@ -44,6 +68,32 @@ def register_user(request):
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def accept_legal_documents(request):
+    required_flags = ['accepted_privacy', 'accepted_cookies', 'accepted_terms']
+    missing_or_false = [flag for flag in required_flags if not request.data.get(flag)]
+
+    if missing_or_false:
+        return Response(
+            {
+                "error": "All legal documents must be accepted.",
+                "missing": missing_or_false,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    _record_legal_acceptance(request.user, request)
+
+    return Response(
+        {
+            "message": "Legal acceptance recorded successfully.",
+            "versions": LEGAL_VERSIONS,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 def google_authorization(request):
