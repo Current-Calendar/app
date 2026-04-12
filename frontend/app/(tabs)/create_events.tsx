@@ -605,7 +605,7 @@ export default function CreateEventsScreen() {
             {!!formError && <Text style={styles.errorText} testID="create-event-error-text">{formError}</Text>}
 
             <Text style={styles.fieldLabel}>Title:</Text>
-            <TextInput value={title} onChangeText={setTitle} style={styles.input} testID="create-event-title-input" />
+            <TextInput maxLength={150} value={title} onChangeText={setTitle} style={styles.input} testID="create-event-title-input" />
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description:</Text>
             <TextInput
@@ -623,6 +623,7 @@ export default function CreateEventsScreen() {
             {/* Place input + clear + loading */}
             <View style={styles.placeRow}>
               <TextInput
+                maxLength={255}
                 value={place}
                 onChangeText={setPlace}
                 style={[styles.input, { flex: 1, paddingRight: 38 }]}

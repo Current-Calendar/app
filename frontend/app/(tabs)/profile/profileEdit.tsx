@@ -184,6 +184,7 @@ const EditProfileScreen = () => {
               style={profileStyles.editInput}
               value={pronouns}
               onChangeText={setPronouns}
+              maxLength={150}
               placeholder="e.g., she/her, he/him, they/them"
               placeholderTextColor="#aaa"
             />
