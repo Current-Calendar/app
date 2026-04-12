@@ -41,10 +41,18 @@ export default function CalendarViewScreen() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
-  
+
+  // When a specific calendarId is in the URL (e.g. via share link), fetch events
+  // for that calendar directly so public calendars always show their events.
+  useEffect(() => {
+    if (calendarId) {
+      refetchEvents(calendarId);
+    }
+  }, [calendarId, refetchEvents]);
+
   // Load events when screen gains focus
   useFocusEffect(
-    React.useCallback(() => { refetchEvents(); }, [refetchEvents])
+    React.useCallback(() => { refetchEvents(calendarId); }, [calendarId, refetchEvents])
   );
 
   const events = useMemo(() => {
