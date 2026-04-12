@@ -27,6 +27,7 @@ from main.radar import views as radar_views
 from main.auth import views as auth_views
 from main.notifications import views as notification_views
 from main.reports import views as report_views
+from main.ads import views as ads_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -101,6 +102,7 @@ urlpatterns = [
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
+    path('api/v1/ads/config/', ads_views.get_ads_config, name='ads_config'),
     path('silk/', include('silk.urls', namespace='silk'))
 ]
 
