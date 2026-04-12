@@ -1,3 +1,4 @@
+from flask import request
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,11 +8,11 @@ from ..models import Calendar, Event, EventLike, EventSave, Notification, EventA
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from main.rs.events import recommend_events
-from ..serializers import EventSerializer
+from ..serializers import EventSerializer, EventPagination
 from utils.storage import get_signed_url
 import json
 
@@ -296,6 +297,7 @@ def edit_event(request: Request, event_id):
 @api_view(['GET'])
 def list_events(request):
     user = request.user
+    
     if user.is_authenticated:
         privacy_filter = (
             Q(calendars__privacy='PUBLIC') |
@@ -306,13 +308,46 @@ def list_events(request):
     else:
         privacy_filter = Q(calendars__privacy='PUBLIC')
 
-    queryset = Event.objects.filter(privacy_filter).distinct()
+    queryset = (
+        Event.objects
+        .filter(privacy_filter)
+        .distinct().
+        select_related('creator')
+        .prefetch_related(
+            'calendars',
+            Prefetch(
+                'attendances',
+                queryset=EventAttendance.objects.filter(
+                    status='ASSISTING'
+                ).select_related('user'),
+            ),
+        )
+        .order_by('-created_at')
+    )
 
     calendar_ids = request.GET.get('calendarIds')
     if calendar_ids:
         id_list = [cid.strip() for cid in calendar_ids.split(',') if cid.strip().isdigit()]
         if id_list:
             queryset = queryset.filter(calendars__id__in=id_list).distinct()
+
+        q = request.GET.get('q', '').strip()
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(description__icontains=q)
+            )
+
+        liked_ids, saved_ids = set(), set()
+        if user.is_authenticated:
+            all_ids = list(queryset.values_list('id', flat=True))
+            liked_ids = set(EventLike.objects.filter(user=user, event_id__in=all_ids).values_list('event_id', flat=True))
+            saved_ids = set(EventSave.objects.filter(user=user, event_id__in=all_ids).values_list('event_id', flat=True))
+
+        serializer = EventSerializer(
+            queryset, many=True,
+            context={'request': request, 'liked_ids': liked_ids, 'saved_ids': saved_ids}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -322,9 +357,22 @@ def list_events(request):
 
     queryset = queryset.order_by('-created_at')
 
-    serializer = EventSerializer(queryset, many=True, context={'request': request})
+    paginator = EventPagination()
+    page = paginator.paginate_queryset(queryset, request)
 
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    liked_ids = set()
+    saved_ids = set()
+    if user.is_authenticated:
+        page_ids = [e.id for e in page]
+        liked_ids = set(EventLike.objects.filter(user=user, event_id__in=page_ids).values_list('event_id', flat=True))
+        saved_ids = set(EventSave.objects.filter(user=user, event_id__in=page_ids).values_list('event_id', flat=True))
+
+    serializer = EventSerializer(
+        page, many=True,
+        context={'request': request, 'liked_ids': liked_ids, 'saved_ids': saved_ids}
+    )
+
+    return paginator.get_paginated_response(serializer.data)
 
 
 @api_view(['GET'])

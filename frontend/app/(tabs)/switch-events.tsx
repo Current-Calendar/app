@@ -5,7 +5,6 @@ import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
-import { useEventsList } from "@/hooks/use-events";
 import CommentsModal from "@/components/comments-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
@@ -43,7 +42,6 @@ export default function EventsScreen() {
 
   // Hooks de datos (HEAD)
   const { calendars: backendCalendars, error: calendarsError } = useCalendars();
-  const { events: backendEvents, loading: loadingEvents, error: eventsError, refetch } = useEventsList();
 
   // Estados de UI (main)
   const [events, setEvents] = useState<Event[]>([]);
@@ -141,7 +139,7 @@ export default function EventsScreen() {
     void fetchData();
   }, [authLoading]);
   // Manejo de errores
-  const errorMessage = calendarsError || eventsError;
+  const errorMessage = calendarsError;
 
   // Handlers de UI
   const handleSave = async (id: string) => {
@@ -188,7 +186,7 @@ export default function EventsScreen() {
   };
 
   // Vistas de estado (Loading / Error)
-  if (loadingEvents && events.length === 0) {
+  if (loading && events.length === 0) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color="#10464d" />

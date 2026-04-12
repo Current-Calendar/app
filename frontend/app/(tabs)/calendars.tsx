@@ -226,7 +226,7 @@ export default function CalendarScreen() {
     useEffect(() => {
         const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
 
-        const mappedEvents: CalendarEvent[] = backendEvents
+        const mappedEvents: CalendarEvent[] = (backendEvents ?? [])
             .filter((e: any) =>
                 e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
             )
