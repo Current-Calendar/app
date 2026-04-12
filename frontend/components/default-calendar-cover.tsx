@@ -1,4 +1,4 @@
-import React from "react";
+git pimport React from "react";
 import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
