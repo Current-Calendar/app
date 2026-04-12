@@ -24,7 +24,7 @@ export default function CalendarViewScreen() {
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
   const eventId = Array.isArray(params.eventId) ? params.eventId[0] : params.eventId;
   const { calendars: backendCalendars } = useCalendars();
-  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList();
+  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({autoFetch:false});
   const { user } = useAuth();
   const [inviteVisible, setInviteVisible] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
