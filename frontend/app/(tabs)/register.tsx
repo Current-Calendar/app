@@ -353,7 +353,12 @@ export default function SignUpScreen() {
             {!!activeLegalDoc && (
               <View style={styles.legalPanel}>
                 <Text style={styles.legalPanelTitle}>{LEGAL_DOCS[activeLegalDoc].title}</Text>
-                <ScrollView style={styles.legalScroll} contentContainerStyle={styles.legalScrollContent}>
+                <ScrollView
+                  style={styles.legalScroll}
+                  contentContainerStyle={styles.legalScrollContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                >
                   {LEGAL_DOCS[activeLegalDoc].content.map((section) => (
                     <View key={section.heading} style={styles.legalSection}>
                       <Text style={styles.legalSectionTitle}>{section.heading}</Text>

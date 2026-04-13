@@ -345,6 +345,22 @@ export default function EditEventsScreen() {
       setPlace(event.place_name);
       setCoverUri(event.photo);
 
+      if (event.date) {
+        const [y, m, d] = String(event.date).split("-").map(Number);
+        const eventDate = new Date(y, m - 1, d);
+        eventDate.setHours(0, 0, 0, 0);
+        setDate(eventDate);
+      }
+
+      if (event.time) {
+        const [h, min] = String(event.time).split(":").map(Number);
+        const eventTime = new Date();
+        eventTime.setHours(h, min, 0, 0);
+        setTime(eventTime);
+        setWebHour(h);
+        setWebMinute(min);
+      }
+
       if (event.latitude && event.longitude) {
         setLat(event.latitude);
         setLon(event.longitude);
@@ -1131,11 +1147,15 @@ const styles = StyleSheet.create({
   fieldLabel: { color: TEXT, fontSize: 14, fontWeight: "800", marginBottom: 6 },
 
   input: {
-    height: 34,
+    height: 46,
+    minHeight: 46,
     borderWidth: 2,
     borderColor: PINK,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "android" ? 10 : 8,
+    fontSize: 15,
+    textAlignVertical: "center",
     backgroundColor: "rgba(255,255,255,0.45)",
   },
 
@@ -1396,4 +1416,3 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 });
-

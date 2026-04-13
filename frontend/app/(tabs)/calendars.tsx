@@ -26,6 +26,7 @@ import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
+import { CreateMenuModal } from '@/components/nav_bar/create-menu-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -72,6 +73,7 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
     const [importModalVisible, setImportModalVisible] = useState(false);
+    const [createMenuVisible, setCreateMenuVisible] = useState(false);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
     const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
@@ -542,7 +544,7 @@ export default function CalendarScreen() {
                         onInfoPress={setInfoCalendar}
                     />
 
-                    {isDesktop && (
+                    {isDesktop ? (
                         <View style={styles.toolbarButtons}>
 
 
@@ -576,6 +578,15 @@ export default function CalendarScreen() {
                             </TouchableOpacity>
 
                         </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            activeOpacity={0.8}
+                            onPress={() => setCreateMenuVisible(true)}
+                        >
+                            <Ionicons name="add" size={18} color="#fff" />
+                            <Text style={styles.primaryBtnText}>Create</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
 
@@ -780,6 +791,34 @@ export default function CalendarScreen() {
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
                 onSuccess={fetchData}
+            />
+            <CreateMenuModal
+                visible={createMenuVisible}
+                onClose={() => setCreateMenuVisible(false)}
+                onNewEvent={() => {
+                    setCreateMenuVisible(false);
+                    if (isAuthenticated) {
+                        router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ""}`);
+                    } else {
+                        router.push("/login");
+                    }
+                }}
+                onNewCalendar={() => {
+                    setCreateMenuVisible(false);
+                    if (isAuthenticated) {
+                        router.push("/(tabs)/create");
+                    } else {
+                        router.push("/login");
+                    }
+                }}
+                onImportCalendar={() => {
+                    setCreateMenuVisible(false);
+                    if (isAuthenticated) {
+                        setImportModalVisible(true);
+                    } else {
+                        router.push("/login");
+                    }
+                }}
             />
         </View>
     );
