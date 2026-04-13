@@ -17,7 +17,7 @@ import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import apiClient from '@/services/api-client';
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
 const RED = "#D64545";
