@@ -1,20 +1,47 @@
-import { View, Text, TextInput, ScrollView, Pressable, StyleSheet, useWindowDimensions, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useCalendarActions } from '@/hooks/use-calendar-actions';
+import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { appendPhoto } from '@/services/api-client';
-import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import { appendPhoto } from "@/services/api-client";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import apiClient from "@/services/api-client";
 
-type PrivacyStatus = 'PRIVATE' | 'PUBLIC';
+type PrivacyStatus = "PRIVATE" | "PUBLIC";
+
+type CategoryItem = {
+  id: number;
+  name: string;
+  calendars_count?: number;
+};
+
+type ApiListResponse<T> = T[] | { results?: T[]; data?: T[] };
+
+const extractArray = <T,>(response: ApiListResponse<T> | null | undefined): T[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
+};
 
 export default function EditScreen() {
   const router = useRouter();
   const { updateCalendar } = useCalendarActions();
+
   const params = useLocalSearchParams<{
     id: string;
     name: string;
@@ -23,26 +50,42 @@ export default function EditScreen() {
     cover: string;
   }>();
 
-  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(params.privacy ?? 'PRIVATE');
+  const [selectedPrivacy, setSelectedPrivacy] = useState<PrivacyStatus>(
+    params.privacy ?? "PRIVATE"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [calendarData, setCalendarData] = useState({
     name: params.name ?? "",
     description: params.description ?? "",
   });
 
-  // Cover image state: existing URL from server, or new local pick
-  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(params.cover || null);
-  const [newCoverImage, setNewCoverImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(
+    params.cover || null
+  );
+  const [newCoverImage, setNewCoverImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
   const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
+
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [initialCategoryIds, setInitialCategoryIds] = useState<number[]>([]);
 
   const calendarId = params.id;
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const privacyOptions: { label: string; value: PrivacyStatus; icon: string; description: string }[] = [
+  const privacyOptions: {
+    label: string;
+    value: PrivacyStatus;
+    icon: string;
+    description: string;
+  }[] = [
     {
       label: "Private",
       value: "PRIVATE",
@@ -56,6 +99,58 @@ export default function EditScreen() {
       description: "Visible to everyone",
     },
   ];
+
+  const selectedCategories = useMemo(
+    () => categories.filter((c) => selectedCategoryIds.includes(c.id)),
+    [categories, selectedCategoryIds]
+  );
+
+  useEffect(() => {
+  const loadCategories = async () => {
+    if (!calendarId) return;
+
+    try {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+
+      const [allCategoriesResponse, assignedCategoriesResponse] = await Promise.all([
+        apiClient.get("/categories/") as Promise<ApiListResponse<CategoryItem>>,
+        apiClient.get(`/categories/for-calendar/${calendarId}/`) as Promise<ApiListResponse<CategoryItem>>,
+      ]);
+
+      const allCategories = extractArray(allCategoriesResponse);
+      const assignedCategories = extractArray(assignedCategoriesResponse);
+
+      const assignedIds = assignedCategories
+        .map((c) => Number(c?.id))
+        .filter((id) => Number.isFinite(id));
+
+      setCategories(allCategories);
+      setSelectedCategoryIds(assignedIds);
+      setInitialCategoryIds(assignedIds);
+    } catch (error: any) {
+      console.error("Error loading calendar categories:", error);
+      setCategories([]);
+      setSelectedCategoryIds([]);
+      setInitialCategoryIds([]);
+      setCategoriesError(
+        error?.message || "Failed to load calendar categories."
+      );
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  loadCategories();
+}, [calendarId]);
+
+  const toggleCategory = (categoryId: number) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,8 +183,46 @@ export default function EditScreen() {
     setShowRemoveCoverConfirm(false);
   };
 
-  // Determine what to display as cover
   const displayCoverUri = newCoverImage?.uri ?? (coverRemoved ? null : existingCoverUrl);
+
+  const syncCategories = async () => {
+    const currentSet = new Set(selectedCategoryIds);
+    const initialSet = new Set(initialCategoryIds);
+
+    const toAdd = selectedCategoryIds.filter((id) => !initialSet.has(id));
+    const toRemove = initialCategoryIds.filter((id) => !currentSet.has(id));
+
+    const failedAdds: string[] = [];
+    const failedRemoves: string[] = [];
+
+    await Promise.all(
+      toAdd.map(async (categoryId) => {
+        try {
+          await apiClient.post(`/categories/${categoryId}/assign_to_calendar/`, {
+            calendar_id: Number(calendarId),
+          });
+        } catch {
+          const category = categories.find((c) => c.id === categoryId);
+          failedAdds.push(category?.name || `Category ${categoryId}`);
+        }
+      })
+    );
+
+    await Promise.all(
+      toRemove.map(async (categoryId) => {
+        try {
+          await apiClient.post(`/categories/${categoryId}/remove_from_calendar/`, {
+            calendar_id: Number(calendarId),
+          });
+        } catch {
+          const category = categories.find((c) => c.id === categoryId);
+          failedRemoves.push(category?.name || `Category ${categoryId}`);
+        }
+      })
+    );
+
+    return { failedAdds, failedRemoves };
+  };
 
   const handleEdit = async () => {
     if (!calendarData.name.trim()) {
@@ -104,6 +237,7 @@ export default function EditScreen() {
 
     setIsLoading(true);
     setErrorMessage(null);
+
     try {
       if (newCoverImage) {
         const formData = new FormData();
@@ -112,14 +246,34 @@ export default function EditScreen() {
         formData.append("privacy", selectedPrivacy);
 
         await appendPhoto(formData, newCoverImage, "cover");
-
         await updateCalendar(Number(calendarId), formData);
       } else {
-        await updateCalendar(Number(calendarId), {
+        const payload: any = {
           name: calendarData.name,
           description: calendarData.description,
           privacy: selectedPrivacy,
-        });
+        };
+
+        if (coverRemoved) {
+          payload.remove_cover = "true";
+        }
+
+        await updateCalendar(Number(calendarId), payload);
+      }
+
+      const { failedAdds, failedRemoves } = await syncCategories();
+
+      if (failedAdds.length || failedRemoves.length) {
+        const parts: string[] = [];
+
+        if (failedAdds.length) {
+          parts.push(`Could not add: ${failedAdds.join(", ")}`);
+        }
+        if (failedRemoves.length) {
+          parts.push(`Could not remove: ${failedRemoves.join(", ")}`);
+        }
+
+        Alert.alert("Calendar updated", parts.join("\n"));
       }
 
       router.replace(`/(tabs)/calendars?selectedCalendarId=${calendarId}`);
@@ -147,13 +301,14 @@ export default function EditScreen() {
   return (
     <View style={styles.wrapper}>
       <ScrollView
-        contentContainerStyle={[styles.container, isDesktop && styles.containerDesktop, !isDesktop && { paddingBottom: 100 }]}
+        contentContainerStyle={[
+          styles.container,
+          isDesktop && styles.containerDesktop,
+          !isDesktop && { paddingBottom: 100 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* FORM CARD */}
         <View style={[styles.card, isDesktop && styles.cardDesktop]}>
-
-          {/* TITLE */}
           <ThemedText
             type="title"
             lightColor="#10464d"
@@ -163,16 +318,12 @@ export default function EditScreen() {
             Edit Calendar
           </ThemedText>
 
-          {/* COVER IMAGE */}
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Cover Image</Text>
 
             {displayCoverUri ? (
               <View style={styles.coverPreviewContainer}>
-                <Image
-                  source={{ uri: displayCoverUri }}
-                  style={styles.coverPreview}
-                />
+                <Image source={{ uri: displayCoverUri }} style={styles.coverPreview} />
                 <Pressable style={styles.coverRemoveButton} onPress={handleRemoveCover}>
                   <Ionicons name="close-circle" size={26} color="#fff" />
                 </Pressable>
@@ -192,10 +343,8 @@ export default function EditScreen() {
             )}
           </View>
 
-          {/* DIVIDER */}
           <View style={styles.divider} />
 
-          {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Calendar Details</Text>
             <TextInput
@@ -211,16 +360,75 @@ export default function EditScreen() {
               placeholder="Description (optional)"
               placeholderTextColor="#aaa"
               value={calendarData.description}
-              onChangeText={(text) => setCalendarData({ ...calendarData, description: text })}
+              onChangeText={(text) =>
+                setCalendarData({ ...calendarData, description: text })
+              }
               multiline
               numberOfLines={3}
             />
           </View>
 
-          {/* DIVIDER */}
           <View style={styles.divider} />
 
-          {/* PRIVACY */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <Text style={styles.sectionSubtitle}>
+              Select one or more categories for this calendar
+            </Text>
+
+            {categoriesLoading ? (
+              <View style={styles.categoriesLoading}>
+                <ActivityIndicator color="#10464d" />
+              </View>
+            ) : categoriesError ? (
+              <Text style={styles.errorText}>{categoriesError}</Text>
+            ) : categories.length === 0 ? (
+              <Text style={styles.helperText}>No categories available.</Text>
+            ) : (
+              <View style={styles.categoriesWrap}>
+                {categories.map((category) => {
+                  const selected = selectedCategoryIds.includes(category.id);
+
+                  return (
+                    <Pressable
+                      key={category.id}
+                      style={[
+                        styles.categoryChip,
+                        selected && styles.categoryChipSelected,
+                      ]}
+                      onPress={() => toggleCategory(category.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          selected && styles.categoryChipTextSelected,
+                        ]}
+                      >
+                        {category.name}
+                      </Text>
+                      {selected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color="#10464d"
+                          style={{ marginLeft: 6 }}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {!!selectedCategories.length && (
+              <Text style={styles.helperText}>
+                Selected: {selectedCategories.map((c) => c.name).join(", ")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
           <View style={styles.privacySection}>
             <Text style={styles.sectionTitle}>Who can see this?</Text>
 
@@ -252,7 +460,6 @@ export default function EditScreen() {
                   <Text style={styles.privacyDescription}>{option.description}</Text>
                 </View>
 
-                {/* Radio Button */}
                 <View
                   style={[
                     styles.radioButton,
@@ -267,9 +474,13 @@ export default function EditScreen() {
             ))}
           </View>
 
-          {/* INFO BOX */}
           <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={20} color="#10464d" style={{ marginRight: 12 }} />
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="#10464d"
+              style={{ marginRight: 12 }}
+            />
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
@@ -277,14 +488,8 @@ export default function EditScreen() {
             </Text>
           </View>
 
-          {/* ERROR MESSAGE */}
-          {errorMessage && (
-            <Text style={styles.errorText}>
-              {errorMessage}
-            </Text>
-          )}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-          {/* SAVE BUTTON */}
           <Pressable
             style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
             onPress={handleEdit}
@@ -296,7 +501,6 @@ export default function EditScreen() {
               <Text style={styles.saveText}>Save Changes</Text>
             )}
           </Pressable>
-
         </View>
       </ScrollView>
 
@@ -341,7 +545,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // INPUT SECTION
   inputSection: {
     marginBottom: 24,
   },
@@ -349,6 +552,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#10464d",
     fontWeight: "700",
+    marginBottom: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: "#6f7d7f",
     marginBottom: 12,
   },
   input: {
@@ -372,7 +580,6 @@ const styles = StyleSheet.create({
     marginVertical: 24,
   },
 
-  // COVER IMAGE
   coverPreviewContainer: {
     borderRadius: 12,
     overflow: "hidden",
@@ -438,7 +645,44 @@ const styles = StyleSheet.create({
     color: "#999",
   },
 
-  // PRIVACY SECTION
+  categoriesLoading: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoriesWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
+    backgroundColor: "#f7fbfb",
+  },
+  categoryChipSelected: {
+    borderColor: "#10464d",
+    backgroundColor: "#e8f2f2",
+  },
+  categoryChipText: {
+    color: "#10464d",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  categoryChipTextSelected: {
+    fontWeight: "700",
+  },
+  helperText: {
+    marginTop: 12,
+    fontSize: 12,
+    color: "#6b6b6b",
+  },
+
   privacySection: {
     marginBottom: 24,
   },
@@ -500,7 +744,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#10464d",
   },
 
-  // INFO BOX
   infoBox: {
     flexDirection: "row",
     backgroundColor: "#f0f5f5",
@@ -517,7 +760,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
-  // BUTTONS
   saveButton: {
     flex: 1,
     backgroundColor: "#10464d",

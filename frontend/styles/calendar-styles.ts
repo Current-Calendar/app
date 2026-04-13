@@ -859,6 +859,34 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#10464d',
   },
+  tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 14,
+  marginBottom: 10,
+  },
+  tagsLoadingWrap: {
+  marginTop: 10,
+  marginBottom: 8,
+  alignItems: "flex-start",
+  },
+
+  tagChip: {
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 999,
+  backgroundColor: "#EEF6F6",
+  borderWidth: 1,
+  borderColor: "#CFE2E3",
+  alignSelf: "flex-start",
+  },
+
+  tagChipText: {
+  color: "#10464d",
+  fontSize: 12,
+  fontWeight: "700",
+  },
 });
 
 export const eventDetailModalStyles = StyleSheet.create({
@@ -1152,4 +1180,5 @@ export const eventDetailsModalStyles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  
 });
