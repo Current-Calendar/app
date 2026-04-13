@@ -386,6 +386,16 @@ def list_events(request):
         queryset = queryset.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         )
+        liked_ids, saved_ids = set(), set()
+        if user.is_authenticated:
+            all_ids = list(queryset.values_list('id', flat=True))
+            liked_ids = set(EventLike.objects.filter(user=user, event_id__in=all_ids).values_list('event_id', flat=True))
+            saved_ids = set(EventSave.objects.filter(user=user, event_id__in=all_ids).values_list('event_id', flat=True))
+        serializer = EventSerializer(
+            queryset, many=True,
+            context={'request': request, 'liked_ids': liked_ids, 'saved_ids': saved_ids}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     # Filtrar por tags
     tags = request.GET.get('tags', '').strip()

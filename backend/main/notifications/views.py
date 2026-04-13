@@ -76,10 +76,18 @@ def handle_invite(request: Request, id: int) -> Response:
     ).order_by('-created_at').first()
 
     if not invitation:
-        return Response(
-            {"error": "Invitation not found or already handled."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        # No CalendarInvitation record — handle directly from the Notification
+        if user_status == "ACCEPT":
+            user_features = get_user_features(notification.recipient)
+            favorite_limit = user_features['max_favorite_calendars']
+            if favorite_limit != math.inf and notification.recipient.subscribed_calendars.count() >= favorite_limit:
+                return Response(
+                    {"error": "You cannot accept this invitation because you have already reached the maximum number of favorite calendars allowed by your plan."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            notification.recipient.subscribed_calendars.add(calendar)
+        notification.delete()
+        return Response({"message": "Handled calendar invitation"})
 
     if user_status == "ACCEPT":
         if invitation.permission == "EDIT":
