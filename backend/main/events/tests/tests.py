@@ -910,6 +910,7 @@ class EditEventTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_event_data(self):
+        self.client.force_authenticate(self.user)
         response = self.client.get(self.endpoint())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.event.id)
@@ -919,6 +920,18 @@ class EditEventTests(APITestCase):
         self.assertEqual(str(response.data["date"]), str(self.event.date))
         self.assertEqual(str(response.data["time"]), str(self.event.time))
         self.assertIn(self.calendar1.id, response.data["calendars"])
+
+    def test_get_event_data_unauthenticated_returns_401(self):
+        response = self.client.get(self.endpoint())
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_event_data_forbidden_for_user_without_permissions(self):
+        self.client.force_authenticate(self.user2)
+
+        response = self.client.get(self.endpoint())
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("errors", response.data)
 
     def test_post_not_allowed(self):
         self.client.force_authenticate(self.user)

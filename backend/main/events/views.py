@@ -87,7 +87,7 @@ def create_event(request):
 
         if not is_creator_or_co_owner:
             return Response(
-                {"errors": [f"No tienes permiso para agregar events al calendar {calendar.id}."]},
+                {"errors": ["No tienes permiso para agregar eventos a este calendario."]},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -160,10 +160,29 @@ def create_event(request):
 
 @api_view(['GET', 'PUT', 'PATCH'])
 def edit_event(request: Request, event_id):
-    if request.method != "GET" and not request.user.is_authenticated:
+    if not request.user.is_authenticated:
         return Response(None, status=status.HTTP_401_UNAUTHORIZED)
 
     event = get_object_or_404(Event, id=event_id)
+    user = request.user
+
+    current_calendars = event.calendars.all()
+    if not current_calendars.exists():
+        return Response(
+            {"error": "No tienes permiso sobre este event"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    for calendar in current_calendars:
+        is_creator_or_co_owner = (
+            calendar.creator == user or
+            calendar.co_owners.filter(id=user.id).exists()
+        )
+        if not is_creator_or_co_owner:
+            return Response(
+                {"errors": ["No tienes permiso para editar eventos en este calendario."]},
+                status=status.HTTP_403_FORBIDDEN
+            )
     
     if request.method == 'GET':
         serializer = EventSerializer(event, context={'request': request})
@@ -171,7 +190,6 @@ def edit_event(request: Request, event_id):
     
     # Handle PUT: Update event
     data = request.data
-    user = request.user
 
     # Validate required fields are not empty if provided
     if "title" in data and not data["title"]:
@@ -252,7 +270,7 @@ def edit_event(request: Request, event_id):
         is_creator_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
 
         if not is_creator_or_co_owner:
-            return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+            return Response({"errors": ["No tienes permiso para editar eventos en este calendario."]},
                 status=status.HTTP_403_FORBIDDEN
             )
 
