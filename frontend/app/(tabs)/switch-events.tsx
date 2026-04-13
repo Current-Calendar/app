@@ -90,8 +90,6 @@ export default function EventsScreen() {
 
   const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
 
-  const { data: adsConfig } = useAdsConfig();
-
   const resolveImageUrl = (rawUrl?: string) => {
     if (!rawUrl) return "https://picsum.photos/seed/event/640/360";
     if (/^https?:\/\//.test(rawUrl)) return rawUrl;
@@ -124,7 +122,11 @@ export default function EventsScreen() {
         return;
       }
 
-      setCookiePreference(parsed.value);
+      if (parsed.value === 'accepted' || parsed.value === 'rejected') {
+        setCookiePreference(parsed.value);
+      } else {
+        setCookiePreference(readCookiePreferenceFromCookie());
+      }
     } catch {
       setCookiePreference(readCookiePreferenceFromCookie());
     }
@@ -337,10 +339,6 @@ export default function EventsScreen() {
     );
   }
 
-  const listData = adsConfig?.show_ads
-    ? injectAds(events, adsConfig.frequency)
-    : events;
-
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
@@ -450,29 +448,6 @@ export const styles = StyleSheet.create({
     color: "#10464d",
     opacity: 0.85,
     textAlign: "center",
-
-  limitedBanner: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#f0c88b',
-    backgroundColor: '#fff2dd',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-
-  limitedBannerTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#7a4d00',
-    marginBottom: 2,
-  },
-
-  limitedBannerBody: {
-    fontSize: 12,
-    lineHeight: 17,
-    color: '#6a4706',
-  },
     fontWeight: "600",
   },
   errorTitle: {
@@ -546,5 +521,25 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  limitedBanner: {
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f0c88b',
+    backgroundColor: '#fff2dd',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  limitedBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7a4d00',
+    marginBottom: 2,
+  },
+  limitedBannerBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6a4706',
   },
 });

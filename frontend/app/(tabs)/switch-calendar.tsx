@@ -142,7 +142,10 @@ export default function CalendarsScreen() {
   }, [calendarsError]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!hasSession) {
+      setSubscribedCalendarIds([]);
+      return;
+    }
 
     const fetchSubscribedCalendars = async () => {
       try {
@@ -159,43 +162,17 @@ export default function CalendarsScreen() {
       }
     };
 
+    void fetchSubscribedCalendars();
+  }, [hasSession]);
 
-        <FlatList
-          data={listData}
-          keyExtractor={(item) => (isAdItem(item) ? item.id : (item as Calendar).id)}
-          renderItem={({ item }) => {
-            if (isAdItem(item)) return <AdCard placement="feed" />;
-            const calendar = item as Calendar;
-            return (
-              <CalendarCard
-                calendar={calendar}
-                onPress={handleOpenCalendar}
-                onLike={handleLike}
-                onSubscribe={handleSubscribe}
-                onComment={handleOpenCalendarComments}
-                isSubscribed={subscribedCalendarIds.includes(calendar.id)}
-              />
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.emptyStateWrap}>
-              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
-              <Text style={styles.emptySubtext}>
-                You may already follow all available calendars, or none match your privacy access.
-              </Text>
-            </View>
-          }
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-        })
-      );
+  useEffect(() => {
+    if (isLimitedMode) {
+      setCalendars([]);
+      return;
+    }
 
-      setCalendars(mappedCalendars);
-    };
-
-    void buildCalendars();
-  }, [backendCalendars, user, hasSession, subscribedCalendarIds]);
+    setCalendars(backendCalendars);
+  }, [backendCalendars, isLimitedMode]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
