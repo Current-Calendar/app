@@ -91,6 +91,31 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    @action(detail=False, methods=['get'], url_path=r'for-calendar/(?P<calendar_id>[^/.]+)')
+    def for_calendar(self, request, calendar_id=None):
+        """
+        Lista categorías asignadas a un calendario concreto.
+
+        GET /api/v1/categories/for-calendar/{calendar_id}/
+        """
+        calendar = get_object_or_404(Calendar, id=calendar_id)
+
+        can_access = (
+            calendar.privacy == 'PUBLIC'
+            or request.user == calendar.creator
+            or request.user in calendar.co_owners.all()
+            or request.user in calendar.viewers.all()
+            or request.user in calendar.subscribers.all()
+        )
+        if not can_access:
+            return Response(
+                {'error': 'You do not have permission to access this calendar.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = CategorySerializer(calendar.categories.all(), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'])
     def remove_from_calendar(self, request, pk=None):
         """
@@ -241,6 +266,62 @@ class EventTagViewSet(viewsets.ModelViewSet):
             {'message': 'This tag is not assigned to this event'},
             status=status.HTTP_200_OK
         )
+
+    @action(detail=False, methods=['get'], url_path=r'for-calendar/(?P<calendar_id>[^/.]+)')
+    def for_calendar(self, request, calendar_id=None):
+        """
+        Lista tags válidos para un calendario según sus categorías asignadas.
+
+        GET /api/v1/event-tags/for-calendar/{calendar_id}/
+        """
+        calendar = get_object_or_404(Calendar, id=calendar_id)
+
+        can_access = (
+            calendar.privacy == 'PUBLIC'
+            or request.user == calendar.creator
+            or request.user in calendar.co_owners.all()
+            or request.user in calendar.viewers.all()
+            or request.user in calendar.subscribers.all()
+        )
+        if not can_access:
+            return Response(
+                {'error': 'You do not have permission to access this calendar.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        tags = EventTag.objects.filter(category__in=calendar.categories.all()).distinct()
+        serializer = EventTagSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path=r'for-event/(?P<event_id>[^/.]+)')
+    def for_event(self, request, event_id=None):
+        """
+        Lista tags asignados a un evento concreto.
+
+        GET /api/v1/event-tags/for-event/{event_id}/
+        """
+        event = get_object_or_404(Event, id=event_id)
+
+        can_access = False
+        for calendar in event.calendars.all():
+            if (
+                calendar.privacy == 'PUBLIC'
+                or request.user == calendar.creator
+                or request.user in calendar.co_owners.all()
+                or request.user in calendar.viewers.all()
+                or request.user in calendar.subscribers.all()
+            ):
+                can_access = True
+                break
+
+        if not can_access:
+            return Response(
+                {'error': 'You do not have permission to access this event.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = EventTagSerializer(event.tags.all(), many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # Funciones utilitarias para recomendaciones y búsquedas
