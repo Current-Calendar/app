@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
@@ -16,6 +17,7 @@ import CommentsModal from "./comments-modal";
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import apiClient from '@/services/api-client';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BG = "#E8E5D8";
 const TEXT = "#10464D";
@@ -38,6 +40,9 @@ export function EventDetailModal({
 }: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isNarrow = width < 420;
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
@@ -116,7 +121,10 @@ export function EventDetailModal({
     <>
       <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
         <Pressable style={styles.overlay} onPress={onClose}>
-          <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable
+            style={[styles.card, { paddingBottom: 12 + insets.bottom }]}
+            onPress={() => {}}
+          >
             <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
@@ -202,9 +210,9 @@ export function EventDetailModal({
               </View>
             )}
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, isNarrow && styles.actionsStack]}>
               <Pressable
-                style={styles.commentBtn}
+                style={[styles.commentBtn, isNarrow && styles.actionFullWidth]}
                 onPress={handleOpenComments}
               >
                 <Ionicons name="chatbubble-outline" size={16} color={TEXT} />
@@ -214,7 +222,7 @@ export function EventDetailModal({
               {canManageActions && (
                 <>
                   <Pressable
-                    style={styles.editBtn}
+                    style={[styles.editBtn, isNarrow && styles.actionFullWidth]}
                     onPress={() => {
                       onClose();
                       router.push({
@@ -228,7 +236,11 @@ export function EventDetailModal({
                   </Pressable>
 
                   <Pressable
-                    style={[styles.deleteBtn, deletingEvent && styles.deleteBtnDisabled]}
+                    style={[
+                      styles.deleteBtn,
+                      deletingEvent && styles.deleteBtnDisabled,
+                      isNarrow && styles.actionFullWidth,
+                    ]}
                     onPress={() => setDeleteConfirmVisible(true)}
                     disabled={deletingEvent}
                   >
@@ -445,6 +457,10 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
   },
+  actionsStack: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
 
   commentBtn: {
     flex: 1,
@@ -502,6 +518,10 @@ const styles = StyleSheet.create({
   deleteText: {
     color: "#FFFFFF",
     fontWeight: "900",
+  },
+  actionFullWidth: {
+    width: "100%",
+    flex: 0,
   },
 
   image: {

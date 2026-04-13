@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/use-auth";
 import apiClient, { ApiError } from "@/services/api-client";
 
@@ -147,6 +148,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { login } = useAuth();
+  const insets = useSafeAreaInsets();
   const usernameRef = useRef<TextInput | null>(null);
   const passwordRef = useRef<TextInput | null>(null);
 
@@ -222,7 +224,12 @@ export default function LoginScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[
+        styles.scrollContent,
+        // Leave room for the custom bottom navigation bar and the Android gesture bar
+        // so the login button never gets covered.
+        { paddingBottom: 90 + insets.bottom },
+      ]}
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.content}>
@@ -325,7 +332,12 @@ export default function LoginScreen() {
             {!!activeLegalDoc && (
               <View style={styles.legalPanel}>
                 <Text style={styles.legalPanelTitle}>{LEGAL_DOCS[activeLegalDoc].title}</Text>
-                <ScrollView style={styles.legalScroll} contentContainerStyle={styles.legalScrollContent}>
+                <ScrollView
+                  style={styles.legalScroll}
+                  contentContainerStyle={styles.legalScrollContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                >
                   {LEGAL_DOCS[activeLegalDoc].content.map((section) => (
                     <View key={section.heading} style={styles.legalSection}>
                       <Text style={styles.legalSectionTitle}>{section.heading}</Text>

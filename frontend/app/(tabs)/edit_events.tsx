@@ -1131,11 +1131,15 @@ const styles = StyleSheet.create({
   fieldLabel: { color: TEXT, fontSize: 14, fontWeight: "800", marginBottom: 6 },
 
   input: {
-    height: 34,
+    height: 46,
+    minHeight: 46,
     borderWidth: 2,
     borderColor: PINK,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "android" ? 10 : 8,
+    fontSize: 15,
+    textAlignVertical: "center",
     backgroundColor: "rgba(255,255,255,0.45)",
   },
 
@@ -1396,4 +1400,3 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 });
-
