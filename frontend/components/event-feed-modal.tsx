@@ -37,6 +37,7 @@ export type FeedEvent = {
   userAvatar?: string;
   calendarId: string;
   calendarName: string;
+  color: string;
   // List of users who marked this event as attending.
   attendees?: FeedEventAttendee[];
 };
@@ -72,10 +73,9 @@ function formatResponseDateTime(dateLike?: string) {
 }
 
 export default function EventFeedModal({ visible, onClose, event }: Props) {
-  if (!event) return null;
-
   const { user } = useAuth();
   const [inviteVisible, setInviteVisible] = useState(false);
+  if (!event) return null;
 
   const isOwner = event.username === user?.username;
 

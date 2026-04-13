@@ -598,10 +598,10 @@ tagChipText: {
 
 export const eventCalendarEventCardStyles = StyleSheet.create({
   card: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
+    borderColor: '#1f6a6a',
     borderWidth: 1,
-    borderColor: '#f4b6b6',
     padding: 20,
     marginBottom: 20,
   },
@@ -615,6 +615,8 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    borderColor: '#1f6a6a',
+    borderWidth: 1,
   },
   username: {
     fontWeight: '600',

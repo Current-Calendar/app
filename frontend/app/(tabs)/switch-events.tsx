@@ -59,6 +59,7 @@ export interface Event {
   likes_count: number;
   liked_by_me: boolean;
   saved_by_me: boolean;
+  color: string;
   tags?: {
     id: number | string;
     name: string;
@@ -89,13 +90,6 @@ export default function EventsScreen() {
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
 
   const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
-
-  const resolveImageUrl = (rawUrl?: string) => {
-    if (!rawUrl) return "https://picsum.photos/seed/event/640/360";
-    if (/^https?:\/\//.test(rawUrl)) return rawUrl;
-    const base = API_CONFIG.rootBaseURL || API_CONFIG.BaseURL;
-    return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
-  };
 
   const readCookiePreference = () => {
     if (Platform.OS !== 'web') return;
@@ -167,6 +161,14 @@ export default function EventsScreen() {
   }, [hasSession]);
 
   const fetchData = useCallback(async () => {
+
+    const resolveImageUrl = (rawUrl?: string) => {
+    if (!rawUrl || rawUrl.trim() === "") return ""; 
+    if (/^https?:\/\//.test(rawUrl)) return rawUrl;
+    const base = API_CONFIG.rootBaseURL || API_CONFIG.BaseURL;
+    return `${(base || "").replace(/\/+$/, "")}/${String(rawUrl).replace(/^\/+/, "")}`;
+  };
+
     if (isLimitedMode) {
       setEvents([]);
       setLoading(false);
@@ -206,6 +208,7 @@ export default function EventsScreen() {
               likes_count: e.likes_count ?? 0,
               liked_by_me: e.liked_by_me ?? false,
               saved_by_me: e.saved_by_me ?? false,
+              color: cal.color || "#6C63FF",
               tags: [],
               attendees: Array.isArray(e.attendees)
                 ? e.attendees.map((a: any) => ({
@@ -257,7 +260,7 @@ export default function EventsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [isLimitedMode, resolveImageUrl]);
+  }, [isLimitedMode]);
 
   useEffect(() => {
     if (authLoading) return;

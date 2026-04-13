@@ -178,7 +178,7 @@ export function EventDetailModal({
               />
             ) : (
               <DefaultCalendarCover
-                style={styles.image}
+                style={{...styles.image, backgroundColor: event.color}}
                 label="Evento"
                 iconSize={52}
               />

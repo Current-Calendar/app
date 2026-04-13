@@ -173,6 +173,7 @@ export default function CalendarScreen() {
                 creator_username:
                 updatedCalendar.creator_username ?? (calendar as any).creator_username,
                 color: calendar.color,
+                photo: updatedCalendar.photo || "",
                 co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((calendar as any).co_owners ?? []),
@@ -255,6 +256,7 @@ export default function CalendarScreen() {
                     recurrence: e.recurrence,
                     type: 'other',
                     color: calendar?.color || '#6C63FF',
+                    photo: e.photo || ""
                 };
             });
 

@@ -70,7 +70,7 @@ export default function EventCard({
             />
           ) : (
             <DefaultCalendarCover
-              style={eventCalendarEventCardStyles.image}
+              style={{...eventCalendarEventCardStyles.image, backgroundColor: `${event.color}33`}}
               label="Evento"
               iconSize={24}
             />
