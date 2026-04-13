@@ -11,8 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
 import { BottomSheetModal } from '@/components/ui/bottom-sheet-modal';
-import { API_CONFIG } from '@/constants/api';
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
+import { API_CONFIG } from '@/constants/api';
 
 interface ShareCalendarModalProps {
     calendar: Calendar | null;
@@ -24,9 +24,7 @@ export function ShareCalendarModal({ calendar, onClose }: ShareCalendarModalProp
 
     if (!calendar) return null;
 
-    const shareBaseUrl = process.env.EXPO_PUBLIC_SHARE_BASE_URL ?? API_CONFIG.rootBaseURL;
-    const shareUrl = `${shareBaseUrl}/share/calendar/${calendar.id}/`;
-    console.log('Creator:', calendar.creator);
+    const shareUrl = `${API_CONFIG.rootBaseURL}/share/calendar/${calendar.id}/`;
 
     const handleNativeShare = async () => {
         try {

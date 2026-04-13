@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
@@ -248,6 +249,12 @@ class OwnProfileSerializer(serializers.ModelSerializer):
         )
 
 
+class EventPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class EventSerializer(serializers.ModelSerializer):
     photo = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
@@ -301,12 +308,18 @@ class EventSerializer(serializers.ModelSerializer):
         ).data
 
     def get_liked_by_me(self, obj):
+        liked_ids = self.context.get('liked_ids')
+        if liked_ids is not None:
+            return obj.id in liked_ids
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
         return EventLike.objects.filter(user=request.user, event=obj).exists()
 
     def get_saved_by_me(self, obj):
+        saved_ids = self.context.get('saved_ids')
+        if saved_ids is not None:
+            return obj.id in saved_ids
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False

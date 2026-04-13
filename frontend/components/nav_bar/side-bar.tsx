@@ -6,9 +6,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
 import { navSideBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
-import { useNotifications } from "@/hooks/use-notifications";
+import { useNotificationsContext } from "@/context/notification-context";
 
-  interface SidebarProps {
+interface SidebarProps {
   expanded: boolean;
   setExpanded: (value: boolean) => void;
 }
@@ -16,21 +16,17 @@ import { useNotifications } from "@/hooks/use-notifications";
 export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [importVisible, setImportVisible] = useState(false);
-
-
+  const { unreadCount } = useNotificationsContext();
 
   const handleAddPress = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
-  const { unreadCount } = useNotifications();
 
   const navigateTo = (path: string) => {
     closeMenu();
     router.push(path as any);
   };
-
-  const { user } = useAuth();
 
   const getTodayFormatted = () => {
     const today = new Date();
@@ -67,7 +63,6 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
     return content;
   };
 
-  const profileLabel = isAuthenticated ? "Profile" : "Login";
   const profileHref: string = isAuthenticated ? "/profile" : "/login";
 
   return (
@@ -104,37 +99,37 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
             }} />
           )}
         </View>
-        <SidebarItem icon="person" label={profileLabel} href={profileHref} />
+        <SidebarItem icon="person" label={profileHref} href={profileHref} />
 
-      <CreateMenuModal
-  visible={menuVisible}
-  onClose={closeMenu}
-  onNewEvent={() => {
-    if (isAuthenticated) {
-      navigateTo(`/create_events?date=${getTodayFormatted()}`);
-    } else {
-      closeMenu();
-      router.push("/login");
-    }
-  }}
-  onNewCalendar={() => {
-    if (isAuthenticated) {
-      navigateTo("/create");
-    } else {
-      closeMenu();
-      router.push("/login");
-    }
-  }}
-  onImportCalendar={() => {
-    if (isAuthenticated) {
-      closeMenu();
-      setImportVisible(true);
-    } else {
-      closeMenu();
-      router.push("/login");
-    }
-  }}
-/>
+        <CreateMenuModal
+          visible={menuVisible}
+          onClose={closeMenu}
+          onNewEvent={() => {
+            if (isAuthenticated) {
+              navigateTo(`/create_events?date=${getTodayFormatted()}`);
+            } else {
+              closeMenu();
+              router.push("/login");
+            }
+          }}
+          onNewCalendar={() => {
+            if (isAuthenticated) {
+              navigateTo("/create");
+            } else {
+              closeMenu();
+              router.push("/login");
+            }
+          }}
+          onImportCalendar={() => {
+            if (isAuthenticated) {
+              closeMenu();
+              setImportVisible(true);
+            } else {
+              closeMenu();
+              router.push("/login");
+            }
+          }}
+        />
       </View>
 
       <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />

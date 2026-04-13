@@ -18,6 +18,7 @@ import InviteUserModal from '@/components/InviteUserModal';
 import { ShareCalendarModal } from '@/components/share-calendar-modal';
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { AddCoOwnerModal } from '@/components/add-co-owner';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import apiClient from '@/services/api-client';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
@@ -57,11 +58,13 @@ export function CalendarInfoModal({
   const [showShare, setShowShare] = useState(false);
   const [showCoOwners, setShowCoOwners] = useState(false);
   const [isLeavingCalendar, setIsLeavingCalendar] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [localCalendar, setLocalCalendar] = useState<Calendar | null>(calendar);
 
   useEffect(() => {
     setLocalCalendar(calendar);
+    setShowDeleteConfirm(false);
   }, [calendar]);
 
  
@@ -101,26 +104,19 @@ export function CalendarInfoModal({
 
   const handleDeletePress = () => {
     if (!onDelete) return;
+    setShowDeleteConfirm(true);
+  };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`)) {
-        void onDelete(localCalendar);
-      }
-      return;
+  const handleConfirmDelete = async () => {
+    if (!onDelete || !localCalendar) return;
+
+    try {
+      await Promise.resolve(onDelete(localCalendar));
+    } catch (error) {
+      console.error('Delete calendar error:', error);
+    } finally {
+      setShowDeleteConfirm(false);
     }
-
-    Alert.alert(
-      'Delete calendar',
-      `Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => void onDelete(localCalendar),
-        },
-      ]
-    );
   };
 
   const handleLeaveCalendarPress = async () => {
@@ -433,6 +429,17 @@ export function CalendarInfoModal({
                     type="calendar"
                 />
             )}
+
+      <ConfirmDeleteModal
+        visible={showDeleteConfirm}
+        title="Delete calendar"
+        message={`Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`}
+        loading={isDeleting}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+      />
     </>
   );
 }
