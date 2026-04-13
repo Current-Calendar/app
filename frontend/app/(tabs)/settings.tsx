@@ -4,13 +4,16 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  Switch,
   StyleSheet,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/use-auth';
+import { requestPasswordReset } from '@/services/password-reset';
 
 const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
 const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
@@ -39,8 +42,9 @@ function readCookiePreferenceFromCookie(): CookiePreference | null {
 
 const SettingsScreen = () => {
   const router = useRouter();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { user: currentUser } = useAuth();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
+  const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
 
   const readCookiePreference = React.useCallback(() => {
     if (Platform.OS !== 'web') return;
@@ -94,13 +98,30 @@ const SettingsScreen = () => {
     }, [readCookiePreference]),
   );
 
-  React.useEffect(() => {
-    if (cookiePreference === 'rejected') {
-      setNotificationsEnabled(false);
-    }
-  }, [cookiePreference]);
-
   const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
+
+  const sendPasswordReset = async () => {
+    const email = currentUser?.email?.trim();
+
+    if (!email) {
+      Alert.alert('Error', 'No email associated with your account.');
+      return;
+    }
+
+    setIsSendingPasswordReset(true);
+
+    try {
+      const message = await requestPasswordReset(email);
+      Alert.alert('Success', message);
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Could not send recovery email. Please try again.',
+      );
+    } finally {
+      setIsSendingPasswordReset(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -171,8 +192,11 @@ const SettingsScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.row, styles.rowBorder]}
-            //onPress={() => router.push('/change-password' as any)}
+              style={[styles.row, isSendingPasswordReset && styles.rowDisabled]}
+              onPress={() => {
+                void sendPasswordReset();
+              }}
+              disabled={isSendingPasswordReset}
             >
               <View style={styles.rowLeft}>
                 <View style={styles.iconWrap}>
@@ -181,35 +205,16 @@ const SettingsScreen = () => {
                 <View>
                   <Text style={styles.rowTitle}>Change password</Text>
                   <Text style={styles.rowSubtitle}>
-                    Manage your account security
+                    Send a reset link to your account email
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#10464d" />
+              {isSendingPasswordReset ? (
+                <ActivityIndicator size="small" color="#10464d" />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color="#10464d" />
+              )}
             </TouchableOpacity>
-
-            <View style={styles.row}>
-              <View style={styles.rowLeft}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name="notifications-outline" size={22} color="#10464d" />
-                </View>
-                <View>
-                  <Text style={styles.rowTitle}>Notifications</Text>
-                  <Text style={styles.rowSubtitle}>
-                    {isLimitedMode
-                      ? 'Disabled while optional cookies are rejected'
-                      : 'Receive reminders and updates'}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: '#c9c4b8', true: '#e58a84' }}
-                thumbColor="#ffffff"
-                disabled={isLimitedMode}
-              />
-            </View>
           </View>
 
           <View style={styles.sectionCard}>
@@ -404,6 +409,9 @@ const styles = StyleSheet.create({
   rowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: '#ddd4c8',
+  },
+  rowDisabled: {
+    opacity: 0.7,
   },
   rowLeft: {
     flexDirection: 'row',
