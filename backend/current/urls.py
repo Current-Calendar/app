@@ -83,6 +83,7 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/export/', calendar_views.export_to_ics, name='export_to_ics'),
     path('api/v1/calendars/<int:calendar_id>/share/', calendar_views.get_calendar_share_info, name='get_calendar_share_info'),
     path('api/v1/calendars/<int:calendar_id>/leave/', calendar_views.leave_calendar, name='leave_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/co_owners/', calendar_views.update_co_owners, name='update_co_owners'),
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),

@@ -87,7 +87,7 @@ def create_event(request):
 
         if not is_creator_or_co_owner:
             return Response(
-                {"errors": [f"No tienes permiso para agregar events al calendar {calendar.id}."]},
+                {"errors": ["No tienes permiso para agregar eventos a este calendario."]},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -252,7 +252,7 @@ def edit_event(request: Request, event_id):
         is_creator_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
 
         if not is_creator_or_co_owner:
-            return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+            return Response({"errors": ["No tienes permiso para editar eventos en este calendario."]},
                 status=status.HTTP_403_FORBIDDEN
             )
 
