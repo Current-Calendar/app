@@ -205,11 +205,11 @@ class CurrentUser(HttpUser):
         )
 
     @task(2)
-    def list_events_from_calendar(self):
+    def list_events_with_calendar_filter(self):
         self.get_ok(
             "/api/v1/events/list",
-            name="GET /api/v1/events/list?calendarId",
-            params={"calendarId": TEST_CALENDAR_ID},
+            name="GET /api/v1/events/list?calendarIds",
+            params={"calendarIds": TEST_CALENDAR_ID},
         )
 
     # -------------------------

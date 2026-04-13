@@ -113,7 +113,7 @@ class ReadHeavyUser(HttpUser):
         self._get(
             "/api/v1/events/list",
             name="GET /api/v1/events/list",
-            params={"calendarId": TEST_CALENDAR_ID} if random.random() > 0.5 else None,
+            params={"calendarIds": TEST_CALENDAR_ID} if random.random() > 0.5 else None,
         )
 
     @task(3)

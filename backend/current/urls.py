@@ -91,7 +91,6 @@ urlpatterns = [
     path('api/v1/events/<int:event_id>/rsvp/', event_views.rsvp_event, name='rsvp_event'),
     path('api/v1/events/<int:event_id>/invite/', event_views.invite_event, name='invite_event'),
     path('api/v1/events/list', event_views.list_events, name='list_events'),
-    path('api/v1/events/list/<int:calendar_id>', event_views.list_events_from_calendar, name='list_events_from_calendar'),
     path('api/v1/events/asign-to-calendar/', event_views.asign_event_to_calendar, name='asign_event_to_calendar'),
     path('api/v1/events/deasign-from-calendar/', event_views.deasign_event_from_calendar, name='deasign_event_from_calendar'),
     path('api/v1/events/<int:event_id>/delete/', event_views.delete_event, name='delete_event'),

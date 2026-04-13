@@ -1,7 +1,7 @@
 import datetime
 import json
 from datetime import date, time, datetime as dt
-from rest_framework.test import APITestCase, APIRequestFactory
+from rest_framework.test import APITestCase
 from django.test import override_settings
 from django.conf import settings
 import tempfile
@@ -9,7 +9,6 @@ import shutil
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from main.models import User, Calendar, Event, EventAttendance, Notification
-from main.events.views import list_events_from_calendar
 
 ENDPOINT_EVENTOS = "/api/v1/events/"
 EDIT_EVENT_ENDPOINT = "/api/v1/events/{}/edit/"
@@ -1332,73 +1331,42 @@ class ListEventsTests(APITestCase):
         )
         self.event_b.calendars.add(self.calendar_b)
 
+    def _extract_items(self, response):
+        if isinstance(response.data, dict):
+            return response.data.get("results", [])
+        return response.data
+
+    def test_list_events_returns_all_when_no_filter(self):
+        response = self.client.get("/api/v1/events/list")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items = self._extract_items(response)
+        ids = {item["id"] for item in items}
+        self.assertSetEqual(ids, {self.event_a.id, self.event_b.id})
+
+    def test_list_events_filters_by_single_calendar_id(self):
+        response = self.client.get("/api/v1/events/list", {"calendarIds": str(self.calendar_a.id)})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        items = self._extract_items(response)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], self.event_a.id)
+
     def test_list_events_filters_by_query(self):
         response = self.client.get("/api/v1/events/list", {"q": "brunch"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.event_a.id)
+        items = self._extract_items(response)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], self.event_a.id)
 
     def test_list_events_filters_by_calendar(self):
         response = self.client.get("/api/v1/events/list", {"calendarIds": [self.calendar_b.id]})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.event_b.id)
-
-
-class ListEventsFromCalendarFunctionTests(APITestCase):
-    def setUp(self):
-        self.factory = APIRequestFactory()
-        self.user = User.objects.create_user(
-            username="functionlist",
-            email="function@test.com",
-            password="pass123",
-        )
-        self.calendar_a = Calendar.objects.create(
-            name="Cal Func A",
-            privacy="PUBLIC",
-            creator=self.user,
-        )
-        self.calendar_b = Calendar.objects.create(
-            name="Cal Func B",
-            privacy="PUBLIC",
-            creator=self.user,
-        )
-        self.event_a = Event.objects.create(
-            title="Func Event A",
-            description="desc a",
-            date=date(2026, 5, 10),
-            time=time(10, 0),
-            creator=self.user,
-        )
-        self.event_a.calendars.add(self.calendar_a)
-        self.event_b = Event.objects.create(
-            title="Func Event B",
-            description="desc b",
-            date=date(2026, 5, 11),
-            time=time(11, 0),
-            creator=self.user,
-        )
-        self.event_b.calendars.add(self.calendar_b)
-
-    def _call_view(self, params=None):
-        request = self.factory.get("/api/v1/events/list/", params or {})
-        return list_events_from_calendar(request)
-
-    def test_list_events_from_calendar_returns_all_when_no_filter(self):
-        response = self._call_view()
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        ids = {item["id"] for item in response.data}
-        self.assertSetEqual(ids, {self.event_a.id, self.event_b.id})
-
-    def test_list_events_from_calendar_filters_by_calendar_id(self):
-        response = self._call_view({"calendarId": self.calendar_a.id})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.event_a.id)
+        items = self._extract_items(response)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["id"], self.event_b.id)
 
 
 class CreateEventParsingTests(APITestCase):

@@ -399,49 +399,6 @@ def list_events(request):
 
 
 @api_view(['GET'])
-def list_events_from_calendar(request):
-    """
-    List and search events.
-
-    GET /api/v1/events/list
-
-    Query parameters:
-        calendarId (int) -- filter by calendar ID
-    """
-    user = request.user
-    if user.is_authenticated:
-        privacy_filter = (
-            Q(calendars__privacy='PUBLIC') |
-            Q(calendars__creator=user)
-        )
-    else:
-        privacy_filter = Q(calendars__privacy='PUBLIC')
-
-    queryset = Event.objects.filter(privacy_filter).distinct().order_by('-created_at')
-    calendar_id = request.GET.get('calendarId')
-
-    if calendar_id:
-        queryset = queryset.filter(calendars__id=calendar_id)
-
-    results = [
-        {
-            "id": event.id,
-            "title": event.title,
-            "description": event.description,
-            "place_name": event.place_name,
-            "date": event.date,
-            "time": event.time,
-            "recurrence": event.recurrence,
-            "external_id": event.external_id,
-            "calendars": list(event.calendars.values_list("id", flat=True)),
-            "created_at": event.created_at,
-            "photo": get_signed_url(request, event.photo),
-        }
-        for event in queryset
-    ]
-    return Response(results, status=status.HTTP_200_OK)
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def asign_event_to_calendar(request):
