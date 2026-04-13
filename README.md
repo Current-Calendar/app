@@ -227,14 +227,29 @@ npm run ios      # iOS simulator
 npm run lint     # ESLint
 ```
 
-### End-to-end tests (local only)
+### End-to-end tests (automatic Docker)
 
 ```bash
-# Headless
-E2E_HEADLESS=true pytest -c e2e/pytest.ini e2e/tests
+sh e2e/run_selenium_docker.sh
+```
 
-# With visible browser
-E2E_HEADLESS=false pytest -c e2e/pytest.ini e2e/tests -q
+Run a single test file:
+
+```bash
+sh e2e/run_selenium_docker.sh pytest -c e2e/pytest.ini e2e/tests/test_auth_flows.py
+```
+
+Optional hybrid mode (frontend local):
+
+```bash
+EXPO_PUBLIC_API_URL=http://host.docker.internal:8000/api/v1 EXPO_PUBLIC_API_BASE=http://host.docker.internal:8000 npx expo start --web --port 8081
+docker compose -f docker-compose.mac.yaml -f docker-compose.e2e.yaml run --rm -e E2E_BASE_URL=http://host.docker.internal:8081 e2e-runner
+```
+
+Optional local fallback:
+
+```bash
+E2E_HEADLESS=true pytest -c e2e/pytest.ini e2e/tests
 ```
 
 ### Docker management
