@@ -572,7 +572,7 @@ export function AddCoOwnerModal({
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Search by username or email"
+                  placeholder="Search by username"
                   placeholderTextColor="#9D978D"
                   style={styles.searchInput}
                   autoCapitalize="none"
