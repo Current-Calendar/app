@@ -1,15 +1,16 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Modal } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Text, Modal, ActivityIndicator } from 'react-native';
 
 
 interface LogoutModalProps {
   visible: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
+  loading?: boolean;
 }
 
 
-export default function LogoutModal({ visible, onClose, onConfirm }: LogoutModalProps) {
+export default function LogoutModal({ visible, onClose, onConfirm, loading = false }: LogoutModalProps) {
   return (
     
     <Modal
@@ -26,18 +27,24 @@ export default function LogoutModal({ visible, onClose, onConfirm }: LogoutModal
           <View style={styles.buttonRow}>
             {/* El botón Cancelar ahora avisa a [username].tsx de que cierre el modal */}
             <TouchableOpacity 
-              style={styles.cancelButton} 
+              style={[styles.cancelButton, loading && styles.disabled]}
               onPress={onClose} 
+              disabled={loading}
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             
             {/* El botón Confirmar ahora avisa a [username].tsx de que borre la sesión */}
             <TouchableOpacity 
-              style={styles.confirmButton} 
+              style={[styles.confirmButton, loading && styles.disabled]}
               onPress={onConfirm}
+              disabled={loading}
             >
-              <Text style={styles.confirmText}>Yes, exit</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmText}>Yes, exit</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
