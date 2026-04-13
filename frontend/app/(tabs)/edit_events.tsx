@@ -45,6 +45,23 @@ type PlaceSuggestion = {
   lon: string;
 };
 
+type EventTagItem = {
+  id: number;
+  name: string;
+  category: number;
+  category_name?: string;
+  events_count?: number;
+};
+
+type ApiListResponse<T> = T[] | { results?: T[]; data?: T[] };
+
+const extractArray = <T,>(response: ApiListResponse<T> | null | undefined): T[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
+};
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -250,6 +267,12 @@ export default function EditEventsScreen() {
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
 
+  const [availableTags, setAvailableTags] = useState<EventTagItem[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [initialTagIds, setInitialTagIds] = useState<number[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tagsError, setTagsError] = useState<string | null>(null);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
@@ -301,12 +324,57 @@ export default function EditEventsScreen() {
     router.replace("/calendars");
   };
 
+  const loadTagsForCalendar = async (calendarId: string | number) => {
+    try {
+      setTagsLoading(true);
+      setTagsError(null);
+
+      const response = await apiClient.get(
+        `/event-tags/for-calendar/${calendarId}/`
+      ) as ApiListResponse<EventTagItem>;
+
+      const list = extractArray(response);
+      setAvailableTags(list);
+
+      setSelectedTagIds((prev) =>
+        prev.filter((tagId) => list.some((tag) => tag.id === tagId))
+      );
+    } catch (error: any) {
+      console.error("Error loading tags for calendar:", error);
+      setAvailableTags([]);
+      setSelectedTagIds([]);
+      setTagsError(error?.message || "Error loading event labels");
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  const loadEventAssignedTags = async (currentEventId: string | number) => {
+    try {
+      const response = await apiClient.get(
+        `/event-tags/for-event/${currentEventId}/`
+      ) as ApiListResponse<EventTagItem>;
+
+      const assignedTags = extractArray(response);
+      const assignedIds = assignedTags
+        .map((tag) => Number(tag.id))
+        .filter((id) => Number.isFinite(id));
+
+      setSelectedTagIds(assignedIds);
+      setInitialTagIds(assignedIds);
+    } catch (error: any) {
+      console.error("Error loading event assigned tags:", error);
+      setSelectedTagIds([]);
+      setInitialTagIds([]);
+    }
+  };
+
   const loadCalendars = async () => {
     try {
       setCalLoading(true);
       setCalError(null);
 
-      const data: any = await loadMyCalendars()
+      const data: any = await loadMyCalendars();
 
       const list =
         (Array.isArray(data) && data) ||
@@ -340,23 +408,42 @@ export default function EditEventsScreen() {
 
       const event: any = await apiClient.get<any>(`/events/${eventId}/edit/`);
 
-      setTitle(event.title);
-      setDescription(event.description);
-      setPlace(event.place_name);
-      setCoverUri(event.photo);
+      setTitle(event.title ?? "");
+      setDescription(event.description ?? "");
+      setPlace(event.place_name ?? "");
+      setCoverUri(event.photo ?? null);
 
       if (event.latitude && event.longitude) {
         setLat(event.latitude);
         setLon(event.longitude);
       }
 
+      if (event.date) {
+        const parsedDate = new Date(event.date);
+        parsedDate.setHours(0, 0, 0, 0);
+        if (!isNaN(parsedDate.getTime())) {
+          setDate(parsedDate);
+        }
+      }
+
+      if (event.time) {
+        const [h = "14", m = "00"] = String(event.time).split(":");
+        const parsedTime = new Date();
+        parsedTime.setHours(Number(h), Number(m), 0, 0);
+        setTime(parsedTime);
+      }
+
       if (event?.calendars?.length > 0) {
         const selectedId = String(event.calendars[0]);
         const foundCalendar = availableCalendars.find((c) => c.id === selectedId);
+
         if (foundCalendar) {
           setSelectedCalendar(foundCalendar);
+          await loadTagsForCalendar(foundCalendar.id);
         }
       }
+
+      await loadEventAssignedTags(eventId);
     } catch (e: any) {
       setFormError(e?.message ?? "No se pudo cargar el evento");
       Alert.alert("Error", e?.message ?? "No se pudo cargar el evento");
@@ -474,6 +561,53 @@ export default function EditEventsScreen() {
     setPlaceError(null);
   };
 
+  const toggleTag = (tagId: number) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const syncEventTags = async () => {
+    const currentSet = new Set(selectedTagIds);
+    const initialSet = new Set(initialTagIds);
+
+    const toAdd = selectedTagIds.filter((id) => !initialSet.has(id));
+    const toRemove = initialTagIds.filter((id) => !currentSet.has(id));
+
+    const failedAdds: string[] = [];
+    const failedRemoves: string[] = [];
+
+    await Promise.all(
+      toAdd.map(async (tagId) => {
+        try {
+          await apiClient.post(`/event-tags/${tagId}/add_to_event/`, {
+            event_id: Number(eventId),
+          });
+        } catch {
+          const tag = availableTags.find((t) => t.id === tagId);
+          failedAdds.push(tag?.name || `Tag ${tagId}`);
+        }
+      })
+    );
+
+    await Promise.all(
+      toRemove.map(async (tagId) => {
+        try {
+          await apiClient.post(`/event-tags/${tagId}/remove_from_event/`, {
+            event_id: Number(eventId),
+          });
+        } catch {
+          const tag = availableTags.find((t) => t.id === tagId);
+          failedRemoves.push(tag?.name || `Tag ${tagId}`);
+        }
+      })
+    );
+
+    return { failedAdds, failedRemoves };
+  };
+
   const openTimePicker = () => {
     if (Platform.OS === "web") {
       setWebHour(time.getHours());
@@ -539,7 +673,6 @@ export default function EditEventsScreen() {
     const calendarsIds = [Number(selectedCalendar.id)];
 
     try {
-
       if (coverAsset) {
         const formData = new FormData();
         formData.append("title", title.trim());
@@ -553,9 +686,9 @@ export default function EditEventsScreen() {
           formData.append("latitud", String(lat));
           formData.append("longitud", String(lon));
         }
+
         await appendPhoto(formData, coverAsset, "photo");
         await apiClient.put<any>(`/events/${eventId}/edit/`, formData);
-
       } else {
         const updateData: any = {
           title: title.trim(),
@@ -567,15 +700,30 @@ export default function EditEventsScreen() {
         };
 
         if (lat != null && lon != null) {
-            updateData.latitud = lat;
-            updateData.longitud = lon;
+          updateData.latitud = lat;
+          updateData.longitud = lon;
         }
 
         if (!coverUri) {
-             updateData.remove_photo = "true";
+          updateData.remove_photo = "true";
         }
 
         await apiClient.put<any>(`/events/${eventId}/edit/`, updateData);
+      }
+
+      const { failedAdds, failedRemoves } = await syncEventTags();
+
+      if (failedAdds.length || failedRemoves.length) {
+        const parts: string[] = [];
+
+        if (failedAdds.length) {
+          parts.push(`Could not add: ${failedAdds.join(", ")}`);
+        }
+        if (failedRemoves.length) {
+          parts.push(`Could not remove: ${failedRemoves.join(", ")}`);
+        }
+
+        setFormError(parts.join("\n"));
       }
 
       setSuccessModalOpen(true);
@@ -645,8 +793,7 @@ export default function EditEventsScreen() {
                       />
                     ) : (
                       <View style={styles.calendarImgPlaceholder} />
-                    )
-                  }
+                    )}
                   </View>
                   {calLoading ? (
                     <View style={{ marginTop: 6 }}>
@@ -672,7 +819,6 @@ export default function EditEventsScreen() {
                     <Ionicons name="camera" size={28} color={TEXT} />
                   )}
                 </Pressable>
-
               </View>
             </View>
 
@@ -745,6 +891,49 @@ export default function EditEventsScreen() {
                 </Text>
               )}
 
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Labels:</Text>
+
+              {tagsLoading ? (
+                <View style={styles.tagsLoadingWrap}>
+                  <ActivityIndicator color={TEXT} />
+                </View>
+              ) : tagsError ? (
+                <Text style={styles.errorText}>{tagsError}</Text>
+              ) : availableTags.length > 0 ? (
+                <View style={styles.tagsWrap}>
+                  {availableTags.map((tag) => {
+                    const selected = selectedTagIds.includes(tag.id);
+
+                    return (
+                      <Pressable
+                        key={tag.id}
+                        style={[styles.tagChip, selected && styles.tagChipSelected]}
+                        onPress={() => toggleTag(tag.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.tagChipText,
+                            selected && styles.tagChipTextSelected,
+                          ]}
+                        >
+                          {tag.name}
+                        </Text>
+                        {selected && (
+                          <Ionicons
+                            name="checkmark"
+                            size={14}
+                            color={TEXT}
+                            style={{ marginLeft: 6 }}
+                          />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : selectedCalendar?.id ? (
+                <Text style={styles.helperText}>This calendar has no available labels.</Text>
+              ) : null}
+
               <View style={styles.timeRow}>
                 <Text style={styles.fieldLabel}>Date:</Text>
                 <View style={styles.timePill}>
@@ -800,9 +989,10 @@ export default function EditEventsScreen() {
                   renderItem={({ item }) => (
                     <Pressable
                       style={styles.modalItem}
-                      onPress={() => {
+                      onPress={async () => {
                         setSelectedCalendar(item);
                         setCalendarModalOpen(false);
+                        await loadTagsForCalendar(item.id);
                       }}
                     >
                       <Text style={styles.modalItemText}>{item.name}</Text>
@@ -1034,7 +1224,7 @@ const ITEM_H = 20;
 const VISIBLE_ITEMS = 3;
 
 const styles = StyleSheet.create({
-  container: { flex: 1},
+  container: { flex: 1 },
 
   iconBtn: { padding: 6 },
 
@@ -1395,5 +1585,38 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-});
 
+  // nuevos estilos de tags
+  tagsLoadingWrap: {
+    paddingVertical: 8,
+    alignItems: "flex-start",
+  },
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 4,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
+    backgroundColor: "#f7fbfb",
+  },
+  tagChipSelected: {
+    borderColor: "#10464d",
+    backgroundColor: "#e8f2f2",
+  },
+  tagChipText: {
+    color: "#10464d",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  tagChipTextSelected: {
+    fontWeight: "700",
+  },
+});

@@ -37,6 +37,11 @@ export interface Event {
   likes_count: number;
   liked_by_me: boolean;
   saved_by_me: boolean;
+  tags?: {
+    id: number | string;
+    name: string;
+    category_name?: string;
+  }[];
   attendees?: {
     id: string;
     name: string;
@@ -103,32 +108,70 @@ export default function EventsScreen() {
           calendarMap[Number(c.id)] = c;
         });
 
-        const mappedEvents: Event[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendars[0]];
-          return {
-            id: String(e.id),
-            title: e.title || e.titulo || "",
-            description: e.description || e.descripcion || "",
-            location: e.place_name || e.nombre_lugar || "",
-            date: e.date || e.fecha || "",
-            time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
-            image: resolveImageUrl(e.photo || e.foto),
-            username: e.creator_username || cal?.creator || "unknown",
-            userAvatar: e.creator_photo || null,
-            calendarId: String(e.calendars[0] || ""),
-            calendarName: cal?.name || "General",
-            likes_count: e.likes_count ?? 0,
-            liked_by_me: e.liked_by_me ?? false,
-            saved_by_me: e.saved_by_me ?? false,
-            attendees: Array.isArray(e.attendees)
-              ? e.attendees.map((a: any) => ({
-                name: a.username || a.name || "",
-                respondedAt: a.responded_at || a.respondedAt || "",
-                avatar: a.photo || a.avatar || undefined,
-              }))
-              : [],
-          };
-        }).filter((evt: Event) => evt.id && evt.title);
+        const baseEvents: Event[] = evData
+          .map((e: any) => {
+            const cal = calendarMap[e.calendars?.[0]];
+            return {
+              id: String(e.id),
+              title: e.title || e.titulo || "",
+              description: e.description || e.descripcion || "",
+              location: e.place_name || e.nombre_lugar || "",
+              date: e.date || e.fecha || "",
+              time:
+                typeof (e.time || e.hora) === "string"
+                  ? String(e.time || e.hora).slice(0, 5)
+                  : "",
+              image: resolveImageUrl(e.photo || e.foto),
+              username: e.creator_username || cal?.creator || "unknown",
+              userAvatar: e.creator_photo || null,
+              calendarId: String(e.calendars?.[0] || ""),
+              calendarName: cal?.name || "General",
+              likes_count: e.likes_count ?? 0,
+              liked_by_me: e.liked_by_me ?? false,
+              saved_by_me: e.saved_by_me ?? false,
+              tags: [],
+              attendees: Array.isArray(e.attendees)
+                ? e.attendees.map((a: any) => ({
+                    id: String(a.id ?? ""),
+                    name: a.username || a.name || "",
+                    respondedAt: a.responded_at || a.respondedAt || "",
+                    avatar: a.photo || a.avatar || undefined,
+                  }))
+                : [],
+            };
+          })
+          .filter((evt: Event) => evt.id && evt.title);
+
+        const mappedEvents: Event[] = await Promise.all(
+          baseEvents.map(async (event) => {
+            try {
+              const tagsResponse: any = await apiClient.get(
+                `/event-tags/for-event/${event.id}/`
+              );
+
+              const tags =
+                (Array.isArray(tagsResponse) && tagsResponse) ||
+                (Array.isArray(tagsResponse?.results) && tagsResponse.results) ||
+                (Array.isArray(tagsResponse?.data) && tagsResponse.data) ||
+                [];
+
+              return {
+                ...event,
+                tags: tags.map((tag: any) => ({
+                  id: tag.id,
+                  name: tag.name,
+                  category_name: tag.category_name,
+                })),
+              };
+            } catch (error) {
+              console.log("Error loading event tags:", event.id, error);
+              return {
+                ...event,
+                tags: [],
+              };
+            }
+          })
+        );
 
         setEvents(mappedEvents);
       } catch (error) {
@@ -148,7 +191,7 @@ export default function EventsScreen() {
     try {
       const res = await apiClient.post<{ saved: boolean }>(`/events/${id}/save/`);
       setEvents((prev) =>
-        prev.map((e) => e.id === id ? { ...e, saved_by_me: res.saved } : e)
+        prev.map((e) => (e.id === id ? { ...e, saved_by_me: res.saved } : e))
       );
     } catch (error) {
       Alert.alert("Error", "Could not save this event.");
@@ -158,10 +201,14 @@ export default function EventsScreen() {
 
   const handleLike = async (id: string) => {
     try {
-      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(`/events/${id}/like/`);
+      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(
+        `/events/${id}/like/`
+      );
       setEvents((prev) =>
         prev.map((e) =>
-          e.id === id ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count } : e
+          e.id === id
+            ? { ...e, liked_by_me: res.liked, likes_count: res.likes_count }
+            : e
         )
       );
     } catch (error) {

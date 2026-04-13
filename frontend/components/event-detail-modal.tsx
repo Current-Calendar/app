@@ -25,6 +25,13 @@ const RED_DARK = "#B22222";
 
 type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING";
 
+type EventTagItem = {
+  id: number | string;
+  name: string;
+  category?: number | string;
+  category_name?: string;
+};
+
 interface EventDetailModalProps {
   event: CalendarEvent | null;
   onClose: () => void;
@@ -46,6 +53,9 @@ export function EventDetailModal({
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
 
+  const [eventTags, setEventTags] = useState<EventTagItem[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+
   useEffect(() => {
     setAttendanceMenuOpen(false);
     setCommentsVisible(false);
@@ -53,15 +63,46 @@ export function EventDetailModal({
     setDeletingEvent(false);
   }, [event]);
 
+  useEffect(() => {
+    const loadEventTags = async () => {
+      if (!event?.id) {
+        setEventTags([]);
+        return;
+      }
+
+      try {
+        setTagsLoading(true);
+
+        const response: any = await apiClient.get(`/event-tags/for-event/${event.id}/`);
+
+        const tags =
+          (Array.isArray(response) && response) ||
+          (Array.isArray(response?.results) && response.results) ||
+          (Array.isArray(response?.data) && response.data) ||
+          [];
+
+        setEventTags(tags);
+      } catch (error) {
+        console.error("Error loading event tags:", error);
+        setEventTags([]);
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+
+    void loadEventTags();
+  }, [event?.id]);
+
   if (!event) return null;
+
   const eventImageRaw =
     typeof (event as any).photo === "string" && (event as any).photo.trim().length > 0
       ? (event as any).photo.trim()
       : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
         ? (event as any).image.trim()
         : "";
-  const hasEventImage = eventImageRaw.length > 0;
 
+  const hasEventImage = eventImageRaw.length > 0;
   const currentAttendance = attendanceByEvent[event.id] ?? "pending";
 
   const handleAttendanceChange = async (value: AttendanceStatus) => {
@@ -154,6 +195,28 @@ export function EventDetailModal({
                   label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                 />
               )}
+
+              {tagsLoading ? (
+                <View style={styles.tagsLoadingRow}>
+                  <ActivityIndicator size="small" color={TEXT} />
+                </View>
+              ) : Array.isArray(eventTags) && eventTags.length > 0 ? (
+                <View style={styles.metaRow}>
+                  <Ionicons
+                    name="pricetags-outline"
+                    size={16}
+                    color={TEXT}
+                    style={styles.metaRowIcon}
+                  />
+                  <View style={styles.tagsWrap}>
+                    {eventTags.map((tag) => (
+                      <View key={String(tag.id)} style={styles.tagChip}>
+                        <Text style={styles.tagChipText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
 
               <View style={styles.attendanceSection}>
                 <Text style={styles.attendanceLabel}>Attendance</Text>
@@ -510,5 +573,44 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     marginBottom: 12,
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 2,
+  },
+
+  metaRowIcon: {
+    marginTop: 4,
+  },
+
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginLeft: 8,
+    flex: 1,
+  },
+
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#E8F2F2",
+    borderWidth: 1,
+    borderColor: "#CFE3E3",
+  },
+
+  tagChipText: {
+    color: TEXT,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  tagsLoadingRow: {
+    paddingTop: 2,
+    paddingBottom: 2,
+    alignItems: "flex-start",
   },
 });

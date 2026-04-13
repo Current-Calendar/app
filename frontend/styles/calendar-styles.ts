@@ -555,6 +555,31 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  metaRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 8,
+},
+tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 6,
+  marginLeft: 6,
+  flex: 1,
+},
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#E8F2F2",
+  borderWidth: 1,
+  borderColor: "#CFE3E3",
+},
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
+  fontWeight: "700",
+},
 });
 
 export const eventCalendarEventCardStyles = StyleSheet.create({
@@ -648,6 +673,26 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
   actionText: {
     fontSize: 14,
   },
+  tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 6,
+  marginBottom: 6,
+},
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#E8F2F2",
+  borderWidth: 1,
+  borderColor: "#CFE3E3",
+},
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
+  fontWeight: "700",
+},
 });
 
 export const calendarInfoModalStyles = StyleSheet.create({
@@ -859,34 +904,32 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#10464d',
   },
-  tagsWrap: {
+  metaRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 12,
+  marginBottom: 6,
+},
+tagsWrap: {
   flexDirection: "row",
   flexWrap: "wrap",
-  gap: 8,
-  marginTop: 14,
-  marginBottom: 10,
-  },
-  tagsLoadingWrap: {
-  marginTop: 10,
-  marginBottom: 8,
-  alignItems: "flex-start",
-  },
-
-  tagChip: {
-  paddingHorizontal: 12,
-  paddingVertical: 6,
+  gap: 6,
+  marginLeft: 6,
+  flex: 1,
+},
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
   borderRadius: 999,
-  backgroundColor: "#EEF6F6",
+  backgroundColor: "#E8F2F2",
   borderWidth: 1,
-  borderColor: "#CFE2E3",
-  alignSelf: "flex-start",
-  },
-
-  tagChipText: {
-  color: "#10464d",
-  fontSize: 12,
+  borderColor: "#CFE3E3",
+},
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
   fontWeight: "700",
-  },
+},
 });
 
 export const eventDetailModalStyles = StyleSheet.create({

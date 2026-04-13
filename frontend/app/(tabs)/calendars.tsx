@@ -123,6 +123,7 @@ export default function CalendarScreen() {
             color: COLORS[index % COLORS.length],
             co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
             viewers: Array.isArray(c.viewers) ? c.viewers : [],
+            categories: Array.isArray(c.categories) ? c.categories : [],
             }));
 
             setCalendars(mappedCalendars);
@@ -176,6 +177,9 @@ export default function CalendarScreen() {
                 viewers: Array.isArray(updatedCalendar.viewers)
                 ? updatedCalendar.viewers
                 : ((calendar as any).viewers ?? []),
+                categories: Array.isArray(updatedCalendar.categories)
+                ? updatedCalendar.categories
+                : ((calendar as any).categories ?? []),
             } as Calendar;
             })
         );
@@ -203,6 +207,9 @@ export default function CalendarScreen() {
             viewers: Array.isArray(updatedCalendar.viewers)
                 ? updatedCalendar.viewers
                 : ((current as any).viewers ?? []),
+            categories: Array.isArray(updatedCalendar.categories)
+                ? updatedCalendar.categories
+                : ((current as any).categories ?? []),
             } as Calendar;
         });
     };
@@ -291,6 +298,32 @@ export default function CalendarScreen() {
             showSheet(dateKey);
         }
     };
+
+    const handleOpenCalendarInfo = async (calendar: Calendar) => {
+  try {
+    const response: any = await apiClient.get(
+      `/categories/for-calendar/${calendar.id}/`
+    );
+
+    const categories =
+      (Array.isArray(response) && response) ||
+      (Array.isArray(response?.results) && response.results) ||
+      (Array.isArray(response?.data) && response.data) ||
+      [];
+
+    setInfoCalendar({
+      ...calendar,
+      categories,
+    });
+  } catch (error) {
+    console.error("Error loading calendar categories:", error);
+
+    setInfoCalendar({
+      ...calendar,
+      categories: [],
+    });
+  }
+};
 
     // TODO BACKEND - Once endpoints exist, move filtering server-side
     const filteredEvents = useMemo(() => {
@@ -537,7 +570,7 @@ export default function CalendarScreen() {
                         calendars={calendars}
                         selectedId={selectedCalendarId}
                         onChange={setSelectedCalendarId}
-                        onInfoPress={setInfoCalendar}
+                        onInfoPress={handleOpenCalendarInfo}
                     />
 
                     {isDesktop && (

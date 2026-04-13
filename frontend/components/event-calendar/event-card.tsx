@@ -98,6 +98,25 @@ export default function EventCard({
             <Text style={eventCalendarEventCardStyles.metaText}>{event.date}</Text>
           </View>
 
+          {Array.isArray(event.tags) && event.tags.length > 0 && (
+          <View style={eventCalendarEventCardStyles.metaRow}>
+            <Ionicons name="pricetags-outline" size={16} />
+
+            <View style={eventCalendarEventCardStyles.tagsWrap}>
+              {event.tags.map((tag) => (
+                <View
+                  key={String(tag.id)}
+                  style={eventCalendarEventCardStyles.tagChip}
+                >
+                  <Text style={eventCalendarEventCardStyles.tagChipText}>
+                    {tag.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
           <View style={eventCalendarEventCardStyles.metaRow}>
             <Ionicons name="location-outline" size={16} />
             <Text style={eventCalendarEventCardStyles.metaText}>{event.location}</Text>
