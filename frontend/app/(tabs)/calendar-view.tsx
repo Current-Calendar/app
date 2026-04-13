@@ -11,6 +11,7 @@ import { useEventsList } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import InviteUserModal from "@/components/InviteUserModal";
 import { ReportModal } from "@/components/report-modal";
+import apiClient from "@/services/api-client";
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
@@ -22,37 +23,47 @@ export default function CalendarViewScreen() {
   const params = useLocalSearchParams<{ calendarId?: string | string[]; eventId?: string | string[] }>();
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
-  const eventId = Array.isArray(params.eventId) ? params.eventId[0] : params.eventId;
-  const { calendars: backendCalendars } = useCalendars();
-  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({autoFetch:false});
-  const { user } = useAuth();
-  const [inviteVisible, setInviteVisible] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [reportTarget, setReportTarget] = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
+  const eventId    = Array.isArray(params.eventId)    ? params.eventId[0]    : params.eventId;
 
-  const calendar = useMemo(() => {
-    const found = backendCalendars.find((c) => String(c.id) === calendarId);
-    return found || backendCalendars[0] || null;
+  const { calendars: backendCalendars } = useCalendars();
+  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({ autoFetch: false });
+  const { user } = useAuth();
+
+  const [fetchedCalendar, setFetchedCalendar] = useState<any>(null);
+
+  useEffect(() => {
+    if (!calendarId || backendCalendars.length === 0) return;
+    const alreadyOwned = backendCalendars.some((c) => String(c.id) === calendarId);
+    if (!alreadyOwned) {
+      apiClient.get<any>(`/calendars/${calendarId}/`).then(setFetchedCalendar).catch(() => {});
+    }
   }, [calendarId, backendCalendars]);
 
-  const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
-  const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
-
-  // When a specific calendarId is in the URL (e.g. via share link), fetch events
-  // for that calendar directly so public calendars always show their events.
-  useEffect(() => {
+  const calendar = useMemo(() => {
     if (calendarId) {
-      refetchEvents(calendarId);
+      return backendCalendars.find((c) => String(c.id) === calendarId) ?? fetchedCalendar ?? null;
     }
-  }, [calendarId, refetchEvents]);
+    return backendCalendars[0] ?? null;
+  }, [calendarId, backendCalendars, fetchedCalendar]);
 
-  // Load events when screen gains focus
+  const today = new Date();
+  const [year, setYear]   = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [selectedDay, setSelectedDay]             = useState<string | null>(null);
+  const [activeEvent, setActiveEvent]             = useState<CalendarEvent | null>(null);
+  const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [reportOpen, setReportOpen]       = useState(false);
+  const [reportTarget, setReportTarget]   = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
+
+  useEffect(() => {
+    if (calendar?.id) refetchEvents(String(calendar.id));
+  }, [calendar?.id]);
+
   useFocusEffect(
-    React.useCallback(() => { refetchEvents(calendarId); }, [calendarId, refetchEvents])
+    React.useCallback(() => {
+      if (calendar?.id) refetchEvents(String(calendar.id));
+    }, [calendar?.id])
   );
 
   const events = useMemo(() => {
@@ -79,7 +90,6 @@ export default function CalendarViewScreen() {
     return transformed.filter((e) => String(e.calendarId) === String(calendar.id));
   }, [calendar, backendEvents, loadingEvents]);
 
-  // Check if current user is the owner of the calendar
   const isOwner = useMemo(() => {
     if (!calendar || !user) return false;
     return calendar.creator_username === user.username || calendar.creator === user.username;
@@ -87,7 +97,7 @@ export default function CalendarViewScreen() {
 
   const eventsOfSelectedDay = useMemo(() => {
     if (!selectedDay) return [];
-    return events.filter((event) => event.date?.slice(0,10) === selectedDay);
+    return events.filter((event) => event.date?.slice(0, 10) === selectedDay);
   }, [events, selectedDay]);
 
   useEffect(() => {
@@ -95,11 +105,10 @@ export default function CalendarViewScreen() {
   }, [eventId]);
 
   useEffect(() => {
-    if (!eventId || openedEventFromParams || events.length === 0) {
-      return;
-    }
+    if (!eventId || openedEventFromParams) return;
+    if (loadingEvents || events.length === 0) return;
 
-    const matchedEvent = events.find((event) => String(event.id) === String(eventId));
+    const matchedEvent = events.find((e) => String(e.id) === String(eventId));
     if (!matchedEvent) {
       setOpenedEventFromParams(true);
       return;
@@ -108,19 +117,18 @@ export default function CalendarViewScreen() {
     setSelectedDay(matchedEvent.date?.slice(0, 10) ?? null);
     setActiveEvent(matchedEvent);
     setOpenedEventFromParams(true);
-  }, [eventId, events, openedEventFromParams]);
-
+  }, [eventId, events, loadingEvents, openedEventFromParams]);
 
   const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   function formatSelectedDay(dateKey: string): string {
-    const [y,m,d] = dateKey.split("-").map(Number);
+    const [y, m, d] = dateKey.split("-").map(Number);
     const date = new Date(y, m - 1, d);
-    return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m-1]} ${y}`;
+    return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
   }
 
   const goToPrevMonth = () => { setMonth((m) => (m === 0 ? 11 : m - 1)); setYear((y) => (month === 0 ? y - 1 : y)); };
-  const goToNextMonth = () => { setMonth((m) => (m === 11 ? 0 : m + 1)); setYear((y) => (month === 11 ? y + 1 : y)); };
-  const goToToday = () => { const now = new Date(); setYear(now.getFullYear()); setMonth(now.getMonth()); };
+  const goToNextMonth = () => { setMonth((m) => (m === 11 ? 0  : m + 1)); setYear((y) => (month === 11 ? y + 1 : y)); };
+  const goToToday    = () => { const now = new Date(); setYear(now.getFullYear()); setMonth(now.getMonth()); };
 
   const openReport = (id: number, type: 'CALENDAR' | 'EVENT', label?: string) => {
     setReportTarget({ id, type, label });
@@ -138,10 +146,7 @@ export default function CalendarViewScreen() {
 
           <View style={styles.topRow}>
             <Text style={styles.title}>{calendar.name}</Text>
-            <Pressable
-              style={styles.reportBtn}
-              onPress={() => openReport(calendar.id, 'CALENDAR', calendar.name)}
-            >
+            <Pressable style={styles.reportBtn} onPress={() => openReport(calendar.id, 'CALENDAR', calendar.name)}>
               <Text style={styles.reportBtnText}>Report</Text>
             </Pressable>
           </View>
@@ -189,7 +194,7 @@ export default function CalendarViewScreen() {
                 <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
               </Pressable>
             )}
-            <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar") }>
+            <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
               <Text style={styles.secondaryButtonText}>Back to calendars</Text>
             </Pressable>
           </View>

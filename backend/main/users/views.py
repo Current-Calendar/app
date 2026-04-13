@@ -28,8 +28,8 @@ def search_users(request):
         Q(username__icontains=query) |
         Q(email__icontains=query) |
         Q(pronouns__icontains=query)
-    ).distinct()
-    
+    ).exclude(is_superuser=True).distinct()
+
     users = PublicUserSerializer(users, many=True, context={'request': request})
 
     return Response(users.data, status=status.HTTP_200_OK)
@@ -86,7 +86,11 @@ def get_followers(request, pk):
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     followers = user.followers_set.all()
-    serializer = PublicUserSerializer(followers, many=True, context={'request': request})
+    context = {'request': request}
+    if request.user.is_authenticated:
+        req_user: User = request.user  # type: ignore
+        context['following_ids'] = set(req_user.following.values_list('id', flat=True))
+    serializer = PublicUserSerializer(followers, many=True, context=context)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -103,7 +107,11 @@ def get_following(request, pk):
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     following = user.following.all()
-    serializer = PublicUserSerializer(following, many=True, context={'request': request})
+    context = {'request': request}
+    if request.user.is_authenticated:
+        req_user: User = request.user  # type: ignore
+        context['following_ids'] = set(req_user.following.values_list('id', flat=True))
+    serializer = PublicUserSerializer(following, many=True, context=context)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

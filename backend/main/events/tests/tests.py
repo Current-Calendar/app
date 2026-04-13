@@ -1336,8 +1336,9 @@ class ListEventsTests(APITestCase):
         response = self.client.get("/api/v1/events/list", {"q": "brunch"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["id"], self.event_a.id)
+        results = response.data.get("results", response.data) if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["id"], self.event_a.id)
 
     def test_list_events_filters_by_calendar(self):
         response = self.client.get("/api/v1/events/list", {"calendarIds": [self.calendar_b.id]})

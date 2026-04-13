@@ -40,6 +40,9 @@ class RegistroUsuarioTests(APITestCase):
             'email': 'test@example.com',
             'password': 'TestPassword123!',
             'password2': 'TestPassword123!',
+            'accepted_privacy': True,
+            'accepted_cookies': True,
+            'accepted_terms': True,
             'pronouns': 'él/he',
             'bio': 'Esta es mi biografía de prueba'
         }
@@ -86,7 +89,10 @@ class RegistroUsuarioTests(APITestCase):
             'username': 'userminimo',
             'email': 'minimo@example.com',
             'password': 'Password123!',
-            'password2': 'Password123!'
+            'password2': 'Password123!',
+            'accepted_privacy': True,
+            'accepted_cookies': True,
+            'accepted_terms': True,
         }
         
         response = self.client.post(self.url, datos_minimos, format='json')
