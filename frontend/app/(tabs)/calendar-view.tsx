@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import apiClient from "@/services/api-client";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
@@ -6,7 +7,6 @@ import { CalendarGrid } from "@/components/calendar-grid";
 import { CalendarHeader } from "@/components/calendar-header";
 import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
-import { useCalendars } from "@/hooks/use-calendars";
 import { useEventsList } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import InviteUserModal from "@/components/InviteUserModal";
@@ -23,17 +23,12 @@ export default function CalendarViewScreen() {
 
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
   const eventId = Array.isArray(params.eventId) ? params.eventId[0] : params.eventId;
-  const { calendars: backendCalendars } = useCalendars();
-  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({autoFetch:false});
+  const [calendar, setCalendar] = useState<any>(null);
+  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({ autoFetch: false });
   const { user } = useAuth();
   const [inviteVisible, setInviteVisible] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
-
-  const calendar = useMemo(() => {
-    const found = backendCalendars.find((c) => String(c.id) === calendarId);
-    return found || backendCalendars[0] || null;
-  }, [calendarId, backendCalendars]);
 
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -42,18 +37,27 @@ export default function CalendarViewScreen() {
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
   const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
 
-  // When a specific calendarId is in the URL (e.g. via share link), fetch events
-  // for that calendar directly so public calendars always show their events.
   useEffect(() => {
-    if (calendarId) {
-      refetchEvents(calendarId);
-    }
+    if (!calendarId) return;
+
+    Promise.all([
+      apiClient.get<any>(`/calendars/${calendarId}/share/`),
+      refetchEvents(calendarId),
+    ])
+      .then(([calendarData]) => {
+        setCalendar(calendarData);
+      })
+      .catch(console.error);
   }, [calendarId, refetchEvents]);
 
   // Load events when screen gains focus
   useFocusEffect(
-    React.useCallback(() => { refetchEvents(calendarId); }, [calendarId, refetchEvents])
-  );
+    React.useCallback(() => {
+        if (calendarId) {          
+            refetchEvents(calendarId);
+        }
+    }, [calendarId, refetchEvents])
+);
 
   const events = useMemo(() => {
     if (loadingEvents || !calendar) return [];
