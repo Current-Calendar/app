@@ -1,15 +1,29 @@
-# Current Calendar
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/743da1a0-b2e7-4035-8d3d-4e7815bdfde2" width="200" alt="Logo del Proyecto">
+
+  # Current Calendar
+
+</div>
 
 > A social calendar platform — create, share, and discover events with the people and communities that matter to you.
 
 [![CI](https://github.com/Current-Calendar/app/actions/workflows/CI_test.yml/badge.svg?branch=main)](https://github.com/Current-Calendar/app/actions/workflows/CI_test.yml)
 
+> **Beta is live!** We are currently accepting testers before the official release. [Sign up here](https://docs.google.com/forms/d/e/1FAIpQLSenX3NNKmhceOx2zGaedfAbtTXYXrPtX6M1DgA_oFJnnxMwTQ/viewform?fbclid=PAb21jcARJnUZleHRuA2FlbQIxMQBzcnRjBmFwcF9pZA81NjcwNjczNDMzNTI0MjcAAafrM8BbH_4QplT0Vi6rX6RLC_rTyLAH5W5voRcRTZP72lLPaw7ptJbvUdXL2w_aem_sYfJG-2GJjemg5xVcuiZHw) or visit our [Landing page](https://currentcalendar.vercel.app/).
 
 ---
 
 ## Overview
 
 **Current Calendar** is a full-stack social media application built around calendars and events. Beyond a personal organizer, it is a platform where users publish and follow public calendars, co-manage shared calendars with friends or teams, and discover what is happening nearby through an interactive map.
+
+The Current community is _Currently_ ;) formed by 22 Software Engineer students who aim to develop a great service. Built from Seville, this application was born as a faculty project.
+
+---
+
+## Documentation
+
+Extended documentation (in Spanish) is available in the [`docs/`](docs/) directory, covering topics such as API contracts, Redis cache usage, GraphQL queries, subscription plan restrictions, and a pilot-user guide.
 
 ---
 
@@ -265,6 +279,3 @@ Docker images are built and pushed to Docker Hub automatically via `dockerhub.ym
 
 ---
 
-## Documentation
-
-Extended documentation (in Spanish) is available in the [`docs/`](docs/) directory, covering topics such as API contracts, Redis cache usage, GraphQL queries, subscription plan restrictions, and a pilot-user guide.
