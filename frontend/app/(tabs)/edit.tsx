@@ -8,6 +8,7 @@ import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 type PrivacyStatus = 'PRIVATE' | 'PUBLIC';
 
@@ -34,6 +35,7 @@ export default function EditScreen() {
   const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(params.cover || null);
   const [newCoverImage, setNewCoverImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
+  const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
 
   const calendarId = params.id;
 
@@ -76,9 +78,14 @@ export default function EditScreen() {
   };
 
   const handleRemoveCover = () => {
+    setShowRemoveCoverConfirm(true);
+  };
+
+  const confirmRemoveCover = () => {
     setNewCoverImage(null);
     setExistingCoverUrl(null);
     setCoverRemoved(true);
+    setShowRemoveCoverConfirm(false);
   };
 
   // Determine what to display as cover
@@ -292,6 +299,15 @@ export default function EditScreen() {
 
         </View>
       </ScrollView>
+
+      <ConfirmDeleteModal
+        visible={showRemoveCoverConfirm}
+        title="Remove cover image"
+        message="Are you sure you want to remove this cover image?"
+        confirmLabel="Remove"
+        onCancel={() => setShowRemoveCoverConfirm(false)}
+        onConfirm={confirmRemoveCover}
+      />
     </View>
   );
 }

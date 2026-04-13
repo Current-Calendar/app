@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
@@ -13,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import apiClient from '@/services/api-client';
 
 const BG = "#E8E5D8";
@@ -41,10 +43,14 @@ export function EventDetailModal({
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   useEffect(() => {
     setAttendanceMenuOpen(false);
     setCommentsVisible(false);
+    setDeleteConfirmVisible(false);
+    setDeletingEvent(false);
   }, [event]);
 
   if (!event) return null;
@@ -71,13 +77,19 @@ export function EventDetailModal({
     }
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
+  const handleDeleteEvent = async () => {
+    if (!event || deletingEvent) return;
+
     try {
-      await deleteEvent(eventId);
+      setDeletingEvent(true);
+      await deleteEvent(event.id);
+      setDeleteConfirmVisible(false);
       onClose();
       router.replace('/calendars');
     } catch (error) {
       console.log('Error deleting event:', error);
+    } finally {
+      setDeletingEvent(false);
     }
   };
 
@@ -216,11 +228,18 @@ export function EventDetailModal({
                   </Pressable>
 
                   <Pressable
-                    style={styles.deleteBtn}
-                    onPress={() => handleDeleteEvent(event.id)}
+                    style={[styles.deleteBtn, deletingEvent && styles.deleteBtnDisabled]}
+                    onPress={() => setDeleteConfirmVisible(true)}
+                    disabled={deletingEvent}
                   >
-                    <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.deleteText}>Delete</Text>
+                    {deletingEvent ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                    )}
+                    <Text style={styles.deleteText}>
+                      {deletingEvent ? "Deleting..." : "Delete"}
+                    </Text>
                   </Pressable>
                 </>
               )}
@@ -238,6 +257,17 @@ export function EventDetailModal({
           image: (event as any).photo || (event as any).image || "",
           username: "",
           userAvatar: "",
+        }}
+      />
+
+      <ConfirmDeleteModal
+        visible={deleteConfirmVisible}
+        title="Delete event"
+        message={`Are you sure you want to delete "${event.title}"? This action cannot be undone.`}
+        loading={deletingEvent}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={() => {
+          void handleDeleteEvent();
         }}
       />
     </>
@@ -463,6 +493,10 @@ const styles = StyleSheet.create({
     backgroundColor: RED,
     borderWidth: 2,
     borderColor: RED_DARK,
+  },
+
+  deleteBtnDisabled: {
+    opacity: 0.7,
   },
 
   deleteText: {

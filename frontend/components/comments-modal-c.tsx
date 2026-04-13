@@ -22,6 +22,7 @@ import {
 } from "@/services/comments";
 import { CommentItem } from "@/types/comments";
 import apiClient from "@/services/api-client";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 const BG = "#FFFFFF";
 const TEXT = "#10464D";
@@ -44,6 +45,7 @@ export default function CommentsModalC({
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null);
+  const [deletingComment, setDeletingComment] = useState(false);
 
   const [openReplies, setOpenReplies] = useState<Record<number, boolean>>({});
   const [repliesByRoot, setRepliesByRoot] = useState<Record<number, CommentItem[]>>({});
@@ -68,6 +70,7 @@ export default function CommentsModalC({
       setOpenMenuId(null);
       setDeleteModalVisible(false);
       setCommentToDelete(null);
+      setDeletingComment(false);
       setOpenReplies({});
       setRepliesByRoot({});
       setLoadingRepliesByRoot({});
@@ -176,9 +179,10 @@ export default function CommentsModalC({
   };
 
   const handleDeleteComment = async () => {
-    if (!commentToDelete) return;
+    if (!commentToDelete || deletingComment) return;
 
     try {
+      setDeletingComment(true);
       const deletedComment =
         comments.find((c) => c.id === commentToDelete) ||
         Object.values(repliesByRoot).flat().find((c) => c.id === commentToDelete);
@@ -222,6 +226,7 @@ export default function CommentsModalC({
       console.log("Data:", e?.data);
       Alert.alert("Error", "Could not delete comment.");
     } finally {
+      setDeletingComment(false);
       setDeleteModalVisible(false);
       setCommentToDelete(null);
     }
@@ -512,43 +517,19 @@ export default function CommentsModalC({
         </Pressable>
       </Modal>
 
-      <Modal
+      <ConfirmDeleteModal
         visible={deleteModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
+        title="Delete comment"
+        message="Are you sure you want to delete this comment?"
+        loading={deletingComment}
+        onCancel={() => {
           setDeleteModalVisible(false);
           setCommentToDelete(null);
         }}
-      >
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmCard}>
-            <Text style={styles.confirmTitle}>Delete Comment</Text>
-            <Text style={styles.confirmText}>
-              Are you sure you want to delete this comment?
-            </Text>
-
-            <View style={styles.confirmActions}>
-              <Pressable
-                style={[styles.confirmButton, styles.cancelButton]}
-                onPress={() => {
-                  setDeleteModalVisible(false);
-                  setCommentToDelete(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.confirmButton, styles.deleteButton]}
-                onPress={handleDeleteComment}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onConfirm={() => {
+          void handleDeleteComment();
+        }}
+      />
     </>
   );
 }

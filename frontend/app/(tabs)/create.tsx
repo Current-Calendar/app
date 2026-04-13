@@ -20,6 +20,7 @@ import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 type PrivacyStatus = "PRIVATE" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
@@ -53,6 +54,7 @@ export default function CreateScreen() {
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -100,7 +102,12 @@ export default function CreateScreen() {
   };
 
   const handleRemoveCover = () => {
+    setShowRemoveCoverConfirm(true);
+  };
+
+  const confirmRemoveCover = () => {
     setCoverImage(null);
+    setShowRemoveCoverConfirm(false);
   };
 
   const handleCancel = () => {
@@ -378,6 +385,14 @@ export default function CreateScreen() {
         </View>
       </ScrollView>
 
+      <ConfirmDeleteModal
+        visible={showRemoveCoverConfirm}
+        title="Remove cover image"
+        message="Are you sure you want to remove this cover image?"
+        confirmLabel="Remove"
+        onCancel={() => setShowRemoveCoverConfirm(false)}
+        onConfirm={confirmRemoveCover}
+      />
 
     </View>
   );
