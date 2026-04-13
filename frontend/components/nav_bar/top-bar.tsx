@@ -14,6 +14,10 @@ export default function TopBar() {
     router.push((isAuthenticated ? "/profile" : "/login") as Href);
   };
 
+  const goNotificationsOrLogin = () => {
+    router.push((isAuthenticated ? "/(tabs)/notifications" : "/login") as Href);
+  };
+
   return (
     <View style={navTopBarStyles.topBar}>
       <Pressable style={navTopBarStyles.profileContainer} onPress={goProfileOrLogin}>
@@ -27,9 +31,9 @@ export default function TopBar() {
           resizeMode="contain"
         />
       </View>
-          <Pressable
+      <Pressable
         style={styles.bellWrap}
-        onPress={() => router.push("/(tabs)/notifications" as Href)}
+        onPress={goNotificationsOrLogin}
       >
         <Ionicons name="notifications-outline" size={22} color="#ffffff" />
         {unreadCount > 0 && <View style={styles.badge} />}

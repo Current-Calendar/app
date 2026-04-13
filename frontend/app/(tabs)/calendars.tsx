@@ -217,14 +217,16 @@ export default function CalendarScreen() {
     };
 
     useEffect(() => {
-        void fetchData();
-    }, [fetchData]);
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            void fetchData();
+        if (!isAuthenticated) {
+            setLoadingCalendars(false);
+            setCalendars([]);
+            setEvents([]);
+            router.replace('/login' as any);
+            return;
         }
-    }, [isAuthenticated]);
+
+        void fetchData();
+    }, [fetchData, isAuthenticated, router]);
     useEffect(() => {
         if (calendarsError || eventsError) {
             console.error('Error fetching data:', calendarsError || eventsError);
@@ -399,6 +401,51 @@ export default function CalendarScreen() {
             setDeletingCalendarId(null);
         }
     };
+
+    const goToLogin = useCallback(() => {
+        router.push('/login' as any);
+    }, [router]);
+
+    const goToNewEvent = useCallback(
+        (dateKey?: string | null) => {
+            if (!isAuthenticated) {
+                goToLogin();
+                return;
+            }
+
+            router.push(
+                `/create_events?date=${dateKey ?? selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}` as any
+            );
+        },
+        [goToLogin, isAuthenticated, router, selectedCalendarId, selectedDay]
+    );
+
+    const goToNewCalendar = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        router.push('/(tabs)/create' as any);
+    }, [goToLogin, isAuthenticated, router]);
+
+    const openImportCalendar = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        setImportModalVisible(true);
+    }, [goToLogin, isAuthenticated]);
+
+    const openCreateMenu = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        setCreateMenuVisible(true);
+    }, [goToLogin, isAuthenticated]);
 
     const goToPrev = () => {
         if (viewMode === 'week') {
@@ -584,9 +631,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.primaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() =>
-                                    router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
-                                }
+                                onPress={() => goToNewEvent()}
                             >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>
@@ -595,7 +640,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push('/(tabs)/create')}
+                                onPress={goToNewCalendar}
                             >
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
@@ -604,7 +649,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => setImportModalVisible(true)}
+                                onPress={openImportCalendar}
                             >
                                 <Ionicons name="download-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>Import Calendar</Text>
@@ -615,7 +660,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.primaryBtn}
                             activeOpacity={0.8}
-                            onPress={() => setCreateMenuVisible(true)}
+                            onPress={openCreateMenu}
                         >
                             <Ionicons name="add" size={18} color="#fff" />
                             <Text style={styles.primaryBtnText}>Create</Text>
@@ -643,7 +688,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => goToNewEvent(selectedDay)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -771,9 +816,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() =>
-                                router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
-                            }
+                            onPress={() => goToNewEvent(selectedDay)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
@@ -830,27 +873,15 @@ export default function CalendarScreen() {
                 onClose={() => setCreateMenuVisible(false)}
                 onNewEvent={() => {
                     setCreateMenuVisible(false);
-                    if (isAuthenticated) {
-                        router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ""}`);
-                    } else {
-                        router.push("/login");
-                    }
+                    goToNewEvent();
                 }}
                 onNewCalendar={() => {
                     setCreateMenuVisible(false);
-                    if (isAuthenticated) {
-                        router.push("/(tabs)/create");
-                    } else {
-                        router.push("/login");
-                    }
+                    goToNewCalendar();
                 }}
                 onImportCalendar={() => {
                     setCreateMenuVisible(false);
-                    if (isAuthenticated) {
-                        setImportModalVisible(true);
-                    } else {
-                        router.push("/login");
-                    }
+                    openImportCalendar();
                 }}
             />
         </View>
