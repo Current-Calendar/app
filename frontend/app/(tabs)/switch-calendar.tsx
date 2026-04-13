@@ -29,6 +29,25 @@ type CalendarCategory = {
   name: string;
 };
 
+const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
+const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
+type CookiePreference = 'accepted' | 'rejected';
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== 'web') return null;
+
+  try {
+    const pair = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split('=').slice(1).join('='));
+    return rawValue === 'accepted' || rawValue === 'rejected' ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function CalendarsScreen() {
   const router = useRouter();
 
@@ -45,13 +64,60 @@ export default function CalendarsScreen() {
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [errorSubscribeModal, setErrorSubscibeModal] = useState(false);
   const [subscribeErrorMessage, setSubscribeErrorMessage] = useState("");
+  const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
 
+  const readCookiePreference = () => {
+    if (Platform.OS !== 'web') return;
+
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      if (!saved) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      if (saved === 'accepted' || saved === 'rejected') {
+        setCookiePreference(saved);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as { value?: CookiePreference; expiresAt?: string };
+      const isValidValue = parsed?.value === 'accepted' || parsed?.value === 'rejected';
+      const expiryMs = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiryMs) || expiryMs <= Date.now();
+
+      if (!isValidValue || isExpired) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      setCookiePreference(parsed.value);
+    } catch {
+      setCookiePreference(readCookiePreferenceFromCookie());
+    }
+  };
+
+  useEffect(() => {
+    readCookiePreference();
+    if (Platform.OS !== 'web') return;
+
+    const onCookiePreferenceChanged = () => {
+      readCookiePreference();
+    };
+    window.addEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+
+    return () => {
+      window.removeEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+    };
+  }, []);
+
+  const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
     refetch: refetchCalendars,
-  } = useRecommendedCalendars({ enabled: isAuthenticated });
+  } = useRecommendedCalendars({ enabled: isAuthenticated && !isLimitedMode });
 
   const { data: adsConfig } = useAdsConfig();
 
@@ -60,7 +126,7 @@ export default function CalendarsScreen() {
       if (isAuthenticated) {
         refetchCalendars();
       }
-    }, [isAuthenticated])
+    }, [isAuthenticated, refetchCalendars])
   );
 
   useEffect(() => {
@@ -256,6 +322,15 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+        {isLimitedMode ? (
+          <View style={styles.limitedBanner}>
+            <Text style={styles.limitedBannerTitle}>Limited recommendation mode</Text>
+            <Text style={styles.limitedBannerBody}>
+              Recommended calendars are disabled while optional cookies are rejected.
+            </Text>
+          </View>
+        ) : null}
+
         {!authLoading && !hasSession ? (
           <View style={styles.authHeader}>
             <TouchableOpacity
@@ -307,8 +382,9 @@ export default function CalendarsScreen() {
                 No recommended calendars right now.
               </Text>
               <Text style={styles.emptySubtext}>
-                You may already follow all available calendars, or none match
-                your privacy access.
+                {isLimitedMode
+                  ? 'Accept optional cookies in Privacy settings to enable personalized recommendations.'
+                  : 'You may already follow all available calendars, or none match your privacy access.'}
               </Text>
             </View>
           }
@@ -358,6 +434,31 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 800,
     flex: 1,
+  },
+
+  limitedBanner: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#f0c88b',
+    backgroundColor: '#fff2dd',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  limitedBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7a4d00',
+    marginBottom: 2,
+  },
+
+  limitedBannerBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6a4706',
   },
   list: {
     paddingHorizontal: 16,

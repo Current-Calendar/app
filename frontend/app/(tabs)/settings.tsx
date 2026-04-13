@@ -6,24 +6,135 @@ import {
   ScrollView,
   Switch,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+
+const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
+const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
+type CookiePreference = 'accepted' | 'rejected';
+
+type CookiePreferenceStorage = {
+  value: CookiePreference;
+  acceptedAt: string;
+  expiresAt: string;
+};
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== 'web') return null;
+
+  try {
+    const pair = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split('=').slice(1).join('='));
+    return rawValue === 'accepted' || rawValue === 'rejected' ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
 
 const SettingsScreen = () => {
   const router = useRouter();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
+
+  const readCookiePreference = React.useCallback(() => {
+    if (Platform.OS !== 'web') return;
+
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      if (!saved) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      // Backward compatibility with previous plain string format.
+      if (saved === 'accepted' || saved === 'rejected') {
+        setCookiePreference(saved);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as CookiePreferenceStorage;
+      const isValidValue = parsed?.value === 'accepted' || parsed?.value === 'rejected';
+      const expiryMs = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiryMs) || expiryMs <= Date.now();
+
+      if (!isValidValue || isExpired) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      setCookiePreference(parsed.value);
+    } catch {
+      setCookiePreference(null);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    readCookiePreference();
+    if (Platform.OS !== 'web') return;
+
+    const onCookiePreferenceChanged = () => {
+      readCookiePreference();
+    };
+    window.addEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+
+    return () => {
+      window.removeEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+    };
+  }, [readCookiePreference]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      readCookiePreference();
+    }, [readCookiePreference]),
+  );
+
+  React.useEffect(() => {
+    if (cookiePreference === 'rejected') {
+      setNotificationsEnabled(false);
+    }
+  }, [cookiePreference]);
+
+  const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.headerCoral} />
+        <View style={styles.heroWrap}>
+          <View style={styles.heroBackdrop} />
+          <View style={styles.heroCard}>
+            <Text style={styles.heroEyebrow}>Account center</Text>
+            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.heroBody}>
+              Manage your profile, privacy, and experience in one place.
+            </Text>
+            {isLimitedMode && (
+              <View style={styles.limitedPill}>
+                <Ionicons name="shield-outline" size={14} color="#8a2f28" />
+                <Text style={styles.limitedPillText}>Limited mode due to cookie rejection</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>Settings</Text>
+          {isLimitedMode && (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>Cookie rejection impacts</Text>
+              <Text style={styles.warningBody}>
+                You can continue browsing normally, but optional features are reduced: no personalized
+                suggestions, no analytics optimization, and notifications are disabled.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>Account</Text>
             <TouchableOpacity
               style={[styles.row, styles.rowBorder]}
               onPress={() => router.push('/subscription' as any)}
@@ -85,7 +196,9 @@ const SettingsScreen = () => {
                 <View>
                   <Text style={styles.rowTitle}>Notifications</Text>
                   <Text style={styles.rowSubtitle}>
-                    Receive reminders and updates
+                    {isLimitedMode
+                      ? 'Disabled while optional cookies are rejected'
+                      : 'Receive reminders and updates'}
                   </Text>
                 </View>
               </View>
@@ -94,11 +207,13 @@ const SettingsScreen = () => {
                 onValueChange={setNotificationsEnabled}
                 trackColor={{ false: '#c9c4b8', true: '#e58a84' }}
                 thumbColor="#ffffff"
+                disabled={isLimitedMode}
               />
             </View>
           </View>
 
           <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>Privacy and support</Text>
             <TouchableOpacity
               style={[styles.row, styles.rowBorder]}
               onPress={() => router.push('/privacy-settings' as any)}
@@ -164,41 +279,120 @@ export default SettingsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFDED',
+    backgroundColor: '#efe8dc',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 80,
+    paddingBottom: 64,
   },
-  headerGreen: {
-    height: 74,
+  heroWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  heroBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 112,
+    backgroundColor: '#df7f77',
+  },
+  heroCard: {
+    marginTop: 20,
     backgroundColor: '#10464d',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#0c353b',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    shadowColor: '#000000',
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
   },
-  headerCoral: {
-    height: 34,
-    backgroundColor: '#e58a84',
+  heroEyebrow: {
+    color: '#9bd6ce',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: 12,
   },
   title: {
-    fontSize: 28,
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 8,
+  },
+  heroBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#dbf2ee',
+  },
+  limitedPill: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffe0dd',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#f4b2ab',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  limitedPillText: {
+    color: '#8a2f28',
+    fontSize: 12,
     fontWeight: '700',
-    color: '#2f2f2f',
-    textAlign: 'center',
-    marginBottom: 24,
+  },
+  warningCard: {
+    backgroundColor: '#fff0da',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#f2c98d',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  warningTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#825200',
+    marginBottom: 4,
+  },
+  warningBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#624000',
   },
   sectionCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 22,
+    backgroundColor: '#f8f5f1',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#c9c4b8',
+    borderColor: '#dacfbf',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     marginBottom: 18,
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: '#6a6156',
+    marginTop: 4,
+    marginBottom: 6,
   },
   row: {
     minHeight: 62,
@@ -209,7 +403,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#c9c4b8',
+    borderBottomColor: '#ddd4c8',
   },
   rowLeft: {
     flexDirection: 'row',
@@ -225,12 +419,12 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2f2f2f',
   },
   rowSubtitle: {
     fontSize: 13,
-    color: '#6e6e6e',
+    color: '#615d58',
     marginTop: 2,
   },
   backButton: {
