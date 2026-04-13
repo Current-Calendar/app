@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { User } from '../../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
@@ -266,6 +267,12 @@ const OwnProfile = () => {
     fetchOwnProfile();
     return () => { isMounted = false; };
   }, [currentUser, reloadKey]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setReloadKey((prev) => prev + 1);
+    }, [])
+  );
 
   const handleLikeMy = (id: string) => handleLikeInList(id, setMyCalendars);
   const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendars);

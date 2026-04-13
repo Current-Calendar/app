@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/services/api-client';
 
 export interface RecommendedEvent {
@@ -30,7 +30,7 @@ export function useRecommendedEvents(): UseRecommendedEventsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -58,11 +58,11 @@ export function useRecommendedEvents(): UseRecommendedEventsResult {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   return { events, loading, error, refetch: fetchEvents };
 }
