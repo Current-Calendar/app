@@ -459,6 +459,7 @@ def toggle_like_calendar(request, calendar_id):
             liked = True
 
     calendar.refresh_from_db(fields=['likes_count'])
+    cache.delete(f"recommended_calendars_{user.id}")
     return Response(
         {
             "calendar_id": calendar_id,
@@ -986,7 +987,8 @@ def recommended_calendars(request):
         return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
 
     calendars = recommend_calendars(user, limit=30)
-    serializer = CalendarSummarySerializer(calendars, many=True)
+    liked_calendar_ids = set(CalendarLike.objects.filter(user=user).values_list('calendar_id', flat=True))
+    serializer = CalendarSummarySerializer(calendars, many=True, context={'request': request, 'liked_calendar_ids': liked_calendar_ids})
 
     cache.set(cache_key, serializer.data, 60 * 5)
 

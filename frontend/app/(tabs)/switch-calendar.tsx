@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import CommentsModalC from "@/components/comments-modal-c";
@@ -40,13 +42,18 @@ export default function CalendarsScreen() {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
+    refetch: refetchCalendars,
   } = useRecommendedCalendars({ enabled: isAuthenticated });
 
   const { data: adsConfig } = useAdsConfig();
 
-  if (calendarsError) {
-    Alert.alert('Error', calendarsError);
-  }
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) {
+        refetchCalendars();
+      }
+    }, [isAuthenticated])
+  );
 
   useEffect(() => {
     if (calendarsError) {
@@ -108,21 +115,19 @@ export default function CalendarsScreen() {
 
   const handleLike = async (id: string) => {
     try {
-      const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
+      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(
+        `/calendars/${id}/like/`
+      );
       setCalendars((prev) =>
-        prev.map((calendar) => {
-          if (calendar.id === id) {
-            const currentLikes = calendar.likes_count ?? 0;
-            return {
-              ...calendar,
-              liked_by_me: res.liked,
-              likes_count: res.liked
-                ? currentLikes + 1
-                : Math.max(0, currentLikes - 1),
-            };
-          }
-          return calendar;
-        })
+        prev.map((calendar) =>
+          calendar.id === id
+            ? {
+                ...calendar,
+                liked_by_me: res.liked,
+                likes_count: res.likes_count,
+              }
+            : calendar
+        )
       );
     } catch (error) {
       Alert.alert("Error", "Could not like this calendar.");

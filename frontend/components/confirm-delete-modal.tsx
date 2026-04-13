@@ -44,7 +44,7 @@ export function ConfirmDeleteModal({
       animationType="fade"
       onRequestClose={handleCancel}
     >
-      <Pressable style={styles.overlay} onPress={handleCancel}>
+      <View style={styles.overlay}>
         <Pressable style={styles.card} onPress={() => {}}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
@@ -75,7 +75,7 @@ export function ConfirmDeleteModal({
             </Pressable>
           </View>
         </Pressable>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

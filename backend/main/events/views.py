@@ -572,7 +572,9 @@ def recommended_events(request):
         return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
 
     events = recommend_events(user, limit=30)
-    serializer = EventSerializer(events, many=True)
+    liked_event_ids = set(EventLike.objects.filter(user=user).values_list('event_id', flat=True))
+    saved_event_ids = set(EventSave.objects.filter(user=user).values_list('event_id', flat=True))
+    serializer = EventSerializer(events, many=True, context={'request': request, 'liked_ids': liked_event_ids, 'saved_ids': saved_event_ids})
 
     cache.set(cache_key, serializer.data, 60 * 5)
 
@@ -612,6 +614,7 @@ def toggle_like_event(request, event_id):
             liked = True
 
     event.refresh_from_db(fields=['likes_count'])
+    cache.delete(f"recommended_events_{user.id}")
     return Response(
         {
             "event_id": event_id,
@@ -642,6 +645,7 @@ def toggle_save_event(request, event_id):
                 pass
             saved = True
 
+    cache.delete(f"recommended_events_{user.id}")
     return Response(
         {
             "event_id": event_id,
