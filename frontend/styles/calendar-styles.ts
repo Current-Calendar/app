@@ -448,6 +448,9 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   content: {
     padding: 12,
+    minWidth: 0,
+    maxWidth: '100%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -557,16 +560,22 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   metaRow: {
   flexDirection: "row",
-  alignItems: "center",
+  alignItems: "flex-start",
   marginTop: 8,
+  width: "100%",
 },
+
 tagsWrap: {
   flexDirection: "row",
   flexWrap: "wrap",
-  gap: 6,
-  marginLeft: 6,
   flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  marginLeft: 6,
+  rowGap: 6,
+  columnGap: 6,
 },
+
 tagChip: {
   paddingHorizontal: 10,
   paddingVertical: 5,
@@ -574,6 +583,7 @@ tagChip: {
   backgroundColor: "#E8F2F2",
   borderWidth: 1,
   borderColor: "#CFE3E3",
+  maxWidth: "100%",
 },
 tagChipText: {
   color: "#10464D",
@@ -606,9 +616,11 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     fontWeight: '600',
   },
   body: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 2,
+  flexDirection: 'row',
+  gap: 20,
+  marginBottom: 2,
+  alignItems: 'flex-start',
+  minWidth: 0,
   },
   imageWrapper: {
     borderRadius: 16,
@@ -619,7 +631,9 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     height: '100%',
   },
   content: {
-    flex: 1,
+  flex: 1,
+  minWidth: 0,
+  maxWidth: '100%',
   },
   title: {
     fontSize: 18,
@@ -631,10 +645,12 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     marginBottom: 8,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  marginBottom: 4,
+  width: '100%',
+  minWidth: 0,
   },
   metaText: {
     fontSize: 13,
@@ -679,7 +695,10 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
   gap: 8,
   marginTop: 6,
   marginBottom: 6,
-},
+  flex: 1,
+  minWidth: 0,
+  maxWidth: '100%',
+  },
 tagChip: {
   paddingHorizontal: 10,
   paddingVertical: 5,
@@ -687,7 +706,9 @@ tagChip: {
   backgroundColor: "#E8F2F2",
   borderWidth: 1,
   borderColor: "#CFE3E3",
+  maxWidth: "100%",
 },
+
 tagChipText: {
   color: "#10464D",
   fontSize: 11,
@@ -913,9 +934,12 @@ export const calendarInfoModalStyles = StyleSheet.create({
 tagsWrap: {
   flexDirection: "row",
   flexWrap: "wrap",
-  gap: 6,
-  marginLeft: 6,
   flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  marginLeft: 8,
+  rowGap: 6,
+  columnGap: 6,
 },
 tagChip: {
   paddingHorizontal: 10,
