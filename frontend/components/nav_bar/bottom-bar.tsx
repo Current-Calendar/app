@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { ImportCalendarModal } from "@/components/import-calendar-modal";
@@ -18,7 +18,14 @@ export default function BottomBar({ NavButton }: Props) {
   const { isAuthenticated } = useAuth();
   const { createButtonLayout } = useTutorial();
 
-  const handleAddPress = () => setMenuVisible(true);
+  const handleAddPress = () => {
+    if (isAuthenticated) {
+      setMenuVisible(true);
+      return;
+    }
+
+    router.push("/login" as any);
+  };
   const closeMenu = () => setMenuVisible(false);
 
   const navigateTo = (path: string) => {
@@ -36,7 +43,12 @@ export default function BottomBar({ NavButton }: Props) {
 
   return (
     <View style={navBottomBarStyles.bottomBar}>
-      <NavButton icon="home" href="/calendars" />
+      <NavButton
+        icon="home"
+        onPress={() => {
+          router.push((isAuthenticated ? "/calendars" : "/login") as any);
+        }}
+      />
       <NavButton icon="search" href="/search" />
 
       <View
