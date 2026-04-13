@@ -123,12 +123,17 @@ export default function CalendarsScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
-      if (isAuthenticated) {
+      if (isAuthenticated && !isLimitedMode) {
         refetchCalendars();
       }
-    }, [isAuthenticated, refetchCalendars])
+    }, [isAuthenticated, isLimitedMode, refetchCalendars])
   );
 
+  useEffect(() => {
+    if (isLimitedMode) {
+      setCalendars([]);
+    }
+  }, [isLimitedMode]);
   useEffect(() => {
     if (calendarsError) {
       console.error("Error fetching data:", calendarsError);
@@ -154,79 +159,35 @@ export default function CalendarsScreen() {
       }
     };
 
-    void fetchSubscribedCalendars();
-  }, [isAuthenticated]);
 
-  useEffect(() => {
-    const buildCalendars = async () => {
-      const COLORS = [
-        "#6C63FF",
-        "#FF6584",
-        "#43D9AD",
-        "#FFB84C",
-        "#FF9F43",
-        "#00CFE8",
-      ];
-
-      const filteredCalendars = backendCalendars.filter((c: any) => {
-        const calendarId = String(c.id);
-        const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
-        const isNotMine = !user?.id || creatorId !== String(user.id);
-        const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-        const isVisibleByPrivacy = c.privacy === "PUBLIC";
-
-        return isVisibleByPrivacy && isNotMine && isNotSubscribed;
-      });
-
-      const baseCalendars: Calendar[] = filteredCalendars.map(
-        (c: any, index: number) => ({
-          id: String(c.id),
-          name: c.name,
-          description: c.description || "",
-          privacy: c.privacy,
-          origin: c.origin,
-          creator: c.creator || c.creator_username || "unknown",
-          color: COLORS[index % COLORS.length],
-          cover: c.cover || null,
-          likes_count: c.likes_count,
-          liked_by_me: c.liked_by_me || false,
-          categories: [],
-        })
-      );
-
-      const mappedCalendars: Calendar[] = await Promise.all(
-        baseCalendars.map(async (calendar) => {
-          try {
-            const categoriesResponse: any = await apiClient.get(
-              `/categories/for-calendar/${calendar.id}/`
+        <FlatList
+          data={listData}
+          keyExtractor={(item) => (isAdItem(item) ? item.id : (item as Calendar).id)}
+          renderItem={({ item }) => {
+            if (isAdItem(item)) return <AdCard placement="feed" />;
+            const calendar = item as Calendar;
+            return (
+              <CalendarCard
+                calendar={calendar}
+                onPress={handleOpenCalendar}
+                onLike={handleLike}
+                onSubscribe={handleSubscribe}
+                onComment={handleOpenCalendarComments}
+                isSubscribed={subscribedCalendarIds.includes(calendar.id)}
+              />
             );
-
-            const categories: CalendarCategory[] =
-              (Array.isArray(categoriesResponse) && categoriesResponse) ||
-              (Array.isArray(categoriesResponse?.results) &&
-                categoriesResponse.results) ||
-              (Array.isArray(categoriesResponse?.data) &&
-                categoriesResponse.data) ||
-              [];
-
-            return {
-              ...calendar,
-              categories: categories.map((category: any) => ({
-                id: category.id,
-                name: category.name,
-              })),
-            };
-          } catch (error) {
-            console.log(
-              "Error loading calendar categories:",
-              calendar.id,
-              error
-            );
-            return {
-              ...calendar,
-              categories: [],
-            };
+          }}
+          ListEmptyComponent={
+            <View style={styles.emptyStateWrap}>
+              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+              <Text style={styles.emptySubtext}>
+                You may already follow all available calendars, or none match your privacy access.
+              </Text>
+            </View>
           }
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
         })
       );
 
@@ -307,6 +268,59 @@ export default function CalendarsScreen() {
     }
   };
 
+  if (isLimitedMode) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          {isLimitedMode ? (
+            <View style={styles.limitedBanner}>
+              <Text style={styles.limitedBannerTitle}>Limited recommendation mode</Text>
+              <Text style={styles.limitedBannerBody}>
+                Recommended calendars are disabled while optional cookies are rejected.
+              </Text>
+            </View>
+          ) : null}
+
+          {!authLoading && !hasSession ? (
+            <View style={styles.authHeader}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/login');
+                }}
+              >
+                <Text style={styles.loginButtonText}>Log In</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/register');
+                }}
+              >
+                <Text style={styles.registerButtonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <EventsSwitch />
+
+          <View style={styles.emptyStateWrap}>
+            <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+            <Text style={styles.emptySubtext}>
+              Recommended calendars are hidden while optional cookies are rejected.
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Accept optional cookies in Privacy settings to see calendar suggestions again.
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (loadingCalendars) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -359,9 +373,7 @@ export default function CalendarsScreen() {
 
         <FlatList
           data={listData}
-          keyExtractor={(item) =>
-            isAdItem(item) ? item.id : (item as Calendar).id
-          }
+          keyExtractor={(item) => (isAdItem(item) ? item.id : (item as Calendar).id)}
           renderItem={({ item }) => {
             if (isAdItem(item)) return <AdCard placement="feed" />;
             const calendar = item as Calendar;
@@ -378,13 +390,9 @@ export default function CalendarsScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyStateWrap}>
-              <Text style={styles.emptyText}>
-                No recommended calendars right now.
-              </Text>
+              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
               <Text style={styles.emptySubtext}>
-                {isLimitedMode
-                  ? 'Accept optional cookies in Privacy settings to enable personalized recommendations.'
-                  : 'You may already follow all available calendars, or none match your privacy access.'}
+                You may already follow all available calendars, or none match your privacy access.
               </Text>
             </View>
           }

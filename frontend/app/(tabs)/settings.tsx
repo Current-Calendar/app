@@ -127,8 +127,8 @@ const SettingsScreen = () => {
             <View style={styles.warningCard}>
               <Text style={styles.warningTitle}>Cookie rejection impacts</Text>
               <Text style={styles.warningBody}>
-                You can continue browsing normally, but optional features are reduced: no personalized
-                suggestions, no analytics optimization, and notifications are disabled.
+                You can keep using the app normally, but calendar recommendations, event recommendations,
+                and non-essential notifications are turned off.
               </Text>
             </View>
           )}
