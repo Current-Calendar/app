@@ -5,7 +5,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("main", "0028_seed_default_categories_and_tags.py"),
+        ("main", "0028_seed_default_categories_and_tags"),
     ]
 
     operations = [
