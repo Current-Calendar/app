@@ -22,37 +22,50 @@ const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
     sections: [
       {
         heading: "1. Data Controller Identity",
-        body: "The controller of the personal data collected through the platform is the Current development team (an academic project of the University of Seville).",
+        body: "The controller of the collected personal data is:",
         bullets: [
+          "Controller: Current development team",
+          "Academic project - University of Seville",
           "Contact: support@currentcalendar.es",
-          "Request channel: Settings > Help & support > Contact us",
         ],
       },
       {
         heading: "2. Data We Process",
-        body: "We process data provided by the user (registration, profile, contact details) and technical usage data (IP, activity, security logs, and app usage).",
+        body: "We process the data you provide directly (registration, profile, contact) and the data derived from your browsing activity (IP address, cookies, technical logs). We do not process special category data (health, religion, biometrics) unless it is explicitly required for a specific platform feature.",
       },
       {
         heading: "3. Purpose and Legal Basis",
         bullets: [
-          "Service delivery and account management.",
-          "Security and fraud prevention.",
-          "Support and user assistance.",
-          "Compliance with applicable legal obligations.",
+          "Service management: Registration and performance of the user agreement (Art. 6.1.b GDPR).",
+          "Support: Handling inquiries and improving the experience (Legitimate interest, Art. 6.1.f GDPR).",
+          "Marketing: Sending newsletters or promotions only if you have checked the consent box (Consent, Art. 6.1.a GDPR).",
+          "Security: Preventing fraud and cyberattacks (Legitimate interest).",
         ],
       },
       {
-        heading: "4. User Rights",
-        body: "You may exercise, among others, your rights of access, rectification, erasure, objection, restriction, and portability.",
+        heading: "4. Recipients",
+        body: "Your data will not be shared with third parties outside the service, except:",
         bullets: [
-          "Right of access: you can request a copy of your processed data.",
-          "Right to be forgotten: you can request deletion of your account and related data when legally applicable.",
-          "To request access or the right to be forgotten, email us from Contact us (Settings > Help & support) at support@currentcalendar.es.",
+          "Processors: Hosting providers, analytics tools, or email services (always under confidentiality agreements).",
+          "Legal obligation: Competent authorities, law enforcement, or courts.",
         ],
       },
       {
-        heading: "5. Retention",
-        body: "Data is retained for as long as necessary to provide the service and meet legal obligations. After account closure, data is blocked for the legally required periods.",
+        heading: "5. International Transfers",
+        body: "If our technology providers operate outside the European Economic Area (for example, in the U.S.), we ensure they comply with the EU-U.S. Data Privacy Framework or use Standard Contractual Clauses approved by the European Commission.",
+      },
+      {
+        heading: "6. Your Rights",
+        body: "You have the right to access, rectify, erase, restrict processing, object to processing, and data portability.",
+        bullets: [
+          "You can exercise these rights by emailing support@currentcalendar.es.",
+          "To verify your identity, include a copy of your ID card or equivalent document.",
+          "You may also file a complaint with the Spanish Data Protection Agency (AEPD).",
+        ],
+      },
+      {
+        heading: "7. Retention",
+        body: "We will keep your data while you do not request its deletion. After the account is closed, the data will remain blocked for the legal limitation periods to address any potential liabilities.",
       },
     ],
   },
@@ -60,60 +73,105 @@ const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
     title: "Cookies Policy",
     sections: [
       {
-        heading: "1. What Cookies Are",
-        body: "Cookies are small text files stored on your device to enable technical functions, remember preferences, and, where applicable, measure app usage.",
+        heading: "1. What is a cookie?",
+        body: "A cookie is a small text file stored in your browser when you visit our platform. It allows the system to remember your visit, keep your session open, and analyze how you interact with the website to improve your experience.",
       },
       {
-        heading: "2. Types of Cookies",
+        heading: "2. Cookie controller",
         bullets: [
-          "Technical/necessary: essential for authentication, security, and core operation.",
-          "Preferences: store user settings.",
-          "Analytics: help understand usage and improve the experience.",
+          "Controller: Current development team",
+          "Academic project - University of Seville",
+          "Contact: support@currentcalendar.es",
         ],
       },
       {
-        heading: "3. Consent Management",
-        body: "You can accept or reject non-essential cookies and change your choice at any time from settings and/or your browser.",
+        heading: "3. Types of cookies we use",
+        bullets: [
+          "Technical cookies (necessary): Required for the website to function.",
+          "Preference cookies: Remember your settings (such as language or time zone).",
+          "Analytics cookies: Tell us how many people visit and which sections are most popular. They are only enabled if you give consent.",
+        ],
       },
       {
-        heading: "4. Retention and Third Parties",
-        body: "Each cookie may have a different duration. If third-party analytics services are used, their policies and data protection safeguards apply.",
+        heading: "4. Cookie inventory",
+        bullets: [
+          "sessionid (First-party): Identify your session. Technical cookie. Session duration.",
+          "csrftoken (First-party): CSRF protection. Technical cookie. Duration: 1 year.",
+          "cookie_consent (First-party): Remember whether you accepted or rejected cookies. Technical cookie. Duration: 6 months.",
+          "_ga (Google): Usage statistics. Analytics cookie. Duration: 2 years.",
+          "_gid (Google): Distinguish users. Analytics cookie. Duration: 24 hours.",
+        ],
+      },
+      {
+        heading: "5. How to manage or withdraw consent",
+        body: "You can change your mind at any time from the platform cookie settings or from your browser privacy settings (Chrome, Firefox, Safari, and Edge).",
+      },
+      {
+        heading: "6. International transfers",
+        body: "When using tools such as Google Analytics, some data may travel to servers in the U.S. We ensure these providers comply with the Data Privacy Framework or have signed the European Union Standard Contractual Clauses.",
       },
     ],
   },
   terms: {
-    title: "Terms and Conditions",
+    title: "Terms and Conditions of Use",
     sections: [
       {
-        heading: "1. Scope of the Service",
-        body: "Current provides features to create, share, and manage calendars and events. Use of the service is subject to these terms.",
+        heading: "1. Service scope",
+        body: "Current is a digital service developed as an academic project at the University of Seville that allows users to create, share, and manage event calendars. Access to and use of the Platform is subject to acceptance of these Terms, as well as the Privacy and Cookies Policy.",
       },
       {
-        heading: "2. Permitted Use",
+        heading: "2. Users and access",
         bullets: [
-          "Do not publish illegal or offensive content, or content that infringes third-party rights.",
-          "Do not interfere with the platform's security or technical operation.",
-          "Do not perform unauthorized automated usage.",
+          "Requirements: You must be at least 14 years old. By registering, you agree to provide accurate information.",
+          "Responsibility: You are solely responsible for the security of your password and for all activities carried out under your account.",
         ],
       },
       {
-        heading: "3. User Account",
-        body: "Each user is responsible for keeping credentials confidential and for all actions performed through their account.",
+        heading: "3. Usage rules and conduct",
+        body: "The following are expressly prohibited:",
+        bullets: [
+          "Publishing illegal, offensive, defamatory content, or content that violates third-party rights.",
+          "Performing scraping or automated data extraction without authorization.",
+          "Interfering with the security or technical operation of the platform.",
+          "Spreading malware or engaging in fraudulent activity.",
+          "Consequences: Breach of these terms may result in content removal or permanent account closure.",
+        ],
       },
       {
-        heading: "4. Measures for Breach",
-        body: "The platform may limit, suspend, or cancel accounts in case of serious breaches of these terms.",
+        heading: "4. Content and intellectual property",
+        bullets: [
+          "Your content: You own what you post, but you grant us a free worldwide license to store and display that content.",
+          "Current rights: The design, source code, logos, and trademarks belong to the development team. Reproduction is not allowed without permission.",
+        ],
       },
       {
-        heading: "5. Governing Law and Updates",
-        body: "These terms are governed by applicable regulations and may be updated. When appropriate, users will be informed of relevant changes.",
+        heading: "5. Limitation of liability",
+        bullets: [
+          "Service status: The platform is provided as is. As an academic project, we do not guarantee uninterrupted availability or the accuracy of third-party events.",
+          "Exclusion: We are not responsible for data loss or unauthorized access resulting from user negligence.",
+        ],
+      },
+      {
+        heading: "6. Suspension and termination",
+        bullets: [
+          "By you: You may request account deletion at any time.",
+          "By us: We may suspend your access for breach of terms or for technical/academic reasons.",
+        ],
+      },
+      {
+        heading: "7. Governing law and jurisdiction",
+        body: "These Terms are governed by Spanish law (GDPR, LOPDGDD, and LSSI-CE). Any dispute shall be submitted to the courts of Seville.",
       },
     ],
   },
 };
 
 export default function PrivacySettingsScreen() {
-  const [openDoc, setOpenDoc] = useState<LegalDocKey | null>(null);
+  const [openDocs, setOpenDocs] = useState<Record<LegalDocKey, boolean>>({
+    privacy: false,
+    cookies: false,
+    terms: false,
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -124,7 +182,7 @@ export default function PrivacySettingsScreen() {
         </Text>
 
         {(Object.keys(LEGAL_DOCS) as LegalDocKey[]).map((key) => {
-          const isOpen = openDoc === key;
+          const isOpen = openDocs[key];
           const doc = LEGAL_DOCS[key];
 
           return (
@@ -132,7 +190,12 @@ export default function PrivacySettingsScreen() {
               <TouchableOpacity
                 style={styles.itemHeader}
                 activeOpacity={0.85}
-                onPress={() => setOpenDoc(isOpen ? null : key)}
+                onPress={() =>
+                  setOpenDocs((prev) => ({
+                    ...prev,
+                    [key]: !prev[key],
+                  }))
+                }
               >
                 <Text style={styles.itemTitle}>{doc.title}</Text>
                 <Ionicons
