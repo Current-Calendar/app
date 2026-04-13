@@ -44,6 +44,17 @@ function formatSelectedDay(dateKey: string): string {
     return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
 }
 
+function getDates(startDate: Date, stopDate: Date) {
+    const dateArray = new Array();
+    let currentDate = startDate;
+    while (currentDate <= stopDate) {
+        dateArray.push(new Date(currentDate));
+        currentDate = new Date(currentDate);
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dateArray;
+}
+
 export default function CalendarScreen() {
     const { isAuthenticated, user } = useAuth();
     const { downloadCalendarFile } = useCalendarTransfer();
@@ -230,22 +241,28 @@ export default function CalendarScreen() {
             .filter((e: any) =>
                 e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
             )
-            .map((e: any) => {
+            .flatMap((e: any) => {
                 const calendar = calendars.find(c => e.calendars.includes(Number(c.id)));
 
-                return {
-                    id: String(e.id),
-                    calendarId: String(e.calendars[0] || ''),
-                    title: e.title,
-                    description: e.description || '',
-                    place_name: e.place_name || '',
-                    date: e.date,
-                    time: e.time.substring(0, 5),
-                    recurrence: e.recurrence,
-                    type: 'other',
-                    color: calendar?.color || '#6C63FF',
-                };
+                const dates = getDates(new Date(e.date), e.end_date ? new Date(e.end_date) : new Date(e.date));
+
+                return dates.map(date => {
+                    return {
+                        id: String(e.id),
+                        calendarId: String(e.calendars[0] || ''),
+                        title: e.title,
+                        description: e.description || '',
+                        place_name: e.place_name || '',
+                        date: date.toISOString().slice(0, 10),
+                        time: e.time.substring(0, 5),
+                        recurrence: e.recurrence,
+                        type: 'other',
+                        color: calendar?.color || '#6C63FF',
+                        show_time: dates.length === 1,
+                    }
+                });
             });
+            console.log(mappedEvents);
 
         setEvents(mappedEvents);
     }, [backendEvents, calendars]);

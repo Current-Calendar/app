@@ -15,6 +15,7 @@ from main.rs.events import recommend_events
 from ..serializers import EventSerializer, EventPagination
 from utils.storage import get_signed_url
 import json
+from datetime import datetime
 
 
 @api_view(['POST'])
@@ -26,6 +27,7 @@ def create_event(request):
     title = data.get("title")
     date = data.get("date")
     time = data.get("time")
+    end_date = data.get("end_date")
     calendars_ids = data.get("calendars")
 
     if calendars_ids and isinstance(calendars_ids, str):
@@ -58,6 +60,9 @@ def create_event(request):
             {"errors": ["El campo 'time' es obligatorio."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    
+    if end_date:
+        end_date = datetime.fromisoformat(end_date)
     
     if Event.objects.filter(
         creator=creator,
@@ -111,6 +116,7 @@ def create_event(request):
         place_name=data.get("place_name", ""),
         date=date,
         time=time,
+        end_date=end_date,
         photo=photo,
         recurrence=data.get("recurrence"),
         external_id=data.get("external_id"),

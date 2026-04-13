@@ -374,11 +374,31 @@ export default function CreateEventsScreen() {
     return d;
   });
 
+  const [endDate, setEndDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   const [time, setTime] = useState<Date>(() => {
     const d = new Date();
     d.setHours(14, 0, 0, 0);
     return d;
   });
+
+  const [endTime, setEndTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(14, 0, 0, 0);
+    return d;
+  });
+
+  const [saveTime, setSaveTime] = useState()
 
   // ====== Pickers ======
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
@@ -389,7 +409,11 @@ export default function CreateEventsScreen() {
   const timeLabel = useMemo(() => `${toHM(time)} h`, [time]);
   const dateLabel = useMemo(() => toISODate(date), [date]);
 
-  const openTimePicker = () => {
+  const endTimeLabel = useMemo(() => `${toHM(endTime)} h`, [endTime]);
+  const endDateLabel = useMemo(() => toISODate(endDate), [endDate]);
+
+  const openTimePicker = (time: any, setTime: any) => {
+    setSaveTime(() => setTime);
     if (Platform.OS === "web") {
       setWebHour(time.getHours());
       setWebMinute(time.getMinutes());
@@ -401,7 +425,7 @@ export default function CreateEventsScreen() {
 
   const onPickNativeTime = (_event: any, selected?: Date) => {
     if (Platform.OS !== "ios") setShowNativeTimePicker(false);
-    if (selected) setTime(selected);
+    if (selected) saveTime(selected);
   };
 
   const applyWebTime = () => {
@@ -409,7 +433,7 @@ export default function CreateEventsScreen() {
     d.setHours(webHour);
     d.setMinutes(webMinute);
     d.setSeconds(0, 0);
-    setTime(d);
+    saveTime(d);
     setShowWebTimePicker(false);
   };
 
@@ -475,6 +499,14 @@ export default function CreateEventsScreen() {
   const publish = async () => {
     setFormError(null);
 
+    if (endDate < date) {
+      setFormError("End date must be after start date");
+      return;
+    }
+    if ((endDate.getTime() === date.getTime()) && (endTime < time)) {
+      setFormError("End date must be after start date");
+      return;
+    }
     const titleTrimmed = title.trim();
     if (!titleTrimmed) {
       setFormError("El título es obligatorio.");
@@ -484,7 +516,6 @@ export default function CreateEventsScreen() {
       setFormError("Selecciona un calendar.");
       return;
     }
-
     if (!user) {
         setFormError("User not authenticated.");
         return;
@@ -495,6 +526,9 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
+      let end_date = new Date(endDate);
+      end_date.setHours(endTime.getHours());
+
       if (coverAsset) {
          const formData = new FormData();
          formData.append("title", titleTrimmed);
@@ -502,6 +536,7 @@ export default function CreateEventsScreen() {
          formData.append("place_name", place?.trim() ?? "");
          formData.append("date", toISODate(date));
          formData.append("time", toHMS(time));
+         formData.append("end_date", endDate.toISOString())
          formData.append("calendars", JSON.stringify(calendarsIds));
          formData.append("creator_id", String(user.id));
 
@@ -519,6 +554,7 @@ export default function CreateEventsScreen() {
             place_name: place?.trim() ?? "",
             date: toISODate(date),
             time: toHMS(time),
+            end_date,
             calendars: calendarsIds,
             creator_id: user.id,
         };
@@ -677,25 +713,44 @@ export default function CreateEventsScreen() {
               </Text>
             )}
 
-            {/* Date */}
-            <View style={styles.timeRow}>
-              <Text style={styles.fieldLabel}>Date:</Text>
-              <View style={styles.timePill}>
-                <Text style={styles.timeText}>{dateLabel}</Text>
+            <View style={{display: "flex", flexDirection: width < 1000 ? "column" : "row", marginBlock: 10}}>
+              <View style={{flexGrow: 1}}>
+                <Text style={styles.fieldLabel}>Start Date:</Text>
+                <View style={styles.timeRow}>
+                  {/* Date */}
+                  <View style={styles.timePill}>
+                    <Text style={styles.timeText}>{dateLabel}</Text>
+                  </View>
+                  {/* Time */}
+                  <Pressable style={styles.timePill} onPress={() => openTimePicker(time, setTime)}>
+                    <Text style={styles.timeText}>{timeLabel}</Text>
+                  </Pressable>
+                </View>
+
+                {/* Mini calendar */}
+                <View style={styles.calendarCenterWrap}>
+                  <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+                </View>
               </View>
-            </View>
 
-            {/* Time */}
-            <View style={styles.timeRow}>
-              <Text style={styles.fieldLabel}>Time:</Text>
-              <Pressable style={styles.timePill} onPress={openTimePicker}>
-                <Text style={styles.timeText}>{timeLabel}</Text>
-              </Pressable>
-            </View>
+              <View style={{flexGrow: 1}}>
+                <Text style={styles.fieldLabel}>End Date:</Text>
+                <View style={styles.timeRow}>
+                  {/* Date */}
+                  <View style={styles.timePill}>
+                    <Text style={styles.timeText}>{endDateLabel}</Text>
+                  </View>
+                  {/* Time */}
+                  <Pressable style={styles.timePill} onPress={() => openTimePicker(endTime, setEndTime)}>
+                    <Text style={styles.timeText}>{endTimeLabel}</Text>
+                  </Pressable>
+                </View>
 
-            {/* Mini calendar */}
-            <View style={styles.calendarCenterWrap}>
-              <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+                {/* Mini calendar */}
+                <View style={styles.calendarCenterWrap}>
+                  <MiniMonthCalendar value={endDate} onChange={setEndDate} size={miniSize} />
+                </View>
+              </View>
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "center",alignItems: "center", gap: 12, marginTop: 14 }}>

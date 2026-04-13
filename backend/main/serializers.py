@@ -271,7 +271,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'title', 'description', 'place_name',
-            'date', 'time', 'recurrence', 'external_id',
+            'date', 'time', 'end_date', 'recurrence', 'external_id',
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
             'photo', 'creator_username', 'creator_photo', 'attendees',
