@@ -115,51 +115,62 @@ function RootLayoutContent() {
   };
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="new-password" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-      </Stack>
-      {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
-        <View style={styles.cookieBanner}>
-          <View style={styles.cookieTextWrap}>
-            <Text style={styles.cookieTitle}>This website uses cookies</Text>
-            <Text style={styles.cookieBody}>
-              We use essential cookies for functionality and optional cookies for analytics.
-            </Text>
-            <Pressable onPress={() => router.push("/cookies" as any)}>
-              <Text style={styles.cookieLink}>Read the Cookies Policy</Text>
-            </Pressable>
-          </View>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TutorialProvider>
+          <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="new-password" options={{ headerShown: false }} />
+              {/* Esta es tu ruta nueva */}
+              <Stack.Screen name="(tabs)/payment" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+            </Stack>
 
-          <View style={styles.cookieActions}>
-            <Pressable
-              style={[styles.cookieButton, styles.cookieSecondaryButton]}
-              onPress={() => saveCookiePreference("rejected")}
-            >
-              <Text style={styles.cookieSecondaryButtonText}>Reject</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.cookieButton, styles.cookieSecondaryButton]}
-              onPress={() => router.push("/privacy-settings" as any)}
-            >
-              <Text style={styles.cookieSecondaryButtonText}>Configure</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.cookieButton, styles.cookiePrimaryButton]}
-              onPress={() => saveCookiePreference("accepted")}
-            >
-              <Text style={styles.cookiePrimaryButtonText}>Accept</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-      <StatusBar style="auto" />
-    </ThemeProvider>
+            {/* Este es el banner de cookies que venía de HEAD */}
+            {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
+              <View style={styles.cookieBanner}>
+                <View style={styles.cookieTextWrap}>
+                  <Text style={styles.cookieTitle}>This website uses cookies</Text>
+                  <Text style={styles.cookieBody}>
+                    We use essential cookies for functionality and optional cookies for analytics.
+                  </Text>
+                  <Pressable onPress={() => router.push("/cookies" as any)}>
+                    <Text style={styles.cookieLink}>Read the Cookies Policy</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.cookieActions}>
+                  <Pressable
+                    style={[styles.cookieButton, styles.cookieSecondaryButton]}
+                    onPress={() => saveCookiePreference("rejected")}
+                  >
+                    <Text style={styles.cookieSecondaryButtonText}>Reject</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.cookieButton, styles.cookieSecondaryButton]}
+                    onPress={() => router.push("/privacy-settings" as any)}
+                  >
+                    <Text style={styles.cookieSecondaryButtonText}>Configure</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.cookieButton, styles.cookiePrimaryButton]}
+                    onPress={() => saveCookiePreference("accepted")}
+                  >
+                    <Text style={styles.cookiePrimaryButtonText}>Accept</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </TutorialProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
-
+    
 const styles = StyleSheet.create({
   cookieBanner: {
     position: "fixed",

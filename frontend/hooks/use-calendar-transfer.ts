@@ -10,11 +10,11 @@ export function useCalendarTransfer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const downloadCalendarFile = async (calendarId: string, token?: string) => {
+  const downloadCalendarFile = async (calendarId: string) => {
     setLoading(true);
     setError(null);
     try {
-      return await downloadCalendar(calendarId, token);
+      return await downloadCalendar(calendarId);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -23,11 +23,11 @@ export function useCalendarTransfer() {
     }
   };
 
-  const importFromICS = async (userId: number) => {
+  const importFromICS = async () => {
     setLoading(true);
     setError(null);
     try {
-      return await importICS(userId);
+      return await importICS();
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -49,11 +49,11 @@ export function useCalendarTransfer() {
     }
   };
 
-  const importFromIOS = async (calendarUrl: string, userId: number) => {
+  const importFromIOS = async (calendarUrl: string) => {
     setLoading(true);
     setError(null);
     try {
-      return await importIOSCalendar(calendarUrl, userId);
+      return await importIOSCalendar(calendarUrl);
     } catch (err) {
       setError(err as Error);
       throw err;

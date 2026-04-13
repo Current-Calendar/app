@@ -1,5 +1,6 @@
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
+
 const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, "");
 const stripLeadingSlashes = (value: string) => value.replace(/^\/+/, "");
 
@@ -67,6 +68,7 @@ export const API_CONFIG = {
     listNotifications: buildEndpoint('notifications/'),
     handleNotification: (id: string | number) => buildEndpoint(`notifications/${id}/`),
     rsvpEvent: (eventId: string | number) => buildEndpoint(`events/${eventId}/rsvp/`),
+    updatePlan: '/users/me/plan/',
   },
 };
 

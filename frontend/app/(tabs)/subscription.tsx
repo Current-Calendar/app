@@ -6,18 +6,30 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/use-auth';
+
+const mascotFree = require('../../assets/images/mascota-sorpresa.png');
+const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.png');
+const mascotBusiness = require('../../assets/images/mascota-traje.png');
 
 const SubscriptionScreen = () => {
   const { width } = useWindowDimensions();
   const router = useRouter();
+  const { user } = useAuth();
+  const currentPlan = (user?.plan ?? 'FREE') as PlanKey;
 
   const isMobile = width < 768;
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
+
+  const goToPayment = (plan: 'FREE' | 'STANDARD' | 'BUSINESS') => {
+    router.push({ pathname: '/payment', params: { plan } });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,6 +49,8 @@ const SubscriptionScreen = () => {
           <View style={[styles.plansGrid, isMobile && styles.plansStack]}>
             <PlanCard
               title="FREE PLAN"
+              planKey="FREE"
+              mascot={mascotFree}
               description="All core functions, but limited"
               introText="Some limitations:"
               bullets={[
@@ -51,10 +65,14 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
+              isActive={currentPlan === 'FREE'}
+              onSelect={goToPayment}
             />
 
             <PlanCard
               title="STANDARD PACK"
+              planKey="STANDARD"
+              mascot={mascotStandard}
               price="4.99€"
               period="/monthly"
               description="Ideal for users seeking a complete experience"
@@ -74,10 +92,14 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
+              isActive={currentPlan === 'STANDARD'}
+              onSelect={goToPayment}
             />
 
             <PlanCard
               title="BUSINESS PACK"
+              planKey="BUSINESS"
+              mascot={mascotBusiness}
               price="9.99€"
               period="/monthly"
               description="Ideal for influencers and companies that want to grow"
@@ -95,6 +117,8 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
+              isActive={currentPlan === 'BUSINESS'}
+              onSelect={goToPayment}
             />
           </View>
         </View>
@@ -103,8 +127,12 @@ const SubscriptionScreen = () => {
   );
 };
 
+type PlanKey = 'FREE' | 'STANDARD' | 'BUSINESS';
+
 type PlanCardProps = {
   title: string;
+  planKey: PlanKey;
+  mascot: ImageSourcePropType;
   description: string;
   bullets: string[];
   footer?: string;
@@ -118,10 +146,14 @@ type PlanCardProps = {
   isSmallScreen: boolean;
   isVerySmallScreen: boolean;
   isMobile: boolean;
+  isActive: boolean;
+  onSelect: (plan: PlanKey) => void;
 };
 
 const PlanCard = ({
   title,
+  planKey,
+  mascot,
   description,
   bullets,
   footer,
@@ -135,6 +167,8 @@ const PlanCard = ({
   isSmallScreen,
   isVerySmallScreen,
   isMobile,
+  isActive,
+  onSelect,
 }: PlanCardProps) => {
   const titleSize = isMobile ? 18 : isVerySmallScreen ? 16 : isSmallScreen ? 18 : 22;
   const priceSize = isMobile ? 32 : isVerySmallScreen ? 24 : isSmallScreen ? 28 : 36;
@@ -142,6 +176,18 @@ const PlanCard = ({
   const descSize = isMobile ? 17 : isVerySmallScreen ? 12 : isSmallScreen ? 13 : 15;
   const annualTitleSize = isMobile ? 17 : isVerySmallScreen ? 13 : isSmallScreen ? 15 : 18;
   const annualPriceSize = isMobile ? 28 : isVerySmallScreen ? 18 : isSmallScreen ? 20 : 24;
+  const mascotSize = isMobile ? 90 : isVerySmallScreen ? 70 : isSmallScreen ? 80 : 100;
+
+  const isFree = planKey === 'FREE';
+  const buttonLabel = isActive ? 'Subscribed' : isFree ? 'Start Free' : 'Subscribe';
+  const buttonStyle = isActive
+    ? styles.buttonSubscribed
+    : isFree
+    ? styles.buttonFree
+    : highlight
+    ? styles.buttonHighlight
+    : styles.buttonBusiness;
+  const buttonTextColor = isActive ? '#10464d' : isFree ? '#10464d' : '#ffffff';
 
   return (
     <View
@@ -153,6 +199,15 @@ const PlanCard = ({
     >
       <View style={styles.planColumn}>
         <View style={[styles.planCard, isMobile && styles.planCardMobile]}>
+          {/* Mascot */}
+          <View style={styles.mascotContainer}>
+            <Image
+              source={mascot}
+              style={[styles.mascotImage, { width: mascotSize, height: mascotSize }]}
+              resizeMode="contain"
+            />
+          </View>
+
           <Text style={[styles.planTitle, { fontSize: titleSize }]}>{title}</Text>
 
           {price ? (
@@ -189,6 +244,18 @@ const PlanCard = ({
           {footer ? (
             <Text style={[styles.footerText, { fontSize: titleSize - 2 }]}>{footer}</Text>
           ) : null}
+
+          {/* Pay / Select button */}
+          <TouchableOpacity
+            style={[styles.selectButton, buttonStyle]}
+            onPress={() => !isActive && onSelect(planKey)}
+            activeOpacity={isActive ? 1 : 0.82}
+            disabled={isActive}
+          >
+            <Text style={[styles.selectButtonText, { fontSize: textSize + 1, color: buttonTextColor }]}>
+              {buttonLabel}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {annualTitle && annualPrice && (
@@ -207,6 +274,17 @@ const PlanCard = ({
                 </Text>
               ) : null}
             </View>
+
+            <TouchableOpacity
+              style={[styles.selectButton, buttonStyle, { marginTop: 12 }]}
+              onPress={() => !isActive && onSelect(planKey)}
+              activeOpacity={isActive ? 1 : 0.82}
+              disabled={isActive}
+            >
+              <Text style={[styles.selectButtonText, { fontSize: textSize + 1, color: buttonTextColor }]}>
+                {isActive ? 'Subscribed' : `${buttonLabel} (Annual)`}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -286,6 +364,13 @@ const styles = StyleSheet.create({
   planCardMobile: {
     minHeight: undefined,
   },
+  mascotContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  mascotImage: {
+    borderRadius: 12,
+  },
   planTitle: {
     textAlign: 'center',
     color: '#10464d',
@@ -351,6 +436,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#10464d',
   },
+  selectButton: {
+    marginTop: 20,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonSubscribed: {
+    backgroundColor: '#d4f0d4',
+    borderWidth: 2,
+    borderColor: '#10464d',
+  },
+  buttonFree: {
+    backgroundColor: '#e7e3d3',
+    borderWidth: 2,
+    borderColor: '#10464d',
+  },
+  buttonHighlight: {
+    backgroundColor: '#10464d',
+  },
+  buttonBusiness: {
+    backgroundColor: '#0b5d73',
+  },
+  selectButtonText: {
+    fontWeight: '700',
+    color: '#10464d',
+  },
   annualCard: {
     marginTop: 12,
     backgroundColor: '#ffffff',
@@ -404,3 +516,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
