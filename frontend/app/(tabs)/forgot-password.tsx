@@ -14,7 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { API_CONFIG } from "@/constants/api";
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
 const TEAL_DARK = "#0F4E4F";

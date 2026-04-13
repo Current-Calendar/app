@@ -289,7 +289,7 @@ export const styles = StyleSheet.create({
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
+    backgroundColor: "#FFFDED",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,

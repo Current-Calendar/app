@@ -13,7 +13,7 @@ import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 import { useAuth } from "@/hooks/use-auth";
 import InviteUserModal from "@/components/InviteUserModal";
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
 

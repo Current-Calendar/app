@@ -24,7 +24,7 @@ import apiClient, { appendPhoto } from '@/services/api-client';
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
