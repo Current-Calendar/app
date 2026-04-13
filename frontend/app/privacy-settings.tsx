@@ -256,10 +256,11 @@ export default function PrivacySettingsScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.heroCard}>
-          <Text style={styles.eyebrow}>Data controls</Text>
+          <Text style={styles.eyebrow}>Privacy controls</Text>
           <Text style={styles.title}>Privacy settings</Text>
           <Text style={styles.subtitle}>
-            Configure cookie consent and review the legal documents that define how your data is handled.
+            Choose whether we can use optional cookies. If you reject them, the app still works,
+            but suggestions and non-essential notifications are turned off.
           </Text>
 
           <View style={styles.statusPill}>
@@ -270,10 +271,10 @@ export default function PrivacySettingsScreen() {
             />
             <Text style={styles.statusText}>
               {cookiePreference === "accepted"
-                ? "Optional cookies accepted"
+                ? "Optional cookies on"
                 : cookiePreference === "rejected"
-                  ? "Optional cookies rejected (limited mode)"
-                  : "Cookie decision pending"}
+                  ? "Optional cookies off"
+                  : "No cookie choice yet"}
             </Text>
           </View>
         </View>
@@ -282,9 +283,8 @@ export default function PrivacySettingsScreen() {
           <View style={styles.preferenceCard}>
             <Text style={styles.preferenceTitle}>Cookie preferences</Text>
             <Text style={styles.preferenceBody}>
-              You can continue using the app after rejecting cookies. In that case, optional features
-              are reduced: personalized content, analytics-based improvements, and some non-essential
-              reminders are disabled.
+              You can keep using the app if you reject optional cookies. What changes is that calendar
+              recommendations, event recommendations, and non-essential notifications are turned off.
             </Text>
             <View style={styles.preferenceActions}>
               <TouchableOpacity
@@ -309,8 +309,8 @@ export default function PrivacySettingsScreen() {
           <View style={styles.noticeCard}>
             <Text style={styles.noticeTitle}>Active limited mode</Text>
             <Text style={styles.noticeBody}>
-              Core navigation remains available. Optional personalization and analytics are disabled as
-              requested.
+              You can browse normally. Only the recommendation and non-essential notification features
+              are disabled.
             </Text>
           </View>
         )}

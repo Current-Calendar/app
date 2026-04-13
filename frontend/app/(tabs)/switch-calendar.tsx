@@ -104,6 +104,12 @@ export default function CalendarsScreen() {
     error: calendarsError,
   } = useRecommendedCalendars({ enabled: isAuthenticated && !isLimitedMode });
 
+  useEffect(() => {
+    if (isLimitedMode) {
+      setCalendars([]);
+    }
+  }, [isLimitedMode]);
+
   if (calendarsError) {
     Alert.alert('Error', calendarsError);
   }
@@ -235,6 +241,59 @@ export default function CalendarsScreen() {
   }
 };
 
+  if (isLimitedMode) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          {isLimitedMode ? (
+            <View style={styles.limitedBanner}>
+              <Text style={styles.limitedBannerTitle}>Limited recommendation mode</Text>
+              <Text style={styles.limitedBannerBody}>
+                Recommended calendars are disabled while optional cookies are rejected.
+              </Text>
+            </View>
+          ) : null}
+
+          {!authLoading && !hasSession ? (
+            <View style={styles.authHeader}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/login');
+                }}
+              >
+                <Text style={styles.loginButtonText}>Log In</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/register');
+                }}
+              >
+                <Text style={styles.registerButtonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <EventsSwitch />
+
+          <View style={styles.emptyStateWrap}>
+            <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+            <Text style={styles.emptySubtext}>
+              Recommended calendars are hidden while optional cookies are rejected.
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Accept optional cookies in Privacy settings to see calendar suggestions again.
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (loadingCalendars) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -283,32 +342,42 @@ export default function CalendarsScreen() {
 
         <EventsSwitch />
 
-        <FlatList
-          data={calendars}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CalendarCard
-              calendar={item}
-              onPress={handleOpenCalendar}
-              onLike={handleLike}
-              onSubscribe={handleSubscribe}
-              onComment={handleOpenCalendarComments}
-              isSubscribed={subscribedCalendarIds.includes(item.id)}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyStateWrap}>
-              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
-              <Text style={styles.emptySubtext}>
-                {isLimitedMode
-                  ? 'Accept optional cookies in Privacy settings to enable personalized recommendations.'
-                  : 'You may already follow all available calendars, or none match your privacy access.'}
-              </Text>
-            </View>
-          }
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        {isLimitedMode ? (
+          <View style={styles.emptyStateWrap}>
+            <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+            <Text style={styles.emptySubtext}>
+              Recommended calendars are hidden while optional cookies are rejected.
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Accept optional cookies in Privacy settings to see calendar suggestions again.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={calendars}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <CalendarCard
+                calendar={item}
+                onPress={handleOpenCalendar}
+                onLike={handleLike}
+                onSubscribe={handleSubscribe}
+                onComment={handleOpenCalendarComments}
+                isSubscribed={subscribedCalendarIds.includes(item.id)}
+              />
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyStateWrap}>
+                <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+                <Text style={styles.emptySubtext}>
+                  You may already follow all available calendars, or none match your privacy access.
+                </Text>
+              </View>
+            }
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
         <CommentsModalC
           visible={commentsModalVisible}
