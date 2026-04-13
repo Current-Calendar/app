@@ -412,9 +412,11 @@ export default function CalendarScreen() {
 
     const handleViewModeChange = (mode: CalendarViewMode) => {
         setViewMode(mode);
-        // When switching to week, use current date context
-        if (mode === 'week') {
-            setWeekDay(new Date(year, month, 1).getDate());
+            if (mode === 'week') {
+            const today = new Date();
+            setYear(today.getFullYear());
+            setMonth(today.getMonth());
+            setWeekDay(today.getDate());
         }
     };
 

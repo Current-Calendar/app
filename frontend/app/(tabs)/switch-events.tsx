@@ -9,7 +9,9 @@ import {
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
@@ -87,60 +89,67 @@ export default function EventsScreen() {
     void fetchSubscribedCalendars();
   }, [hasSession]);
 
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [calData, evData] = await Promise.all([
+        apiClient.get<any[]>("/recommendations/calendars/"),
+        apiClient.get<any[]>("/recommendations/events/"),
+      ]);
+
+      const calendarMap: Record<number, any> = {};
+      calData.forEach((c: any) => {
+        calendarMap[Number(c.id)] = c;
+      });
+
+      const mappedEvents: Event[] = evData.map((e: any) => {
+        const cal = calendarMap[e.calendars[0]];
+        return {
+          id: String(e.id),
+          title: e.title || e.titulo || "",
+          description: e.description || e.descripcion || "",
+          location: e.place_name || e.nombre_lugar || "",
+          date: e.date || e.fecha || "",
+          time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
+          image: resolveImageUrl(e.photo || e.foto),
+          username: e.creator_username || cal?.creator || "unknown",
+          userAvatar: e.creator_photo || null,
+          calendarId: String(e.calendars[0] || ""),
+          calendarName: cal?.name || "General",
+          likes_count: e.likes_count ?? 0,
+          liked_by_me: e.liked_by_me ?? false,
+          saved_by_me: e.saved_by_me ?? false,
+          attendees: Array.isArray(e.attendees)
+            ? e.attendees.map((a: any) => ({
+              name: a.username || a.name || "",
+              respondedAt: a.responded_at || a.respondedAt || "",
+              avatar: a.photo || a.avatar || undefined,
+            }))
+            : [],
+        };
+      }).filter((evt: Event) => evt.id && evt.title);
+
+      setEvents(mappedEvents);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      Alert.alert("Error", "Could not load events.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [calData, evData] = await Promise.all([
-          apiClient.get<any[]>("/recommendations/calendars/"),
-          apiClient.get<any[]>("/recommendations/events/"),
-        ]);
-
-        const calendarMap: Record<number, any> = {};
-        calData.forEach((c: any) => {
-          calendarMap[Number(c.id)] = c;
-        });
-
-        const mappedEvents: Event[] = evData.map((e: any) => {
-          const cal = calendarMap[e.calendars[0]];
-          return {
-            id: String(e.id),
-            title: e.title || e.titulo || "",
-            description: e.description || e.descripcion || "",
-            location: e.place_name || e.nombre_lugar || "",
-            date: e.date || e.fecha || "",
-            time: typeof (e.time || e.hora) === "string" ? String(e.time || e.hora).slice(0, 5) : "",
-            image: resolveImageUrl(e.photo || e.foto),
-            username: e.creator_username || cal?.creator || "unknown",
-            userAvatar: e.creator_photo || null,
-            calendarId: String(e.calendars[0] || ""),
-            calendarName: cal?.name || "General",
-            likes_count: e.likes_count ?? 0,
-            liked_by_me: e.liked_by_me ?? false,
-            saved_by_me: e.saved_by_me ?? false,
-            attendees: Array.isArray(e.attendees)
-              ? e.attendees.map((a: any) => ({
-                name: a.username || a.name || "",
-                respondedAt: a.responded_at || a.respondedAt || "",
-                avatar: a.photo || a.avatar || undefined,
-              }))
-              : [],
-          };
-        }).filter((evt: Event) => evt.id && evt.title);
-
-        setEvents(mappedEvents);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        Alert.alert("Error", "Could not load events.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     void fetchData();
   }, [authLoading]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!authLoading) {
+        void fetchData();
+      }
+    }, [authLoading])
+  );
 
   const errorMessage = calendarsError;
 
@@ -289,7 +298,7 @@ export const styles = StyleSheet.create({
   },
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#E8E5D8",
+    backgroundColor: "#FFFDED",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,

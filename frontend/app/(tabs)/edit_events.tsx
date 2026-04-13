@@ -345,6 +345,22 @@ export default function EditEventsScreen() {
       setPlace(event.place_name);
       setCoverUri(event.photo);
 
+      if (event.date) {
+        const [y, m, d] = String(event.date).split("-").map(Number);
+        const eventDate = new Date(y, m - 1, d);
+        eventDate.setHours(0, 0, 0, 0);
+        setDate(eventDate);
+      }
+
+      if (event.time) {
+        const [h, min] = String(event.time).split(":").map(Number);
+        const eventTime = new Date();
+        eventTime.setHours(h, min, 0, 0);
+        setTime(eventTime);
+        setWebHour(h);
+        setWebMinute(min);
+      }
+
       if (event.latitude && event.longitude) {
         setLat(event.latitude);
         setLon(event.longitude);

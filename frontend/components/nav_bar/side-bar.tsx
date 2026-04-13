@@ -80,7 +80,6 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
         <SidebarItem icon="search" label="Search" href="/(tabs)/search" />
         <SidebarItem icon="add-circle" label="Create" onPress={handleAddPress} />
         <SidebarItem icon="calendar" label="Discover" href="/(tabs)/switch-calendar" />
-        <SidebarItem icon="people" label="Our Team" />
         <SidebarItem icon="compass" label="Map" href="/radar" />
         <View style={{ position: "relative" }}>
           <SidebarItem icon="notifications" label="Notifications" href="/(tabs)/notifications" />

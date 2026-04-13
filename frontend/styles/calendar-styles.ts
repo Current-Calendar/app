@@ -215,7 +215,8 @@ export const eventPillStyles = StyleSheet.create({
 
 export const calendarCardStyles = StyleSheet.create({
   cardContainer: {
-    width: '90%',
+    width: '100%',
+    alignSelf: 'center',
     backgroundColor: 'white',
     borderRadius: 15,
     marginBottom: 15,
@@ -253,7 +254,7 @@ export const calendarCardStyles = StyleSheet.create({
   cardDetails: {
     flex: 1,
     marginLeft: 12,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   titleRow: {
     flexDirection: 'row',
@@ -272,11 +273,14 @@ export const calendarCardStyles = StyleSheet.create({
     lineHeight: 18,
   },
   actionsRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 16,
-  marginTop: 10,
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 10,
+    width: '100%',
+    flexWrap: 'wrap',
+  },
 actionButton: {
   flexDirection: 'row',
   alignItems: 'center',

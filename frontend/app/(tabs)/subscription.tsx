@@ -219,7 +219,7 @@ export default SubscriptionScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e7e3d3',
+    backgroundColor: '#FFFDED',
   },
   scrollView: {
     flex: 1,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   planCard: {
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#ffffff',
     borderWidth: 2,
     borderColor: '#10464d',
     borderRadius: 28,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   annualCard: {
     marginTop: 12,
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#ffffff',
     borderWidth: 2,
     borderColor: '#10464d',
     borderRadius: 24,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginTop: 6,
     width: '42%',
-    backgroundColor: '#e7e3d3',
+    backgroundColor: '#FFFDED',
     borderWidth: 1,
     borderColor: '#10464d',
     borderRadius: 12,

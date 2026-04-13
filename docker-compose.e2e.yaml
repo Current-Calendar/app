@@ -1,0 +1,53 @@
+services:
+  backend:
+    environment:
+      FRONTEND_URL: http://frontend-e2e:8081
+
+  frontend-e2e:
+    image: node:20-alpine
+    container_name: frontend_e2e_container
+    working_dir: /app/frontend
+    command: sh -c "npm ci && npx expo start --web --host lan --port 8081"
+    environment:
+      EXPO_PUBLIC_API_URL: http://backend:8000/api/v1
+      EXPO_PUBLIC_API_BASE: http://backend:8000
+      CI: "1"
+    volumes:
+      - ./frontend:/app/frontend
+    networks:
+      - current_network
+
+  selenium:
+    image: selenium/standalone-chromium:latest
+    container_name: selenium_e2e_container
+    shm_size: 2gb
+    ports:
+      - "4444:4444"
+    networks:
+      - current_network
+
+  e2e-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend.dev
+    container_name: e2e_runner_container
+    working_dir: /workspace
+    command: ["sh", "e2e/run_docker_e2e.sh"]
+    environment:
+      E2E_HEADLESS: "true"
+      E2E_BASE_URL: http://frontend-e2e:8081
+      E2E_API_BASE: http://backend:8000/api/v1
+      E2E_SELENIUM_REMOTE_URL: http://selenium:4444/wd/hub
+      E2E_SELENIUM_STATUS_URL: http://selenium:4444/wd/hub/status
+      E2E_API_HEALTH_URL: http://backend:8000/api/docs/
+    volumes:
+      - ./:/workspace
+    depends_on:
+      backend:
+        condition: service_started
+      frontend-e2e:
+        condition: service_started
+      selenium:
+        condition: service_started
+    networks:
+      - current_network

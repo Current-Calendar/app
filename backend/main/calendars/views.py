@@ -82,16 +82,21 @@ def delete_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated, CanChangePrivacy])
 def edit_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
-
-    if calendar.creator != request.user and request.user not in calendar.co_owners.all():
+    if calendar.creator == request.user:
+        campos_editables = ['name', 'description', 'privacy']
+    elif calendar.co_owners.filter(id=request.user.id).exists():
+        campos_editables = ['name', 'description']
+    else:
         return Response(
-        {'error': 'You do not have permission to edit this calendar.'},
-        status=status.HTTP_403_FORBIDDEN
-    )
-
+            {'error': 'You do not have permission to edit this calendar.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    if 'privacy' in request.data and calendar.creator != request.user:
+        return Response(
+            {"error": "Only the creator can change privacy."},
+            status=status.HTTP_403_FORBIDDEN
+        )
     ESTADOS_VALIDOS = ACCEPTED_CALENDAR_PRIVACY_VALUES
-    campos_editables = ['name', 'privacy', 'description']
-
     for campo in campos_editables:
         if campo in request.data:
             valor = request.data[campo]
@@ -403,6 +408,61 @@ def leave_calendar(request, calendar_id):
         status=status.HTTP_200_OK,
     )
 
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_co_owners(request, calendar_id):
+    """
+    Set the co-owners list for a calendar. Only the calendar creator may call this.
+
+    PATCH /api/v1/calendars/<id>/co_owners/
+    Body: { "co_owners": [<user_id>, ...] }
+    """
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    if calendar.creator != request.user:
+        return Response(
+            {'error': 'Solo el creador del calendario puede gestionar los co-propietarios.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    raw_ids = request.data.get('co_owners', [])
+    if not isinstance(raw_ids, list):
+        return Response(
+            {'error': 'El campo "co_owners" debe ser una lista de IDs de usuario.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Coerce to ints and remove the creator's own id (creator cannot be a co-owner)
+    try:
+        user_ids = [int(uid) for uid in raw_ids if int(uid) != calendar.creator_id]
+    except (TypeError, ValueError):
+        return Response(
+            {'error': 'Los IDs de usuario deben ser números enteros.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    users = list(User.objects.filter(id__in=user_ids))
+    if len(users) != len(set(user_ids)):
+        return Response(
+            {'error': 'Uno o más usuarios no existen.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    calendar.co_owners.set(users)
+
+    return Response({
+        'id': calendar.id,
+        'name': calendar.name,
+        'description': calendar.description,
+        'privacy': calendar.privacy,
+        'cover': get_signed_url(request, calendar.cover),
+        'creator': calendar.creator.username,
+        'creator_id': calendar.creator_id,
+        'creator_username': calendar.creator.username,
+        'co_owners': _serialize_co_owners(calendar),
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, CanAddFavoriteCalendar])
 def subscribe_calendar(request, calendar_id):
@@ -454,6 +514,7 @@ def toggle_like_calendar(request, calendar_id):
             liked = True
 
     calendar.refresh_from_db(fields=['likes_count'])
+    cache.delete(f"recommended_calendars_{user.id}")
     return Response(
         {
             "calendar_id": calendar_id,
@@ -651,7 +712,7 @@ def import_google_calendar(request):
             return Response({"error": "Has alcanzado el límite de calendars privados permitidos. Elimina alguno para importar este calendar."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
     except Exception as e:
         print(f"Error al importar eventos: {e}")
-        return Response({"error": str(e)}, status=500, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "Error al conectar con Google Calendar. Inténtalo de nuevo más tarde."}, status=500, headers={"Access-Control-Allow-Origin": "*"})
 
     return Response({"message": "Eventos importados exitosamente", "count": count}, headers={"Access-Control-Allow-Origin": "*"})
 
@@ -944,6 +1005,7 @@ def share_calendar_html(request, calendar_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def export_to_ics(request, calendar_id):
     """Endpoint para exportar un calendar a formato ICS."""
     try:
@@ -951,13 +1013,22 @@ def export_to_ics(request, calendar_id):
     except Calendar.DoesNotExist:
         return Response({"error": "Calendar no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
 
+    user = request.user
+    is_owner_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
+    if calendar.privacy == 'PRIVATE' and not is_owner_or_co_owner:
+        return Response({"error": "No tienes permiso para exportar este calendario."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+
     cal = ICalCalendar()
-    cal.add('prodid', '-//Current Calendar//')
+    cal.add('prodid', '-//Current Calendar//currentcalendar.es//ES')
     cal.add('version', '2.0')
 
-    for event in calendar.events.all():
-        ical_event = event.to_ical_event()
-        cal.add_component(ical_event)
+    for event in calendar.events.all().select_related('creator'):
+        try:
+            ical_event = event.to_ical_event()
+            cal.add_component(ical_event)
+        except Exception as exc:
+            print(f"Warning: could not serialize event {event.pk} to ICS: {exc}")
+            continue
 
     ics_content = cal.to_ical().decode('utf-8')
     response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
@@ -981,7 +1052,8 @@ def recommended_calendars(request):
         return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
 
     calendars = recommend_calendars(user, limit=30)
-    serializer = CalendarSummarySerializer(calendars, many=True)
+    liked_calendar_ids = set(CalendarLike.objects.filter(user=user).values_list('calendar_id', flat=True))
+    serializer = CalendarSummarySerializer(calendars, many=True, context={'request': request, 'liked_calendar_ids': liked_calendar_ids})
 
     cache.set(cache_key, serializer.data, 60 * 5)
 

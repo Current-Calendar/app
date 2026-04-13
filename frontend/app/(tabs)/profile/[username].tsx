@@ -11,10 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { User } from '../../../types/auth';
 import { useAuth } from "@/hooks/use-auth";
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import CommentsModalC from '../../../components/comments-modal-c';
+import { ConfirmDeleteModal } from '../../../components/confirm-delete-modal';
 import profileStyles from '../../../styles/profile-styles';
 import apiClient from '../../../services/api-client';
 import LogoutModal from '../../../components/logout-modal';
@@ -199,10 +201,16 @@ const OwnProfile = () => {
 
   const { user: currentUser, logout } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const performLogout = async () => {
-    setShowLogoutModal(false);
-    await logout();
-    router.replace('/login');
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      router.replace('/login');
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   const [shownUser, setShownUser] = useState<User | null>(null);
@@ -219,6 +227,9 @@ const OwnProfile = () => {
   const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
+  const [unsubscribeModalVisible, setUnsubscribeModalVisible] = useState(false);
+  const [pendingUnsubscribeCalendarId, setPendingUnsubscribeCalendarId] = useState<string | null>(null);
+  const [isUnsubscribing, setIsUnsubscribing] = useState(false);
   const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
     shownUser?.id,
     Boolean(shownUser)
@@ -257,8 +268,51 @@ const OwnProfile = () => {
     return () => { isMounted = false; };
   }, [currentUser, reloadKey]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setReloadKey((prev) => prev + 1);
+    }, [])
+  );
+
   const handleLikeMy = (id: string) => handleLikeInList(id, setMyCalendars);
   const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendars);
+
+  const openUnsubscribeModal = (id: string) => {
+    setPendingUnsubscribeCalendarId(id);
+    setUnsubscribeModalVisible(true);
+  };
+
+  const handleUnsubscribe = async (id: string) => {
+    try {
+      const response = await apiClient.post<{ subscribed: boolean; calendar_id: number }>(
+        `/calendars/${id}/subscribe/`
+      );
+      if (!response.subscribed) {
+        setFollowingCalendars((prev) => prev.filter((cal) => String(cal.id) !== id));
+      }
+    } catch (error) {
+      console.error('Error unsubscribing from calendar:', error);
+      Alert.alert('Error', 'Could not unsubscribe from this calendar. Please try again.');
+    }
+  };
+
+  const confirmUnsubscribe = async () => {
+    if (!pendingUnsubscribeCalendarId) return;
+    setIsUnsubscribing(true);
+    try {
+      await handleUnsubscribe(pendingUnsubscribeCalendarId);
+      setUnsubscribeModalVisible(false);
+    } finally {
+      setIsUnsubscribing(false);
+      setPendingUnsubscribeCalendarId(null);
+    }
+  };
+
+  const cancelUnsubscribe = () => {
+    if (isUnsubscribing) return;
+    setUnsubscribeModalVisible(false);
+    setPendingUnsubscribeCalendarId(null);
+  };
 
   const handleComment = (id: string, list: CalendarData[]) => {
     const found = list.find((c) => String(c.id) === id);
@@ -314,7 +368,7 @@ const OwnProfile = () => {
 
   return (
     <SafeAreaView style={profileStyles.container}>
-      <ScrollView style={profileStyles.scrollView}>
+      <ScrollView style={profileStyles.scrollView} contentContainerStyle={{ paddingBottom: 64 }}>
 
         <ProfileHeader />
 
@@ -402,6 +456,7 @@ const OwnProfile = () => {
                   onPress={() => router.push(`/calendar-view?calendarId=${cal.id}` as any)}
                   onLike={handleLikeFollowing}
                   onComment={(id) => handleComment(id, followingCalendars)}
+                  onUnsubscribe={openUnsubscribeModal}
                 />
               ))
             ) : (
@@ -426,6 +481,18 @@ const OwnProfile = () => {
         visible={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={performLogout}
+        loading={isLoggingOut}
+      />
+
+      <ConfirmDeleteModal
+        visible={unsubscribeModalVisible}
+        title="Unfollow calendar"
+        message="Are you sure you want to stop following this calendar?"
+        confirmLabel="Accept"
+        cancelLabel="Cancel"
+        loading={isUnsubscribing}
+        onCancel={cancelUnsubscribe}
+        onConfirm={confirmUnsubscribe}
       />
 
       <CommentsModalC

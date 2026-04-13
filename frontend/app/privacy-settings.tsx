@@ -232,7 +232,7 @@ export default function PrivacySettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e7e3d3",
+    backgroundColor: "#FFFDED",
   },
   scroll: {
     flex: 1,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   itemWrap: {
-    backgroundColor: "#e9e7e7",
+    backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#c9c4b8",
