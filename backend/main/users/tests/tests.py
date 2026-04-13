@@ -319,6 +319,11 @@ class BuscarUsuariosTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
 
+    def test_busqueda_no_usa_email(self):
+        response = self.client.get(f"{ENDPOINT_BUSCAR_USUARIOS}?search=lucia@example.com")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 0)
+
     def test_busqueda_sin_parametro(self):
         response = self.client.get(ENDPOINT_BUSCAR_USUARIOS)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

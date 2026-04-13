@@ -13,7 +13,7 @@ from utils.storage import get_signed_url
 @permission_classes([AllowAny])
 def search_users(request):
     """
-    Endpoint to register a new user.
+    Endpoint to search users.
     GET /api/v1/users/search/
     """
     query = request.GET.get("search")
@@ -26,7 +26,6 @@ def search_users(request):
 
     users = User.objects.filter(
         Q(username__icontains=query) |
-        Q(email__icontains=query) |
         Q(pronouns__icontains=query)
     ).exclude(is_superuser=True).distinct()
 
