@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from '@/services/api-client';
 
 export type ReportedType = 'USER' | 'EVENT' | 'CALENDAR';
@@ -23,6 +24,24 @@ const REPORT_COOLDOWN_MS = 5 * 60 * 1000;
 const buildStorageKey = (type: ReportedType, id: number): string =>
   `report_cooldown_${type}_${id}`;
 
+const storage = {
+  async getItem(key: string) {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (err) {
+      console.warn('Failed to read cooldown from storage', err);
+      return null;
+    }
+  },
+  async setItem(key: string, value: string) {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (err) {
+      console.warn('Failed to write cooldown to storage', err);
+    }
+  },
+};
+
 const getReportedItemId = (
   payload: ReportPayload
 ): number | null => {
@@ -43,9 +62,9 @@ export function useReport() {
   const [error, setError] = useState<Error | null>(null);
 
   const getRemainingCooldown = useCallback(
-    (type: ReportedType, id: number): number => {
+    async (type: ReportedType, id: number): Promise<number> => {
       const key = buildStorageKey(type, id);
-      const raw = localStorage.getItem(key);
+      const raw = await storage.getItem(key);
       if (!raw) return 0;
       const lastReportedAt = parseInt(raw, 10);
       if (isNaN(lastReportedAt)) return 0;
@@ -56,8 +75,8 @@ export function useReport() {
   );
 
   const canReport = useCallback(
-    (type: ReportedType, id: number): boolean =>
-      getRemainingCooldown(type, id) === 0,
+    async (type: ReportedType, id: number): Promise<boolean> =>
+      (await getRemainingCooldown(type, id)) === 0,
     [getRemainingCooldown]
   );
 
@@ -66,7 +85,10 @@ export function useReport() {
       const itemId = getReportedItemId(payload);
 
       if (itemId != null) {
-        const remaining = getRemainingCooldown(payload.reported_type, itemId);
+        const remaining = await getRemainingCooldown(
+          payload.reported_type,
+          itemId
+        );
         if (remaining > 0) {
           const minutes = Math.ceil(remaining / 60_000);
           throw new Error(
@@ -82,7 +104,7 @@ export function useReport() {
         const result = await apiClient.post<any>('/reports/create/', payload);
 
         if (itemId != null) {
-          localStorage.setItem(
+          await storage.setItem(
             buildStorageKey(payload.reported_type, itemId),
             String(Date.now())
           );
