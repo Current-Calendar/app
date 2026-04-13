@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -15,6 +15,32 @@ type LegalDoc = {
   title: string;
   sections: LegalSection[];
 };
+
+const COOKIE_PREFERENCE_KEY = "current_cookie_preference";
+const COOKIE_PREFERENCE_TTL_DAYS = 180;
+const COOKIE_PREFERENCE_COOKIE = "current_cookie_preference";
+type CookiePreference = "accepted" | "rejected";
+
+type CookiePreferenceStorage = {
+  value: CookiePreference;
+  acceptedAt: string;
+  expiresAt: string;
+};
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== "web") return null;
+
+  try {
+    const pair = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split("=").slice(1).join("="));
+    return rawValue === "accepted" || rawValue === "rejected" ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
 
 const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
   privacy: {
@@ -172,14 +198,122 @@ export default function PrivacySettingsScreen() {
     cookies: false,
     terms: false,
   });
+  const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      if (!saved) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      if (saved === "accepted" || saved === "rejected") {
+        setCookiePreference(saved);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as CookiePreferenceStorage;
+      const isValidValue = parsed?.value === "accepted" || parsed?.value === "rejected";
+      const expiryMs = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiryMs) || expiryMs <= Date.now();
+
+      if (!isValidValue || isExpired) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      setCookiePreference(parsed.value);
+    } catch {
+      setCookiePreference(null);
+    }
+  }, []);
+
+  const saveCookiePreference = (value: CookiePreference) => {
+    setCookiePreference(value);
+    if (Platform.OS !== "web") return;
+
+    try {
+      const acceptedAt = new Date().toISOString();
+      const expiresAt = new Date(
+        Date.now() + COOKIE_PREFERENCE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const payload: CookiePreferenceStorage = { value, acceptedAt, expiresAt };
+      window.localStorage.setItem(COOKIE_PREFERENCE_KEY, JSON.stringify(payload));
+      const maxAge = COOKIE_PREFERENCE_TTL_DAYS * 24 * 60 * 60;
+      document.cookie = `${COOKIE_PREFERENCE_COOKIE}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+      window.dispatchEvent(new Event("current:cookiePreferenceChanged"));
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  };
+
+  const isLimitedMode = Platform.OS === "web" && cookiePreference === "rejected";
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Privacy</Text>
-        <Text style={styles.subtitle}>
-          Find the full content of the Privacy Notice, Cookies Policy, and Terms and Conditions here.
-        </Text>
+        <View style={styles.heroCard}>
+          <Text style={styles.eyebrow}>Data controls</Text>
+          <Text style={styles.title}>Privacy settings</Text>
+          <Text style={styles.subtitle}>
+            Configure cookie consent and review the legal documents that define how your data is handled.
+          </Text>
+
+          <View style={styles.statusPill}>
+            <Ionicons
+              name={cookiePreference === "accepted" ? "checkmark-circle" : "alert-circle"}
+              size={15}
+              color={cookiePreference === "accepted" ? "#0f6a57" : "#965c00"}
+            />
+            <Text style={styles.statusText}>
+              {cookiePreference === "accepted"
+                ? "Optional cookies accepted"
+                : cookiePreference === "rejected"
+                  ? "Optional cookies rejected (limited mode)"
+                  : "Cookie decision pending"}
+            </Text>
+          </View>
+        </View>
+
+        {Platform.OS === "web" && (
+          <View style={styles.preferenceCard}>
+            <Text style={styles.preferenceTitle}>Cookie preferences</Text>
+            <Text style={styles.preferenceBody}>
+              You can continue using the app after rejecting cookies. In that case, optional features
+              are reduced: personalized content, analytics-based improvements, and some non-essential
+              reminders are disabled.
+            </Text>
+            <View style={styles.preferenceActions}>
+              <TouchableOpacity
+                style={[styles.preferenceButton, styles.rejectButton]}
+                activeOpacity={0.85}
+                onPress={() => saveCookiePreference("rejected")}
+              >
+                <Text style={styles.rejectButtonText}>Reject optional cookies</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.preferenceButton, styles.acceptButton]}
+                activeOpacity={0.85}
+                onPress={() => saveCookiePreference("accepted")}
+              >
+                <Text style={styles.acceptButtonText}>Accept optional cookies</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {isLimitedMode && (
+          <View style={styles.noticeCard}>
+            <Text style={styles.noticeTitle}>Active limited mode</Text>
+            <Text style={styles.noticeBody}>
+              Core navigation remains available. Optional personalization and analytics are disabled as
+              requested.
+            </Text>
+          </View>
+        )}
 
         {(Object.keys(LEGAL_DOCS) as LegalDocKey[]).map((key) => {
           const isOpen = openDocs[key];
@@ -232,33 +366,135 @@ export default function PrivacySettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#e7e3d3",
+    backgroundColor: "#efe8dc",
   },
   scroll: {
     flex: 1,
   },
   content: {
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 16,
     paddingBottom: 28,
   },
-  title: {
-    fontSize: 28,
+  heroCard: {
+    backgroundColor: "#10464d",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#0c363b",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    marginBottom: 14,
+  },
+  eyebrow: {
+    color: "#9ad9cf",
+    fontSize: 12,
     fontWeight: "700",
-    color: "#2f2f2f",
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#ffffff",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: "#5d5d5d",
-    marginBottom: 14,
+    color: "#d7eeea",
+    marginBottom: 12,
     lineHeight: 20,
   },
-  itemWrap: {
-    backgroundColor: "#e9e7e7",
+  statusPill: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#f6f4ef",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d8d2c8",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#47423d",
+  },
+  preferenceCard: {
+    backgroundColor: "#f8f5f1",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#d8d0c4",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  preferenceTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#2d2a27",
+    marginBottom: 6,
+  },
+  preferenceBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#5c5751",
+  },
+  preferenceActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  preferenceButton: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+  },
+  rejectButton: {
+    backgroundColor: "#fff0da",
+    borderColor: "#f2c98d",
+  },
+  acceptButton: {
+    backgroundColor: "#dff4e8",
+    borderColor: "#8ac7ab",
+  },
+  rejectButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#7b4f00",
+  },
+  acceptButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#115745",
+  },
+  noticeCard: {
+    backgroundColor: "#fff0da",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#c9c4b8",
+    borderColor: "#f2c98d",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  noticeTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#8a5a00",
+    marginBottom: 4,
+  },
+  noticeBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#6f4c08",
+  },
+  itemWrap: {
+    backgroundColor: "#f8f5f1",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#d8d0c4",
     marginBottom: 10,
     overflow: "hidden",
   },
@@ -279,7 +515,7 @@ const styles = StyleSheet.create({
   },
   itemBody: {
     borderTopWidth: 1,
-    borderTopColor: "#c9c4b8",
+    borderTopColor: "#d8d0c4",
     backgroundColor: "#ffffff",
     paddingHorizontal: 12,
     paddingVertical: 12,

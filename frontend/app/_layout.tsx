@@ -17,6 +17,7 @@ export const unstable_settings = {
 
 const COOKIE_PREFERENCE_KEY = "current_cookie_preference";
 const COOKIE_PREFERENCE_TTL_DAYS = 180;
+const COOKIE_PREFERENCE_COOKIE = "current_cookie_preference";
 type CookiePreference = "accepted" | "rejected";
 
 type CookiePreferenceStorage = {
@@ -24,6 +25,21 @@ type CookiePreferenceStorage = {
   acceptedAt: string;
   expiresAt: string;
 };
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== "web") return null;
+
+  try {
+    const pair = document.cookie
+      .split("; ")
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split("=").slice(1).join("="));
+    return rawValue === "accepted" || rawValue === "rejected" ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function RootLayout() {
   return (
@@ -48,6 +64,10 @@ function RootLayoutContent() {
     try {
       const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
       if (!saved) {
+        const cookieValue = readCookiePreferenceFromCookie();
+        if (cookieValue) {
+          setCookiePreference(cookieValue);
+        }
         return;
       }
 
@@ -74,7 +94,8 @@ function RootLayoutContent() {
 
       if (!isValidValue || isExpired || isDifferentDayForAnonymous) {
         window.localStorage.removeItem(COOKIE_PREFERENCE_KEY);
-        setCookiePreference(null);
+        const cookieValue = readCookiePreferenceFromCookie();
+        setCookiePreference(cookieValue);
         return;
       }
 
@@ -97,6 +118,9 @@ function RootLayoutContent() {
       const payload: CookiePreferenceStorage = { value, acceptedAt, expiresAt };
       const serialized = JSON.stringify(payload);
       window.localStorage.setItem(COOKIE_PREFERENCE_KEY, serialized);
+      const maxAge = COOKIE_PREFERENCE_TTL_DAYS * 24 * 60 * 60;
+      document.cookie = `${COOKIE_PREFERENCE_COOKIE}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+      window.dispatchEvent(new Event("current:cookiePreferenceChanged"));
     } catch {
       // Ignore localStorage write errors.
     }
@@ -112,8 +136,36 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerBackButtonDisplayMode: "minimal",
+          headerTintColor: "#10464d",
+          headerTitleStyle: {
+            fontWeight: "700",
+            color: "#1f1f1f",
+          },
+          headerStyle: {
+            backgroundColor: "#f7f0e6",
+          },
+          headerShadowVisible: false,
+          headerTitleAlign: "left",
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="privacy-settings"
+          options={{
+            title: "Privacy settings",
+            headerLargeTitle: Platform.OS === "ios",
+          }}
+        />
+        <Stack.Screen
+          name="cookies"
+          options={{
+            title: "Cookies policy",
+            headerLargeTitle: Platform.OS === "ios",
+          }}
+        />
         <Stack.Screen name="new-password" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
       </Stack>
@@ -122,7 +174,8 @@ function RootLayoutContent() {
           <View style={styles.cookieTextWrap}>
             <Text style={styles.cookieTitle}>This website uses cookies</Text>
             <Text style={styles.cookieBody}>
-              We use essential cookies for functionality and optional cookies for analytics.
+              Essential cookies keep the app running. You can reject optional cookies and keep browsing,
+              but some personalized and analytics-based features will be limited.
             </Text>
             <Pressable onPress={() => router.push("/cookies" as any)}>
               <Text style={styles.cookieLink}>Read the Cookies Policy</Text>

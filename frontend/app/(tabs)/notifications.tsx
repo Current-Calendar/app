@@ -4,15 +4,69 @@ import { useNotifications } from '@/hooks/use-notifications';
 import { NotificationItem } from '@/components/notification-item';
 import { notificationsPageStyles as s } from '@/styles/notification-styles';
 import { ApiError } from '@/services/api-client';
+import { useFocusEffect } from 'expo-router';
 
 const INVITE_TYPES = new Set(['CALENDAR_INVITE', 'EVENT_INVITE']);
+const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
+const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
+type CookiePreference = 'accepted' | 'rejected';
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== 'web') return null;
+
+  try {
+    const pair = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split('=').slice(1).join('='));
+    return rawValue === 'accepted' || rawValue === 'rejected' ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function NotificationsScreen() {
   const { notifications, markAllAsRead, markAsRead, handleInvite } = useNotifications();
+  const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
 
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorTitle, setErrorTitle] = useState("Warning");
+
+  const readCookiePreference = React.useCallback(() => {
+    if (Platform.OS !== 'web') return;
+
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      if (!saved) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      if (saved === 'accepted' || saved === 'rejected') {
+        setCookiePreference(saved);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as {
+        value?: CookiePreference;
+        expiresAt?: string;
+      };
+      const isValidValue = parsed?.value === 'accepted' || parsed?.value === 'rejected';
+      const expiryMs = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiryMs) || expiryMs <= Date.now();
+
+      if (!isValidValue || isExpired) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      setCookiePreference(parsed.value);
+    } catch {
+      setCookiePreference(readCookiePreferenceFromCookie());
+    }
+  }, []);
 
   const onInviteAction = async (id: number, action: 'accept' | 'decline') => {
     try {
@@ -35,25 +89,65 @@ export default function NotificationsScreen() {
     return () => { markAllAsRead(); };
   }, []);
 
+  useEffect(() => {
+    readCookiePreference();
+    if (Platform.OS !== 'web') return;
+
+    const onCookiePreferenceChanged = () => {
+      readCookiePreference();
+    };
+    window.addEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+
+    return () => {
+      window.removeEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+    };
+  }, [readCookiePreference]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      readCookiePreference();
+    }, [readCookiePreference]),
+  );
+
   const invitations = notifications.filter(n => INVITE_TYPES.has(n.type));
-  const regular     = notifications.filter(n => !INVITE_TYPES.has(n.type));
-  const hasUnread   = notifications.some(n => !n.is_read);
+  const regular = notifications.filter(n => !INVITE_TYPES.has(n.type));
+  const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
+
+  const visibleNotifications = isLimitedMode ? invitations : notifications;
+  const visibleInvitations = visibleNotifications.filter(n => INVITE_TYPES.has(n.type));
+  const visibleRegular = visibleNotifications.filter(n => !INVITE_TYPES.has(n.type));
+  const hasUnread = visibleNotifications.some(n => !n.is_read);
 
   const sections = [
-    ...(invitations.length ? [{ title: 'Invitations', data: invitations }] : []),
-    ...(regular.length     ? [{ title: 'Notifications', data: regular   }] : []),
+    ...(visibleInvitations.length ? [{ title: 'Invitations', data: visibleInvitations }] : []),
+    ...(visibleRegular.length ? [{ title: 'Notifications', data: visibleRegular }] : []),
   ];
 
-  if (notifications.length === 0) {
+  if (visibleNotifications.length === 0) {
     return (
       <View style={[s.container, s.emptyState]}>
-        <Text style={s.emptyText} testID="notifications-empty-text">No notifications</Text>
+        <Text style={s.emptyText} testID="notifications-empty-text">
+          {isLimitedMode ? 'No essential notifications' : 'No notifications'}
+        </Text>
+        {isLimitedMode && (
+          <Text style={styles.limitedHint}>
+            Optional notifications are hidden while optional cookies are rejected.
+          </Text>
+        )}
       </View>
     );
   }
 
   return (
     <View style={s.container}>
+      {isLimitedMode && (
+        <View style={styles.limitedBanner}>
+          <Text style={styles.limitedBannerTitle}>Limited notifications mode</Text>
+          <Text style={styles.limitedBannerBody}>
+            Only essential invitation notifications are shown.
+          </Text>
+        </View>
+      )}
       {hasUnread && (
         <TouchableOpacity style={s.markReadBtn} onPress={markAllAsRead}>
           <Text style={s.markReadLabel}>Mark every notification as read</Text>
@@ -95,6 +189,36 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
+  limitedBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f0c88b',
+    backgroundColor: '#fff2dd',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  limitedBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7a4d00',
+    marginBottom: 2,
+  },
+  limitedBannerBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6a4706',
+  },
+  limitedHint: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    color: '#6a4706',
+    maxWidth: 320,
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '80%', maxWidth: 400, alignItems: 'center' },
   errorModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#E53935', marginBottom: 8 },
