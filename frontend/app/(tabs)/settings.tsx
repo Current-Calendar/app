@@ -119,7 +119,7 @@ const SettingsScreen = () => {
 
             <TouchableOpacity
               style={[styles.row, styles.rowBorder]}
-            //onPress={() => router.push('/help-support' as any)}
+              onPress={() => router.push('/help-support' as any)}
             >
               <View style={styles.rowLeft}>
                 <View style={styles.iconWrap}>
