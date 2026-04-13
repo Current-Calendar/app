@@ -11,8 +11,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { API_CONFIG } from "@/constants/api";
+import { requestPasswordReset } from "@/services/password-reset";
 
 const BG = "#FFFDED";
 const PINK = "#F2A3A6";
@@ -26,7 +25,6 @@ const TEXT = "#10464D";
 const Otter = require("../../assets/images/Mascota.png");
 
 export default function ForgotPasswordScreen() {
-  const router = useRouter();
   const { width } = useWindowDimensions();
 
   const formWidth =
@@ -37,25 +35,6 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  const recoverpass = async (email: string) => {
-    const fallbackMessage =
-      "If an account exists with this email, a password reset link has been sent.";
-    const genericErrorMessage = "Error sending password recovery email.";
-    const source = window.location.origin;
-    const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, source: source }),
-    });
-    const data = (await response.json().catch(() => null)) as
-      | { message?: string; error?: string }
-      | null;
-    if (!response.ok) {
-      throw new Error(genericErrorMessage);
-    }
-    return data?.message ?? fallbackMessage;
-  };
 
   const onForgotPassword = async () => {
     setErrorMsg(null);
@@ -75,7 +54,9 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      const message = await recoverpass(u);
+      const message = await requestPasswordReset(u, {
+        errorMessage: "Error sending password recovery email.",
+      });
       setSuccessMsg(message);
     } catch (error) {
       setErrorMsg(

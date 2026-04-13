@@ -17,8 +17,8 @@ import { User } from '../../../types/auth';
 import { useAuth } from '@/hooks/use-auth';
 import * as ImagePicker from 'expo-image-picker';
 import { useProfileActions } from '@/hooks/use-profile-actions';
-import { API_CONFIG } from '@/constants/api';
 import apiClient, { appendPhoto } from '@/services/api-client';
+import { requestPasswordReset } from '@/services/password-reset';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import profileStyles from '../../../styles/profile-styles';
 
@@ -108,20 +108,11 @@ const EditProfileScreen = () => {
     setIsRecoveringPassword(true);
     setRecoverError(null);
     try {
-      const fallbackMessage =
-        'If an account exists with this email, a password reset link has been sent.';
-      const genericErrorMessage = 'Could not send recovery email. Please try again.';
-      const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
+      const message = await requestPasswordReset(currentUser.email, {
+        errorMessage: 'Could not send recovery email. Please try again.',
       });
-      const data = (await response.json().catch(() => null)) as
-        | { message?: string; error?: string }
-        | null;
-      if (!response.ok) throw new Error(genericErrorMessage);
       setShowRecoverConfirm(false);
-      Alert.alert('Success', data?.message ?? fallbackMessage);
+      Alert.alert('Success', message);
     } catch (error) {
       setRecoverError(error instanceof Error ? error.message : 'Could not send recovery email. Please try again.');
     } finally {
