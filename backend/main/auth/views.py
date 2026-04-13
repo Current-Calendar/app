@@ -147,7 +147,7 @@ def credentials_to_dict(credentials):
         'token_uri': credentials.token_uri,
         'client_id': credentials.client_id,
         'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
+        'scopes': list(credentials.scopes) if credentials.scopes else [],
     }
 
 
