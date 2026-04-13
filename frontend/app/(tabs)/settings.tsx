@@ -101,7 +101,7 @@ const SettingsScreen = () => {
           <View style={styles.sectionCard}>
             <TouchableOpacity
               style={[styles.row, styles.rowBorder]}
-            //onPress={() => router.push('/privacy-settings' as any)}
+              onPress={() => router.push('/privacy-settings' as any)}
             >
               <View style={styles.rowLeft}>
                 <View style={styles.iconWrap}>
