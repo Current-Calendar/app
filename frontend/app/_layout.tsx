@@ -7,6 +7,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { APP_BACKGROUND, Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useAuth } from "@/hooks/use-auth";
 import AuthProvider from "../context/auth-context";
 import { TutorialProvider } from "@/context/tutorial-context";
 
@@ -15,48 +16,89 @@ export const unstable_settings = {
 };
 
 const COOKIE_PREFERENCE_KEY = "current_cookie_preference";
+const COOKIE_PREFERENCE_TTL_DAYS = 180;
 type CookiePreference = "accepted" | "rejected";
 
+type CookiePreferenceStorage = {
+  value: CookiePreference;
+  acceptedAt: string;
+  expiresAt: string;
+};
+
 export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <TutorialProvider>
+        <RootLayoutContent />
+      </TutorialProvider>
+    </AuthProvider>
+  );
+}
+
+function RootLayoutContent() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const { isAuthenticated, isLoading } = useAuth();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
   const [cookiePreferenceChecked, setCookiePreferenceChecked] = useState(Platform.OS !== "web");
-  const [cookiePreferenceRaw, setCookiePreferenceRaw] = useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    if (isLoading) return;
     try {
       const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
-      setCookiePreferenceRaw(saved);
-      if (saved === "accepted" || saved === "rejected") {
-        setCookiePreference(saved);
+      if (!saved) {
+        return;
       }
+
+      // Backward compatibility: old plain string format without expiration.
+      if (saved === "accepted" || saved === "rejected") {
+        window.localStorage.removeItem(COOKIE_PREFERENCE_KEY);
+        setCookiePreference(null);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as CookiePreferenceStorage;
+      const isValidValue = parsed?.value === "accepted" || parsed?.value === "rejected";
+      const acceptedAtMs = parsed?.acceptedAt ? new Date(parsed.acceptedAt).getTime() : NaN;
+      const expiry = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiry) || expiry <= Date.now();
+      const acceptedDate = new Date(acceptedAtMs);
+      const now = new Date();
+      const isDifferentDayForAnonymous =
+        !isAuthenticated &&
+        (Number.isNaN(acceptedAtMs) ||
+          acceptedDate.getFullYear() !== now.getFullYear() ||
+          acceptedDate.getMonth() !== now.getMonth() ||
+          acceptedDate.getDate() !== now.getDate());
+
+      if (!isValidValue || isExpired || isDifferentDayForAnonymous) {
+        window.localStorage.removeItem(COOKIE_PREFERENCE_KEY);
+        setCookiePreference(null);
+        return;
+      }
+
+      setCookiePreference(parsed.value);
     } catch {
       // Ignore localStorage access errors in restricted browser contexts.
     } finally {
       setCookiePreferenceChecked(true);
     }
-  }, []);
+  }, [isAuthenticated, isLoading]);
 
   const saveCookiePreference = (value: CookiePreference) => {
     setCookiePreference(value);
     if (Platform.OS !== "web") return;
     try {
-      window.localStorage.setItem(COOKIE_PREFERENCE_KEY, value);
-      setCookiePreferenceRaw(value);
+      const acceptedAt = new Date().toISOString();
+      const expiresAt = new Date(
+        Date.now() + COOKIE_PREFERENCE_TTL_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const payload: CookiePreferenceStorage = { value, acceptedAt, expiresAt };
+      const serialized = JSON.stringify(payload);
+      window.localStorage.setItem(COOKIE_PREFERENCE_KEY, serialized);
     } catch {
       // Ignore localStorage write errors.
-    }
-  };
-
-  const refreshCookiePreferenceDebug = () => {
-    if (Platform.OS !== "web") return;
-    try {
-      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
-      setCookiePreferenceRaw(saved);
-    } catch {
-      setCookiePreferenceRaw("<storage-error>");
     }
   };
   const lightTheme = {
@@ -69,72 +111,48 @@ export default function RootLayout() {
   };
 
   return (
-    <AuthProvider>
-      <TutorialProvider>
-        <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="new-password" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-          </Stack>
-          {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
-            <View style={styles.cookieBanner}>
-              <View style={styles.cookieTextWrap}>
-                <Text style={styles.cookieTitle}>This website uses cookies</Text>
-                <Text style={styles.cookieBody}>
-                  We use essential cookies for functionality and optional cookies for analytics.
-                </Text>
-                <Pressable onPress={() => router.push("/cookies" as any)}>
-                  <Text style={styles.cookieLink}>Read the Cookies Policy</Text>
-                </Pressable>
-              </View>
+    <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="new-password" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+      </Stack>
+      {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
+        <View style={styles.cookieBanner}>
+          <View style={styles.cookieTextWrap}>
+            <Text style={styles.cookieTitle}>This website uses cookies</Text>
+            <Text style={styles.cookieBody}>
+              We use essential cookies for functionality and optional cookies for analytics.
+            </Text>
+            <Pressable onPress={() => router.push("/cookies" as any)}>
+              <Text style={styles.cookieLink}>Read the Cookies Policy</Text>
+            </Pressable>
+          </View>
 
-              <View style={styles.cookieActions}>
-                <Pressable
-                  style={[styles.cookieButton, styles.cookieSecondaryButton]}
-                  onPress={() => saveCookiePreference("rejected")}
-                >
-                  <Text style={styles.cookieSecondaryButtonText}>Reject</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.cookieButton, styles.cookieSecondaryButton]}
-                  onPress={() => router.push("/privacy-settings" as any)}
-                >
-                  <Text style={styles.cookieSecondaryButtonText}>Configure</Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.cookieButton, styles.cookiePrimaryButton]}
-                  onPress={() => saveCookiePreference("accepted")}
-                >
-                  <Text style={styles.cookiePrimaryButtonText}>Accept</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-          {Platform.OS === "web" && (
-            <View style={styles.cookieDebugBox}>
-              <Text style={styles.cookieDebugTitle}>Cookie debug</Text>
-              <Text style={styles.cookieDebugLine}>
-                key: {COOKIE_PREFERENCE_KEY}
-              </Text>
-              <Text style={styles.cookieDebugLine}>
-                localStorage: {cookiePreferenceRaw ?? "<null>"}
-              </Text>
-              <Text style={styles.cookieDebugLine}>
-                state: {cookiePreference ?? "<null>"}
-              </Text>
-              <Text style={styles.cookieDebugLine}>
-                checked: {cookiePreferenceChecked ? "true" : "false"}
-              </Text>
-              <Pressable style={styles.cookieDebugButton} onPress={refreshCookiePreferenceDebug}>
-                <Text style={styles.cookieDebugButtonText}>Refresh debug</Text>
-              </Pressable>
-            </View>
-          )}
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </TutorialProvider>
-    </AuthProvider>
+          <View style={styles.cookieActions}>
+            <Pressable
+              style={[styles.cookieButton, styles.cookieSecondaryButton]}
+              onPress={() => saveCookiePreference("rejected")}
+            >
+              <Text style={styles.cookieSecondaryButtonText}>Reject</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.cookieButton, styles.cookieSecondaryButton]}
+              onPress={() => router.push("/privacy-settings" as any)}
+            >
+              <Text style={styles.cookieSecondaryButtonText}>Configure</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.cookieButton, styles.cookiePrimaryButton]}
+              onPress={() => saveCookiePreference("accepted")}
+            >
+              <Text style={styles.cookiePrimaryButtonText}>Accept</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+      <StatusBar style="auto" />
+    </ThemeProvider>
   );
 }
 
@@ -205,44 +223,5 @@ const styles = StyleSheet.create({
     color: "#d7f0ec",
     fontWeight: "700",
     fontSize: 12,
-  },
-  cookieDebugBox: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 1000,
-    backgroundColor: "rgba(12, 28, 32, 0.92)",
-    borderWidth: 1,
-    borderColor: "#3f6660",
-    borderRadius: 10,
-    padding: 10,
-    minWidth: 220,
-    gap: 2,
-  },
-  cookieDebugTitle: {
-    color: "#f2a3a6",
-    fontSize: 12,
-    fontWeight: "800",
-    marginBottom: 3,
-  },
-  cookieDebugLine: {
-    color: "#d7f0ec",
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: "600",
-  },
-  cookieDebugButton: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#7bb9b3",
-  },
-  cookieDebugButtonText: {
-    color: "#d7f0ec",
-    fontSize: 10,
-    fontWeight: "800",
   },
 });
