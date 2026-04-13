@@ -1,7 +1,7 @@
 from rest_framework import permissions
 import math
 from .entitlements import get_user_features
-from .models import Calendar, Notification, User, CalendarInvitation
+from .models import Calendar, Event, Notification, User, CalendarInvitation
 from .privacy import normalize_calendar_privacy
 from django.shortcuts import get_object_or_404
 
@@ -202,4 +202,126 @@ class CanReceiveCalendarViewInvites(permissions.BasePermission):
         favorite_calendars_count = invitee.subscribed_calendars.count()
 
         return favorite_calendars_count < favorite_limit
+
+
+class IsOwnerOrCoOwnerOfCalendar(permissions.BasePermission):
+    """
+    Permiso que verifica si el usuario es owner o coowner del calendario.
+    Se usa para operaciones en categorías y tags de un calendario específico.
+    """
+    message = "You must be the owner or coowner of this calendar to perform this action."
+
+    def has_object_permission(self, request, view, obj):
+        # obj es el Calendar
+        return request.user == obj.creator or request.user in obj.co_owners.all()
+
+
+class CanAssignCategoryToCalendar(permissions.BasePermission):
+    """
+    Permite acciones de categoría sobre calendario cuando el usuario es owner/coowner.
+    Diseñada para acciones custom de `CategoryViewSet` basadas en `calendar_id` del body.
+    """
+    message = "You must be the owner or coowner of this calendar to perform this action."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_staff:
+            return True
+
+        calendar_id = request.data.get('calendar_id') if request.data else None
+
+        # Dejamos que la view devuelva 400 si falta calendar_id
+        if not calendar_id:
+            return True
+
+        # Dejamos que la view devuelva 404 si calendar_id no existe
+        try:
+            calendar = Calendar.objects.get(id=calendar_id)
+        except Calendar.DoesNotExist:
+            return True
+
+        return request.user == calendar.creator or request.user in calendar.co_owners.all()
+
+    def has_object_permission(self, request, view, obj):
+        # No validamos contra obj porque aquí obj es Category
+        return True
+
+
+class CanManageEventTagsForEvent(permissions.BasePermission):
+    """
+    Permite añadir/remover tags de evento cuando el usuario es owner/coowner
+    de al menos un calendario que contiene el evento.
+    Diseñada para acciones custom de `EventTagViewSet` basadas en `event_id` del body.
+    """
+    message = "You must be the owner or coowner of a calendar containing this event."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_staff:
+            return True
+
+        event_id = request.data.get('event_id') if request.data else None
+
+        # Dejamos que la view devuelva 400 si falta event_id
+        if not event_id:
+            return True
+
+        # Dejamos que la view devuelva 404 si event_id no existe
+        try:
+            event = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            return True
+
+        for calendar in event.calendars.all():
+            if request.user == calendar.creator or request.user in calendar.co_owners.all():
+                return True
+
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        # No validamos contra obj porque aquí obj es EventTag
+        return True
+
+
+class CanManageCategoriesAndTags(permissions.BasePermission):
+    """
+    Permiso dual:
+    - has_permission: Valida que el usuario sea admin O que intente asignar a su calendario
+    - has_object_permission: Valida ownership de la categoría/tag a nivel de calendario
+    """
+    message = "You don't have permission to manage categories and tags."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        
+        # Admin siempre puede
+        if request.user.is_staff:
+            return True
+        
+        # Para operaciones de assign/add: buscar calendar_id en kwargs o data
+        calendar_id = request.parser_context['kwargs'].get('calendar_id') if hasattr(request, 'parser_context') else None
+        if not calendar_id and request.data:
+            calendar_id = request.data.get('calendar_id')
+        
+        # Si hay calendar_id, validar que sea owner/coowner
+        if calendar_id:
+            try:
+                calendar = Calendar.objects.get(id=calendar_id)
+                return request.user == calendar.creator or request.user in calendar.co_owners.all()
+            except Calendar.DoesNotExist:
+                return False
+        
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        # Para operaciones CRUD en categorías/tags (solo admin)
+        if request.method in ['GET']:
+            return True
+        
+        return request.user.is_staff
         

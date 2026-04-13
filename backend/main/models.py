@@ -46,11 +46,28 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
-class CalendarLabel(models.Model):
+class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        verbose_name_plural = 'Categories'
 
     def __str__(self):
         return self.name
+
+
+class EventTag(models.Model):
+    name = models.CharField(max_length=50)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='tags')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'category'], name='unique_tag_per_category')
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.category.name})"
+
 
 class Calendar(models.Model):
     PRIVACY_CHOICES = [
@@ -72,7 +89,7 @@ class Calendar(models.Model):
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
     created_at = models.DateTimeField(default=timezone.now)
-    labels = models.ManyToManyField(CalendarLabel, related_name='calendars', blank=True)
+    categories = models.ManyToManyField(Category, related_name='calendars', blank=True)
 
     class Meta:
         pass
@@ -119,6 +136,7 @@ class Event(models.Model):
     calendars = models.ManyToManyField(Calendar, related_name='events')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
     created_at = models.DateTimeField(default=timezone.now)
+    tags = models.ManyToManyField(EventTag, related_name='events', blank=True)
     likes_count = models.PositiveIntegerField(default=0)
 
     def __str__(self):

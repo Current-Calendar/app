@@ -51,8 +51,9 @@ def get_all_events_features():
     features = {}
     events = Event.objects.prefetch_related(
         'calendars',
-        'calendars__labels',
+        'calendars__categories',
         'calendars__subscribers',
+        'tags',
     ).select_related('creator')
 
     for event in events:
@@ -83,8 +84,12 @@ def build_feature_set(event):
 
     for cal in event.calendars.all():
         s.add(f"Calendar_{cal.id}")
-        for etiqueta in cal.labels.all():
-            s.add(f"Label_{etiqueta.id}")
+        for category in cal.categories.all():
+            s.add(f"Category_{category.id}")
+
+    for tag in event.tags.all():
+        s.add(f"Tag_{tag.id}")
+        s.add(f"TagCategory_{tag.category_id}")
 
     return s
 

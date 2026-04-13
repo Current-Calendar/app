@@ -7,7 +7,7 @@ from main.models import Event, EventAttendance, EventLike, EventSave
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from utils.login_log import get_client_ip
 from main.models import LoginLog
-from .models import Calendar, Notification, Report, ChatMessage
+from .models import Calendar, Notification, Report, ChatMessage, Category, EventTag
 from utils.storage import get_signed_url
 
 User = get_user_model()
@@ -455,3 +455,102 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         )
 
         return data
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer para categorías de calendarios.
+    Solo administradores pueden crear/eliminar categorías.
+    """
+    calendars_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'calendars_count']
+        read_only_fields = ['id', 'calendars_count']
+
+    def get_calendars_count(self, obj):
+        return obj.calendars.count()
+
+
+class EventTagSerializer(serializers.ModelSerializer):
+    """
+    Serializer para tags de eventos.
+    Los tags pertenecen a una categoría específica.
+    Solo administradores pueden crear/eliminar tags.
+    """
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    events_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventTag
+        fields = ['id', 'name', 'category', 'category_name', 'events_count']
+        read_only_fields = ['id', 'category_name', 'events_count']
+
+    def validate_category(self, value):
+        """Verifica que la categoría existe."""
+        if not Category.objects.filter(id=value.id).exists():
+            raise serializers.ValidationError("The specified category does not exist.")
+        return value
+
+    def get_events_count(self, obj):
+        return obj.events.count()
+
+
+class CalendarDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer extendido del calendario que incluye categorías asignadas.
+    """
+    is_owner = serializers.SerializerMethodField()
+    is_coowner = serializers.SerializerMethodField()
+    categories = CategorySerializer(many=True, read_only=True)
+    creator_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Calendar
+        fields = [
+            'id', 'name', 'description', 'cover', 'privacy', 'created_at',
+            'is_owner', 'is_coowner', 'categories', 'creator_info', 'likes_count'
+        ]
+
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return False
+        return request.user == obj.creator
+
+    def get_is_coowner(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return False
+        return request.user in obj.co_owners.all()
+
+    def get_creator_info(self, obj):
+        return {
+            'id': obj.creator.id,
+            'username': obj.creator.username,
+            'photo': obj.creator.photo.url if obj.creator.photo else None
+        }
+
+
+class EventDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer extendido del evento que incluye tags asignados.
+    """
+    tags = EventTagSerializer(many=True, read_only=True)
+    creator_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'title', 'description', 'date', 'time', 'place_name',
+            'location', 'photo', 'tags', 'creator_info', 'likes_count'
+        ]
+
+    def get_creator_info(self, obj):
+        return {
+            'id': obj.creator.id,
+            'username': obj.creator.username,
+            'photo': obj.creator.photo.url if obj.creator.photo else None
+        }
+

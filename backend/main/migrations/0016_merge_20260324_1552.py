@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0003_calendarlabel_calendar_labels'),
+        ('main', '0003_notification'),
         ('main', '0015_merge_20260324_0123'),
     ]
 

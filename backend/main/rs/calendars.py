@@ -50,7 +50,7 @@ def get_similar_calendars(calendar_id, top_n=5):
 def get_all_calendars_features():
     features = {}
     calendars = Calendar.objects.prefetch_related(
-        'labels',
+        'categories',
         'subscribers',
         'events',
     ).filter(privacy='PUBLIC')
@@ -73,8 +73,8 @@ def get_location_clusters(calendar):
 def build_feature_set(calendar):
     s = set()
 
-    for label in calendar.labels.all():
-        s.add(f"Label_{label.id}")
+    for category in calendar.categories.all():
+        s.add(f"Category_{category.id}")
 
     if calendar.name:
         for token in tokenize(calendar.name, 5):
