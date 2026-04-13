@@ -27,6 +27,7 @@ from main.radar import views as radar_views
 from main.auth import views as auth_views
 from main.notifications import views as notification_views
 from main.reports import views as report_views
+from main.labels import CategoryViewSet, EventTagViewSet
 from main.ads import views as ads_views
 from django.urls import path, include
 from django.contrib import admin
@@ -35,6 +36,10 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 api_router = routers.DefaultRouter()
+
+# Registrar viewsets para categorías y tags
+api_router.register(r'categories', CategoryViewSet, basename='category')
+api_router.register(r'event-tags', EventTagViewSet, basename='event-tag')
 
 urlpatterns = [
     path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

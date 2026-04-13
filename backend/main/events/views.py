@@ -296,6 +296,16 @@ def edit_event(request: Request, event_id):
 
 @api_view(['GET'])
 def list_events(request):
+    """
+    List and search events.
+
+    GET /api/v1/events/list
+
+    Query parameters:
+        q           (str)  -- case-insensitive substring match on title/description
+        calendarIds (str)  -- filter by calendar IDs (comma-separated)
+        tags        (str)  -- filter by tag IDs (comma-separated, e.g., "1,2")
+    """
     user = request.user
     
     if user.is_authenticated:
@@ -354,6 +364,19 @@ def list_events(request):
         queryset = queryset.filter(
             Q(title__icontains=q) | Q(description__icontains=q)
         )
+
+    # Filtrar por tags
+    tags = request.GET.get('tags', '').strip()
+    if tags:
+        try:
+            tag_ids = [tid.strip() for tid in tags.split(',') if tid.strip().isdigit()]
+            if tag_ids:
+                queryset = queryset.filter(tags__id__in=tag_ids).distinct()
+        except ValueError:
+            return Response(
+                {"errors": ["Invalid 'tags' format. Expected comma-separated integers."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     queryset = queryset.order_by('-created_at')
 

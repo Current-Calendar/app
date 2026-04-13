@@ -473,8 +473,9 @@ def list_calendars(request):
     GET /api/v1/calendars/list
 
     Query parameters:
-        q       (str)  -- case-insensitive substring match on calendar name
-        privacy  (str)  -- filter by privacy status (PRIVATE | PUBLIC)
+        q           (str)  -- case-insensitive substring match on calendar name
+        privacy     (str)  -- filter by privacy status (PRIVATE | PUBLIC)
+        categories  (str)  -- filter by category IDs (comma-separated, e.g., "1,4")
     """
     queryset = Calendar.objects.select_related('creator').all()
 
@@ -491,6 +492,19 @@ def list_calendars(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         queryset = queryset.filter(privacy=privacy)
+
+    # Filtrar por categorías
+    categories = request.GET.get('categories', '').strip()
+    if categories:
+        try:
+            category_ids = [cid.strip() for cid in categories.split(',') if cid.strip().isdigit()]
+            if category_ids:
+                queryset = queryset.filter(categories__id__in=category_ids).distinct()
+        except ValueError:
+            return Response(
+                {"errors": ["Invalid 'categories' format. Expected comma-separated integers."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     queryset = queryset.order_by('-created_at')
 
