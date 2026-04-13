@@ -35,10 +35,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         required=True,
         help_text='Unique user email'
     )
+    accepted_privacy = serializers.BooleanField(write_only=True, required=True)
+    accepted_cookies = serializers.BooleanField(write_only=True, required=False, default=False)
+    accepted_terms = serializers.BooleanField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'password2', 'pronouns', 'bio')
+        fields = (
+            'id',
+            'username',
+            'email',
+            'password',
+            'password2',
+            'pronouns',
+            'bio',
+            'accepted_privacy',
+            'accepted_cookies',
+            'accepted_terms',
+        )
         extra_kwargs = {
             'pronouns': {'required': False},
             'bio': {'required': False}
@@ -79,6 +93,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 "password": "Passwords do not match."
             })
 
+        if not attrs.get('accepted_privacy'):
+            raise serializers.ValidationError({
+                "accepted_privacy": "Privacy policy acceptance is required."
+            })
+        if not attrs.get('accepted_terms'):
+            raise serializers.ValidationError({
+                "accepted_terms": "Terms and conditions acceptance is required."
+            })
+
         # Create a temporary user object to validate the password with context
         # This allows UserAttributeSimilarityValidator to work correctly
         temp_user = User(
@@ -102,6 +125,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         """
         # Remove password2 as it is not stored
         validated_data.pop('password2')
+        validated_data.pop('accepted_privacy', None)
+        validated_data.pop('accepted_cookies', None)
+        validated_data.pop('accepted_terms', None)
 
         # Use create_user to automatically hash the password
         user = User.objects.create_user(

@@ -56,6 +56,7 @@ urlpatterns = [
     path('api/v1/auth/oauth2callback/', auth_views.google_oauth2callback, name='google_oauth2_callback'),
     path('oauth2callback/', auth_views.google_oauth2callback, name='google_oauth2_callback_root'),
     path('api/v1/auth/register/', auth_views.register_user, name='register'),
+    path('api/v1/auth/accept-legal/', auth_views.accept_legal_documents, name='accept_legal_documents'),
     path('api/v1/users/search/', user_views.search_users, name='search_users'),
     path('api/v1/users/<int:pk>/follow/', user_views.follow_or_unfollow_user, name='follow_users_logic'),
     path('api/v1/users/<int:pk>/followers/', user_views.get_followers, name='get_followers'),

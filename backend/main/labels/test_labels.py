@@ -706,6 +706,34 @@ class CategoryViewSetTests(APITestCase):
         # Debería permitir a co-owner
         self.assertIn(response.status_code, [200, 201, 204])
 
+    def test_get_categories_for_calendar(self):
+        """GET categorías asignadas a un calendario"""
+        self.calendar.categories.add(self.category1)
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/categories/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        category_ids = {item['id'] for item in response.data}
+        self.assertIn(self.category1.id, category_ids)
+
+    def test_get_categories_for_calendar_forbidden_if_no_access(self):
+        """No debe permitir ver categorías de calendario privado sin acceso"""
+        self.calendar.privacy = 'PRIVATE'
+        self.calendar.save(update_fields=['privacy'])
+        self.calendar.categories.add(self.category1)
+
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.get(
+            f'/api/v1/categories/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
+
 
 class EventTagViewSetTests(APITestCase):
     """Tests exhaustivos para EventTagViewSet"""
@@ -998,6 +1026,48 @@ class EventTagViewSetTests(APITestCase):
         self.assertEqual(self.event.tags.count(), 2)
         self.assertIn(self.tag1, self.event.tags.all())
         self.assertIn(self.tag2, self.event.tags.all())
+
+    def test_get_event_tags_for_calendar(self):
+        """GET tags válidos para un calendario según categorías asignadas"""
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/event-tags/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        tag_ids = {item['id'] for item in response.data}
+        self.assertIn(self.tag1.id, tag_ids)
+        self.assertIn(self.tag2.id, tag_ids)
+
+    def test_get_event_tags_for_event(self):
+        """GET tags asignados a un evento concreto"""
+        self.event.tags.add(self.tag1)
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/event-tags/for-event/{self.event.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        tag_ids = {item['id'] for item in response.data}
+        self.assertIn(self.tag1.id, tag_ids)
+
+    def test_get_event_tags_for_event_forbidden_if_no_access(self):
+        """No debe permitir ver tags de evento privado sin acceso"""
+        self.calendar.privacy = 'PRIVATE'
+        self.calendar.save(update_fields=['privacy'])
+        self.event.tags.add(self.tag1)
+
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.get(
+            f'/api/v1/event-tags/for-event/{self.event.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
 
 class LabelViewsetHelpersTests(TestCase):

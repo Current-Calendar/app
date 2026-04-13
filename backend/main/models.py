@@ -385,6 +385,40 @@ class LoginLog(models.Model):
     def __str__(self):
         return f"{self.user} - {self.ip_address} - {self.created_at}"
 
+
+class LegalAcceptance(models.Model):
+    DOCUMENT_PRIVACY = "PRIVACY"
+    DOCUMENT_COOKIES = "COOKIES"
+    DOCUMENT_TERMS = "TERMS"
+    DOCUMENT_CHOICES = [
+        (DOCUMENT_PRIVACY, "Privacy Policy"),
+        (DOCUMENT_COOKIES, "Cookies Policy"),
+        (DOCUMENT_TERMS, "Terms and Conditions"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="legal_acceptances",
+    )
+    document = models.CharField(max_length=20, choices=DOCUMENT_CHOICES)
+    version = models.CharField(max_length=32)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=512, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "document", "version"],
+                name="unique_legal_acceptance_per_version",
+            )
+        ]
+        ordering = ["-accepted_at"]
+
+    def __str__(self):
+        return f"{self.user_id} - {self.document} v{self.version}"
+
 class CalendarInvitation(models.Model):
     calendar = models.ForeignKey(Calendar, on_delete=models.CASCADE, related_name='invitations')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_calendar_invitations')
