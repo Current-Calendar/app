@@ -2,7 +2,7 @@
   <img src="https://github.com/user-attachments/assets/743da1a0-b2e7-4035-8d3d-4e7815bdfde2" width="200" alt="Logo del Proyecto">
 
   # Current Calendar
-
+  ### *Go with the flow*
 </div>
 
 > A social calendar platform — create, share, and discover events with the people and communities that matter to you.
