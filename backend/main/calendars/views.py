@@ -82,16 +82,21 @@ def delete_calendar(request, calendar_id):
 @permission_classes([IsAuthenticated, CanChangePrivacy])
 def edit_calendar(request, calendar_id):
     calendar = get_object_or_404(Calendar, id=calendar_id)
-
-    if calendar.creator != request.user and request.user not in calendar.co_owners.all():
+    if calendar.creator == request.user:
+        campos_editables = ['name', 'description', 'privacy']
+    elif calendar.co_owners.filter(id=request.user.id).exists():
+        campos_editables = ['name', 'description']
+    else:
         return Response(
-        {'error': 'You do not have permission to edit this calendar.'},
-        status=status.HTTP_403_FORBIDDEN
-    )
-
+            {'error': 'You do not have permission to edit this calendar.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    if 'privacy' in request.data and calendar.creator != request.user:
+        return Response(
+            {"error": "Only the creator can change privacy."},
+            status=status.HTTP_403_FORBIDDEN
+        )
     ESTADOS_VALIDOS = ACCEPTED_CALENDAR_PRIVACY_VALUES
-    campos_editables = ['name', 'privacy', 'description']
-
     for campo in campos_editables:
         if campo in request.data:
             valor = request.data[campo]
