@@ -160,14 +160,36 @@ def create_event(request):
 
 @api_view(['GET', 'PUT', 'PATCH'])
 def edit_event(request: Request, event_id):
-    if request.method != "GET" and not request.user.is_authenticated:
-        return Response(None, status=status.HTTP_401_UNAUTHORIZED)
-
     event = get_object_or_404(Event, id=event_id)
-    
+
+    # GET is public — return event detail without requiring authentication
     if request.method == 'GET':
         serializer = EventSerializer(event, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # PUT / PATCH require the user to be the creator or co-owner of the calendar
+    if not request.user.is_authenticated:
+        return Response(None, status=status.HTTP_401_UNAUTHORIZED)
+
+    user = request.user
+
+    current_calendars = event.calendars.all()
+    if not current_calendars.exists():
+        return Response(
+            {"error": "No tienes permiso sobre este event"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    for calendar in current_calendars:
+        is_creator_or_co_owner = (
+            calendar.creator == user or
+            calendar.co_owners.filter(id=user.id).exists()
+        )
+        if not is_creator_or_co_owner:
+            return Response(
+                {"errors": ["No tienes permiso para editar eventos en este calendario."]},
+                status=status.HTTP_403_FORBIDDEN
+            )
     
     # Handle PUT: Update event
     data = request.data
