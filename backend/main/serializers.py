@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
@@ -7,7 +8,7 @@ from main.models import Event, EventAttendance, EventLike, EventSave
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from utils.login_log import get_client_ip
 from main.models import LoginLog
-from .models import Calendar, Notification, Report, ChatMessage
+from .models import Calendar, Notification, Report, ChatMessage, Category, EventTag
 from utils.storage import get_signed_url
 
 User = get_user_model()
@@ -119,6 +120,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     Does not include email or password for security.
     """
     is_following = serializers.SerializerMethodField()
+    followed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -133,6 +135,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'total_followers',
             'total_following',
             'is_following',
+            'followed',
         )
         read_only_fields = ('id',)
 
@@ -141,6 +144,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.followers_set.filter(id=request.user.id).exists()
         return False
+
+    def get_followed(self, obj):
+        return self.get_is_following(obj)
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """
@@ -243,6 +249,12 @@ class OwnProfileSerializer(serializers.ModelSerializer):
         )
 
 
+class EventPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class EventSerializer(serializers.ModelSerializer):
     photo = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
@@ -296,12 +308,18 @@ class EventSerializer(serializers.ModelSerializer):
         ).data
 
     def get_liked_by_me(self, obj):
+        liked_ids = self.context.get('liked_ids')
+        if liked_ids is not None:
+            return obj.id in liked_ids
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
         return EventLike.objects.filter(user=request.user, event=obj).exists()
 
     def get_saved_by_me(self, obj):
+        saved_ids = self.context.get('saved_ids')
+        if saved_ids is not None:
+            return obj.id in saved_ids
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
@@ -435,6 +453,11 @@ class EventAttendeeSerializer(serializers.ModelSerializer):
             iso_str = iso_str.replace('+00:00', 'Z')
         return iso_str
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        "no_active_account": "Credenciales inválidas.",
+        "invalid_credentials": "Credenciales inválidas.",
+    }
+
     def validate(self, attrs):
         data = super().validate(attrs)
         
@@ -445,3 +468,102 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         )
 
         return data
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer para categorías de calendarios.
+    Solo administradores pueden crear/eliminar categorías.
+    """
+    calendars_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = ['id', 'name', 'calendars_count']
+        read_only_fields = ['id', 'calendars_count']
+
+    def get_calendars_count(self, obj):
+        return obj.calendars.count()
+
+
+class EventTagSerializer(serializers.ModelSerializer):
+    """
+    Serializer para tags de eventos.
+    Los tags pertenecen a una categoría específica.
+    Solo administradores pueden crear/eliminar tags.
+    """
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    events_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EventTag
+        fields = ['id', 'name', 'category', 'category_name', 'events_count']
+        read_only_fields = ['id', 'category_name', 'events_count']
+
+    def validate_category(self, value):
+        """Verifica que la categoría existe."""
+        if not Category.objects.filter(id=value.id).exists():
+            raise serializers.ValidationError("The specified category does not exist.")
+        return value
+
+    def get_events_count(self, obj):
+        return obj.events.count()
+
+
+class CalendarDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer extendido del calendario que incluye categorías asignadas.
+    """
+    is_owner = serializers.SerializerMethodField()
+    is_coowner = serializers.SerializerMethodField()
+    categories = CategorySerializer(many=True, read_only=True)
+    creator_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Calendar
+        fields = [
+            'id', 'name', 'description', 'cover', 'privacy', 'created_at',
+            'is_owner', 'is_coowner', 'categories', 'creator_info', 'likes_count'
+        ]
+
+    def get_is_owner(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return False
+        return request.user == obj.creator
+
+    def get_is_coowner(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return False
+        return request.user in obj.co_owners.all()
+
+    def get_creator_info(self, obj):
+        return {
+            'id': obj.creator.id,
+            'username': obj.creator.username,
+            'photo': obj.creator.photo.url if obj.creator.photo else None
+        }
+
+
+class EventDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer extendido del evento que incluye tags asignados.
+    """
+    tags = EventTagSerializer(many=True, read_only=True)
+    creator_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'title', 'description', 'date', 'time', 'place_name',
+            'location', 'photo', 'tags', 'creator_info', 'likes_count'
+        ]
+
+    def get_creator_info(self, obj):
+        return {
+            'id': obj.creator.id,
+            'username': obj.creator.username,
+            'photo': obj.creator.photo.url if obj.creator.photo else None
+        }
+

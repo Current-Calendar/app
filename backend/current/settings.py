@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'main',
     'storages',
     'django.contrib.gis',
+    'silk'
 ]
 
 ASGI_APPLICATION = 'current.asgi.application'
@@ -157,6 +158,7 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'main.User'
 
 MIDDLEWARE = [
+    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'current.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -199,6 +201,10 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
         'HOST': os.getenv('POSTGRES_HOST'),
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
+        'CONN_MAX_AGE': 60,
     }
 }
 
@@ -223,6 +229,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
+    'UPDATE_LAST_LOGIN': True,
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
@@ -262,7 +269,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Madrid'
 
 USE_I18N = True
 

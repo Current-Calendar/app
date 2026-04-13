@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Calendar } from "@/types/calendar";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import apiClient, { ApiError } from "@/services/api-client";
 
 type UserItem = {
@@ -130,6 +131,7 @@ export function AddCoOwnerModal({
 
   const [savingIds, setSavingIds] = useState<number[]>([]);
   const [removingIds, setRemovingIds] = useState<number[]>([]);
+  const [coOwnerToRemove, setCoOwnerToRemove] = useState<UserItem | null>(null);
   const [isCalendarOwner, setIsCalendarOwner] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -146,6 +148,7 @@ export function AddCoOwnerModal({
       setSearchResults([]);
       setSavingIds([]);
       setRemovingIds([]);
+      setCoOwnerToRemove(null);
       setLoadingOwner(true);
       setLoadingFollowing(true);
 
@@ -295,7 +298,7 @@ export function AddCoOwnerModal({
   }, [search, searchResults, following, owner?.id]);
 
   const topUsers = useMemo(() => {
-    const list: Array<UserItem & { __role: "owner" | "co-owner" }> = [];
+    const list: (UserItem & { __role: "owner" | "co-owner" })[] = [];
 
     if (owner) {
       list.push({ ...owner, __role: "owner" });
@@ -447,20 +450,31 @@ export function AddCoOwnerModal({
     }
   };
 
+  const confirmRemoveCoOwner = async () => {
+    if (!coOwnerToRemove) return;
+
+    try {
+      await handleRemoveCoOwner(coOwnerToRemove);
+    } finally {
+      setCoOwnerToRemove(null);
+    }
+  };
+
   if (!calendar) return null;
 
   return (
-    <Modal
-      visible={isVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.modalCard} onPress={() => {}}>
+    <>
+      <Modal
+        visible={isVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
           <View style={styles.header}>
             <View style={styles.headerTextWrap}>
-              <Text style={styles.title}>Add co-owner to "{calendar.name}"</Text>
+              <Text style={styles.title}>Add co-owner to {calendar.name}</Text>
             </View>
 
             <Pressable onPress={onClose} hitSlop={12}>
@@ -518,7 +532,7 @@ export function AddCoOwnerModal({
                                 styles.removeButton,
                                 isRemoving && styles.removeButtonDisabled,
                               ]}
-                              onPress={() => void handleRemoveCoOwner(item)}
+                              onPress={() => setCoOwnerToRemove(item)}
                               disabled={isRemoving}
                             >
                               {isRemoving ? (
@@ -640,9 +654,22 @@ export function AddCoOwnerModal({
               />
             )}
           </View>
+          </Pressable>
         </Pressable>
-      </Pressable>
-    </Modal>
+      </Modal>
+
+      <ConfirmDeleteModal
+        visible={!!coOwnerToRemove}
+        title="Remove co-owner"
+        message={`Are you sure you want to remove @${coOwnerToRemove?.username ?? "this user"} from "${calendar.name}"?`}
+        confirmLabel="Remove"
+        loading={!!coOwnerToRemove && removingIds.includes(coOwnerToRemove.id)}
+        onCancel={() => setCoOwnerToRemove(null)}
+        onConfirm={() => {
+          void confirmRemoveCoOwner();
+        }}
+      />
+    </>
   );
 }
 

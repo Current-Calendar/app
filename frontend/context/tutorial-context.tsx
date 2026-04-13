@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from "react";
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 
 export type TutorialStep = {
   key: string;
@@ -22,9 +22,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     key: "switch-calendar",
     route: "/(tabs)/switch-calendar",
     icon: "calendar",
-    title: "Calendars and Events",
+    title: "Switch Calendar",
     description:
-      "Here you can see different calendars to follow and recommended events.",
+      "Use this to filter your view. See everything at once, or focus on a specific calendar you follow.",
   },
   {
     key: "search",
@@ -45,7 +45,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     key: "create",
     icon: "add-circle",
-    route: "/(tabs)/calendars",
+    route: "",
     spotlight: true,
     title: "Create",
     description:
@@ -60,6 +60,37 @@ export type ButtonLayout = {
   height: number;
 };
 
+const STORAGE_KEY_ACTIVE = "tutorial_is_active";
+const STORAGE_KEY_STEP   = "tutorial_current_step";
+
+function loadFromStorage(): { isActive: boolean; currentStep: number } {
+  try {
+    const active = localStorage.getItem(STORAGE_KEY_ACTIVE);
+    const step   = localStorage.getItem(STORAGE_KEY_STEP);
+    return {
+      isActive:    active === "true",
+      currentStep: step ? parseInt(step, 10) : 0,
+    };
+  } catch {
+    return { isActive: false, currentStep: 0 };
+  }
+}
+
+function saveToStorage(isActive: boolean, currentStep: number) {
+  try {
+    localStorage.setItem(STORAGE_KEY_ACTIVE,  String(isActive));
+    localStorage.setItem(STORAGE_KEY_STEP,    String(currentStep));
+  } catch {
+  }
+}
+
+function clearStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY_ACTIVE);
+    localStorage.removeItem(STORAGE_KEY_STEP);
+  } catch {}
+}
+
 type TutorialContextType = {
   isActive: boolean;
   showWelcome: boolean;
@@ -70,16 +101,22 @@ type TutorialContextType = {
   nextStep: () => void;
   prevStep: () => void;
   endTutorial: () => void;
-  createButtonLayout: React.RefObject<ButtonLayout | null>;
+  createButtonLayout: React.MutableRefObject<ButtonLayout | null>;
 };
 
 const TutorialContext = createContext<TutorialContextType | null>(null);
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
-  const [isActive, setIsActive] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
+  const saved = loadFromStorage();
+
+  const [isActive,     setIsActive]     = useState(saved.isActive);
+  const [showWelcome,  setShowWelcome]  = useState(false);
+  const [currentStep,  setCurrentStep]  = useState(saved.currentStep);
   const createButtonLayout = useRef<ButtonLayout | null>(null);
+
+  useEffect(() => {
+    saveToStorage(isActive, currentStep);
+  }, [isActive, currentStep]);
 
   const startTutorial = useCallback(() => {
     setCurrentStep(0);
@@ -89,8 +126,11 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
   const nextStep = useCallback(() => {
     setCurrentStep((prev) => {
-      if (prev < TUTORIAL_STEPS.length - 1) return prev + 1;
+      const next = prev + 1;
+      if (next < TUTORIAL_STEPS.length) return next;
+      // Last step done — end tutorial and clear storage
       setIsActive(false);
+      clearStorage();
       return 0;
     });
   }, []);
@@ -102,6 +142,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   const endTutorial = useCallback(() => {
     setIsActive(false);
     setCurrentStep(0);
+    clearStorage();
   }, []);
 
   return (

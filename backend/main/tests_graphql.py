@@ -28,8 +28,8 @@ class GraphQLTests(GraphQLTestCase):
         )
 
         self.cal2 = Calendar.objects.create(
-            name="Friends Calendar",
-            privacy="FRIENDS",
+            name="Restricted Calendar",
+            privacy="PRIVATE",
             creator=self.user2,
         )
 
@@ -53,7 +53,7 @@ class GraphQLTests(GraphQLTestCase):
 
         self.event2 = Event.objects.create(
             title="Secret Meeting",
-            description="For my friends only.",
+            description="Restricted meeting.",
             date=date(2026, 4, 20),
             time=time(10, 00),
             creator=self.user2,

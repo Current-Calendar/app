@@ -9,9 +9,9 @@ export type NotificationType =
   | 'EVENT_LIKED' 
   | 'CALENDAR_INVITE'
   | 'EVENT_INVITE' 
-  | 'EVENT_COMMENT';
+  | 'EVENT_COMMENT'
+  | 'CALENDAR_COMMENT';
   
-
 export type Notification = {
   id: number;
   type: NotificationType;
@@ -25,6 +25,7 @@ export type Notification = {
   sender?: number | null;
   sender_username?: string | null;
   sender_photo?: string | null;
+  invite_resolved?: boolean;
 };
 
 interface UseNotificationsOptions {

@@ -4,9 +4,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y \
+    gcc \
     gdal-bin \
     libpq-dev \
-    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /backend
@@ -18,10 +18,9 @@ COPY . .
 
 # rest_framework_simplejwt.token_blacklist requiere tener un `SECRET_KEY` configurado en todo momento,
 # así que usamos el de ejemplo y luego lo borrarmos, si no el collectstatic no funciona.
-COPY .env.dev.example .env
-
-RUN python manage.py collectstatic --noinput
-RUN rm .env
+RUN cp .env.dev.example .env && \
+    python manage.py collectstatic --noinput && \
+    rm .env
 
 EXPOSE 8000
 

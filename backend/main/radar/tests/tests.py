@@ -1,5 +1,6 @@
 from datetime import date, time
 from rest_framework.test import APITestCase
+from django.utils import timezone
 from rest_framework import status
 from main.models import Calendar, Event
 from django.contrib.auth import get_user_model
@@ -39,8 +40,8 @@ class RadarEventsTest(APITestCase):
         )
 
         self.friends_calendar = Calendar.objects.create(
-            name="Friends",
-            privacy="FRIENDS",
+            name="Restricted",
+            privacy="PRIVATE",
             creator=self.friend
         )
 
@@ -54,7 +55,7 @@ class RadarEventsTest(APITestCase):
 
         self.public_event = Event.objects.create(
             title="Event Público",
-            date=date.today(),
+            date=timezone.now().date(),
             time=time(12, 0),
             location=location,
             creator=self.other
@@ -62,8 +63,8 @@ class RadarEventsTest(APITestCase):
         self.public_event.calendars.add(self.public_calendar)
 
         self.friends_event = Event.objects.create(
-            title="Event Friends",
-            date=date.today(),
+            title="Event Restricted",
+            date=timezone.now().date(),
             time=time(13, 0),
             location=location,
             creator=self.friend
@@ -72,7 +73,7 @@ class RadarEventsTest(APITestCase):
 
         self.private_event = Event.objects.create(
             title="Event Private",
-            date=date.today(),
+            date=timezone.now().date(),
             time=time(14, 0),
             location=location,
             creator=self.other
@@ -87,10 +88,10 @@ class RadarEventsTest(APITestCase):
         titles = [e["title"] for e in response.data]
 
         self.assertIn("Event Público", titles)
-        self.assertNotIn("Event Friends", titles)
+        self.assertNotIn("Event Restricted", titles)
         self.assertNotIn("Event Private", titles)
 
-    def test_authenticated_sees_public_and_friends(self):
+    def test_authenticated_sees_public_only(self):
         self.client.login(username="user1", password="testpass")
 
         response = self.client.get(self.url)
@@ -100,10 +101,10 @@ class RadarEventsTest(APITestCase):
         titles = [e["title"] for e in response.data]
 
         self.assertIn("Event Público", titles)
-        self.assertIn("Event Friends", titles)
+        self.assertNotIn("Event Restricted", titles)
         self.assertNotIn("Event Private", titles)
 
-    def test_non_friend_cannot_see_friends_event(self):
+    def test_non_owner_cannot_see_restricted_event(self):
         self.client.login(username="other", password="testpass")
 
         response = self.client.get(self.url)
@@ -111,14 +112,14 @@ class RadarEventsTest(APITestCase):
         titles = [e["title"] for e in response.data]
 
         self.assertIn("Event Público", titles)
-        self.assertNotIn("Event Friends", titles)
+        self.assertNotIn("Event Restricted", titles)
 
     def test_event_outside_radius_not_returned(self):
         far_location = Point(-0.1276, 51.5074)
 
         far_event = Event.objects.create(
             title="Event Lejano",
-            date=date.today(),
+            date=timezone.now().date(),
             time=time(15, 0),
             location=far_location,
             creator=self.other

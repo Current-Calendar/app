@@ -18,7 +18,7 @@ export const MOCK_CALENDARS: Calendar[] = [
         id: 'work',
         name: 'Work',
         description: 'Team meetings, sprints, and deployment schedules.',
-        privacy: 'FRIENDS',
+        privacy: 'PRIVATE',
         origin: 'GOOGLE',
         creator: 'pablo',
         color: '#FF6584',

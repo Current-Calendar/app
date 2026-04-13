@@ -10,7 +10,6 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,12 +19,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useProfileActions } from '@/hooks/use-profile-actions';
 import { API_CONFIG } from '@/constants/api';
 import apiClient, { appendPhoto } from '@/services/api-client';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import profileStyles from '../../../styles/profile-styles';
 
 const EditProfileScreen = () => {
   const router = useRouter();
   const { user: currentUser, setUser: updateUserContext, logout } = useAuth();
-  const { updateOwnProfile, deleteOwnProfile: deleteOwnProfileRequest } = useProfileActions();
+  const { deleteOwnProfile: deleteOwnProfileRequest } = useProfileActions();
  
   const [pronouns, setPronouns] = useState<string>(currentUser?.pronouns || '');
   const [bio, setBio] = useState<string>(currentUser?.bio || '');
@@ -108,14 +108,20 @@ const EditProfileScreen = () => {
     setIsRecoveringPassword(true);
     setRecoverError(null);
     try {
+      const fallbackMessage =
+        'If an account exists with this email, a password reset link has been sent.';
+      const genericErrorMessage = 'Could not send recovery email. Please try again.';
       const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: currentUser.email, source: window.location.origin }),
       });
-      if (!response.ok) throw new Error('Failed to send password recovery email.');
+      const data = (await response.json().catch(() => null)) as
+        | { message?: string; error?: string }
+        | null;
+      if (!response.ok) throw new Error(genericErrorMessage);
       setShowRecoverConfirm(false);
-      Alert.alert('Success', 'Password recovery email sent. Check your inbox.');
+      Alert.alert('Success', data?.message ?? fallbackMessage);
     } catch (error) {
       setRecoverError(error instanceof Error ? error.message : 'Could not send recovery email. Please try again.');
     } finally {
@@ -178,6 +184,7 @@ const EditProfileScreen = () => {
               style={profileStyles.editInput}
               value={pronouns}
               onChangeText={setPronouns}
+              maxLength={150}
               placeholder="e.g., she/her, he/him, they/them"
               placeholderTextColor="#aaa"
             />
@@ -283,44 +290,17 @@ const EditProfileScreen = () => {
         </Pressable>
       </Modal>
  
-      <Modal
+      <ConfirmDeleteModal
         visible={showDeleteConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { if (!isDeletingProfile) setShowDeleteConfirm(false); }}
-      >
-        <Pressable
-          style={profileStyles.editModalOverlay}
-          onPress={() => { if (!isDeletingProfile) setShowDeleteConfirm(false); }}
-        >
-          <Pressable style={profileStyles.editModalCard} onPress={() => {}}>
-            <Text style={profileStyles.editModalTitle}>Delete profile</Text>
-            <Text style={profileStyles.editModalText}>
-              Are you sure you want to delete your profile? This action cannot be undone.
-            </Text>
-            <View style={profileStyles.editModalActions}>
-              <TouchableOpacity
-                style={profileStyles.editModalCancelButton}
-                onPress={() => setShowDeleteConfirm(false)}
-                disabled={isDeletingProfile}
-              >
-                <Text style={profileStyles.editModalCancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[profileStyles.editModalDeleteButton, isDeletingProfile && profileStyles.editButtonDisabled]}
-                onPress={() => { void deleteOwnProfile(); }}
-                disabled={isDeletingProfile}
-              >
-                {isDeletingProfile ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <Text style={profileStyles.editModalDeleteButtonText}>Delete</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title="Delete profile"
+        message="Are you sure you want to delete your profile? This action cannot be undone."
+        loading={isDeletingProfile}
+        errorMessage={deleteError}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          void deleteOwnProfile();
+        }}
+      />
  
     </SafeAreaView>
   );

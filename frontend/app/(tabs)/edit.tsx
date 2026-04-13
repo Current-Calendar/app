@@ -8,8 +8,9 @@ import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
-type PrivacyStatus = 'PRIVATE' | 'FRIENDS' | 'PUBLIC';
+type PrivacyStatus = 'PRIVATE' | 'PUBLIC';
 
 export default function EditScreen() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function EditScreen() {
   const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(params.cover || null);
   const [newCoverImage, setNewCoverImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [coverRemoved, setCoverRemoved] = useState(false);
+  const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
 
   const calendarId = params.id;
 
@@ -46,12 +48,6 @@ export default function EditScreen() {
       value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
-    },
-    {
-      label: "Friends",
-      value: "FRIENDS",
-      icon: "people-outline",
-      description: "Visible to your friends only",
     },
     {
       label: "Public",
@@ -82,9 +78,14 @@ export default function EditScreen() {
   };
 
   const handleRemoveCover = () => {
+    setShowRemoveCoverConfirm(true);
+  };
+
+  const confirmRemoveCover = () => {
     setNewCoverImage(null);
     setExistingCoverUrl(null);
     setCoverRemoved(true);
+    setShowRemoveCoverConfirm(false);
   };
 
   // Determine what to display as cover
@@ -121,7 +122,7 @@ export default function EditScreen() {
         });
       }
 
-      router.replace('/(tabs)/calendars');
+      router.replace(`/(tabs)/calendars?selectedCalendarId=${calendarId}`);
     } catch (error: any) {
       console.log("FULL ERROR:", error);
 
@@ -201,6 +202,7 @@ export default function EditScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
+              maxLength={100}
               value={calendarData.name}
               onChangeText={(text) => setCalendarData({ ...calendarData, name: text })}
             />
@@ -271,8 +273,6 @@ export default function EditScreen() {
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                ? "Your friends will receive an invitation to view this calendar."
                 : "Anyone with the link can view this calendar."}
             </Text>
           </View>
@@ -299,6 +299,15 @@ export default function EditScreen() {
 
         </View>
       </ScrollView>
+
+      <ConfirmDeleteModal
+        visible={showRemoveCoverConfirm}
+        title="Remove cover image"
+        message="Are you sure you want to remove this cover image?"
+        confirmLabel="Remove"
+        onCancel={() => setShowRemoveCoverConfirm(false)}
+        onConfirm={confirmRemoveCover}
+      />
     </View>
   );
 }

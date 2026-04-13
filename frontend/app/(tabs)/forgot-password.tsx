@@ -39,16 +39,22 @@ export default function ForgotPasswordScreen() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const recoverpass = async (email: string) => {
-  
+    const fallbackMessage =
+      "If an account exists with this email, a password reset link has been sent.";
+    const genericErrorMessage = "Error sending password recovery email.";
     const source = window.location.origin;
     const response = await fetch(API_CONFIG.endpoints.recoverPassword, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email, source: source }),
     });
+    const data = (await response.json().catch(() => null)) as
+      | { message?: string; error?: string }
+      | null;
     if (!response.ok) {
-      throw new Error("Failed to send password recovery email.");
+      throw new Error(genericErrorMessage);
     }
+    return data?.message ?? fallbackMessage;
   };
 
   const onForgotPassword = async () => {
@@ -69,10 +75,12 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      await recoverpass(u);
-      setSuccessMsg("Password recovery email sent.");
+      const message = await recoverpass(u);
+      setSuccessMsg(message);
     } catch (error) {
-      setErrorMsg("Error sending password recovery email.");
+      setErrorMsg(
+        error instanceof Error ? error.message : "Error sending password recovery email."
+      );
     } finally {
       setLoading(false);
     }

@@ -20,8 +20,9 @@ import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from '@/services/api-client';
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
-type PrivacyStatus = "PRIVATE" | "FRIENDS" | "PUBLIC";
+type PrivacyStatus = "PRIVATE" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
 
 interface PublishData {
@@ -53,6 +54,7 @@ export default function CreateScreen() {
   });
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -68,12 +70,6 @@ export default function CreateScreen() {
       value: "PRIVATE",
       icon: "lock-closed-outline",
       description: "Only you can see this calendar",
-    },
-    {
-      label: "Friends",
-      value: "FRIENDS",
-      icon: "people-outline",
-      description: "Visible to your friends only",
     },
     {
       label: "Public",
@@ -106,7 +102,12 @@ export default function CreateScreen() {
   };
 
   const handleRemoveCover = () => {
+    setShowRemoveCoverConfirm(true);
+  };
+
+  const confirmRemoveCover = () => {
     setCoverImage(null);
+    setShowRemoveCoverConfirm(false);
   };
 
   const handleCancel = () => {
@@ -119,11 +120,13 @@ export default function CreateScreen() {
 
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
+      setErrorMessage("Calendar name is required.");
       Alert.alert("Error", "Calendar name is required.");
       return;
     }
 
     if (!user?.username) {
+      setErrorMessage("You must be logged in to create a calendar.");
       Alert.alert("Error", "You must be logged in to create a calendar.");
       return;
     }
@@ -251,10 +254,12 @@ export default function CreateScreen() {
               style={styles.input}
               placeholder="Calendar name"
               placeholderTextColor="#aaa"
+              maxLength={100}
               value={calendarData.name}
               onChangeText={(text) =>
                 setCalendarData({ ...calendarData, name: text })
               }
+              testID="create-calendar-name-input"
             />
             <TextInput
               style={[styles.input, styles.inputMultiline]}
@@ -266,6 +271,7 @@ export default function CreateScreen() {
               }
               multiline
               numberOfLines={3}
+              testID="create-calendar-description-input"
             />
           </View>
 
@@ -335,9 +341,7 @@ export default function CreateScreen() {
             <Text style={styles.infoText}>
               {selectedPrivacy === "PRIVATE"
                 ? "Only you can access and modify this calendar."
-                : selectedPrivacy === "FRIENDS"
-                  ? "Your friends will receive an invitation to view this calendar."
-                  : "Anyone with the link can view this calendar."}
+                : "Anyone with the link can view this calendar."}
             </Text>
           </View>
      
@@ -357,6 +361,7 @@ export default function CreateScreen() {
               style={styles.cancelButton}
               onPress={handleCancel}
               disabled={isLoading}
+              testID="create-calendar-cancel-button"
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
@@ -368,6 +373,7 @@ export default function CreateScreen() {
               ]}
               onPress={handlePublish}
               disabled={isLoading}
+              testID="create-calendar-submit-button"
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" size="small" />
@@ -379,6 +385,14 @@ export default function CreateScreen() {
         </View>
       </ScrollView>
 
+      <ConfirmDeleteModal
+        visible={showRemoveCoverConfirm}
+        title="Remove cover image"
+        message="Are you sure you want to remove this cover image?"
+        confirmLabel="Remove"
+        onCancel={() => setShowRemoveCoverConfirm(false)}
+        onConfirm={confirmRemoveCover}
+      />
 
     </View>
   );

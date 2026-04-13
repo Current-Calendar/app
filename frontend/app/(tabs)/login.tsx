@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { Ionicons } from '@expo/vector-icons';
+import { ApiError } from "@/services/api-client";
 
 const PINK = "#F2A3A6";
 const TEAL = "#1F6A6A";
@@ -31,13 +32,9 @@ export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
-  const { user, login, isAuthenticated, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (!isLoading && (isAuthenticated || Boolean(user))) {
-      router.replace('/(tabs)/switch-events' as any);
-    }
-  }, [isLoading, isAuthenticated, user, router]);
+  const { login } = useAuth();
+  const usernameRef = useRef<TextInput | null>(null);
+  const passwordRef = useRef<TextInput | null>(null);
 
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.5, 520) : Math.min(width * 0.92, 420);
@@ -50,12 +47,27 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const onLogin = async () => {
-    if (isAuthenticated || user) {
-      router.replace('/(tabs)/switch-events' as any);
-      return;
+  const parseErrorMessage = (error: unknown): string => {
+    if (error instanceof ApiError) {
+      if (error.status === 401) return "Credenciales invalidas.";
+      if (error.status === 0) {
+        return "No se pudo conectar con el servidor. Comprueba que el backend esta activo e intentalo de nuevo.";
+      }
+      if (typeof error.message === "string" && error.message.trim()) return error.message;
     }
+    const anyErr = error as any;
+    const detail = anyErr?.data?.detail || anyErr?.detail || anyErr?.message;
+    if (
+      typeof detail === "string" &&
+      ["Failed to fetch", "Network request failed", "Load failed"].includes(detail.trim())
+    ) {
+      return "No se pudo conectar con el servidor. Comprueba que el backend esta activo e intentalo de nuevo.";
+    }
+    if (typeof detail === "string" && detail.trim()) return detail;
+    return "No se pudo iniciar sesion. Intentalo de nuevo.";
+  };
 
+  const onLogin = async () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
@@ -73,7 +85,8 @@ export default function LoginScreen() {
       setSuccessMsg("Login exitoso.");
       setTimeout(() => router.push("/"), 250);
     } catch (error) {
-      setErrorMsg("User o contraseña incorrectos.");
+      setSuccessMsg(null);
+      setErrorMsg(parseErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -101,6 +114,11 @@ export default function LoginScreen() {
             placeholderTextColor="#999"
             autoCapitalize="none"
             style={styles.input}
+            testID="login-username-input"
+            ref={usernameRef}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
           />
 
           <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
@@ -113,6 +131,15 @@ export default function LoginScreen() {
               secureTextEntry={!showPassword}
               style={[styles.input, { paddingRight: 40 }]}
               autoCapitalize="none"
+              testID="login-password-input"
+              ref={passwordRef}
+              returnKeyType="done"
+              onSubmitEditing={onLogin}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === "Enter") {
+                  onLogin();
+                }
+              }}
             />
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
@@ -130,13 +157,18 @@ export default function LoginScreen() {
           </Link>
           </Pressable>
 
-          {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
+          {!!errorMsg && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          )}
           {!!successMsg && <Text style={styles.successText}>{successMsg}</Text>}
 
           <Pressable
             style={[styles.btn, loading && { opacity: 0.75 }]}
             onPress={onLogin}
             disabled={loading}
+            testID="login-submit-button"
           >
             <View style={styles.btnBubbles} pointerEvents="none">
               <View style={[styles.bubbleDot, { top: 6, left: 10 }]} />
@@ -157,9 +189,9 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>Don’t have an account?</Text>
+          <Text style={styles.bottomText}>Don't have an account?</Text>
           <Link href="/register" asChild>
-            <Pressable>
+            <Pressable testID="go-register-link">
               <Text style={styles.bottomLink}>Sign Up</Text>
             </Pressable>
           </Link>
@@ -245,7 +277,16 @@ const styles = StyleSheet.create({
   forgot: { alignSelf: "flex-end", marginTop: 8, marginBottom: 8 },
   forgotText: { color: "#3A9A9A", fontSize: 12, fontWeight: "700" },
 
-  errorText: { marginTop: 6, color: "#C43B3B", fontWeight: "800" },
+  errorBox: {
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "rgba(196,59,59,0.12)",
+    borderColor: "#C43B3B",
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  errorText: { color: "#C43B3B", fontWeight: "800" },
   successText: { marginTop: 6, color: TEAL, fontWeight: "900" },
 
   btn: {
@@ -292,3 +333,4 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 });
+

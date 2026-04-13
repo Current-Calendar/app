@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from ..models import Calendar, Comment, Event
+from ..models import Calendar, Comment, Event, Notification
 
 DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 50
@@ -26,12 +26,6 @@ def _normalize_target_type(value: str | None) -> str | None:
     return normalized
 
 
-def _is_friend_viewer(owner, viewer) -> bool:
-    if not viewer or not viewer.is_authenticated:
-        return False
-    return owner.is_friend_with(viewer)
-
-
 def can_view_calendar(calendar: Calendar, user) -> bool:
     if calendar.privacy == "PUBLIC":
         return True
@@ -41,8 +35,6 @@ def can_view_calendar(calendar: Calendar, user) -> bool:
         return True
     if calendar.co_owners.filter(id=user.id).exists():
         return True
-    if calendar.privacy == "FRIENDS":
-        return _is_friend_viewer(calendar.creator, user)
     return False
 
 
@@ -59,10 +51,6 @@ def can_view_event(event: Event, user) -> bool:
 
     if calendars.filter(privacy="PRIVATE", creator_id=user.id).exists():
         return True
-
-    for cal in calendars.filter(privacy="FRIENDS"):
-        if _is_friend_viewer(cal.creator, user):
-            return True
 
     return False
 
@@ -281,6 +269,35 @@ def create_comment(request):
             comment.save(update_fields=["root", "updated_at"])
         else:
             Comment.objects.filter(id=parent.root_id).update(replies_count=F("replies_count") + 1)
+
+    recipients = set()
+    notif_type = 'CALENDAR_COMMENT'
+    related_calendar = calendar
+    related_event = event
+
+    if calendar:
+        recipients.add(calendar.creator)
+        recipients.update(calendar.co_owners.all())
+    elif event:
+        recipients.add(event.creator)
+        notif_type = 'EVENT_COMMENT'
+
+    if parent:
+        recipients.add(parent.author)
+
+    for recipient in recipients:
+        if recipient and recipient.id != request.user.id:
+            try:
+                Notification.objects.create(
+                    recipient=recipient,
+                    sender=request.user,
+                    type=notif_type,
+                    message=f"{request.user.username} commented: {comment.body}",
+                    related_calendar=related_calendar,
+                    related_event=related_event,
+                )
+            except Exception:
+                pass
 
     comment = Comment.objects.select_related("author", "parent__author").get(pk=comment.id)
     return Response(

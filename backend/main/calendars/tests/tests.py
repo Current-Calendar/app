@@ -68,8 +68,8 @@ class CrearCalendarTests(APITestCase):
         self.assertEqual(data["privacy"], "PUBLIC")
         self.assertEqual(data["description"], "Un calendar para todos")
 
-    def test_crear_calendario_amigos_exitoso(self):
-        """Crea un calendar con privacy FRIENDS correctamente."""
+    def test_crear_calendario_friends_devuelve_400(self):
+        """FRIENDS ya no es un valor de privacy aceptado."""
         self.client.force_authenticate(self.user)
 
         payload = {
@@ -78,8 +78,8 @@ class CrearCalendarTests(APITestCase):
         }
         response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.json()["privacy"], "FRIENDS")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
 
     def test_crear_calendario_con_origin_google(self):
         """Crea un calendar importado de Google Calendar."""
@@ -513,9 +513,9 @@ class ListCalendarsTests(TestCase):
             creator=self.owner,
         )
         self.cal_amigos = Calendar.objects.create(
-            name="Friends Events",
-            description="Friends calendar",
-            privacy="FRIENDS",
+            name="Secondary Private Events",
+            description="Secondary private calendar",
+            privacy="PRIVATE",
             origin="GOOGLE",
             creator=self.owner,
         )
@@ -577,11 +577,11 @@ class ListCalendarsTests(TestCase):
 
     def test_search_by_name_returns_matching_calendars(self):
         """q parameter filters calendars by name substring (case-insensitive)."""
-        # 'Friends' only appears in 'Friends Events', so exactly 1 match expected
-        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Friends"})
+        # 'Secondary' only appears in 'Secondary Private Events', so exactly 1 match expected
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Secondary"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item["name"] for item in response.json()]
-        self.assertIn("Friends Events", names)
+        self.assertIn("Secondary Private Events", names)
         self.assertNotIn("Private Events", names)
         self.assertNotIn("Public Events", names)
         self.assertNotIn("Open Events", names)
@@ -590,8 +590,10 @@ class ListCalendarsTests(TestCase):
         """Name search is case-insensitive."""
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "PRIVATE"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["name"], "Private Events")
+        names = [item["name"] for item in response.json()]
+        self.assertEqual(len(names), 2)
+        self.assertIn("Private Events", names)
+        self.assertIn("Secondary Private Events", names)
 
     def test_search_with_no_matches_returns_empty_list(self):
         """q parameter that matches nothing returns an empty list, not an error."""
@@ -619,20 +621,19 @@ class ListCalendarsTests(TestCase):
             self.assertEqual(item["privacy"], "PUBLIC")
 
     def test_filter_by_privacy_privado(self):
-        """privacy=PRIVADO returns only private calendars."""
+        """privacy=PRIVATE returns only private calendars."""
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"privacy": "PRIVATE"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["privacy"], "PRIVATE")
+        self.assertEqual(len(data), 2)
+        for item in data:
+            self.assertEqual(item["privacy"], "PRIVATE")
 
-    def test_filter_by_privacy_amigos(self):
-        """privacy=FRIENDS returns only friends calendars."""
+    def test_filter_by_privacy_friends_devuelve_400(self):
+        """privacy=FRIENDS is no longer accepted."""
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"privacy": "FRIENDS"})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["privacy"], "FRIENDS")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.json())
 
     def test_filter_by_privacy_case_insensitive(self):
         """privacy filter is case-insensitive (lowercase is accepted)."""
@@ -695,10 +696,10 @@ class PublishCalendarTests(APITestCase):
             privacy="PRIVATE",
         )
 
-        self.friends_calendar = Calendar.objects.create(
+        self.secondary_private_calendar = Calendar.objects.create(
             creator=self.user,
-            name="Calendar FRIENDS",
-            privacy="FRIENDS",
+            name="Calendar Secondary Private",
+            privacy="PRIVATE",
         )
 
         self.public_calendar = Calendar.objects.create(
@@ -722,15 +723,15 @@ class PublishCalendarTests(APITestCase):
         self.private_calendar.refresh_from_db()
         self.assertEqual(self.private_calendar.privacy, "PUBLIC")
 
-    def test_publish_friends_calendar(self):
+    def test_publish_secondary_private_calendar(self):
         self.client.force_authenticate(self.user)
 
         response = self.client.put(
-            self.endpoint(self.friends_calendar.id)
+            self.endpoint(self.secondary_private_calendar.id)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.friends_calendar.refresh_from_db()
-        self.assertEqual(self.friends_calendar.privacy, "PUBLIC")
+        self.secondary_private_calendar.refresh_from_db()
+        self.assertEqual(self.secondary_private_calendar.privacy, "PUBLIC")
 
     def test_response_contains_expected_keys(self):
         self.client.force_authenticate(self.user)
@@ -873,7 +874,7 @@ class CalendarLikesTests(APITestCase):
             CalendarLike.objects.filter(user=another_user, calendar=self.calendar).exists()
         )
 
-    def test_privacy_change_to_friends_keeps_only_mutual_friends(self):
+    def test_privacy_change_to_private_cleans_non_creator_likes(self):
         mutual_friend = User.objects.create_user(
             username="mutual_friend",
             email="mutual_friend@example.com",
@@ -891,12 +892,12 @@ class CalendarLikesTests(APITestCase):
         CalendarLike.objects.create(user=outsider, calendar=self.calendar)
         CalendarLike.objects.create(user=self.owner, calendar=self.calendar)
 
-        self.calendar.privacy = "FRIENDS"
+        self.calendar.privacy = "PRIVATE"
         self.calendar.save(update_fields=["privacy"])
 
         self.calendar.refresh_from_db()
-        self.assertEqual(self.calendar.likes_count, 2)
-        self.assertTrue(
+        self.assertEqual(self.calendar.likes_count, 1)
+        self.assertFalse(
             CalendarLike.objects.filter(user=mutual_friend, calendar=self.calendar).exists()
         )
         self.assertTrue(
@@ -999,97 +1000,6 @@ class ShareCalendarHtmlTests(TestCase):
         response = self.client.get(SHARE_HTML_ENDPOINT.format(99999))
         self.assertEqual(response.status_code, 404)
 
-
-class EditCoOwnersTests(APITestCase):
-    ENDPOINT = "/api/v1/calendars/{}/co_owners/"
-
-    def setUp(self):
-        self.creator = User.objects.create_user(
-            username="co_creator",
-            email="co_creator@example.com",
-            password="pass1234",
-        )
-        self.co_owner = User.objects.create_user(
-            username="existing_co_owner",
-            email="existing_co_owner@example.com",
-            password="pass1234",
-        )
-        self.old_co_owner = User.objects.create_user(
-            username="old_co_owner",
-            email="old_co_owner@example.com",
-            password="pass1234",
-        )
-        self.new_user = User.objects.create_user(
-            username="new_user",
-            email="new_user@example.com",
-            password="pass1234",
-        )
-        self.outsider = User.objects.create_user(
-            username="outsider_user",
-            email="outsider_user@example.com",
-            password="pass1234",
-        )
-
-        self.calendar = Calendar.objects.create(
-            name="Co Owner Calendar",
-            description="Calendar for co-owner tests",
-            privacy="PRIVATE",
-            creator=self.creator,
-        )
-        self.calendar.co_owners.add(self.co_owner, self.old_co_owner)
-
-    def test_creator_replaces_co_owners(self):
-        self.client.force_authenticate(self.creator)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.calendar.refresh_from_db()
-        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
-        self.assertEqual(resulting_ids, {self.new_user.id})
-
-    def test_co_owner_adds_only_without_replacing(self):
-        self.client.force_authenticate(self.co_owner)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        self.calendar.refresh_from_db()
-        resulting_ids = set(self.calendar.co_owners.values_list("id", flat=True))
-        self.assertEqual(
-            resulting_ids,
-            {self.co_owner.id, self.old_co_owner.id, self.new_user.id},
-        )
-
-    def test_unauthorized_user_gets_403(self):
-        self.client.force_authenticate(self.outsider)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [self.new_user.id]},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_missing_user_ids_get_400(self):
-        self.client.force_authenticate(self.creator)
-
-        response = self.client.patch(
-            self.ENDPOINT.format(self.calendar.id),
-            {"co_owners": [999999]},
-            format="json",
-        )
 
 class SubscribeCalendarTests(APITestCase):
     def setUp(self):
@@ -1215,44 +1125,6 @@ class SubscribeOwnCalendarTests(APITestCase):
         response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/subscribe/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-
-class ListFriendsCalendarsTests(APITestCase):
-    """Covers calendars/views.py lines 275-306: list_friends_calendars."""
-
-    def setUp(self):
-        self.user = User.objects.create_user(username="friends_user", email="friends_user@example.com", password="pass1234")
-        self.mutual = User.objects.create_user(username="mutual_user", email="mutual_user@example.com", password="pass1234")
-        self.one_way = User.objects.create_user(username="oneway_user", email="oneway_user@example.com", password="pass1234")
-        self.user.following.add(self.mutual)
-        self.mutual.following.add(self.user)
-        self.user.following.add(self.one_way)
-        self.friends_cal = Calendar.objects.create(name="Friends Cal", privacy="FRIENDS", creator=self.mutual)
-        self.public_cal = Calendar.objects.create(name="Public Cal", privacy="PUBLIC", creator=self.mutual)
-        self.oneway_cal = Calendar.objects.create(name="One Way Cal", privacy="FRIENDS", creator=self.one_way)
-        self.client.force_authenticate(self.user)
-
-    def test_returns_friends_calendars(self):
-        response = self.client.get("/api/v1/calendars/friends-calendars/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        names = [c["name"] for c in response.json()]
-        self.assertIn("Friends Cal", names)
-
-    def test_does_not_return_public_calendars(self):
-        response = self.client.get("/api/v1/calendars/friends-calendars/")
-        names = [c["name"] for c in response.json()]
-        self.assertNotIn("Public Cal", names)
-
-    def test_does_not_return_one_way_follow_calendars(self):
-        response = self.client.get("/api/v1/calendars/friends-calendars/")
-        names = [c["name"] for c in response.json()]
-        self.assertNotIn("One Way Cal", names)
-
-    def test_returns_empty_when_no_mutual_friends(self):
-        lone = User.objects.create_user(username="lone_user", email="lone@example.com", password="pass1234")
-        self.client.force_authenticate(lone)
-        response = self.client.get("/api/v1/calendars/friends-calendars/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), [])
 
 MINIMAL_ICS = (
     "BEGIN:VCALENDAR\r\n"
@@ -1450,7 +1322,6 @@ class ListSpecialCalendarsTests(APITestCase):
 
         self.mine_public = Calendar.objects.create(name="Mine Public", privacy="PUBLIC", creator=self.user)
         self.mine_private = Calendar.objects.create(name="Mine Private", privacy="PRIVATE", creator=self.user)
-        self.friend_friends = Calendar.objects.create(name="Friend FRIENDS", privacy="FRIENDS", creator=self.friend)
         self.friend_public = Calendar.objects.create(name="Friend PUBLIC", privacy="PUBLIC", creator=self.friend)
 
         self.user.following.add(self.friend)
@@ -1464,12 +1335,6 @@ class ListSpecialCalendarsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [c["name"] for c in response.data]
         self.assertIn("Friend PUBLIC", names)
-
-    def test_friends_calendars_endpoint(self):
-        response = self.client.get("/api/v1/calendars/friends-calendars/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        names = [c["name"] for c in response.data]
-        self.assertIn("Friend FRIENDS", names)
 
     def test_my_calendars_endpoint_and_filters(self):
         response = self.client.get("/api/v1/calendars/my-calendars/")
@@ -1771,3 +1636,130 @@ class InviteCalendarTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class LeaveCalendarTests(APITestCase):
+    """Tests for POST/DELETE /api/v1/calendars/<id>/leave/"""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="creator",
+            email="creator@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.co_owner = User.objects.create_user(
+            username="coowner",
+            email="coowner@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.viewer = User.objects.create_user(
+            username="viewer",
+            email="viewer@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+        self.other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123",
+            plan="STANDARD"
+        )
+
+        self.calendar = Calendar.objects.create(
+            name="Shared Calendar",
+            description="A calendar to test leaving",
+            creator=self.creator,
+            privacy="PRIVATE"
+        )
+
+        # Add co-owner and viewer
+        self.calendar.co_owners.add(self.co_owner)
+        self.calendar.viewers.add(self.viewer)
+
+    def test_leave_calendar_as_co_owner_success(self):
+        """Co-owner successfully leaves the calendar."""
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['calendar_id'], self.calendar.id)
+
+        # Verify user is removed from co_owners
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+
+    def test_leave_calendar_as_viewer_success(self):
+        """Viewer successfully leaves the calendar."""
+        self.client.force_authenticate(self.viewer)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data['success'])
+
+        # Verify user is removed from viewers
+        self.assertFalse(self.calendar.viewers.filter(id=self.viewer.id).exists())
+
+    def test_leave_calendar_creator_cannot_leave(self):
+        """Creator cannot leave their own calendar."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn('error', data)
+        self.assertIn('own calendar', data['error'])
+
+    def test_leave_calendar_not_part_of_calendar(self):
+        """User who is not part of calendar cannot leave."""
+        self.client.force_authenticate(self.other_user)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        data = response.json()
+        self.assertIn('error', data)
+
+    def test_leave_calendar_with_delete_method(self):
+        """Leave calendar using DELETE method should also work."""
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.delete(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+
+    def test_leave_calendar_unauthenticated(self):
+        """Unauthenticated user cannot leave calendar."""
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_leave_calendar_not_found(self):
+        """Attempting to leave non-existent calendar returns 404."""
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.post("/api/v1/calendars/999999/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_leave_calendar_with_both_roles(self):
+        """If user is both co-owner and viewer, they should be removed from both."""
+        # Add co_owner as viewer too
+        self.calendar.viewers.add(self.co_owner)
+
+        self.client.force_authenticate(self.co_owner)
+
+        response = self.client.post(f"/api/v1/calendars/{self.calendar.id}/leave/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify user is removed from both
+        self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
+        self.assertFalse(self.calendar.viewers.filter(id=self.co_owner.id).exists())

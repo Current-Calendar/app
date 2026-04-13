@@ -42,6 +42,8 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
         origin: 'CURRENT',
         creator: '',
         color: AppColors.brand,
+        likes_count: 0,
+        liked_by_me: false,
     };
     const options = [allOption, ...calendars];
 
@@ -51,6 +53,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                 style={[calendarSelectorStyles.trigger, { borderColor: displayColor }]}
                 onPress={() => setOpen(true)}
                 activeOpacity={0.7}
+                testID="calendar-selector-trigger"
             >
                 <View style={[calendarSelectorStyles.dot, { backgroundColor: displayColor }]} />
                 <Text style={calendarSelectorStyles.triggerLabel} numberOfLines={1}>
@@ -96,6 +99,7 @@ export function CalendarSelector({ calendars, selectedId, onChange, onInfoPress 
                                             setOpen(false);
                                         }}
                                         activeOpacity={0.7}
+                                        testID={`calendar-selector-option-${item.id}`}
                                     >
                                         <View style={[calendarSelectorStyles.dot, { backgroundColor: item.color }]} />
                                         <Text

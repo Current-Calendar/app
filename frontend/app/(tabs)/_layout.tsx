@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTutorial, TUTORIAL_STEPS } from "@/context/tutorial-context";
 import { WelcomeModal } from "@/components/tutorial/welcome-modal";
 import { TutorialOverlay } from "@/components/tutorial/tutorial-overlay";
+import { NotificationsProvider } from "@/context/notification-context";
 
 function InnerLayout() {
   const { width } = useWindowDimensions();
@@ -30,7 +31,7 @@ function InnerLayout() {
     return () => clearTimeout(t);
   }, []);
 
-  const { isActive, currentStep } = useTutorial();
+  const { isActive, currentStep, createButtonLayout } = useTutorial();
 
   useEffect(() => {
     if (!isActive) return;
@@ -44,20 +45,50 @@ function InnerLayout() {
     }
   }, [isActive, currentStep]);
 
+  useEffect(() => {
+    if (!isActive) return;
+    const step = TUTORIAL_STEPS[currentStep];
+    if (!step.route) return;
+    const t = setTimeout(() => router.push(step.route as any), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  const contentRef = useRef<View>(null);
+
   const NavButton = ({
     icon,
     href,
     onPress,
+    measureCreate,
   }: {
     icon: any;
     href?: Href;
     onPress?: () => void;
+    measureCreate?: boolean;
   }) => {
     const button = (
       <Pressable style={styles.navButton} onPress={onPress}>
         <Ionicons name={icon} size={24} color="#ffffff" />
       </Pressable>
     );
+
+    if (measureCreate) {
+      return (
+        <View
+          onLayout={(e) => {
+            const { x, y, width: w, height: h } = e.nativeEvent.layout;
+            contentRef.current?.measure((_fx, _fy, _fw, contentH) => {
+              (e.target as any)?.measure?.((px: number, py: number, pw: number, ph: number, pageX: number, pageY: number) => {
+                createButtonLayout.current = { x: pageX, y: pageY, width: pw, height: ph };
+              });
+            });
+          }}
+        >
+          {href ? <Link href={href} asChild>{button}</Link> : button}
+        </View>
+      );
+    }
+
     if (href) {
       return <Link href={href} asChild>{button}</Link>;
     }
@@ -77,10 +108,14 @@ function InnerLayout() {
       <WelcomeModal />
       {isDesktop && <Sidebar expanded={expanded} setExpanded={setExpanded} />}
 
-      <View style={styles.content}>
+      <View ref={contentRef} style={styles.content}>
         {!isDesktop && <TopBar />}
         <Slot />
-        {!isDesktop && <BottomBar NavButton={NavButton} />}
+        {!isDesktop && <BottomBar NavButton={(props: any) =>
+          props.icon === "add-circle"
+            ? <NavButton {...props} measureCreate />
+            : <NavButton {...props} />
+        } />}
         <TutorialOverlay />
       </View>
     </View>
@@ -88,7 +123,11 @@ function InnerLayout() {
 }
 
 export default function CustomTabLayout() {
-  return <InnerLayout />;
+  return (
+    <NotificationsProvider>
+      <InnerLayout />
+    </NotificationsProvider>
+  );
 }
 
 const styles = StyleSheet.create({

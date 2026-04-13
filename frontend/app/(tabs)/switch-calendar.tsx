@@ -16,9 +16,11 @@ import CalendarCard from "@/components/event-calendar/calendar-card";
 import CommentsModalC from "@/components/comments-modal-c";
 import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
-import { useCalendars } from "@/hooks/use-calendars";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
+import { AdCard } from '@/components/ads/ad-card';
+import { injectAds, isAdItem } from '@/components/ads/inject-ads';
+import { useAdsConfig } from '@/hooks/use-ads-config';
 
 
 export default function CalendarsScreen() {
@@ -33,16 +35,19 @@ export default function CalendarsScreen() {
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [errorSubscribeModal, setErrorSubscibeModal] = useState(false);
   const [subscribeErrorMessage, setSubscribeErrorMessage] = useState("");
+
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
-  } = useRecommendedCalendars();
+  } = useRecommendedCalendars({ enabled: isAuthenticated });
+
+  const { data: adsConfig } = useAdsConfig();
 
   if (calendarsError) {
     Alert.alert('Error', calendarsError);
   }
-  
+
   useEffect(() => {
     if (calendarsError) {
       console.error("Error fetching data:", calendarsError);
@@ -51,6 +56,7 @@ export default function CalendarsScreen() {
   }, [calendarsError]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchSubscribedCalendars = async () => {
       try {
         const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
@@ -65,7 +71,7 @@ export default function CalendarsScreen() {
     };
 
     void fetchSubscribedCalendars();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
@@ -75,8 +81,7 @@ export default function CalendarsScreen() {
       const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
       const isNotMine = !user?.id || creatorId !== String(user.id);
       const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-      const isVisibleByPrivacy =
-        c.privacy === "PUBLIC" || (c.privacy === "FRIENDS" && hasSession);
+      const isVisibleByPrivacy = c.privacy === "PUBLIC";
 
       return isVisibleByPrivacy && isNotMine && isNotSubscribed;
     });
@@ -91,7 +96,7 @@ export default function CalendarsScreen() {
       color: COLORS[index % COLORS.length],
       cover: c.cover || null,
       likes_count: c.likes_count,
-      liked_by_me : c.liked_by_me || false
+      liked_by_me: c.liked_by_me || false
     }));
 
     setCalendars(mappedCalendars);
@@ -100,33 +105,30 @@ export default function CalendarsScreen() {
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
   };
-  
- const handleLike = async (id: string) => {
-    try {
-    const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
-    setCalendars((prev) =>
-      prev.map((calendar) => {
-        if (calendar.id === id) {
-          
-          
-          const currentLikes = calendar.likes_count ?? 0;
 
-          return {
-            ...calendar,
-            liked_by_me: res.liked,
-            likes_count: res.liked 
-              ? currentLikes + 1 
-              : Math.max(0, currentLikes - 1), 
-          };
-        }
-        return calendar;
-      })
-    );
-  } catch (error) {
-    Alert.alert("Error", "Could not like this calendar.");
-    console.error("Like error:", error);
-  }
-};
+  const handleLike = async (id: string) => {
+    try {
+      const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
+      setCalendars((prev) =>
+        prev.map((calendar) => {
+          if (calendar.id === id) {
+            const currentLikes = calendar.likes_count ?? 0;
+            return {
+              ...calendar,
+              liked_by_me: res.liked,
+              likes_count: res.liked
+                ? currentLikes + 1
+                : Math.max(0, currentLikes - 1),
+            };
+          }
+          return calendar;
+        })
+      );
+    } catch (error) {
+      Alert.alert("Error", "Could not like this calendar.");
+      console.error("Like error:", error);
+    }
+  };
 
   const handleOpenCalendarComments = (id: string) => {
     const found = calendars.find((c) => c.id === id);
@@ -142,33 +144,27 @@ export default function CalendarsScreen() {
   };
 
   const handleSubscribe = async (id: string) => {
-  try {
-    const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
-    
-    if (res.subscribed) {
-      // 1. Actualizamos los IDs suscritos para mantener la coherencia global
-      setSubscribedCalendarIds((prev) => [...prev, id]);
+    try {
+      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
 
-      // 2. Reactividad: Filtramos el calendario de la lista actual para que "desaparezca"
-      // ya que al estar suscrito, deja de ser una "recomendación".
-      setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
-
-      Alert.alert("¡Listo!", "Te has suscrito correctamente.");
-    } else {
-      // Caso poco común en esta pantalla: si se desuscribiera
-      setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
+      if (res.subscribed) {
+        setSubscribedCalendarIds((prev) => [...prev, id]);
+        setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
+        Alert.alert("¡Listo!", "Te has suscrito correctamente.");
+      } else {
+        setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
+      }
+    } catch (error: any) {
+      const apiError = error.response?.data?.message || error.response?.data?.error || error.message || String(error);
+      if (Platform.OS !== "web") {
+        Alert.alert("Error", apiError);
+      } else {
+        setSubscribeErrorMessage(apiError);
+        setErrorSubscibeModal(true);
+      }
+      console.error("Subscribe error:", error);
     }
-  } catch (error: any) {
-    const apiError = error.response?.data?.message || error.response?.data?.error || error.message || String(error);
-    if (Platform.OS !== "web") {
-      Alert.alert("Error", apiError);
-    } else {
-      setSubscribeErrorMessage(apiError);
-      setErrorSubscibeModal(true);
-    }
-    console.error("Subscribe error:", error);
-  }
-};
+  };
 
   if (loadingCalendars) {
     return (
@@ -178,6 +174,9 @@ export default function CalendarsScreen() {
     );
   }
 
+  const listData = adsConfig?.show_ads
+    ? injectAds(calendars, adsConfig.frequency)
+    : calendars;
 
   return (
     <View style={styles.container}>
@@ -206,22 +205,25 @@ export default function CalendarsScreen() {
           </View>
         ) : null}
 
-
         <EventsSwitch />
 
         <FlatList
-          data={calendars}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <CalendarCard
-              calendar={item}
-              onPress={handleOpenCalendar}
-              onLike={handleLike}
-              onSubscribe={handleSubscribe}
-              onComment={handleOpenCalendarComments}
-              isSubscribed={subscribedCalendarIds.includes(item.id)}
-            />
-          )}
+          data={listData}
+          keyExtractor={(item) => isAdItem(item) ? item.id : (item as Calendar).id}
+          renderItem={({ item }) => {
+            if (isAdItem(item)) return <AdCard placement="feed" />;
+            const calendar = item as Calendar;
+            return (
+              <CalendarCard
+                calendar={calendar}
+                onPress={handleOpenCalendar}
+                onLike={handleLike}
+                onSubscribe={handleSubscribe}
+                onComment={handleOpenCalendarComments}
+                isSubscribed={subscribedCalendarIds.includes(calendar.id)}
+              />
+            );
+          }}
           ListEmptyComponent={
             <View style={styles.emptyStateWrap}>
               <Text style={styles.emptyText}>No recommended calendars right now.</Text>
@@ -259,7 +261,6 @@ export default function CalendarsScreen() {
             </View>
           </View>
         </Modal>
-
       </View>
     </View>
   );
@@ -270,22 +271,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-
   centered: {
     justifyContent: "center",
   },
-
   inner: {
     width: '100%',
     maxWidth: 800,
     flex: 1,
   },
-
   list: {
     paddingHorizontal: 16,
     paddingBottom: 120,
   },
-
   emptyText: {
     marginTop: 40,
     textAlign: "center",
@@ -293,12 +290,10 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     fontWeight: "600",
   },
-
   emptyStateWrap: {
     marginTop: 40,
     paddingHorizontal: 10,
   },
-
   emptySubtext: {
     marginTop: 6,
     textAlign: "center",
@@ -307,7 +302,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontSize: 13,
   },
-
   authHeader: {
     flexDirection: "row",
     justifyContent: "center",
@@ -315,7 +309,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 12,
   },
-
   loginButton: {
     flex: 1,
     borderWidth: 1.5,
@@ -324,13 +317,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-
   loginButtonText: {
     color: "#10464d",
     fontWeight: "600",
     fontSize: 16,
   },
-
   registerButton: {
     flex: 1,
     backgroundColor: "#10464d",
@@ -338,7 +329,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-
   registerButtonText: {
     color: "#FFFFFF",
     fontWeight: "600",

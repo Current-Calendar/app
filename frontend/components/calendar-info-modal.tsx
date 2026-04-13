@@ -18,10 +18,11 @@ import InviteUserModal from '@/components/InviteUserModal';
 import { ShareCalendarModal } from '@/components/share-calendar-modal';
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { AddCoOwnerModal } from '@/components/add-co-owner';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import apiClient from '@/services/api-client';
 
 const PRIVACY_LABELS: Record<string, { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
   PRIVATE: { label: 'Private', icon: 'lock-closed-outline' },
-  FRIENDS: { label: 'Friends', icon: 'people-outline' },
   PUBLIC: { label: 'Public', icon: 'globe-outline' },
 };
 
@@ -56,11 +57,14 @@ export function CalendarInfoModal({
   const [inviteVisible, setInviteVisible] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showCoOwners, setShowCoOwners] = useState(false);
+  const [isLeavingCalendar, setIsLeavingCalendar] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [localCalendar, setLocalCalendar] = useState<Calendar | null>(calendar);
 
   useEffect(() => {
     setLocalCalendar(calendar);
+    setShowDeleteConfirm(false);
   }, [calendar]);
 
  
@@ -70,41 +74,91 @@ export function CalendarInfoModal({
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
   const origin = ORIGIN_LABELS[localCalendar.origin] ?? ORIGIN_LABELS.CURRENT;
+  const currentUsername = (user?.username ?? '').trim().toLowerCase();
   const isOwner = user?.username === localCalendar.creator;
-  const isOwnerOrCoOwner =
-  user &&
-  (
-    localCalendar.creator === user.username ||
+  const isCoOwner =
+    user &&
+    !isOwner &&
     (localCalendar.co_owners ?? []).some(
-      (co: any) => co.username === user.username
-    )
-  );
+      (co: any) => (co?.username ?? '').trim().toLowerCase() === currentUsername
+    );
+  const isViewerOnly =
+    user &&
+    !isOwner &&
+    !isCoOwner &&
+    (localCalendar.viewers ?? []).some(
+      (viewer: any) => (viewer?.username ?? '').trim().toLowerCase() === currentUsername
+    );
+  const canLeaveCalendar = isCoOwner || isViewerOnly;
+  const isOwnerOrCoOwner =
+    user &&
+    (
+      localCalendar.creator === user.username ||
+      (localCalendar.co_owners ?? []).some(
+        (co: any) => co.username === user.username
+      )
+    );
   const hasCalendarCover =
         typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
 
 
   const handleDeletePress = () => {
     if (!onDelete) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete || !localCalendar) return;
+
+    try {
+      await Promise.resolve(onDelete(localCalendar));
+    } catch (error) {
+      console.error('Delete calendar error:', error);
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleLeaveCalendarPress = async () => {
+    if (!localCalendar) return;
 
     if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`)) {
-        void onDelete(localCalendar);
+      if (window.confirm(`Are you sure you want to leave "${localCalendar.name}"? You will lose access to this calendar.`)) {
+        await leaveCalendar();
       }
       return;
     }
 
     Alert.alert(
-      'Delete calendar',
-      `Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`,
+      'Leave calendar',
+      `Are you sure you want to leave "${localCalendar.name}"? You will lose access to this calendar.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Leave',
           style: 'destructive',
-          onPress: () => void onDelete(localCalendar),
+          onPress: () => void leaveCalendar(),
         },
       ]
     );
+  };
+
+  const leaveCalendar = async () => {
+    if (!localCalendar) return;
+
+    try {
+      setIsLeavingCalendar(true);
+      await apiClient.post(`/calendars/${localCalendar.id}/leave/`);
+      
+      // Success - close the modal and notify parent
+      Alert.alert('Success', `You have left the calendar "${localCalendar.name}".`);
+      onClose?.();
+      onCalendarUpdated?.({ id: localCalendar.id, left: true });
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to leave the calendar. Please try again.');
+    } finally {
+      setIsLeavingCalendar(false);
+    }
   };
 
   const handleCalendarUpdated = (updatedCalendar: any) => {
@@ -118,6 +172,9 @@ export function CalendarInfoModal({
     co_owners: Array.isArray(updatedCalendar?.co_owners)
       ? updatedCalendar.co_owners
       : ((localCalendar as any).co_owners ?? []),
+    viewers: Array.isArray(updatedCalendar?.viewers)
+      ? updatedCalendar.viewers
+      : ((localCalendar as any).viewers ?? []),
   } as Calendar;
 
   setLocalCalendar(merged);
@@ -238,33 +295,6 @@ export function CalendarInfoModal({
             )
           )}
 
-          {isOwnerOrCoOwner && (
-            isCompactActions ? (
-              <View style={calendarInfoModalStyles.compactActionWrap}>
-                <TouchableOpacity
-                  style={[
-                    calendarInfoModalStyles.compactActionButton,
-                    calendarInfoModalStyles.compactActionButtonNeutral,
-                  ]}
-                  onPress={() => setShowCoOwners(true)}
-                  activeOpacity={0.75}
-                  accessibilityLabel="Add co-owner"
-                >
-                  <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={calendarInfoModalStyles.shareButton}
-                onPress={() => setShowCoOwners(true)}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="people-outline" size={actionIconSize} color="#10464d" />
-                <Text style={calendarInfoModalStyles.shareButtonLabel}>Add co-owner</Text>
-              </TouchableOpacity>
-            )
-          )}
-
           {localCalendar.privacy !== 'PRIVATE' && (
             isCompactActions ? (
               <View style={calendarInfoModalStyles.compactActionWrap}>
@@ -334,6 +364,49 @@ export function CalendarInfoModal({
               </TouchableOpacity>
             )
           )}
+
+          {canLeaveCalendar && (
+            isCompactActions ? (
+              <View style={calendarInfoModalStyles.compactActionWrap}>
+                <TouchableOpacity
+                  style={[
+                    calendarInfoModalStyles.compactActionButton,
+                    calendarInfoModalStyles.compactActionButtonDanger,
+                    isLeavingCalendar && calendarInfoModalStyles.deleteButtonDisabled,
+                  ]}
+                  onPress={handleLeaveCalendarPress}
+                  disabled={isLeavingCalendar}
+                  activeOpacity={0.75}
+                  accessibilityLabel="Leave calendar"
+                >
+                  {isLeavingCalendar ? (
+                    <ActivityIndicator size="small" color="#B33F37" />
+                  ) : (
+                    <Ionicons name="exit-outline" size={actionIconSize} color="#B33F37" />
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  calendarInfoModalStyles.deleteButton,
+                  isLeavingCalendar && calendarInfoModalStyles.deleteButtonDisabled,
+                ]}
+                onPress={handleLeaveCalendarPress}
+                disabled={isLeavingCalendar}
+                activeOpacity={0.75}
+              >
+                {isLeavingCalendar ? (
+                  <ActivityIndicator size="small" color="#B33F37" />
+                ) : (
+                  <Ionicons name="exit-outline" size={actionIconSize} color="#B33F37" />
+                )}
+                <Text style={calendarInfoModalStyles.deleteButtonLabel}>
+                  {isLeavingCalendar ? 'Leaving...' : 'Leave calendar'}
+                </Text>
+              </TouchableOpacity>
+            )
+          )}
         </View>
 
         <ShareCalendarModal
@@ -356,6 +429,17 @@ export function CalendarInfoModal({
                     type="calendar"
                 />
             )}
+
+      <ConfirmDeleteModal
+        visible={showDeleteConfirm}
+        title="Delete calendar"
+        message={`Are you sure you want to delete "${localCalendar.name}"? This action cannot be undone.`}
+        loading={isDeleting}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+      />
     </>
   );
 }

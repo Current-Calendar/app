@@ -17,12 +17,12 @@ class EventoAdmin(GISModelAdmin):
 @admin.register(User)
 class UsuarioAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ('Profile', {'fields': ('pronouns', 'bio', 'link', 'photo')}),
+        ('Profile', {'fields': ('pronouns', 'bio', 'link', 'photo','plan')}),
         ('Social',  {'fields': ('following', 'subscribed_calendars')}),
     )
     filter_horizontal = ('following', 'subscribed_calendars') 
 
-    list_display = ('username', 'email', 'is_staff', 'total_following')    
+    list_display = ('username', 'email', 'last_login', 'is_staff', 'total_following')    
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):

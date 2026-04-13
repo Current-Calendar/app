@@ -35,7 +35,20 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
+}
+
+const NETWORK_ERROR_MESSAGE =
+  'No se pudo conectar con el servidor. Comprueba que el backend está activo e inténtalo de nuevo.';
+
+function toNetworkApiError(error: unknown): ApiError {
+  const message =
+    error instanceof Error && typeof error.message === 'string' && error.message.trim()
+      ? error.message
+      : NETWORK_ERROR_MESSAGE;
+
+  return new ApiError(NETWORK_ERROR_MESSAGE, 0, { cause: message });
 }
 
 class ApiClient {
@@ -138,7 +151,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    timeoutMs = 15000
   ): Promise<T> {
     const url = `${API_CONFIG.BaseURL}${endpoint}`;
     const isFormData = options.body instanceof FormData;
@@ -152,13 +166,28 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    let response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    // If 401, first attempt to refresh the token
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new ApiError('Request timed out. Please try again.', 408, {});
+      }
+      throw toNetworkApiError(err);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    // If 401, try to recover the session; otherwise surface the API error
     if (response.status === 401) {
+      const hasSession = hadAccessToken || Boolean(this.refreshToken);
       let retried = false;
 
       if (this.refreshToken) {
@@ -166,10 +195,16 @@ class ApiClient {
 
         if (refreshed && this.accessToken) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
-          response = await fetch(url, {
-            ...options,
-            headers,
-          });
+          const retryController = new AbortController();
+          const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+          try {
+            response = await fetch(url, { ...options, headers, signal: retryController.signal });
+          } catch (err: any) {
+            if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
+            throw toNetworkApiError(err);
+          } finally {
+            clearTimeout(retryTimeout);
+          }
           retried = true;
         }
       }
@@ -177,16 +212,20 @@ class ApiClient {
       if (!retried && hadAccessToken) {
         this.user = null;
         await this.clearTokens();
-        delete headers['Authorization'];
-        response = await fetch(url, {
-          ...options,
-          headers,
-        });
-      } else {
-        // Refresh failed — tokens are dead, force logout
-        await this.clearTokens();
         this.onAuthFailure?.();
-        throw new Error('Session expired. Please log in again.');
+        delete headers['Authorization'];
+        const retryController = new AbortController();
+        const retryTimeout = setTimeout(() => retryController.abort(), timeoutMs);
+        try {
+          response = await fetch(url, { ...options, headers, signal: retryController.signal });
+        } catch (err: any) {
+          if (err?.name === 'AbortError') throw new ApiError('Request timed out. Please try again.', 408, {});
+          throw toNetworkApiError(err);
+        } finally {
+          clearTimeout(retryTimeout);
+        }
+      } else if (!hasSession) {
+        // No tokens to refresh; let the standard error handler below capture the message
       }
     }
 

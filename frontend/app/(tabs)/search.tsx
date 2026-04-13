@@ -13,11 +13,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
 import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
-
-// domain types for calendars/events
 import { Calendar, CalendarEvent } from '@/types/calendar';
+import { AdCard } from '@/components/ads/ad-card';
+import { injectAds, isAdItem } from '@/components/ads/inject-ads';
+import { useAdsConfig } from '@/hooks/use-ads-config';
 
-const USE_MOCK = false; // <<--- ACTÍVALO SOLO PARA DESARROLLO
+const USE_MOCK = false;
+
+type TabType = 'all' | 'calendars' | 'events' | 'users';
+
+type TabOption = {
+    type: TabType;
+    label: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+};
+
+const TAB_OPTIONS: TabOption[] = [
+    { type: 'all', label: 'All', icon: 'grid-outline' },
+    { type: 'calendars', label: 'Calendars', icon: 'calendar-outline' },
+    { type: 'events', label: 'Events', icon: 'flag-outline' },
+    { type: 'users', label: 'Users', icon: 'people-outline' },
+];
 
 function normalizeText(value: unknown): string {
     return String(value ?? "").trim();
@@ -52,15 +68,10 @@ function renderHighlightedText(text: string, query: string, baseStyle: any, high
     const source = normalizeText(text);
     const term = normalizeText(query);
 
-    if (!source) {
-        return <Text style={baseStyle} />;
-    }
+    if (!source) return <Text style={baseStyle} />;
+    if (!term) return <Text style={baseStyle}>{source}</Text>;
 
-    if (!term) {
-        return <Text style={baseStyle}>{source}</Text>;
-    }
-
-    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")})`, "ig");
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig");
     const parts = source.split(regex);
 
     return (
@@ -79,6 +90,7 @@ function renderHighlightedText(text: string, query: string, baseStyle: any, high
 
 export default function SearchScreen() {
     const [query, setQuery] = useState("");
+    const [activeTab, setActiveTab] = useState<TabType>('all');
     const router = useRouter();
     const [loadingId, setLoadingId] = useState<string | null>(null);
     const [users, setUsers] = useState<any[]>([]);
@@ -87,37 +99,45 @@ export default function SearchScreen() {
     const { results: userResults } = useUserSearch(query);
     const { results: calendars } = useCalendarSearch(query);
     const { results: events } = useEventSearch(query);
-
     const { followUser: followUserRequest } = useFollowUserAction();
+    const { data: adsConfig } = useAdsConfig();
 
     useEffect(() => {
         setUsers(userResults);
     }, [userResults]);
 
+    useEffect(() => {
+        if (!query.trim()) setActiveTab('all');
+    }, [query]);
+
     const calendarMap = useMemo(() => {
         const m: Record<string, string> = {};
-        calendars.forEach((c) => {
-            m[c.id.toString()] = c.name;
-        });
+        calendars.forEach((c) => { m[c.id.toString()] = c.name; });
         return m;
     }, [calendars]);
 
     type SearchResult =
         | { type: 'user'; data: any }
-        | { type: 'calendar'; data: Calendar }
-        | { type: 'event'; data: CalendarEvent };
+        | { type: 'calendar'; data: any }
+        | { type: 'event'; data: any };
 
-    const filtered: SearchResult[] = useMemo(() => {
+    const allResults: SearchResult[] = useMemo(() => {
         if (!query.trim()) return [];
-
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
-
         const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
-
         const eventRes: SearchResult[] = events.map((e) => ({ type: 'event', data: e }));
-
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events]);
+
+    const filtered: SearchResult[] = useMemo(() => {
+        if (activeTab === 'all') return allResults;
+        return allResults.filter(item => {
+            if (activeTab === 'calendars') return item.type === 'calendar';
+            if (activeTab === 'events') return item.type === 'event';
+            if (activeTab === 'users') return item.type === 'user';
+            return true;
+        });
+    }, [activeTab, allResults]);
 
     const followUser = async (id: string | number) => {
         const normalizedId = String(id);
@@ -133,7 +153,6 @@ export default function SearchScreen() {
 
         try {
             const data = await followUserRequest(normalizedId);
-
             setUsers(prev =>
                 prev.map(u =>
                     String(u.id) === normalizedId ? { ...u, followed: data.followed } : u
@@ -163,9 +182,22 @@ export default function SearchScreen() {
         router.push(`/switch-events`);
     };
 
+    const showTabs = query.trim().length > 0;
+
+    const getEmptyMessage = () => {
+        if (activeTab === 'all') return 'No results found';
+        if (activeTab === 'calendars') return 'No calendars found';
+        if (activeTab === 'events') return 'No events found';
+        if (activeTab === 'users') return 'No users found';
+        return 'No results found';
+    };
+
+    const listData = adsConfig?.show_ads && filtered.length > 0
+        ? injectAds(filtered, adsConfig.frequency)
+        : filtered;
+
     return (
         <View style={styles.container}>
-            {/* SEARCH BAR */}
             <View style={styles.searchContainer}>
                 <Ionicons name="search" size={20} color="#888" />
                 <TextInput
@@ -173,44 +205,83 @@ export default function SearchScreen() {
                     value={query}
                     onChangeText={setQuery}
                     style={styles.input}
+                    testID="search-input"
                 />
             </View>
 
-            {/* RESULTS */}
-            <FlatList<SearchResult>
-                data={filtered}
-                keyExtractor={(item: any) => `${item.type}-${item.data.id}`}
-                renderItem={({ item }) => {
+            {showTabs && (
+                <View style={styles.tabStrip}>
+                    {TAB_OPTIONS.map((tab) => {
+                        const isActive = activeTab === tab.type;
+                        return (
+                            <TouchableOpacity
+                                key={tab.type}
+                                onPress={() => setActiveTab(tab.type)}
+                                style={[
+                                    styles.tabChip,
+                                    isActive ? styles.tabChipActive : styles.tabChipInactive,
+                                ]}
+                                activeOpacity={0.7}
+                                testID={`search-tab-${tab.type}`}
+                            >
+                                <Ionicons
+                                    name={tab.icon}
+                                    size={16}
+                                    color={isActive ? '#fff' : '#10464d'}
+                                />
+                                <Text style={[styles.tabLabel, { color: isActive ? '#fff' : '#333' }]}>
+                                    {tab.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            )}
+
+            <FlatList
+                style={styles.list}
+                contentContainerStyle={styles.listContent}
+                data={listData}
+                keyExtractor={(item: any) =>
+                    isAdItem(item) ? item.id : `${item.type}-${item.data.id}`
+                }
+                ListEmptyComponent={
+                    showTabs ? (
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>{getEmptyMessage()}</Text>
+                        </View>
+                    ) : null
+                }
+                renderItem={({ item }: any) => {
+                    if (isAdItem(item)) return <AdCard placement="search" />;
+
                     if (item.type === 'user') {
                         const user = item.data;
                         return (
-                            <TouchableOpacity style={styles.userCard} onPress={() => handleUserSelect(user.username)}>
-                                <View style={styles.userInfo}>
-                                    <Image
-                                        source={
-                                            user.photo && user.photo.trim() !== ""
-                                                ? { uri: user.photo }
-                                                : require('../../assets/images/default-user.jpg')
-                                        }
-                                        style={styles.avatar}
-                                    />
-                                    <View style={styles.userTextContainer}>
-                                        <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
-                                        <Text style={styles.bio} numberOfLines={2} ellipsizeMode="tail">
-                                            {user.bio}
-                                        </Text>
-                                    </View>
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => handleUserSelect(user.username)}
+                                testID={`search-user-card-${user.username}`}
+                            >
+                                <Image
+                                    source={
+                                        user.photo && user.photo.trim() !== ""
+                                            ? { uri: user.photo }
+                                            : require('../../assets/images/default-user.jpg')
+                                    }
+                                    style={[styles.leftImage, styles.roundedFull]}
+                                />
+                                <View style={styles.middleInfo}>
+                                    <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
+                                    <Text style={styles.subText} numberOfLines={2} ellipsizeMode="tail">{user.bio}</Text>
                                 </View>
-
                                 <Pressable
-                                    style={[
-                                        styles.followButton,
-                                        user.followed && styles.followingButton,
-                                    ]}
+                                    style={[styles.followButton, user.followed && styles.followingButton]}
                                     onPress={(event) => {
                                         event.stopPropagation();
                                         followUser(user.id);
                                     }}
+                                    testID={`search-follow-button-${user.username}`}
                                 >
                                     <Text style={[styles.followText, user.followed && styles.followingText]}>
                                         {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
@@ -221,76 +292,90 @@ export default function SearchScreen() {
                     }
 
                     if (item.type === 'calendar') {
-                        const cal = item.data as Calendar;
+                        const cal = item.data;
                         const description = normalizeText(cal.description);
                         const titleMatches = getMatchIndex(normalizeText(cal.name), query) >= 0;
                         const descriptionMatches = getMatchIndex(description, query) >= 0;
                         const descriptionSnippet = buildDescriptionSnippet(description, query);
+                        const calendarColor = cal.color || "#10464d";
 
                         return (
-                            <TouchableOpacity style={styles.calendarCard} onPress={() => handleCalendarSelect(cal.id)}>
-                                {cal.cover && (
-                                    <Image source={{ uri: cal.cover }} style={styles.calendarCover} />
+                            <TouchableOpacity
+                                style={styles.card}
+                                onPress={() => handleCalendarSelect(cal.id)}
+                                testID={`search-calendar-card-${cal.id}`}
+                            >
+                                {cal.cover ? (
+                                    <Image source={{ uri: cal.cover }} style={styles.leftImage} />
+                                ) : (
+                                    <View style={[styles.leftImage, styles.placeholderIcon, { backgroundColor: `${calendarColor}20` }]}>
+                                        <Ionicons name="calendar" size={24} color={calendarColor} />
+                                    </View>
                                 )}
-                                <View style={styles.calendarInfo}>
-                                    <Text style={styles.calendarName} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
-
+                                <View style={styles.middleInfo}>
+                                    <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{cal.name}</Text>
                                     {!!descriptionSnippet && (
                                         <View>
-                                            {renderHighlightedText(
-                                                descriptionSnippet,
-                                                query,
-                                                styles.calendarDesc,
-                                                styles.highlightText
-                                            )}
+                                            {renderHighlightedText(descriptionSnippet, query, styles.subText, styles.highlightText)}
                                             {descriptionMatches && !titleMatches && (
                                                 <Text style={styles.matchTag}>Matches description</Text>
                                             )}
                                         </View>
                                     )}
                                 </View>
+                                {cal.creator_username && (
+                                    <View style={styles.rightMeta}>
+                                        <Ionicons name="person-circle-outline" size={16} color="#666" />
+                                        <Text style={styles.rightMetaText} numberOfLines={1} ellipsizeMode="tail">
+                                            {cal.creator_username}
+                                        </Text>
+                                    </View>
+                                )}
                             </TouchableOpacity>
                         );
                     }
 
-                    const ev = item.data as CalendarEvent;
+                    const ev = item.data;
                     const eventDescription = normalizeText(ev.description);
                     const eventTitleMatches = getMatchIndex(normalizeText(ev.title), query) >= 0;
                     const eventDescriptionMatches = getMatchIndex(eventDescription, query) >= 0;
                     const eventDescriptionSnippet = buildDescriptionSnippet(eventDescription, query);
 
                     return (
-                        <TouchableOpacity style={styles.eventCard} onPress={() => handleEventSelect(ev)}>
-                            <View style={styles.eventRow}>
-                                {ev.photo && (
-                                    <Image
-                                        source={{ uri: ev.photo }}
-                                        style={styles.eventImage}
-                                    />
-                                )}
-                                <View style={styles.eventInfo}>
-                                    <Text style={styles.eventTitle} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
-                                    <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">
-                                        {ev.date} {ev.time}
-                                        {ev.calendarId &&
-                                            ` • ${calendarMap[ev.calendarId] || ''}`}
-                                    </Text>
-
-                                    {!!eventDescriptionSnippet && (
-                                        <View>
-                                            {renderHighlightedText(
-                                                eventDescriptionSnippet,
-                                                query,
-                                                styles.eventDesc,
-                                                styles.highlightText
-                                            )}
-                                            {eventDescriptionMatches && !eventTitleMatches && (
-                                                <Text style={styles.matchTag}>Matches description</Text>
-                                            )}
-                                        </View>
-                                    )}
+                        <TouchableOpacity
+                            style={styles.card}
+                            onPress={() => handleEventSelect(ev)}
+                            testID={`search-event-card-${ev.id}`}
+                        >
+                            {ev.photo ? (
+                                <Image source={{ uri: ev.photo }} style={styles.leftImage} />
+                            ) : (
+                                <View style={[styles.leftImage, styles.placeholderIcon, { backgroundColor: '#f0f0f0' }]}>
+                                    <Ionicons name="flag" size={24} color="#a0a0a0" />
                                 </View>
+                            )}
+                            <View style={styles.middleInfo}>
+                                <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{ev.title}</Text>
+                                <Text style={styles.subText} numberOfLines={1} ellipsizeMode="tail">
+                                    {ev.date} {ev.time}
+                                </Text>
+                                {!!eventDescriptionSnippet && (
+                                    <View>
+                                        {renderHighlightedText(eventDescriptionSnippet, query, styles.subText, styles.highlightText)}
+                                        {eventDescriptionMatches && !eventTitleMatches && (
+                                            <Text style={styles.matchTag}>Matches description</Text>
+                                        )}
+                                    </View>
+                                )}
                             </View>
+                            {ev.creator_username && (
+                                <View style={styles.rightMeta}>
+                                    <Ionicons name="person-circle-outline" size={16} color="#666" />
+                                    <Text style={styles.rightMetaText} numberOfLines={1} ellipsizeMode="tail">
+                                        {ev.creator_username}
+                                    </Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                     );
                 }}
@@ -306,7 +391,6 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
     },
-
     searchContainer: {
         flexDirection: "row",
         alignItems: "center",
@@ -317,125 +401,131 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         gap: 8,
     },
-
     input: {
         flex: 1,
     },
-
-    userCard: {
-        backgroundColor: "#F2F2F2",
+    tabStrip: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 10,
+    },
+    tabChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        gap: 6,
+    },
+    tabChipActive: {
+        backgroundColor: '#10464d',
+        shadowColor: '#10464d',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    tabChipInactive: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: 'rgba(16,70,77,0.2)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    tabLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    list: {
+        flex: 1,
+    },
+    listContent: {
+        flexGrow: 1,
+        justifyContent: 'flex-start',
+        paddingBottom: 20,
+    },
+    emptyContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+    emptyText: {
+        fontSize: 15,
+        color: '#888',
+        fontStyle: 'italic',
+    },
+    card: {
+        borderColor: "#10464d",
+        borderWidth: 2,
         borderRadius: 12,
         padding: 12,
-        marginBottom: 12,
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-
-    userInfo: {
+        marginBottom: 16,
         flexDirection: "row",
         alignItems: "center",
-        flex: 1,
+        gap: 12,
     },
-
-    userTextContainer: {
-        flex: 1,
-        flexShrink: 1,
+    leftImage: {
+        width: 70,
+        height: 70,
+        borderRadius: 8,
     },
-
-    avatar: {
-        width: 50,
-        height: 50,
+    roundedFull: {
         borderRadius: 25,
-        marginRight: 12,
     },
-
-    name: {
+    placeholderIcon: {
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    middleInfo: {
+        flex: 1,
+        flexDirection: "column",
+        justifyContent: "center",
+    },
+    title: {
         fontWeight: "bold",
+        fontSize: 15,
+        color: "#1a1a1a",
     },
-
-    bio: {
+    subText: {
         fontSize: 12,
         color: "#666",
+        marginTop: 2,
     },
-
+    rightMeta: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        maxWidth: 90,
+        marginRight: 4,
+    },
+    rightMetaText: {
+        fontSize: 12,
+        color: "#10464d",
+        fontWeight: "600",
+        flexShrink: 1,
+    },
     followButton: {
         backgroundColor: "#eb8c85",
         paddingHorizontal: 16,
         paddingVertical: 6,
         borderRadius: 20,
+        marginLeft: 'auto',
     },
-
     followingButton: {
         backgroundColor: "#10464d",
     },
-
     followText: {
         color: "#fff",
         fontWeight: "600",
+        fontSize: 13,
     },
-
     followingText: {
         color: "#fff",
-    },
-
-    calendarCard: {
-        backgroundColor: "#F2F2F2",
-        borderRadius: 12,
-        marginBottom: 12,
-        overflow: "hidden",
-    },
-    calendarCover: {
-        width: "100%",
-        height: 120,
-    },
-    calendarInfo: {
-        padding: 12,
-    },
-    calendarName: {
-        fontWeight: "bold",
-        fontSize: 16,
-    },
-    calendarDesc: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 4,
-    },
-
-    eventCard: {
-        backgroundColor: "#F2F2F2",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 12,
-    },
-    eventInfo: {
-        flexDirection: "column",
-        flex: 1,
-        flexShrink: 1,
-    },
-    eventTitle: {
-        fontWeight: "bold",
-        fontSize: 15,
-    },
-    eventMeta: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 2,
-    },
-    eventDesc: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 4,
-    },
-    eventRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    eventImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        marginRight: 12,
     },
     highlightText: {
         color: "#10464d",

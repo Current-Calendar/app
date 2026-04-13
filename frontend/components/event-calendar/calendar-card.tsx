@@ -38,13 +38,6 @@ export default function CalendarCard({
       borderColor: "#D9D9DE",
       textColor: "#4A4A56",
     },
-    FRIENDS: {
-      icon: "people",
-      label: "Friends",
-      bgColor: "#E7F4FF",
-      borderColor: "#B9DEFF",
-      textColor: "#155A8A",
-    },
     PUBLIC: {
       icon: "globe",
       label: "Public",

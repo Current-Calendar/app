@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions, Modal, TextInput } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
 
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,11 +20,9 @@ import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
-import { useCalendars } from '@/hooks/use-calendars';
 import { useEventsList } from '@/hooks/use-events';
 import { useCalendarTransfer } from '@/hooks/use-calendar-transfer';
 import { useCalendarActions } from '@/hooks/use-calendar-actions';
-import { downloadCalendar, importGoogleCalendar, importICS, importIOSCalendar } from '@/services/calendarService';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
@@ -83,15 +81,14 @@ export default function CalendarScreen() {
         error: eventsError,
         refetch: refetchEvents,
     } = useEventsList({ autoFetch: false });
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoadingCalendars(true);
             setCalendarsError(null);
 
-            const [myCalendarsData, subscribedCalendarsData, friendsCalendarsData, coOwnedCalendarsData] = await Promise.all([
+            const [myCalendarsData, subscribedCalendarsData, coOwnedCalendarsData] = await Promise.all([
             apiClient.get<any[]>('/calendars/my-calendars/'),
             apiClient.get<any[]>('/calendars/subscribed/'),
-            apiClient.get<any[]>('/calendars/friends-calendars/'),
             apiClient.get<any[]>('/calendars/co_owned/'),
             ]);
 
@@ -104,10 +101,6 @@ export default function CalendarScreen() {
             });
 
             subscribedCalendarsData.forEach((calendar: any) => {
-            mergedCalendarsMap.set(calendar.id, calendar);
-            });
-
-            friendsCalendarsData.forEach((calendar: any) => {
             mergedCalendarsMap.set(calendar.id, calendar);
             });
 
@@ -129,6 +122,7 @@ export default function CalendarScreen() {
             creator_username: c.creator_username,
             color: COLORS[index % COLORS.length],
             co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
+            viewers: Array.isArray(c.viewers) ? c.viewers : [],
             }));
 
             setCalendars(mappedCalendars);
@@ -145,9 +139,19 @@ export default function CalendarScreen() {
         } finally {
             setLoadingCalendars(false);
         }
-        };
+        }, [refetchEvents]);
 
     const updateCalendarInState = (updatedCalendar: any) => {
+        if (updatedCalendar?.left && updatedCalendar?.id != null) {
+            const removedId = String(updatedCalendar.id);
+            setCalendars((current) => current.filter((calendar) => calendar.id !== removedId));
+            setEvents((current) => current.filter((event) => event.calendarId !== removedId));
+            setSelectedCalendarId((current) => (current === removedId ? null : current));
+            setActiveEvent((current) => (current?.calendarId === removedId ? null : current));
+            setInfoCalendar((current) => (current?.id === removedId ? null : current));
+            return;
+        }
+
         setCalendars((current) =>
             current.map((calendar) => {
             if (calendar.id !== String(updatedCalendar.id)) return calendar;
@@ -169,6 +173,9 @@ export default function CalendarScreen() {
                 co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((calendar as any).co_owners ?? []),
+                viewers: Array.isArray(updatedCalendar.viewers)
+                ? updatedCalendar.viewers
+                : ((calendar as any).viewers ?? []),
             } as Calendar;
             })
         );
@@ -193,13 +200,22 @@ export default function CalendarScreen() {
             co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((current as any).co_owners ?? []),
+            viewers: Array.isArray(updatedCalendar.viewers)
+                ? updatedCalendar.viewers
+                : ((current as any).viewers ?? []),
             } as Calendar;
         });
-        };
+    };
 
     useEffect(() => {
         void fetchData();
-    }, []);
+    }, [fetchData]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            void fetchData();
+        }
+    }, [isAuthenticated]);
     useEffect(() => {
         if (calendarsError || eventsError) {
             console.error('Error fetching data:', calendarsError || eventsError);
@@ -210,7 +226,7 @@ export default function CalendarScreen() {
     useEffect(() => {
         const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
 
-        const mappedEvents: CalendarEvent[] = backendEvents
+        const mappedEvents: CalendarEvent[] = (backendEvents ?? [])
             .filter((e: any) =>
                 e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
             )

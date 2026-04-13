@@ -13,7 +13,8 @@ PLAN_FEATURES = {
         'max_favorite_calendars': 10,
         'max_days_difference_radar': 0,
         'can_customize_calendars': False,
-        'verified_badge': False
+        'verified_badge': False,
+        'can_co_own_calendars': False
     },
     Planes.STANDARD: {
         'max_public_calendars': math.inf,
@@ -22,7 +23,8 @@ PLAN_FEATURES = {
         'max_favorite_calendars': math.inf,
         'max_days_difference_radar': 1,
         'can_customize_calendars': True,
-        'verified_badge': True
+        'verified_badge': True,
+        'can_co_own_calendars': True
     },
     Planes.BUSINESS: {
         'max_public_calendars': math.inf,
@@ -31,11 +33,14 @@ PLAN_FEATURES = {
         'max_favorite_calendars': math.inf,
         'max_days_difference_radar': 1,
         'can_customize_calendars': True,
-        'verified_badge': True
+        'verified_badge': True,
+        'can_co_own_calendars': True
     }
 }
 
 def get_user_features(user):
+    if not user or not getattr(user, 'is_authenticated', False):
+        return PLAN_FEATURES[Planes.FREE]
     return PLAN_FEATURES.get(user.plan, PLAN_FEATURES[Planes.FREE])
 
 

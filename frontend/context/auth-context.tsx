@@ -13,6 +13,8 @@ export const AuthContext = createContext<AuthContextType | undefined>(
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  // Keep this flag for the initial session bootstrap only.
+  // Using it for login/logout remounts the tabs layout and can reset routing state.
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
@@ -53,7 +55,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const login = useCallback(
     async (username: string, password: string) => {
-      setIsLoading(true);
       try {
         await apiClient.login(username, password);
 
@@ -62,24 +63,19 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       } catch (error) {
         console.error('Login error:', error);
         throw error;
-      } finally {
-        setIsLoading(false);
       }
     },
     []
   );
 
   const logout = useCallback(async () => {
-    setIsLoading(true);
-
     try {
       setUser(null);
       setIsAuthenticated(false);
-      apiClient.clearTokens();
+      apiClient.user = null;
+      await apiClient.clearTokens();
     } catch (error) {
       console.error('Logout error:', error);
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
