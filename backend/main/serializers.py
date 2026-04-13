@@ -142,6 +142,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
     def get_is_following(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
+            following_ids = self.context.get('following_ids')
+            if following_ids is not None:
+                return obj.id in following_ids
             return obj.followers_set.filter(id=request.user.id).exists()
         return False
 
