@@ -17,10 +17,10 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
-import { useCreateEventApi } from '@/hooks/use-create-event-api';
-import { usePlaceSearch, PlaceSuggestion } from '@/hooks/use-place-search';
+import { useCreateEventApi } from "@/hooks/use-create-event-api";
+import { usePlaceSearch, PlaceSuggestion } from "@/hooks/use-place-search";
 import { useRouter } from "expo-router";
-import apiClient, { appendPhoto } from '@/services/api-client';
+import apiClient, { appendPhoto } from "@/services/api-client";
 import { useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,11 +36,27 @@ const PLACE_DEBOUNCE_MS = 350;
 
 type CalendarItem = { id: string; name: string; image?: any };
 
+type EventTagItem = {
+  id: number;
+  name: string;
+  category: number;
+  category_name?: string;
+  events_count?: number;
+};
+
+type ApiListResponse<T> = T[] | { results?: T[]; data?: T[] };
+
+const extractArray = <T,>(response: ApiListResponse<T> | null | undefined): T[] => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.results)) return response.results;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
+};
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-// DRF usually accepts HH:MM:SS format better
 const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
@@ -88,7 +104,6 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
   useEffect(() => {
     setViewYear(selected.getFullYear());
     setViewMonth(selected.getMonth());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected.getFullYear(), selected.getMonth()]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -100,8 +115,9 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
 
     const cells: { date: Date | null; label: string }[] = [];
     for (let i = 0; i < firstDowMondayBased; i++) cells.push({ date: null, label: "" });
-    for (let d = 1; d <= daysInMonth; d++)
+    for (let d = 1; d <= daysInMonth; d++) {
       cells.push({ date: new Date(viewYear, viewMonth, d), label: String(d) });
+    }
     while (cells.length % 7 !== 0) cells.push({ date: null, label: "" });
 
     return cells;
@@ -111,14 +127,18 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear((y) => y - 1);
-    } else setViewMonth((m) => m - 1);
+    } else {
+      setViewMonth((m) => m - 1);
+    }
   };
 
   const goNextMonth = () => {
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear((y) => y + 1);
-    } else setViewMonth((m) => m + 1);
+    } else {
+      setViewMonth((m) => m + 1);
+    }
   };
 
   const goToday = () => {
@@ -127,7 +147,6 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
     onChange(today);
   };
 
-  // ===== sizing (fix months with 6 rows) =====
   const innerPad = 10;
   const headerH = 34;
   const weekdaysH = 18;
@@ -138,7 +157,6 @@ function MiniMonthCalendar({ value, onChange, size = 260 }: MiniMonthCalendarPro
   const cellGapY = 2;
 
   const gridAvailableH = size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
-
   const cellH = Math.floor((gridAvailableH - cellGapY * rows) / rows);
   const cellW = Math.floor((size - innerPad * 2) / 7);
 
@@ -270,12 +288,14 @@ const miniStyles = StyleSheet.create({
   dayToday: { borderWidth: 1.5, borderColor: TEAL },
 });
 
-// =================== SCREEN ===================
 export default function CreateEventsScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
-  const { date: dateParam, calendarId: calendarIdParam } = useLocalSearchParams<{ date: string; calendarId: string }>();
+  const { date: dateParam, calendarId: calendarIdParam } = useLocalSearchParams<{
+    date: string;
+    calendarId: string;
+  }>();
   const router = useRouter();
 
   const goBackOrCalendars = () => {
@@ -291,13 +311,42 @@ export default function CreateEventsScreen() {
   const formWidth =
     Platform.OS === "web" ? Math.min(width * 0.58, 820) : Math.min(width * 0.92, 420);
 
-  // ====== Calendars from API ======
   const [calendars, setCalendars] = useState<CalendarItem[]>([]);
   const [calLoading, setCalLoading] = useState(false);
   const [calError, setCalError] = useState<string | null>(null);
 
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
+
+  const [availableTags, setAvailableTags] = useState<EventTagItem[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tagsError, setTagsError] = useState<string | null>(null);
+
+  const loadTagsForCalendar = async (calendarId: string | number) => {
+    try {
+      setTagsLoading(true);
+      setTagsError(null);
+
+      const response = await apiClient.get(
+        `/event-tags/for-calendar/${calendarId}/`
+      ) as ApiListResponse<EventTagItem>;
+
+      const list = extractArray(response);
+      setAvailableTags(list);
+
+      setSelectedTagIds((prev) =>
+        prev.filter((tagId) => list.some((tag) => tag.id === tagId))
+      );
+    } catch (error: any) {
+      console.error("Error loading tags for calendar:", error);
+      setAvailableTags([]);
+      setSelectedTagIds([]);
+      setTagsError(error?.message || "Error loading event labels");
+    } finally {
+      setTagsLoading(false);
+    }
+  };
 
   const loadCalendars = async () => {
     try {
@@ -316,16 +365,26 @@ export default function CreateEventsScreen() {
       const mapped = list.map(mapCalendarFromApi).filter((c: CalendarItem) => c.id);
 
       setCalendars(mapped);
-      if (!selectedCalendar && mapped.length > 0) {
-        const preSelected = calendarIdParam
-          ? mapped.find((c: CalendarItem) => c.id === String(calendarIdParam)) ?? mapped[0]
-          : mapped[0];
+
+      if (mapped.length > 0) {
+        const preSelected =
+          selectedCalendar ??
+          (calendarIdParam
+            ? mapped.find((c: CalendarItem) => c.id === String(calendarIdParam)) ?? mapped[0]
+            : mapped[0]);
+
         setSelectedCalendar(preSelected);
+
+        if (preSelected?.id) {
+          await loadTagsForCalendar(preSelected.id);
+        }
       }
     } catch (e: any) {
       setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
       setSelectedCalendar(null);
+      setAvailableTags([]);
+      setSelectedTagIds([]);
     } finally {
       setCalLoading(false);
     }
@@ -333,10 +392,8 @@ export default function CreateEventsScreen() {
 
   useEffect(() => {
     loadCalendars();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ====== Form fields ======
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState("");
@@ -344,11 +401,9 @@ export default function CreateEventsScreen() {
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
 
-  // Coordinates
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
 
-  // Autocomplete (Nominatim)
   const [placeFocused, setPlaceFocused] = useState(false);
   const keepCoordinatesOnNextPlaceChangeRef = useRef(false);
 
@@ -380,7 +435,6 @@ export default function CreateEventsScreen() {
     return d;
   });
 
-  // ====== Pickers ======
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
   const [showWebTimePicker, setShowWebTimePicker] = useState(false);
   const [webHour, setWebHour] = useState(time.getHours());
@@ -438,7 +492,6 @@ export default function CreateEventsScreen() {
       return;
     }
 
-    // si el user escribe manualmente, invalidamos coords (hasta que elija sugerencia)
     setLat(null);
     setLon(null);
   }, [place]);
@@ -462,7 +515,34 @@ export default function CreateEventsScreen() {
     setPlaceFocused(false);
   };
 
-  // ====== Submit + Modal éxito ======
+  const toggleTag = (tagId: number) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const assignTagsToEvent = async (eventId: number | string, tagIds: number[]) => {
+    const failures: string[] = [];
+
+    await Promise.all(
+      tagIds.map(async (tagId) => {
+        try {
+          await apiClient.post(`/event-tags/${tagId}/add_to_event/`, {
+            event_id: Number(eventId),
+          });
+        } catch (error) {
+          console.error(`Error assigning tag ${tagId}:`, error);
+          const tag = availableTags.find((t) => t.id === tagId);
+          failures.push(tag?.name || `Tag ${tagId}`);
+        }
+      })
+    );
+
+    return failures;
+  };
+
   const [publishing, setPublishing] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -486,8 +566,8 @@ export default function CreateEventsScreen() {
     }
 
     if (!user) {
-        setFormError("User not authenticated.");
-        return;
+      setFormError("User not authenticated.");
+      return;
     }
 
     const calendarsIds = [Number(selectedCalendar.id)];
@@ -495,39 +575,54 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
+      let createdEvent: any;
+
       if (coverAsset) {
-         const formData = new FormData();
-         formData.append("title", titleTrimmed);
-         formData.append("description", description?.trim() ?? "");
-         formData.append("place_name", place?.trim() ?? "");
-         formData.append("date", toISODate(date));
-         formData.append("time", toHMS(time));
-         formData.append("calendars", JSON.stringify(calendarsIds));
-         formData.append("creator_id", String(user.id));
+        const formData = new FormData();
+        formData.append("title", titleTrimmed);
+        formData.append("description", description?.trim() ?? "");
+        formData.append("place_name", place?.trim() ?? "");
+        formData.append("date", toISODate(date));
+        formData.append("time", toHMS(time));
+        formData.append("calendars", JSON.stringify(calendarsIds));
+        formData.append("creator_id", String(user.id));
 
-         if (lat != null && lon != null) {
-            formData.append("latitud", String(lat));
-            formData.append("longitud", String(lon));
-         }
+        if (lat != null && lon != null) {
+          formData.append("latitud", String(lat));
+          formData.append("longitud", String(lon));
+        }
 
-         await appendPhoto(formData, coverAsset, "photo");
-         await createEvent(formData);
+        await appendPhoto(formData, coverAsset, "photo");
+        createdEvent = await createEvent(formData);
       } else {
         const payload: any = {
-            title: titleTrimmed,
-            description: description?.trim() ?? "",
-            place_name: place?.trim() ?? "",
-            date: toISODate(date),
-            time: toHMS(time),
-            calendars: calendarsIds,
-            creator_id: user.id,
+          title: titleTrimmed,
+          description: description?.trim() ?? "",
+          place_name: place?.trim() ?? "",
+          date: toISODate(date),
+          time: toHMS(time),
+          calendars: calendarsIds,
+          creator_id: user.id,
         };
 
         if (lat != null && lon != null) {
-            payload.latitude = lat;
-            payload.longitude = lon;
+          payload.latitud = lat;
+          payload.longitud = lon;
         }
-        await createEvent(payload);
+
+        createdEvent = await createEvent(payload);
+      }
+
+      const createdEventId = createdEvent?.id;
+
+      if (createdEventId && selectedTagIds.length > 0) {
+        const failedTags = await assignTagsToEvent(createdEventId, selectedTagIds);
+
+        if (failedTags.length > 0) {
+          setFormError(
+            `El evento se creó, pero no se pudieron asignar estas etiquetas: ${failedTags.join(", ")}`
+          );
+        }
       }
 
       setSuccessModalOpen(true);
@@ -539,12 +634,10 @@ export default function CreateEventsScreen() {
   };
 
   const miniSize = Math.min(280, formWidth);
-
   const showSuggestions = placeFocused && suggestions.length > 0;
 
   return (
     <View style={styles.container}>
-      {/* BACK BUTTON */}
       <Pressable style={styles.backBtn} hitSlop={12} onPress={goBackOrCalendars}>
         <Ionicons name="chevron-back" size={22} color={WHITE} />
       </Pressable>
@@ -554,7 +647,6 @@ export default function CreateEventsScreen() {
 
         <View style={[styles.body, { width: formWidth }]}>
           <View style={styles.headerRow}>
-            {/* Calendar */}
             <View style={styles.block}>
               <View style={styles.calendarLabelRow}>
                 <Text style={styles.smallLabelInline}>Calendar:</Text>
@@ -586,7 +678,6 @@ export default function CreateEventsScreen() {
               {!!calError && <Text style={styles.errorText}>{calError}</Text>}
             </View>
 
-            {/* Photos */}
             <View style={styles.block}>
               <Text style={styles.smallLabelCentered}>Photos</Text>
 
@@ -600,12 +691,21 @@ export default function CreateEventsScreen() {
             </View>
           </View>
 
-          {/* Form */}
           <View style={styles.form}>
-            {!!formError && <Text style={styles.errorText} testID="create-event-error-text">{formError}</Text>}
+            {!!formError && (
+              <Text style={styles.errorText} testID="create-event-error-text">
+                {formError}
+              </Text>
+            )}
 
             <Text style={styles.fieldLabel}>Title:</Text>
-            <TextInput maxLength={150} value={title} onChangeText={setTitle} style={styles.input} testID="create-event-title-input" />
+            <TextInput
+              maxLength={150}
+              value={title}
+              onChangeText={setTitle}
+              style={styles.input}
+              testID="create-event-title-input"
+            />
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description:</Text>
             <TextInput
@@ -620,7 +720,6 @@ export default function CreateEventsScreen() {
 
             <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
 
-            {/* Place input + clear + loading */}
             <View style={styles.placeRow}>
               <TextInput
                 maxLength={255}
@@ -629,7 +728,6 @@ export default function CreateEventsScreen() {
                 style={[styles.input, { flex: 1, paddingRight: 38 }]}
                 onFocus={() => setPlaceFocused(true)}
                 onBlur={() => {
-                  // pequeño delay para que el click en sugerencia entre antes del blur
                   setTimeout(() => setPlaceFocused(false), 120);
                 }}
                 placeholder="Empieza a escribir una dirección..."
@@ -652,7 +750,6 @@ export default function CreateEventsScreen() {
 
             {!!placeError && <Text style={styles.errorText}>{placeError}</Text>}
 
-            {/* Suggestions dropdown */}
             {showSuggestions && (
               <View style={styles.suggestBox}>
                 {suggestions.map((s) => (
@@ -670,14 +767,55 @@ export default function CreateEventsScreen() {
               </View>
             )}
 
-            {/* Show coords if selected */}
             {lat != null && lon != null && (
               <Text style={styles.coordsText}>
                 Coordenadas: {lat.toFixed(6)}, {lon.toFixed(6)}
               </Text>
             )}
 
-            {/* Date */}
+            <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Labels:</Text>
+
+            {tagsLoading ? (
+              <View style={styles.tagsLoadingWrap}>
+                <ActivityIndicator color={TEXT} />
+              </View>
+            ) : tagsError ? (
+              <Text style={styles.errorText}>{tagsError}</Text>
+            ) : availableTags.length > 0 ? (
+              <View style={styles.tagsWrap}>
+                {availableTags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+
+                  return (
+                    <Pressable
+                      key={tag.id}
+                      style={[styles.tagChip, selected && styles.tagChipSelected]}
+                      onPress={() => toggleTag(tag.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.tagChipText,
+                          selected && styles.tagChipTextSelected,
+                        ]}
+                      >
+                        {tag.name}
+                      </Text>
+                      {selected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color={TEXT}
+                          style={{ marginLeft: 6 }}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : selectedCalendar?.id ? (
+              <Text style={styles.helperText}>This calendar has no available labels.</Text>
+            ) : null}
+
             <View style={styles.timeRow}>
               <Text style={styles.fieldLabel}>Date:</Text>
               <View style={styles.timePill}>
@@ -685,7 +823,6 @@ export default function CreateEventsScreen() {
               </View>
             </View>
 
-            {/* Time */}
             <View style={styles.timeRow}>
               <Text style={styles.fieldLabel}>Time:</Text>
               <Pressable style={styles.timePill} onPress={openTimePicker}>
@@ -693,16 +830,20 @@ export default function CreateEventsScreen() {
               </Pressable>
             </View>
 
-            {/* Mini calendar */}
             <View style={styles.calendarCenterWrap}>
               <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
             </View>
 
-            <View style={{ flexDirection: "row", justifyContent: "center",alignItems: "center", gap: 12, marginTop: 14 }}>
-              <Pressable
-                style={styles.cancelBtn}
-                onPress={goBackOrCalendars}
-              >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 12,
+                marginTop: 14,
+              }}
+            >
+              <Pressable style={styles.cancelBtn} onPress={goBackOrCalendars}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
               <Pressable
@@ -711,18 +852,18 @@ export default function CreateEventsScreen() {
                 disabled={publishing}
                 testID="create-event-submit-button"
               >
-                {publishing
-                  ? <ActivityIndicator color="#EAF7F6" />
-                  : <Text style={styles.publishText}>Publish</Text>}
+                {publishing ? (
+                  <ActivityIndicator color="#EAF7F6" />
+                ) : (
+                  <Text style={styles.publishText}>Publish</Text>
+                )}
               </Pressable>
-
             </View>
             <View style={{ height: 40 }} />
           </View>
         </View>
       </ScrollView>
 
-      {/* Calendar dropdown modal */}
       <Modal visible={calendarModalOpen} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setCalendarModalOpen(false)}>
           <View style={styles.modalCard}>
@@ -740,22 +881,24 @@ export default function CreateEventsScreen() {
                 renderItem={({ item }) => (
                   <Pressable
                     style={styles.modalItem}
-                    onPress={() => {
+                    onPress={async () => {
                       setSelectedCalendar(item);
                       setCalendarModalOpen(false);
+                      await loadTagsForCalendar(item.id);
                     }}
                   >
                     <Text style={styles.modalItemText}>{item.name}</Text>
                   </Pressable>
                 )}
-                ListEmptyComponent={<Text style={styles.helperText}>No hay calendars. Crea uno primero.</Text>}
+                ListEmptyComponent={
+                  <Text style={styles.helperText}>No hay calendars. Crea uno primero.</Text>
+                }
               />
             )}
           </View>
         </Pressable>
       </Modal>
 
-      {/* Success modal */}
       <Modal visible={successModalOpen} transparent animationType="fade">
         <Pressable style={styles.successOverlay} onPress={closeSuccessAndGoRoot}>
           <View style={styles.successCard}>
@@ -764,9 +907,15 @@ export default function CreateEventsScreen() {
             </View>
 
             <Text style={styles.successTitle}>Ready!</Text>
-            <Text style={styles.successBody} testID="create-event-success-text">Event created successfully</Text>
+            <Text style={styles.successBody} testID="create-event-success-text">
+              Event created successfully
+            </Text>
 
-            <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot} testID="create-event-success-ok-button">
+            <Pressable
+              style={styles.successBtn}
+              onPress={closeSuccessAndGoRoot}
+              testID="create-event-success-ok-button"
+            >
               <Text style={styles.successBtnText}>OK</Text>
             </Pressable>
 
@@ -777,7 +926,6 @@ export default function CreateEventsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Native time picker (iOS/Android) */}
       {showNativeTimePicker && (
         <>
           {Platform.OS === "ios" ? (
@@ -786,21 +934,33 @@ export default function CreateEventsScreen() {
                 <View style={styles.pickerCard}>
                   <Text style={styles.pickerTitle}>Select time</Text>
 
-                  <DateTimePicker value={time} mode="time" display="spinner" onChange={onPickNativeTime} />
+                  <DateTimePicker
+                    value={time}
+                    mode="time"
+                    display="spinner"
+                    onChange={onPickNativeTime}
+                  />
 
-                  <Pressable style={styles.pickerDone} onPress={() => setShowNativeTimePicker(false)}>
+                  <Pressable
+                    style={styles.pickerDone}
+                    onPress={() => setShowNativeTimePicker(false)}
+                  >
                     <Text style={styles.pickerDoneText}>Done</Text>
                   </Pressable>
                 </View>
               </View>
             </Modal>
           ) : (
-            <DateTimePicker value={time} mode="time" display="spinner" onChange={onPickNativeTime} />
+            <DateTimePicker
+              value={time}
+              mode="time"
+              display="spinner"
+              onChange={onPickNativeTime}
+            />
           )}
         </>
       )}
 
-      {/* WEB time picker (custom) */}
       {showWebTimePicker && (
         <Modal transparent animationType="fade">
           <View style={styles.pickerOverlay}>
@@ -820,9 +980,17 @@ export default function CreateEventsScreen() {
                       return (
                         <Pressable
                           onPress={() => setWebHour(item)}
-                          style={[styles.webListItem, selectedH && styles.webListItemSelected]}
+                          style={[
+                            styles.webListItem,
+                            selectedH && styles.webListItemSelected,
+                          ]}
                         >
-                          <Text style={[styles.webListItemText, selectedH && styles.webListItemTextSelected]}>
+                          <Text
+                            style={[
+                              styles.webListItemText,
+                              selectedH && styles.webListItemTextSelected,
+                            ]}
+                          >
                             {pad2(item)}
                           </Text>
                         </Pressable>
@@ -843,9 +1011,17 @@ export default function CreateEventsScreen() {
                       return (
                         <Pressable
                           onPress={() => setWebMinute(item)}
-                          style={[styles.webListItem, selectedM && styles.webListItemSelected]}
+                          style={[
+                            styles.webListItem,
+                            selectedM && styles.webListItemSelected,
+                          ]}
                         >
-                          <Text style={[styles.webListItemText, selectedM && styles.webListItemTextSelected]}>
+                          <Text
+                            style={[
+                              styles.webListItemText,
+                              selectedM && styles.webListItemTextSelected,
+                            ]}
+                          >
                             {pad2(item)}
                           </Text>
                         </Pressable>
@@ -856,7 +1032,10 @@ export default function CreateEventsScreen() {
               </View>
 
               <View style={styles.webTimeActions}>
-                <Pressable style={styles.webCancelBtn} onPress={() => setShowWebTimePicker(false)}>
+                <Pressable
+                  style={styles.webCancelBtn}
+                  onPress={() => setShowWebTimePicker(false)}
+                >
                   <Text style={styles.webCancelText}>Cancel</Text>
                 </Pressable>
 
@@ -1015,7 +1194,6 @@ const styles = StyleSheet.create({
 
   errorText: { color: RED, fontWeight: "800", marginBottom: 8 },
 
-  // Place autocomplete
   placeRow: { flexDirection: "row", alignItems: "center" },
   clearBtn: {
     position: "absolute",
@@ -1116,7 +1294,6 @@ const styles = StyleSheet.create({
   webCancelBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(16,70,77,0.08)" },
   webCancelText: { color: TEXT, fontWeight: "900" },
 
-  // SUCCESS MODAL
   successOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.30)",
@@ -1186,17 +1363,53 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
-  },cancelBtn: {
-  flex: 1,
-  paddingVertical: 12,
-  borderRadius: 18,
-  backgroundColor: "#fff",
-  borderWidth: 2,
-  borderColor: "#10464D",
-  alignItems: "center",
-},cancelText: {
-  color: "#10464D",
-  fontWeight: "900",
-  fontSize: 16,
-},
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#10464D",
+    alignItems: "center",
+  },
+  cancelText: {
+    color: "#10464D",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+
+  // añade también aquí los nuevos estilos
+  tagsLoadingWrap: {
+    paddingVertical: 8,
+    alignItems: "flex-start",
+  },
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 4,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
+    backgroundColor: "#f7fbfb",
+  },
+  tagChipSelected: {
+    borderColor: "#10464d",
+    backgroundColor: "#e8f2f2",
+  },
+  tagChipText: {
+    color: "#10464d",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  tagChipTextSelected: {
+    fontWeight: "700",
+  },
 });

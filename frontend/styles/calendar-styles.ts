@@ -452,6 +452,9 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
   },
   content: {
     padding: 12,
+    minWidth: 0,
+    maxWidth: '100%',
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -559,6 +562,38 @@ export const eventCalendarCalendarCardStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  metaRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  marginTop: 8,
+  width: "100%",
+},
+
+tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  marginLeft: 6,
+  rowGap: 6,
+  columnGap: 6,
+},
+
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#E8F2F2",
+  borderWidth: 1,
+  borderColor: "#CFE3E3",
+  maxWidth: "100%",
+},
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
+  fontWeight: "700",
+},
 });
 
 export const eventCalendarEventCardStyles = StyleSheet.create({
@@ -585,9 +620,11 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     fontWeight: '600',
   },
   body: {
-    flexDirection: 'row',
-    gap: 20,
-    marginBottom: 2,
+  flexDirection: 'row',
+  gap: 20,
+  marginBottom: 2,
+  alignItems: 'flex-start',
+  minWidth: 0,
   },
   imageWrapper: {
     borderRadius: 16,
@@ -598,7 +635,9 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     height: '100%',
   },
   content: {
-    flex: 1,
+  flex: 1,
+  minWidth: 0,
+  maxWidth: '100%',
   },
   title: {
     fontSize: 18,
@@ -610,10 +649,12 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
     marginBottom: 8,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 6,
+  marginBottom: 4,
+  width: '100%',
+  minWidth: 0,
   },
   metaText: {
     fontSize: 13,
@@ -652,6 +693,31 @@ export const eventCalendarEventCardStyles = StyleSheet.create({
   actionText: {
     fontSize: 14,
   },
+  tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  gap: 8,
+  marginTop: 6,
+  marginBottom: 6,
+  flex: 1,
+  minWidth: 0,
+  maxWidth: '100%',
+  },
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#E8F2F2",
+  borderWidth: 1,
+  borderColor: "#CFE3E3",
+  maxWidth: "100%",
+},
+
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
+  fontWeight: "700",
+},
 });
 
 export const calendarInfoModalStyles = StyleSheet.create({
@@ -863,6 +929,35 @@ export const calendarInfoModalStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#10464d',
   },
+  metaRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 12,
+  marginBottom: 6,
+},
+tagsWrap: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  marginLeft: 8,
+  rowGap: 6,
+  columnGap: 6,
+},
+tagChip: {
+  paddingHorizontal: 10,
+  paddingVertical: 5,
+  borderRadius: 999,
+  backgroundColor: "#E8F2F2",
+  borderWidth: 1,
+  borderColor: "#CFE3E3",
+},
+tagChipText: {
+  color: "#10464D",
+  fontSize: 11,
+  fontWeight: "700",
+},
 });
 
 export const eventDetailModalStyles = StyleSheet.create({
@@ -1156,4 +1251,5 @@ export const eventDetailsModalStyles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  
 });

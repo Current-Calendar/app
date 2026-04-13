@@ -19,11 +19,15 @@ import CommentsModalC from "@/components/comments-modal-c";
 import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useAuth } from "@/hooks/use-auth";
-import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
-import { AdCard } from '@/components/ads/ad-card';
-import { injectAds, isAdItem } from '@/components/ads/inject-ads';
-import { useAdsConfig } from '@/hooks/use-ads-config';
+import { useRecommendedCalendars } from "@/hooks/use-recommended-calendars";
+import { AdCard } from "@/components/ads/ad-card";
+import { injectAds, isAdItem } from "@/components/ads/inject-ads";
+import { useAdsConfig } from "@/hooks/use-ads-config";
 
+type CalendarCategory = {
+  id: number | string;
+  name: string;
+};
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -32,8 +36,12 @@ export default function CalendarsScreen() {
   const hasSession = isAuthenticated || Boolean(user);
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
-  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>(
+    []
+  );
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(
+    null
+  );
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [errorSubscribeModal, setErrorSubscibeModal] = useState(false);
   const [subscribeErrorMessage, setSubscribeErrorMessage] = useState("");
@@ -64,9 +72,12 @@ export default function CalendarsScreen() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+
     const fetchSubscribedCalendars = async () => {
       try {
-        const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
+        const subscribedData = await apiClient.get<any[]>(
+          "/calendars/subscribed/"
+        );
         const dataArray = Array.isArray(subscribedData)
           ? subscribedData
           : (subscribedData as any)?.data || [];
@@ -81,32 +92,82 @@ export default function CalendarsScreen() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
+    const buildCalendars = async () => {
+      const COLORS = [
+        "#6C63FF",
+        "#FF6584",
+        "#43D9AD",
+        "#FFB84C",
+        "#FF9F43",
+        "#00CFE8",
+      ];
 
-    const filteredCalendars = backendCalendars.filter((c: any) => {
-      const calendarId = String(c.id);
-      const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
-      const isNotMine = !user?.id || creatorId !== String(user.id);
-      const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-      const isVisibleByPrivacy = c.privacy === "PUBLIC";
+      const filteredCalendars = backendCalendars.filter((c: any) => {
+        const calendarId = String(c.id);
+        const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
+        const isNotMine = !user?.id || creatorId !== String(user.id);
+        const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
+        const isVisibleByPrivacy = c.privacy === "PUBLIC";
 
-      return isVisibleByPrivacy && isNotMine && isNotSubscribed;
-    });
+        return isVisibleByPrivacy && isNotMine && isNotSubscribed;
+      });
 
-    const mappedCalendars: Calendar[] = filteredCalendars.map((c: any, index: number) => ({
-      id: String(c.id),
-      name: c.name,
-      description: c.description || "",
-      privacy: c.privacy,
-      origin: c.origin,
-      creator: c.creator || "unknown",
-      color: COLORS[index % COLORS.length],
-      cover: c.cover || null,
-      likes_count: c.likes_count,
-      liked_by_me: c.liked_by_me || false
-    }));
+      const baseCalendars: Calendar[] = filteredCalendars.map(
+        (c: any, index: number) => ({
+          id: String(c.id),
+          name: c.name,
+          description: c.description || "",
+          privacy: c.privacy,
+          origin: c.origin,
+          creator: c.creator || c.creator_username || "unknown",
+          color: COLORS[index % COLORS.length],
+          cover: c.cover || null,
+          likes_count: c.likes_count,
+          liked_by_me: c.liked_by_me || false,
+          categories: [],
+        })
+      );
 
-    setCalendars(mappedCalendars);
+      const mappedCalendars: Calendar[] = await Promise.all(
+        baseCalendars.map(async (calendar) => {
+          try {
+            const categoriesResponse: any = await apiClient.get(
+              `/categories/for-calendar/${calendar.id}/`
+            );
+
+            const categories: CalendarCategory[] =
+              (Array.isArray(categoriesResponse) && categoriesResponse) ||
+              (Array.isArray(categoriesResponse?.results) &&
+                categoriesResponse.results) ||
+              (Array.isArray(categoriesResponse?.data) &&
+                categoriesResponse.data) ||
+              [];
+
+            return {
+              ...calendar,
+              categories: categories.map((category: any) => ({
+                id: category.id,
+                name: category.name,
+              })),
+            };
+          } catch (error) {
+            console.log(
+              "Error loading calendar categories:",
+              calendar.id,
+              error
+            );
+            return {
+              ...calendar,
+              categories: [],
+            };
+          }
+        })
+      );
+
+      setCalendars(mappedCalendars);
+    };
+
+    void buildCalendars();
   }, [backendCalendars, user, hasSession, subscribedCalendarIds]);
 
   const handleOpenCalendar = (id: string) => {
@@ -150,17 +211,26 @@ export default function CalendarsScreen() {
 
   const handleSubscribe = async (id: string) => {
     try {
-      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+      const res = await apiClient.post<{ subscribed: boolean }>(
+        `/calendars/${id}/subscribe/`
+      );
 
       if (res.subscribed) {
         setSubscribedCalendarIds((prev) => [...prev, id]);
         setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
         Alert.alert("¡Listo!", "Te has suscrito correctamente.");
       } else {
-        setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
+        setSubscribedCalendarIds((prev) =>
+          prev.filter((favId) => favId !== id)
+        );
       }
     } catch (error: any) {
-      const apiError = error.response?.data?.message || error.response?.data?.error || error.message || String(error);
+      const apiError =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        String(error);
+
       if (Platform.OS !== "web") {
         Alert.alert("Error", apiError);
       } else {
@@ -192,7 +262,7 @@ export default function CalendarsScreen() {
               style={styles.loginButton}
               onPress={() => {
                 if (hasSession) return;
-                router.push('/login');
+                router.push("/login");
               }}
             >
               <Text style={styles.loginButtonText}>Log In</Text>
@@ -202,7 +272,7 @@ export default function CalendarsScreen() {
               style={styles.registerButton}
               onPress={() => {
                 if (hasSession) return;
-                router.push('/register');
+                router.push("/register");
               }}
             >
               <Text style={styles.registerButtonText}>Sign Up</Text>
@@ -214,7 +284,9 @@ export default function CalendarsScreen() {
 
         <FlatList
           data={listData}
-          keyExtractor={(item) => isAdItem(item) ? item.id : (item as Calendar).id}
+          keyExtractor={(item) =>
+            isAdItem(item) ? item.id : (item as Calendar).id
+          }
           renderItem={({ item }) => {
             if (isAdItem(item)) return <AdCard placement="feed" />;
             const calendar = item as Calendar;
@@ -231,9 +303,12 @@ export default function CalendarsScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.emptyStateWrap}>
-              <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+              <Text style={styles.emptyText}>
+                No recommended calendars right now.
+              </Text>
               <Text style={styles.emptySubtext}>
-                You may already follow all available calendars, or none match your privacy access.
+                You may already follow all available calendars, or none match
+                your privacy access.
               </Text>
             </View>
           }
@@ -274,13 +349,13 @@ export default function CalendarsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   centered: {
     justifyContent: "center",
   },
   inner: {
-    width: '100%',
+    width: "100%",
     maxWidth: 800,
     flex: 1,
   },

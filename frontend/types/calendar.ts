@@ -6,6 +6,11 @@ export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
 export type EventType = 'meeting' | 'task' | 'reminder' | 'holiday' | 'birthday' | 'other';
 
+export type CalendarCategory = {
+  id: number;
+  name: string;
+};
+
 export interface Calendar {
     id: string;
     name: string;
@@ -19,6 +24,7 @@ export interface Calendar {
     liked_by_me?: boolean;
     co_owners?: { username: string; name: string }[]; // For shared calendars
     viewers?: { id?: number; username: string; name?: string }[];
+    categories?: CalendarCategory[];
 }
 
 export interface CalendarEvent {
