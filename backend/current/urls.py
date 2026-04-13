@@ -65,6 +65,7 @@ urlpatterns = [
     path('api/v1/users/<int:pk>/', user_views.get_user_by_id, name='get_user'),
     path('api/v1/users/me/', user_views.get_own_user, name='get_profile'),
     path('api/v1/users/me/edit/', user_views.edit_profile, name='edit_profile'),
+    path('api/v1/users/me/plan/', user_views.update_plan, name='update_plan'),
     path('api/v1/users/me/delete/', user_views.delete_own_user, name='delete_own_user'),
     path('api/v1/calendars/<int:calendar_id>/publish/', calendar_views.publish_calendar, name='publish_calendar'),
     path('api/v1/calendars/<int:calendar_id>/delete/', calendar_views.delete_calendar, name='delete_calendar'),
