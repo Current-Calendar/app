@@ -7,6 +7,7 @@ import {
     Image,
     Pressable,
     TouchableOpacity,
+    Modal,
 } from "react-native";
 import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,11 +15,12 @@ import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
 import { useAuth } from '@/hooks/use-auth';
 import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
-import { Calendar, CalendarEvent } from '@/types/calendar';
+import { CalendarEvent } from '@/types/calendar';
 import { AdCard } from '@/components/ads/ad-card';
 import { injectAds, isAdItem } from '@/components/ads/inject-ads';
 import { useAdsConfig } from '@/hooks/use-ads-config';
-import { useSearchHistory} from '@/hooks/use-search-history';
+import { useSearchHistory } from '@/hooks/use-search-history';
+import apiClient from '@/services/api-client';
 
 const USE_MOCK = false;
 
@@ -36,6 +38,23 @@ const TAB_OPTIONS: TabOption[] = [
     { type: 'events', label: 'Events', icon: 'flag-outline' },
     { type: 'users', label: 'Users', icon: 'people-outline' },
 ];
+
+type CategoryItem = {
+    id: number;
+    name: string;
+};
+
+type EventTagItem = {
+    id: number;
+    name: string;
+    category: number;
+    category_name?: string;
+};
+
+type SearchResult =
+    | { type: 'user'; data: any }
+    | { type: 'calendar'; data: any }
+    | { type: 'event'; data: any };
 
 function normalizeText(value: unknown): string {
     return String(value ?? "").trim();
@@ -99,6 +118,16 @@ export default function SearchScreen() {
     const [users, setUsers] = useState<any[]>([]);
     const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
 
+    const [categories, setCategories] = useState<CategoryItem[]>([]);
+    const [eventTags, setEventTags] = useState<EventTagItem[]>([]);
+
+    const [calendarFilterModalVisible, setCalendarFilterModalVisible] = useState(false);
+    const [eventTagFilterModalVisible, setEventTagFilterModalVisible] = useState(false);
+
+    const [selectedCalendarCategoryIds, setSelectedCalendarCategoryIds] = useState<number[]>([]);
+    const [selectedEventTagIds, setSelectedEventTagIds] = useState<number[]>([]);
+    const [selectedTagCategoryId, setSelectedTagCategoryId] = useState<number | null>(null);
+
     const { results: userResults } = useUserSearch(query);
     const { results: calendars } = useCalendarSearch(query);
     const { results: events } = useEventSearch(query);
@@ -114,34 +143,108 @@ export default function SearchScreen() {
         if (!query.trim()) setActiveTab('all');
     }, [query]);
 
-    const calendarMap = useMemo(() => {
-        const m: Record<string, string> = {};
-        calendars.forEach((c) => { m[c.id.toString()] = c.name; });
-        return m;
-    }, [calendars]);
+    useEffect(() => {
+        const loadFiltersData = async () => {
+            try {
+                const [categoriesResponse, tagsResponse] = await Promise.all([
+                    apiClient.get("/categories/"),
+                    apiClient.get("/event-tags/"),
+                ]);
 
-    type SearchResult =
-        | { type: 'user'; data: any }
-        | { type: 'calendar'; data: any }
-        | { type: 'event'; data: any };
+                const loadedCategories =
+                    (Array.isArray(categoriesResponse) && categoriesResponse) ||
+                    (Array.isArray((categoriesResponse as any)?.results) && (categoriesResponse as any).results) ||
+                    (Array.isArray((categoriesResponse as any)?.data) && (categoriesResponse as any).data) ||
+                    [];
+
+                const loadedTags =
+                    (Array.isArray(tagsResponse) && tagsResponse) ||
+                    (Array.isArray((tagsResponse as any)?.results) && (tagsResponse as any).results) ||
+                    (Array.isArray((tagsResponse as any)?.data) && (tagsResponse as any).data) ||
+                    [];
+
+                setCategories(loadedCategories);
+                setEventTags(loadedTags);
+            } catch (error) {
+                console.error("Error loading search filters:", error);
+                setCategories([]);
+                setEventTags([]);
+            }
+        };
+
+        void loadFiltersData();
+    }, []);
 
     const allResults: SearchResult[] = useMemo(() => {
-        if (!query.trim()) return history;
+        if (!query.trim()) return history as SearchResult[];
+
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
         const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
         const eventRes: SearchResult[] = events.map((e) => ({ type: 'event', data: e }));
+
         return [...usersRes, ...calRes, ...eventRes];
     }, [query, users, calendars, events, history]);
 
+    const visibleEventTags = useMemo(() => {
+        if (!selectedTagCategoryId) return [];
+        return eventTags.filter((tag) => Number(tag.category) === Number(selectedTagCategoryId));
+    }, [eventTags, selectedTagCategoryId]);
+
     const filtered: SearchResult[] = useMemo(() => {
-        if (activeTab === 'all') return allResults;
-        return allResults.filter(item => {
-            if (activeTab === 'calendars') return item.type === 'calendar';
-            if (activeTab === 'events') return item.type === 'event';
-            if (activeTab === 'users') return item.type === 'user';
-            return true;
-        });
-    }, [activeTab, allResults]);
+        let baseResults =
+            activeTab === 'all'
+                ? allResults
+                : allResults.filter((item) => {
+                    if (activeTab === 'calendars') return item.type === 'calendar';
+                    if (activeTab === 'events') return item.type === 'event';
+                    if (activeTab === 'users') return item.type === 'user';
+                    return true;
+                });
+
+        if (activeTab === 'calendars' && selectedCalendarCategoryIds.length > 0) {
+            baseResults = baseResults.filter((item) => {
+                if (item.type !== 'calendar') return false;
+
+                const calendarCategoryIds = Array.isArray(item.data?.categories)
+                    ? item.data.categories.map((c: any) => Number(c.id))
+                    : [];
+
+                return selectedCalendarCategoryIds.every((categoryId) =>
+                    calendarCategoryIds.includes(categoryId)
+                );
+            });
+        }
+
+        if (activeTab === 'events' && selectedEventTagIds.length > 0) {
+            baseResults = baseResults.filter((item) => {
+                if (item.type !== 'event') return false;
+
+                const eventTagIds = Array.isArray(item.data?.tags)
+                    ? item.data.tags.map((tag: any) => Number(tag.id))
+                    : [];
+
+                return selectedEventTagIds.every((tagId) => eventTagIds.includes(tagId));
+            });
+        }
+
+        return baseResults;
+    }, [activeTab, allResults, selectedCalendarCategoryIds, selectedEventTagIds]);
+
+    const toggleCalendarCategory = (categoryId: number) => {
+        setSelectedCalendarCategoryIds((prev) =>
+            prev.includes(categoryId)
+                ? prev.filter((id) => id !== categoryId)
+                : [...prev, categoryId]
+        );
+    };
+
+    const toggleEventTag = (tagId: number) => {
+        setSelectedEventTagIds((prev) =>
+            prev.includes(tagId)
+                ? prev.filter((id) => id !== tagId)
+                : [...prev, tagId]
+        );
+    };
 
     const followUser = async (id: string | number) => {
         const normalizedId = String(id);
@@ -170,12 +273,12 @@ export default function SearchScreen() {
     };
 
     const handleUserSelect = (user: any) => {
-        addEntry({ type: 'user', data: user, timestamp: Date.now() })
+        addEntry({ type: 'user', data: user, timestamp: Date.now() });
         router.push(`/profile/${user.username}`);
     };
 
     const handleCalendarSelect = (cal: any) => {
-        addEntry({ type: 'calendar', data: cal, timestamp: Date.now() })
+        addEntry({ type: 'calendar', data: cal, timestamp: Date.now() });
         router.push(`/calendar-view?calendarId=${cal.id}`);
     };
 
@@ -191,7 +294,7 @@ export default function SearchScreen() {
     };
 
     const showTabs = query.trim().length > 0 || history.length > 0;
-    
+
     const getEmptyMessage = () => {
         if (activeTab === 'all') return 'No results found';
         if (activeTab === 'calendars') return 'No calendars found';
@@ -243,6 +346,46 @@ export default function SearchScreen() {
                             </TouchableOpacity>
                         );
                     })}
+                </View>
+            )}
+
+            {activeTab === 'calendars' && (
+                <View style={styles.filterActionRow}>
+                    <TouchableOpacity
+                        style={styles.filterActionButton}
+                        onPress={() => setCalendarFilterModalVisible(true)}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="funnel-outline" size={16} color="#10464d" />
+                        <Text style={styles.filterActionButtonText}>Filter by Category</Text>
+                        {!!selectedCalendarCategoryIds.length && (
+                            <View style={styles.filterCountBadge}>
+                                <Text style={styles.filterCountBadgeText}>
+                                    {selectedCalendarCategoryIds.length}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {activeTab === 'events' && (
+                <View style={styles.filterActionRow}>
+                    <TouchableOpacity
+                        style={styles.filterActionButton}
+                        onPress={() => setEventTagFilterModalVisible(true)}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="funnel-outline" size={16} color="#10464d" />
+                        <Text style={styles.filterActionButtonText}>Filter by Event Tag</Text>
+                        {!!selectedEventTagIds.length && (
+                            <View style={styles.filterCountBadge}>
+                                <Text style={styles.filterCountBadgeText}>
+                                    {selectedEventTagIds.length}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                 </View>
             )}
 
@@ -306,8 +449,6 @@ export default function SearchScreen() {
                     if (item.type === 'calendar') {
                         const cal = item.data;
                         const description = normalizeText(cal.description);
-                        const titleMatches = getMatchIndex(normalizeText(cal.name), query) >= 0;
-                        const descriptionMatches = getMatchIndex(description, query) >= 0;
                         const descriptionSnippet = buildDescriptionSnippet(description, query);
                         const calendarColor = cal.color || "#10464d";
 
@@ -329,9 +470,6 @@ export default function SearchScreen() {
                                     {!!descriptionSnippet && (
                                         <View>
                                             {renderHighlightedText(descriptionSnippet, query, styles.subText, styles.highlightText)}
-                                            {descriptionMatches && !titleMatches && (
-                                                <Text style={styles.matchTag}>Matches description</Text>
-                                            )}
                                         </View>
                                     )}
                                 </View>
@@ -349,8 +487,6 @@ export default function SearchScreen() {
 
                     const ev = item.data;
                     const eventDescription = normalizeText(ev.description);
-                    const eventTitleMatches = getMatchIndex(normalizeText(ev.title), query) >= 0;
-                    const eventDescriptionMatches = getMatchIndex(eventDescription, query) >= 0;
                     const eventDescriptionSnippet = buildDescriptionSnippet(eventDescription, query);
 
                     return (
@@ -374,9 +510,6 @@ export default function SearchScreen() {
                                 {!!eventDescriptionSnippet && (
                                     <View>
                                         {renderHighlightedText(eventDescriptionSnippet, query, styles.subText, styles.highlightText)}
-                                        {eventDescriptionMatches && !eventTitleMatches && (
-                                            <Text style={styles.matchTag}>Matches description</Text>
-                                        )}
                                     </View>
                                 )}
                             </View>
@@ -392,6 +525,167 @@ export default function SearchScreen() {
                     );
                 }}
             />
+
+            <Modal
+                visible={calendarFilterModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setCalendarFilterModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.filterModalCard}>
+                        <View style={styles.filterModalHeader}>
+                            <Text style={styles.filterModalTitle}>Filter calendars by category</Text>
+                            <Pressable onPress={() => setCalendarFilterModalVisible(false)}>
+                                <Ionicons name="close" size={20} color="#10464d" />
+                            </Pressable>
+                        </View>
+
+                        <FlatList
+                            data={categories}
+                            keyExtractor={(item) => String(item.id)}
+                            contentContainerStyle={styles.filterOptionsWrap}
+                            renderItem={({ item }) => {
+                                const selected = selectedCalendarCategoryIds.includes(item.id);
+                                return (
+                                    <Pressable
+                                        style={[
+                                            styles.filterChip,
+                                            selected && styles.filterChipSelected,
+                                        ]}
+                                        onPress={() => toggleCalendarCategory(item.id)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterChipText,
+                                                selected && styles.filterChipTextSelected,
+                                            ]}
+                                        >
+                                            {item.name}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            }}
+                        />
+
+                        <View style={styles.filterModalActions}>
+                            <TouchableOpacity
+                                style={styles.filterSecondaryButton}
+                                onPress={() => setSelectedCalendarCategoryIds([])}
+                            >
+                                <Text style={styles.filterSecondaryButtonText}>Clear</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.filterPrimaryButton}
+                                onPress={() => setCalendarFilterModalVisible(false)}
+                            >
+                                <Text style={styles.filterPrimaryButtonText}>Apply</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={eventTagFilterModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setEventTagFilterModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.filterModalCardLarge}>
+                        <View style={styles.filterModalHeader}>
+                            <Text style={styles.filterModalTitle}>Filter events by tag</Text>
+                            <Pressable onPress={() => setEventTagFilterModalVisible(false)}>
+                                <Ionicons name="close" size={20} color="#10464d" />
+                            </Pressable>
+                        </View>
+
+                        <Text style={styles.filterSectionTitle}>Categories</Text>
+                        <FlatList
+                            data={categories}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            keyExtractor={(item) => String(item.id)}
+                            contentContainerStyle={styles.horizontalCategoriesWrap}
+                            renderItem={({ item }) => {
+                                const selected = selectedTagCategoryId === item.id;
+                                return (
+                                    <Pressable
+                                        style={[
+                                            styles.filterChip,
+                                            selected && styles.filterChipSelected,
+                                        ]}
+                                        onPress={() => setSelectedTagCategoryId(item.id)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterChipText,
+                                                selected && styles.filterChipTextSelected,
+                                            ]}
+                                        >
+                                            {item.name}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            }}
+                        />
+
+                        <Text style={styles.filterSectionTitle}>Event tags</Text>
+                        <FlatList
+                            data={visibleEventTags}
+                            keyExtractor={(item) => String(item.id)}
+                            contentContainerStyle={styles.filterOptionsWrap}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyTagsText}>
+                                    Select a category to see its event tags.
+                                </Text>
+                            }
+                            renderItem={({ item }) => {
+                                const selected = selectedEventTagIds.includes(item.id);
+                                return (
+                                    <Pressable
+                                        style={[
+                                            styles.filterChip,
+                                            selected && styles.filterChipSelected,
+                                        ]}
+                                        onPress={() => toggleEventTag(item.id)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterChipText,
+                                                selected && styles.filterChipTextSelected,
+                                            ]}
+                                        >
+                                            {item.name}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            }}
+                        />
+
+                        <View style={styles.filterModalActions}>
+                            <TouchableOpacity
+                                style={styles.filterSecondaryButton}
+                                onPress={() => {
+                                    setSelectedTagCategoryId(null);
+                                    setSelectedEventTagIds([]);
+                                }}
+                            >
+                                <Text style={styles.filterSecondaryButtonText}>Clear</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.filterPrimaryButton}
+                                onPress={() => setEventTagFilterModalVisible(false)}
+                            >
+                                <Text style={styles.filterPrimaryButtonText}>Apply</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <PublicEventDetailModal event={activeEvent} onClose={() => setActiveEvent(null)} />
         </View>
@@ -453,6 +747,41 @@ const styles = StyleSheet.create({
     tabLabel: {
         fontSize: 14,
         fontWeight: '600',
+    },
+    filterActionRow: {
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        marginBottom: 14,
+    },
+    filterActionButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "rgba(16,70,77,0.2)",
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+    },
+    filterActionButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#10464d",
+    },
+    filterCountBadge: {
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: "#10464d",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 6,
+    },
+    filterCountBadgeText: {
+        color: "#fff",
+        fontSize: 11,
+        fontWeight: "700",
     },
     list: {
         flex: 1,
@@ -544,10 +873,107 @@ const styles = StyleSheet.create({
         color: "#10464d",
         fontWeight: "700",
     },
-    matchTag: {
-        marginTop: 4,
-        fontSize: 11,
-        color: "#10464d",
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.35)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    filterModalCard: {
+        width: "100%",
+        maxWidth: 460,
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 16,
+        maxHeight: "75%",
+    },
+    filterModalCardLarge: {
+        width: "100%",
+        maxWidth: 560,
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 16,
+        maxHeight: "80%",
+    },
+    filterModalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 14,
+    },
+    filterModalTitle: {
+        fontSize: 17,
         fontWeight: "700",
+        color: "#10464d",
+    },
+    filterSectionTitle: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#10464d",
+        marginTop: 8,
+        marginBottom: 10,
+    },
+    horizontalCategoriesWrap: {
+        paddingBottom: 6,
+        gap: 8,
+    },
+    filterOptionsWrap: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+        paddingBottom: 8,
+    },
+    filterChip: {
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 999,
+        backgroundColor: "#f7fbfb",
+        borderWidth: 1,
+        borderColor: "#d8e6e7",
+    },
+    filterChipSelected: {
+        backgroundColor: "#10464d",
+        borderColor: "#10464d",
+    },
+    filterChipText: {
+        color: "#10464d",
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    filterChipTextSelected: {
+        color: "#fff",
+    },
+    filterModalActions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: 10,
+        marginTop: 18,
+    },
+    filterSecondaryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: "#f2f2f2",
+    },
+    filterSecondaryButtonText: {
+        color: "#333",
+        fontWeight: "600",
+    },
+    filterPrimaryButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: "#10464d",
+    },
+    filterPrimaryButtonText: {
+        color: "#fff",
+        fontWeight: "700",
+    },
+    emptyTagsText: {
+        color: "#777",
+        fontSize: 13,
+        fontStyle: "italic",
+        marginTop: 6,
     },
 });
