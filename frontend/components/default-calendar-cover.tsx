@@ -25,17 +25,13 @@ export function DefaultCalendarCover({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#E7F1F1",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#C5DDDD",
   },
   iconWrap: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: "#D5EAEA",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignItems: "center",
     justifyContent: "center",
   },

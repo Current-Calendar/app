@@ -1,6 +1,6 @@
-# E2E con Selenium (local)
+# E2E con Selenium
 
-Estas pruebas E2E están pensadas para ejecución **manual/local**.
+Estas pruebas E2E se pueden ejecutar en **Docker** (recomendado) o en local.
 
 ## Qué cubren ahora
 
@@ -22,35 +22,47 @@ Estas pruebas E2E están pensadas para ejecución **manual/local**.
 
 ## Requisitos
 
-- Chrome instalado.
-- Frontend en web levantado (`expo`).
-- Dependencias Python del módulo E2E.
+- Docker + Docker Compose.
+- Archivo `.env` en raíz (igual que para levantar backend).
 
-Configuración de ejecución:
+Configuración útil:
 
 - `E2E_HEADLESS=true|false` (por defecto: `true`).
+- `E2E_BASE_URL` para forzar URL frontend.
+- `E2E_SELENIUM_REMOTE_URL` para usar Selenium remoto.
 
-## Instalación
+## Ejecución automática en Docker (recomendado para Selenium)
+
+Desde la raíz del proyecto:
 
 ```bash
-source "/Users/prgpa/Documents/DOCS UNI/4º Sevilla/ISPP/app/venv/bin/activate"
-pip install -r backend/requirements.txt
+sh e2e/run_selenium_docker.sh
 ```
 
-## Ejecución
+Este flujo levanta backend + db + redis + selenium + frontend para E2E, ejecuta los tests y limpia contenedores al terminar.
+
+Ejecutar solo un archivo de tests:
 
 ```bash
-cd "/Users/prgpa/Documents/DOCS UNI/4º Sevilla/ISPP/app"
+sh e2e/run_selenium_docker.sh pytest -c e2e/pytest.ini e2e/tests/test_auth_flows.py
+```
+
+## Flujo híbrido (opcional, frontend local)
+
+Si necesitas mantener el frontend en tu máquina para depurar:
+
+```bash
+EXPO_PUBLIC_API_URL=http://host.docker.internal:8000/api/v1 EXPO_PUBLIC_API_BASE=http://host.docker.internal:8000 npx expo start --web --port 8081
+docker compose -f docker-compose.mac.yaml -f docker-compose.e2e.yaml run --rm -e E2E_BASE_URL=http://host.docker.internal:8081 e2e-runner
+```
+
+## Ejecución local (opcional)
+
+```bash
+source "/Users/prgpa/Documents/DOCS UNI/4º Sevilla/ISPP/app/.venv/bin/activate"
+pip install -r backend/requirements.txt
 E2E_HEADLESS=true pytest -c e2e/pytest.ini e2e/tests
 ```
-
-Ejemplo con navegador visible:
-
-```bash
-E2E_HEADLESS=false pytest -c e2e/pytest.ini e2e/tests -q
-```
-
-Opcionalmente puedes fijar URL: `E2E_BASE_URL="http://localhost:8081"`.
 
 ## No CI/CD
 

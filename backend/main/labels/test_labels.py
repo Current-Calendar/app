@@ -31,10 +31,11 @@ class CategoryModelTests(TestCase):
     
     def test_category_creation_multiple(self):
         """Test crear múltiples categorías diferentes"""
+        initial_count = Category.objects.count()
         cat2 = Category.objects.create(name="Cat B")
         cat3 = Category.objects.create(name="Cat C")
         
-        self.assertEqual(Category.objects.count(), 3)
+        self.assertEqual(Category.objects.count(), initial_count + 2)
         self.assertIn(self.category, Category.objects.all())
     
     def test_category_verbose_name_plural(self):
@@ -46,32 +47,32 @@ class EventTagModelTests(TestCase):
     """Tests para el modelo EventTag"""
     
     def setUp(self):
-        self.category = Category.objects.create(name="Trabajo")
-        self.tag = EventTag.objects.create(name="Reunión", category=self.category)
+        self.category = Category.objects.create(name="Trabajo ET")
+        self.tag = EventTag.objects.create(name="Reunión ET", category=self.category)
     
     def test_create_event_tag(self):
         """Test crear un tag de evento"""
         self.assertIsNotNone(self.tag.id)
-        self.assertEqual(self.tag.name, "Reunión")
+        self.assertEqual(self.tag.name, "Reunión ET")
         self.assertEqual(self.tag.category, self.category)
     
     def test_event_tag_string_representation(self):
         """Test representación en string del tag"""
-        expected_str = "Reunión (Trabajo)"
+        expected_str = "Reunión ET (Trabajo ET)"
         self.assertEqual(str(self.tag), expected_str)
     
     def test_event_tag_unique_per_category(self):
         """Test que el nombre de tag es único por categoría"""
         with self.assertRaises(Exception):
-            EventTag.objects.create(name="Reunión", category=self.category)
+            EventTag.objects.create(name="Reunión ET", category=self.category)
     
     def test_event_tag_same_name_different_category(self):
         """Test que se puede usar el mismo nombre en categorías diferentes"""
-        cat2 = Category.objects.create(name="Personal")
-        tag2 = EventTag.objects.create(name="Reunión", category=cat2)
+        cat2 = Category.objects.create(name="Personal ET")
+        tag2 = EventTag.objects.create(name="Reunión ET", category=cat2)
         
         self.assertNotEqual(self.tag.id, tag2.id)
-        self.assertEqual(tag2.name, "Reunión")
+        self.assertEqual(tag2.name, "Reunión ET")
     
     def test_event_tag_cascade_delete(self):
         """Test que los tags se eliminan cuando se elimina la categoría"""
@@ -92,8 +93,8 @@ class CalendarCategoriesRelationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass123", email="testuser@test.com")
         self.calendar = Calendar.objects.create(name="Mi Calendario", creator=self.user)
-        self.cat1 = Category.objects.create(name="Trabajo")
-        self.cat2 = Category.objects.create(name="Personal")
+        self.cat1 = Category.objects.create(name="Trabajo CCR")
+        self.cat2 = Category.objects.create(name="Personal CCR")
     
     def test_add_category_to_calendar(self):
         """Test agregar categoría a calendario"""
@@ -138,9 +139,9 @@ class EventTagsRelationTests(TestCase):
         )
         self.event.calendars.add(self.calendar)
         
-        self.category = Category.objects.create(name="Trabajo")
-        self.tag1 = EventTag.objects.create(name="Reunión", category=self.category)
-        self.tag2 = EventTag.objects.create(name="Urgente", category=self.category)
+        self.category = Category.objects.create(name="Trabajo ETR")
+        self.tag1 = EventTag.objects.create(name="Reunión ETR", category=self.category)
+        self.tag2 = EventTag.objects.create(name="Urgente ETR", category=self.category)
     
     def test_add_tag_to_event(self):
         """Test agregar tag a evento"""
@@ -180,9 +181,9 @@ class FilterCategoriesTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         
         # Crear categorías
-        self.cat1 = Category.objects.create(name="Trabajo")
-        self.cat2 = Category.objects.create(name="Personal")
-        self.cat3 = Category.objects.create(name="Viajes")
+        self.cat1 = Category.objects.create(name="Trabajo FC")
+        self.cat2 = Category.objects.create(name="Personal FC")
+        self.cat3 = Category.objects.create(name="Viajes FC")
         
         # Crear calendarios con categorías
         self.cal1 = Calendar.objects.create(name="Cal1", creator=self.user, privacy="PUBLIC")
@@ -204,8 +205,8 @@ class FilterCategoriesTests(APITestCase):
         cal1_cats = set(self.cal1.categories.values_list('name', flat=True))
         cal2_cats = set(self.cal2.categories.values_list('name', flat=True))
         
-        self.assertEqual(cal1_cats, {"Trabajo"})
-        self.assertEqual(cal2_cats, {"Personal"})
+        self.assertEqual(cal1_cats, {self.cat1.name})
+        self.assertEqual(cal2_cats, {self.cat2.name})
     
     def test_query_calendars_by_category(self):
         """Test que podemos obtener calendarios filtrando por categoría"""
@@ -234,9 +235,9 @@ class FilterTagsTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         
         # Crear categoría y tags
-        self.category = Category.objects.create(name="Trabajo")
-        self.tag1 = EventTag.objects.create(name="Reunión", category=self.category)
-        self.tag2 = EventTag.objects.create(name="Urgente", category=self.category)
+        self.category = Category.objects.create(name="Trabajo FT")
+        self.tag1 = EventTag.objects.create(name="Reunión FT", category=self.category)
+        self.tag2 = EventTag.objects.create(name="Urgente FT", category=self.category)
         
         # Crear calendario
         self.calendar = Calendar.objects.create(name="Cal", creator=self.user, privacy="PUBLIC")
@@ -270,8 +271,8 @@ class FilterTagsTests(APITestCase):
         event1_tags = set(self.event1.tags.values_list('name', flat=True))
         event2_tags = set(self.event2.tags.values_list('name', flat=True))
         
-        self.assertEqual(event1_tags, {"Reunión"})
-        self.assertEqual(event2_tags, {"Urgente"})
+        self.assertEqual(event1_tags, {self.tag1.name})
+        self.assertEqual(event2_tags, {self.tag2.name})
     
     def test_query_events_by_tag(self):
         """Test que podemos obtener eventos filtrando por tag"""
@@ -298,12 +299,12 @@ class RecommendationSystemTests(TestCase):
         self.user = User.objects.create_user(username="rsuser", password="rspass123", email="rsuser@test.com")
         
         # Crear categorías
-        self.work_cat = Category.objects.create(name="Trabajo")
-        self.personal_cat = Category.objects.create(name="Personal")
+        self.work_cat = Category.objects.create(name="Trabajo RS")
+        self.personal_cat = Category.objects.create(name="Personal RS")
         
         # Crear tags
-        self.meeting_tag = EventTag.objects.create(name="Reunión", category=self.work_cat)
-        self.urgent_tag = EventTag.objects.create(name="Urgente", category=self.work_cat)
+        self.meeting_tag = EventTag.objects.create(name="Reunión RS", category=self.work_cat)
+        self.urgent_tag = EventTag.objects.create(name="Urgente RS", category=self.work_cat)
     
     def test_calendar_has_categories(self):
         """Test que calendario puede tener categorías"""
@@ -362,7 +363,7 @@ class RecommendationSystemTests(TestCase):
         event.tags.add(self.meeting_tag, self.urgent_tag)
         
         categories_from_tags = set(event.tags.values_list('category__name', flat=True))
-        self.assertEqual(categories_from_tags, {"Trabajo"})
+        self.assertEqual(categories_from_tags, {self.work_cat.name})
 
 
 class EdgeCaseTests(TestCase):
@@ -481,8 +482,8 @@ class CategoryViewSetTests(APITestCase):
         self.owner_user = User.objects.create_user(username="owner", password="owner", email="owner@test.com")
         self.other_user = User.objects.create_user(username="other", password="other", email="other@test.com")
         
-        self.category1 = Category.objects.create(name="Trabajo")
-        self.category2 = Category.objects.create(name="Personal")
+        self.category1 = Category.objects.create(name="Trabajo VS")
+        self.category2 = Category.objects.create(name="Personal VS")
         
         self.calendar = Calendar.objects.create(name="My Calendar", creator=self.owner_user)
     
@@ -507,14 +508,14 @@ class CategoryViewSetTests(APITestCase):
     def test_create_category_admin(self):
         """Admin puede crear categoría"""
         self.client.force_authenticate(user=self.admin_user)
-        response = self.client.post('/api/v1/categories/', {'name': 'Salud'}, format='json')
+        response = self.client.post('/api/v1/categories/', {'name': 'Salud VS'}, format='json')
         self.assertEqual(response.status_code, HTTP_201_CREATED)
-        self.assertTrue(Category.objects.filter(name='Salud').exists())
+        self.assertTrue(Category.objects.filter(name='Salud VS').exists())
 
     def test_create_category_non_admin_forbidden(self):
         """No-admin no puede crear categoría"""
         self.client.force_authenticate(user=self.owner_user)
-        response = self.client.post('/api/v1/categories/', {'name': 'Salud'}, format='json')
+        response = self.client.post('/api/v1/categories/', {'name': 'Salud VS'}, format='json')
         self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
     def test_update_category_admin(self):
@@ -705,6 +706,34 @@ class CategoryViewSetTests(APITestCase):
         # Debería permitir a co-owner
         self.assertIn(response.status_code, [200, 201, 204])
 
+    def test_get_categories_for_calendar(self):
+        """GET categorías asignadas a un calendario"""
+        self.calendar.categories.add(self.category1)
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/categories/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        category_ids = {item['id'] for item in response.data}
+        self.assertIn(self.category1.id, category_ids)
+
+    def test_get_categories_for_calendar_forbidden_if_no_access(self):
+        """No debe permitir ver categorías de calendario privado sin acceso"""
+        self.calendar.privacy = 'PRIVATE'
+        self.calendar.save(update_fields=['privacy'])
+        self.calendar.categories.add(self.category1)
+
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.get(
+            f'/api/v1/categories/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
+
 
 class EventTagViewSetTests(APITestCase):
     """Tests exhaustivos para EventTagViewSet"""
@@ -874,7 +903,7 @@ class EventTagViewSetTests(APITestCase):
     def test_add_tag_from_uncategorized_category(self):
         """Test agregar tag que no pertenece a categoría del calendario"""
         # Crear categoría sin asignar al calendario
-        other_category = Category.objects.create(name="Personal")
+        other_category = Category.objects.create(name="Personal EVT")
         other_tag = EventTag.objects.create(name="PersonalTag", category=other_category)
         
         self.client.force_authenticate(user=self.owner_user)
@@ -997,6 +1026,48 @@ class EventTagViewSetTests(APITestCase):
         self.assertEqual(self.event.tags.count(), 2)
         self.assertIn(self.tag1, self.event.tags.all())
         self.assertIn(self.tag2, self.event.tags.all())
+
+    def test_get_event_tags_for_calendar(self):
+        """GET tags válidos para un calendario según categorías asignadas"""
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/event-tags/for-calendar/{self.calendar.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        tag_ids = {item['id'] for item in response.data}
+        self.assertIn(self.tag1.id, tag_ids)
+        self.assertIn(self.tag2.id, tag_ids)
+
+    def test_get_event_tags_for_event(self):
+        """GET tags asignados a un evento concreto"""
+        self.event.tags.add(self.tag1)
+        self.client.force_authenticate(user=self.owner_user)
+
+        response = self.client.get(
+            f'/api/v1/event-tags/for-event/{self.event.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        tag_ids = {item['id'] for item in response.data}
+        self.assertIn(self.tag1.id, tag_ids)
+
+    def test_get_event_tags_for_event_forbidden_if_no_access(self):
+        """No debe permitir ver tags de evento privado sin acceso"""
+        self.calendar.privacy = 'PRIVATE'
+        self.calendar.save(update_fields=['privacy'])
+        self.event.tags.add(self.tag1)
+
+        self.client.force_authenticate(user=self.other_user)
+        response = self.client.get(
+            f'/api/v1/event-tags/for-event/{self.event.id}/',
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, HTTP_403_FORBIDDEN)
 
 
 class LabelViewsetHelpersTests(TestCase):

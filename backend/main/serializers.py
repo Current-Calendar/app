@@ -35,10 +35,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         required=True,
         help_text='Unique user email'
     )
+    accepted_privacy = serializers.BooleanField(write_only=True, required=True)
+    accepted_cookies = serializers.BooleanField(write_only=True, required=False, default=False)
+    accepted_terms = serializers.BooleanField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password', 'password2', 'pronouns', 'bio')
+        fields = (
+            'id',
+            'username',
+            'email',
+            'password',
+            'password2',
+            'pronouns',
+            'bio',
+            'accepted_privacy',
+            'accepted_cookies',
+            'accepted_terms',
+        )
         extra_kwargs = {
             'pronouns': {'required': False},
             'bio': {'required': False}
@@ -79,6 +93,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 "password": "Passwords do not match."
             })
 
+        if not attrs.get('accepted_privacy'):
+            raise serializers.ValidationError({
+                "accepted_privacy": "Privacy policy acceptance is required."
+            })
+        if not attrs.get('accepted_terms'):
+            raise serializers.ValidationError({
+                "accepted_terms": "Terms and conditions acceptance is required."
+            })
+
         # Create a temporary user object to validate the password with context
         # This allows UserAttributeSimilarityValidator to work correctly
         temp_user = User(
@@ -102,6 +125,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         """
         # Remove password2 as it is not stored
         validated_data.pop('password2')
+        validated_data.pop('accepted_privacy', None)
+        validated_data.pop('accepted_cookies', None)
+        validated_data.pop('accepted_terms', None)
 
         # Use create_user to automatically hash the password
         user = User.objects.create_user(
@@ -142,6 +168,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
     def get_is_following(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
+            following_ids = self.context.get('following_ids')
+            if following_ids is not None:
+                return obj.id in following_ids
             return obj.followers_set.filter(id=request.user.id).exists()
         return False
 
@@ -264,6 +293,7 @@ class EventSerializer(serializers.ModelSerializer):
     creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()
+    my_attendance_status = serializers.SerializerMethodField()
     liked_by_me = serializers.SerializerMethodField()
     saved_by_me = serializers.SerializerMethodField()
 
@@ -275,6 +305,7 @@ class EventSerializer(serializers.ModelSerializer):
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
             'photo', 'creator_username', 'creator_photo', 'attendees',
+            'my_attendance_status',
             'likes_count', 'liked_by_me', 'saved_by_me',
         ]
 
@@ -306,6 +337,21 @@ class EventSerializer(serializers.ModelSerializer):
             many=True,
             context=self.context
         ).data
+
+    def get_my_attendance_status(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        prefetched = getattr(obj, 'my_attendance_records', None)
+        if prefetched is not None:
+            return prefetched[0].status if prefetched else None
+
+        attendance = EventAttendance.objects.filter(
+            user=request.user,
+            event=obj,
+        ).only('status').first()
+        return attendance.status if attendance else None
 
     def get_liked_by_me(self, obj):
         liked_ids = self.context.get('liked_ids')

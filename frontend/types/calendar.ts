@@ -6,6 +6,11 @@ export type CalendarOrigin = 'CURRENT' | 'GOOGLE' | 'APPLE';
 
 export type EventType = 'meeting' | 'task' | 'reminder' | 'holiday' | 'birthday' | 'other';
 
+export type CalendarCategory = {
+  id: number;
+  name: string;
+};
+
 export interface Calendar {
     id: string;
     name: string;
@@ -19,6 +24,7 @@ export interface Calendar {
     liked_by_me?: boolean;
     co_owners?: { username: string; name: string }[]; // For shared calendars
     viewers?: { id?: number; username: string; name?: string }[];
+    categories?: CalendarCategory[];
 }
 
 export interface CalendarEvent {
@@ -34,6 +40,13 @@ export interface CalendarEvent {
     recurrence?: string | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
+    attendees?: {
+        id: string;
+        name: string;
+        respondedAt: string;
+        avatar?: string;
+    }[];
+    my_attendance_status?: 'ASSISTING' | 'NOT_ASSISTING' | 'PENDING' | null;
     show_time: boolean;
 }
 

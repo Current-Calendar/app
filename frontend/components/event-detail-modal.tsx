@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarEvent } from '@/types/calendar';
@@ -16,14 +17,22 @@ import CommentsModal from "./comments-modal";
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import apiClient from '@/services/api-client';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
 const RED = "#D64545";
 const RED_DARK = "#B22222";
 
-type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING";
+type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING" | "PENDING";
+
+type EventTagItem = {
+  id: number | string;
+  name: string;
+  category?: number | string;
+  category_name?: string;
+};
 
 interface EventDetailModalProps {
   event: CalendarEvent | null;
@@ -38,6 +47,9 @@ export function EventDetailModal({
 }: EventDetailModalProps) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isNarrow = width < 420;
 
   const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
@@ -46,6 +58,9 @@ export function EventDetailModal({
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
 
+  const [eventTags, setEventTags] = useState<EventTagItem[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+
   useEffect(() => {
     setAttendanceMenuOpen(false);
     setCommentsVisible(false);
@@ -53,23 +68,75 @@ export function EventDetailModal({
     setDeletingEvent(false);
   }, [event]);
 
+  const normalizeAttendanceStatus = (value?: string | null): AttendanceStatus => {
+    if (value === "ASSISTING" || value === "NOT_ASSISTING") {
+      return value;
+    }
+    return "PENDING";
+  };
+
+  useEffect(() => {
+    if (!event?.id) return;
+
+    const initialStatus = normalizeAttendanceStatus((event as any).my_attendance_status);
+    if (initialStatus === "PENDING") return;
+
+    setAttendanceByEvent((prev) => {
+      if (prev[event.id]) return prev;
+      return { ...prev, [event.id]: initialStatus };
+    });
+  }, [event]);
+
+  useEffect(() => {
+    const loadEventTags = async () => {
+      if (!event?.id) {
+        setEventTags([]);
+        return;
+      }
+
+      try {
+        setTagsLoading(true);
+
+        const response: any = await apiClient.get(`/event-tags/for-event/${event.id}/`);
+
+        const tags =
+          (Array.isArray(response) && response) ||
+          (Array.isArray(response?.results) && response.results) ||
+          (Array.isArray(response?.data) && response.data) ||
+          [];
+
+        setEventTags(tags);
+      } catch (error) {
+        console.error("Error loading event tags:", error);
+        setEventTags([]);
+      } finally {
+        setTagsLoading(false);
+      }
+    };
+
+    void loadEventTags();
+  }, [event?.id]);
+
   if (!event) return null;
+
   const eventImageRaw =
     typeof (event as any).photo === "string" && (event as any).photo.trim().length > 0
       ? (event as any).photo.trim()
       : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
         ? (event as any).image.trim()
         : "";
-  const hasEventImage = eventImageRaw.length > 0;
 
-  const currentAttendance = attendanceByEvent[event.id] ?? "pending";
+  const hasEventImage = eventImageRaw.length > 0;
+  const currentAttendance =
+    attendanceByEvent[event.id] ?? normalizeAttendanceStatus((event as any).my_attendance_status);
 
   const handleAttendanceChange = async (value: AttendanceStatus) => {
     setAttendanceMenuOpen(false);
     setAttendanceLoading(true);
     try {
-      await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
-      setAttendanceByEvent((prev) => ({ ...prev, [event.id]: value }));
+      const response: any = await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
+      const nextStatus = normalizeAttendanceStatus(response?.status || value);
+      setAttendanceByEvent((prev) => ({ ...prev, [event.id]: nextStatus }));
     } catch (error) {
       console.error("Error updating attendance:", error);
     } finally {
@@ -116,7 +183,10 @@ export function EventDetailModal({
     <>
       <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
         <Pressable style={styles.overlay} onPress={onClose}>
-          <Pressable style={styles.card} onPress={() => {}}>
+          <Pressable
+            style={[styles.card, { paddingBottom: 12 + insets.bottom }]}
+            onPress={() => {}}
+          >
             <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={18} color={TEXT} />
             </Pressable>
@@ -129,7 +199,7 @@ export function EventDetailModal({
               />
             ) : (
               <DefaultCalendarCover
-                style={styles.image}
+                style={{...styles.image, backgroundColor: event.color}}
                 label="Evento"
                 iconSize={52}
               />
@@ -154,6 +224,28 @@ export function EventDetailModal({
                   label={`${event.location.latitude.toFixed(4)}, ${event.location.longitude.toFixed(4)}`}
                 />
               )}
+
+              {tagsLoading ? (
+                <View style={styles.tagsLoadingRow}>
+                  <ActivityIndicator size="small" color={TEXT} />
+                </View>
+              ) : Array.isArray(eventTags) && eventTags.length > 0 ? (
+                <View style={styles.metaRow}>
+                  <Ionicons
+                    name="pricetags-outline"
+                    size={16}
+                    color={TEXT}
+                    style={styles.metaRowIcon}
+                  />
+                  <View style={styles.tagsWrap}>
+                    {eventTags.map((tag) => (
+                      <View key={String(tag.id)} style={styles.tagChip}>
+                        <Text style={styles.tagChipText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
 
               <View style={styles.attendanceSection}>
                 <Text style={styles.attendanceLabel}>Attendance</Text>
@@ -202,9 +294,9 @@ export function EventDetailModal({
               </View>
             )}
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, isNarrow && styles.actionsStack]}>
               <Pressable
-                style={styles.commentBtn}
+                style={[styles.commentBtn, isNarrow && styles.actionFullWidth]}
                 onPress={handleOpenComments}
               >
                 <Ionicons name="chatbubble-outline" size={16} color={TEXT} />
@@ -214,7 +306,7 @@ export function EventDetailModal({
               {canManageActions && (
                 <>
                   <Pressable
-                    style={styles.editBtn}
+                    style={[styles.editBtn, isNarrow && styles.actionFullWidth]}
                     onPress={() => {
                       onClose();
                       router.push({
@@ -228,7 +320,11 @@ export function EventDetailModal({
                   </Pressable>
 
                   <Pressable
-                    style={[styles.deleteBtn, deletingEvent && styles.deleteBtnDisabled]}
+                    style={[
+                      styles.deleteBtn,
+                      deletingEvent && styles.deleteBtnDisabled,
+                      isNarrow && styles.actionFullWidth,
+                    ]}
                     onPress={() => setDeleteConfirmVisible(true)}
                     disabled={deletingEvent}
                   >
@@ -445,6 +541,10 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 16,
   },
+  actionsStack: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
 
   commentBtn: {
     flex: 1,
@@ -503,6 +603,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "900",
   },
+  actionFullWidth: {
+    width: "100%",
+    flex: 0,
+  },
 
   image: {
     width: "100%",
@@ -510,5 +614,44 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     marginBottom: 12,
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 2,
+  },
+
+  metaRowIcon: {
+    marginTop: 4,
+  },
+
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginLeft: 8,
+    flex: 1,
+  },
+
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "#E8F2F2",
+    borderWidth: 1,
+    borderColor: "#CFE3E3",
+  },
+
+  tagChipText: {
+    color: TEXT,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  tagsLoadingRow: {
+    paddingTop: 2,
+    paddingBottom: 2,
+    alignItems: "flex-start",
   },
 });

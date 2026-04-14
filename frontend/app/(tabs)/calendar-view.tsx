@@ -30,12 +30,16 @@ export default function CalendarViewScreen() {
   const { user } = useAuth();
 
   const [fetchedCalendar, setFetchedCalendar] = useState<any>(null);
+  const [calendarNotFound, setCalendarNotFound] = useState(false);
 
   useEffect(() => {
     if (!calendarId || backendCalendars.length === 0) return;
     const alreadyOwned = backendCalendars.some((c) => String(c.id) === calendarId);
     if (!alreadyOwned) {
-      apiClient.get<any>(`/calendars/${calendarId}/`).then(setFetchedCalendar).catch(() => {});
+      setCalendarNotFound(false);
+      apiClient.get<any>(`/calendars/${calendarId}/`)
+        .then(setFetchedCalendar)
+        .catch(() => setCalendarNotFound(true));
     }
   }, [calendarId, backendCalendars]);
 
@@ -137,7 +141,14 @@ export default function CalendarViewScreen() {
 
   return (
     <View style={styles.screenWrapper}>
-      {!calendar ? (
+      {calendarNotFound ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>This calendar no longer exists or is not accessible.</Text>
+          <Pressable style={[styles.secondaryButton, { marginTop: 16 }]} onPress={() => router.back()}>
+            <Text style={styles.secondaryButtonText}>Go back</Text>
+          </Pressable>
+        </View>
+      ) : !calendar ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Loading calendar...</Text>
         </View>

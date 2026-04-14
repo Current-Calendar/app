@@ -18,6 +18,9 @@ export interface RegisterData {
   email: string;
   password: string;
   password2: string;
+  accepted_privacy: boolean;
+  accepted_cookies: boolean;
+  accepted_terms: boolean;
 }
 
 export interface AuthContextType {

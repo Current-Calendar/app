@@ -26,6 +26,7 @@ import { useCalendarActions } from '@/hooks/use-calendar-actions';
 import { useAuth } from '@/hooks/use-auth';
 import apiClient from '@/services/api-client';
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
+import { CreateMenuModal } from '@/components/nav_bar/create-menu-modal';
 
 // TODO BACKEND - Replace MOCK_CALENDARS / MOCK_EVENTS with calls to:
 //   GET /calendars          -> CalendarsResponse
@@ -83,6 +84,7 @@ export default function CalendarScreen() {
     const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
     const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
     const [importModalVisible, setImportModalVisible] = useState(false);
+    const [createMenuVisible, setCreateMenuVisible] = useState(false);
     const [loadingCalendars, setLoadingCalendars] = useState(true);
     const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
@@ -134,6 +136,7 @@ export default function CalendarScreen() {
             color: COLORS[index % COLORS.length],
             co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
             viewers: Array.isArray(c.viewers) ? c.viewers : [],
+            categories: Array.isArray(c.categories) ? c.categories : [],
             }));
 
             setCalendars(mappedCalendars);
@@ -181,12 +184,16 @@ export default function CalendarScreen() {
                 creator_username:
                 updatedCalendar.creator_username ?? (calendar as any).creator_username,
                 color: calendar.color,
+                photo: updatedCalendar.photo || "",
                 co_owners: Array.isArray(updatedCalendar.co_owners)
                 ? updatedCalendar.co_owners
                 : ((calendar as any).co_owners ?? []),
                 viewers: Array.isArray(updatedCalendar.viewers)
                 ? updatedCalendar.viewers
                 : ((calendar as any).viewers ?? []),
+                categories: Array.isArray(updatedCalendar.categories)
+                ? updatedCalendar.categories
+                : ((calendar as any).categories ?? []),
             } as Calendar;
             })
         );
@@ -214,19 +221,24 @@ export default function CalendarScreen() {
             viewers: Array.isArray(updatedCalendar.viewers)
                 ? updatedCalendar.viewers
                 : ((current as any).viewers ?? []),
+            categories: Array.isArray(updatedCalendar.categories)
+                ? updatedCalendar.categories
+                : ((current as any).categories ?? []),
             } as Calendar;
         });
     };
 
     useEffect(() => {
-        void fetchData();
-    }, [fetchData]);
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            void fetchData();
+        if (!isAuthenticated) {
+            setLoadingCalendars(false);
+            setCalendars([]);
+            setEvents([]);
+            router.replace('/login' as any);
+            return;
         }
-    }, [isAuthenticated]);
+
+        void fetchData();
+    }, [fetchData, isAuthenticated, router]);
     useEffect(() => {
         if (calendarsError || eventsError) {
             console.error('Error fetching data:', calendarsError || eventsError);
@@ -253,16 +265,24 @@ export default function CalendarScreen() {
                         title: e.title,
                         description: e.description || '',
                         place_name: e.place_name || '',
-                        date: date.toISOString().slice(0, 10),
+                        date: e.date,
                         time: e.time.substring(0, 5),
                         recurrence: e.recurrence,
                         type: 'other',
                         color: calendar?.color || '#6C63FF',
-                        show_time: dates.length === 1,
-                    }
+                        photo: e.photo || "",
+                        attendees: Array.isArray(e.attendees)
+                            ? e.attendees.map((a: any) => ({
+                                id: String(a.id ?? ''),
+                                name: a.name || a.username || '',
+                                respondedAt: a.respondedAt || a.responded_at || '',
+                                avatar: a.avatar || a.photo || undefined,
+                            }))
+                            : [],
+                        my_attendance_status: e.my_attendance_status ?? null,
+                    };
                 });
             });
-            console.log(mappedEvents);
 
         setEvents(mappedEvents);
     }, [backendEvents, calendars]);
@@ -308,6 +328,32 @@ export default function CalendarScreen() {
             showSheet(dateKey);
         }
     };
+
+    const handleOpenCalendarInfo = async (calendar: Calendar) => {
+  try {
+    const response: any = await apiClient.get(
+      `/categories/for-calendar/${calendar.id}/`
+    );
+
+    const categories =
+      (Array.isArray(response) && response) ||
+      (Array.isArray(response?.results) && response.results) ||
+      (Array.isArray(response?.data) && response.data) ||
+      [];
+
+    setInfoCalendar({
+      ...calendar,
+      categories,
+    });
+  } catch (error) {
+    console.error("Error loading calendar categories:", error);
+
+    setInfoCalendar({
+      ...calendar,
+      categories: [],
+    });
+  }
+};
 
     // TODO BACKEND - Once endpoints exist, move filtering server-side
     const filteredEvents = useMemo(() => {
@@ -382,6 +428,51 @@ export default function CalendarScreen() {
         }
     };
 
+    const goToLogin = useCallback(() => {
+        router.push('/login' as any);
+    }, [router]);
+
+    const goToNewEvent = useCallback(
+        (dateKey?: string | null) => {
+            if (!isAuthenticated) {
+                goToLogin();
+                return;
+            }
+
+            router.push(
+                `/create_events?date=${dateKey ?? selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}` as any
+            );
+        },
+        [goToLogin, isAuthenticated, router, selectedCalendarId, selectedDay]
+    );
+
+    const goToNewCalendar = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        router.push('/(tabs)/create' as any);
+    }, [goToLogin, isAuthenticated, router]);
+
+    const openImportCalendar = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        setImportModalVisible(true);
+    }, [goToLogin, isAuthenticated]);
+
+    const openCreateMenu = useCallback(() => {
+        if (!isAuthenticated) {
+            goToLogin();
+            return;
+        }
+
+        setCreateMenuVisible(true);
+    }, [goToLogin, isAuthenticated]);
+
     const goToPrev = () => {
         if (viewMode === 'week') {
             const d = new Date(year, month, weekDay - 7);
@@ -427,9 +518,11 @@ export default function CalendarScreen() {
 
     const handleViewModeChange = (mode: CalendarViewMode) => {
         setViewMode(mode);
-        // When switching to week, use current date context
-        if (mode === 'week') {
-            setWeekDay(new Date(year, month, 1).getDate());
+            if (mode === 'week') {
+            const today = new Date();
+            setYear(today.getFullYear());
+            setMonth(today.getMonth());
+            setWeekDay(today.getDate());
         }
     };
 
@@ -554,19 +647,17 @@ export default function CalendarScreen() {
                         calendars={calendars}
                         selectedId={selectedCalendarId}
                         onChange={setSelectedCalendarId}
-                        onInfoPress={setInfoCalendar}
+                        onInfoPress={handleOpenCalendarInfo}
                     />
 
-                    {isDesktop && (
+                    {isDesktop ? (
                         <View style={styles.toolbarButtons}>
 
 
                             <TouchableOpacity
                                 style={styles.primaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() =>
-                                    router.push(`/create_events?date=${selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}`)
-                                }
+                                onPress={() => goToNewEvent()}
                             >
                                 <Ionicons name="add" size={18} color="#fff" />
                                 <Text style={styles.primaryBtnText}>New Event</Text>
@@ -575,7 +666,7 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => router.push('/(tabs)/create')}
+                                onPress={goToNewCalendar}
                             >
                                 <Ionicons name="calendar-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>New Calendar</Text>
@@ -584,13 +675,22 @@ export default function CalendarScreen() {
                             <TouchableOpacity
                                 style={styles.secondaryBtn}
                                 activeOpacity={0.7}
-                                onPress={() => setImportModalVisible(true)}
+                                onPress={openImportCalendar}
                             >
                                 <Ionicons name="download-outline" size={18} color="#10464d" />
                                 <Text style={styles.secondaryBtnText}>Import Calendar</Text>
                             </TouchableOpacity>
 
                         </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            activeOpacity={0.8}
+                            onPress={openCreateMenu}
+                        >
+                            <Ionicons name="add" size={18} color="#fff" />
+                            <Text style={styles.primaryBtnText}>Create</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
 
@@ -614,7 +714,7 @@ export default function CalendarScreen() {
                     <TouchableOpacity
                         style={styles.mobileBanner}
                         activeOpacity={0.85}
-                        onPress={() => router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ''}`)}
+                        onPress={() => goToNewEvent(selectedDay)}
                     >
                         <Text style={styles.mobileBannerDate}>
                             {formatSelectedDay(selectedDay)}
@@ -742,9 +842,7 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                             style={styles.addButton}
                             activeOpacity={0.85}
-                            onPress={() =>
-                                router.push(`/create_events?date=${selectedDay}&calendarId=${selectedCalendarId ?? ""}`)
-                            }
+                            onPress={() => goToNewEvent(selectedDay)}
                         >
                             <Text style={styles.addButtonIcon}>＋</Text>
                             <Text style={styles.addButtonLabel}>Add Event</Text>
@@ -795,6 +893,22 @@ export default function CalendarScreen() {
                 visible={importModalVisible}
                 onClose={() => setImportModalVisible(false)}
                 onSuccess={fetchData}
+            />
+            <CreateMenuModal
+                visible={createMenuVisible}
+                onClose={() => setCreateMenuVisible(false)}
+                onNewEvent={() => {
+                    setCreateMenuVisible(false);
+                    goToNewEvent();
+                }}
+                onNewCalendar={() => {
+                    setCreateMenuVisible(false);
+                    goToNewCalendar();
+                }}
+                onImportCalendar={() => {
+                    setCreateMenuVisible(false);
+                    openImportCalendar();
+                }}
             />
         </View>
     );

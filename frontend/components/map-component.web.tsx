@@ -386,7 +386,7 @@ export default function MapComponent({ location, events }: { location: any; even
           width: 260px;
           border-radius: 16px;
           overflow: hidden;
-          background: #E8E5D8;
+          background: #FFFFFF;
           border: 2px solid rgba(16,70,77,0.18);
         }
         .eventImg {

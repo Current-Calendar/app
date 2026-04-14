@@ -115,9 +115,16 @@ export function useEventSearch(query: string, options: UseSearchOptions = {}) {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await apiClient.get<any[]>(`/events/list?q=${encodeURIComponent(normalizedQuery)}`);
+        const data = await apiClient.get<any>(`/events/list?q=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
-        setResults(Array.isArray(data) ? data : []);
+
+        let fetchedResults = [];
+        if (Array.isArray(data)) {
+          fetchedResults = data;
+        } else if (data && Array.isArray(data.results)) {
+          fetchedResults = data.results;
+        }
+        setResults(fetchedResults);
       } catch (err) {
         if (!active) return;
         console.error('Error buscando eventos:', err);

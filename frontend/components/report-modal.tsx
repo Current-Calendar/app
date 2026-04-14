@@ -41,11 +41,12 @@ export function ReportModal({
   reportedId,
   reportedLabel,
 }: ReportModalProps) {
-  const { loading, submitReport, getRemainingCooldown, canReport } = useReport();
+  const { loading, submitReport, getRemainingCooldown } = useReport();
 
   const [reason, setReason] = useState<ReportReason | ''>('');
   const [description, setDescription] = useState('');
   const [cooldownMsg, setCooldownMsg] = useState<string | null>(null);
+  const [cooldownMs, setCooldownMs] = useState<number>(0);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -56,16 +57,29 @@ export function ReportModal({
     setDescription('');
     setFieldError(null);
     setSubmitted(false);
+    let active = true;
+    const loadCooldown = async () => {
+      try {
+        const remaining = await getRemainingCooldown(reportedType, reportedId);
+        if (!active) return;
+        setCooldownMs(remaining);
+        if (remaining > 0) {
+          const minutes = Math.ceil(remaining / 60_000);
+          setCooldownMsg(
+            `You have already reported this ${TYPE_LABELS[reportedType]} recently. You can report it again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`
+          );
+        } else {
+          setCooldownMsg(null);
+        }
+      } finally {
+        // no-op
+      }
+    };
+    loadCooldown();
 
-    const remaining = getRemainingCooldown(reportedType, reportedId);
-    if (remaining > 0) {
-      const minutes = Math.ceil(remaining / 60_000);
-      setCooldownMsg(
-        `You have already reported this ${TYPE_LABELS[reportedType]} recently. You can report it again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`
-      );
-    } else {
-      setCooldownMsg(null);
-    }
+    return () => {
+      active = false;
+    };
   }, [open, reportedType, reportedId, getRemainingCooldown]);
 
   const handleSubmit = async () => {
@@ -101,7 +115,7 @@ export function ReportModal({
     }
   };
 
-  const isCoolingDown = !canReport(reportedType, reportedId);
+  const isCoolingDown = cooldownMs > 0;
 
   return (
     <Modal
