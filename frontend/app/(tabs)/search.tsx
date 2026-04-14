@@ -12,6 +12,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUserSearch, useCalendarSearch, useEventSearch, useFollowUserAction } from '@/hooks/use-search';
+import { useAuth } from '@/hooks/use-auth';
 import { PublicEventDetailModal } from '@/components/public-event-detail-modal';
 import { Calendar, CalendarEvent } from '@/types/calendar';
 import { AdCard } from '@/components/ads/ad-card';
@@ -90,6 +91,7 @@ function renderHighlightedText(text: string, query: string, baseStyle: any, high
 }
 
 export default function SearchScreen() {
+    const { user: currentUser } = useAuth();
     const [query, setQuery] = useState("");
     const [activeTab, setActiveTab] = useState<TabType>('all');
     const router = useRouter();
@@ -282,18 +284,20 @@ export default function SearchScreen() {
                                     <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{user.username}</Text>
                                     <Text style={styles.subText} numberOfLines={2} ellipsizeMode="tail">{user.bio}</Text>
                                 </View>
-                                <Pressable
-                                    style={[styles.followButton, user.followed && styles.followingButton]}
-                                    onPress={(event) => {
-                                        event.stopPropagation();
-                                        followUser(user.id);
-                                    }}
-                                    testID={`search-follow-button-${user.username}`}
-                                >
-                                    <Text style={[styles.followText, user.followed && styles.followingText]}>
-                                        {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
-                                    </Text>
-                                </Pressable>
+                                {(!currentUser || user.username !== currentUser.username) && (
+                                    <Pressable
+                                        style={[styles.followButton, user.followed && styles.followingButton]}
+                                        onPress={(event) => {
+                                            event.stopPropagation();
+                                            followUser(user.id);
+                                        }}
+                                        testID={`search-follow-button-${user.username}`}
+                                    >
+                                        <Text style={[styles.followText, user.followed && styles.followingText]}>
+                                            {loadingId === String(user.id) ? "..." : user.followed ? "Following" : "Follow"}
+                                        </Text>
+                                    </Pressable>
+                                )}
                             </TouchableOpacity>
                         );
                     }
