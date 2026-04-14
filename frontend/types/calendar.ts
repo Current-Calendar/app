@@ -40,13 +40,14 @@ export interface CalendarEvent {
     recurrence?: string | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)
     color?: string;         // UI-only, inherited from calendar
-        attendees?: {
-            id: string;
-            name: string;
-            respondedAt: string;
-            avatar?: string;
-        }[];
-        my_attendance_status?: 'ASSISTING' | 'NOT_ASSISTING' | 'PENDING' | null;
+    attendees?: {
+        id: string;
+        name: string;
+        respondedAt: string;
+        avatar?: string;
+    }[];
+    my_attendance_status?: 'ASSISTING' | 'NOT_ASSISTING' | 'PENDING' | null;
+    show_time: boolean;
 }
 
 // ─── API Response shapes (to be connected to backend) ─────────────────────────

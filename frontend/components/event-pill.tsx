@@ -21,7 +21,7 @@ export function EventPill({ event, onPress }: EventPillProps) {
             style={[eventPillStyles.pill, { backgroundColor: bg + '1A', borderLeftColor: bg }]}
             testID={`event-pill-${event.id}`}
         >
-            {event.time && event.time !== '00:00' && (
+            {event.show_time && event.time && event.time !== '00:00' && (
                 <Text style={[eventPillStyles.time, { color: bg }]} numberOfLines={1}>
                     {event.time}
                 </Text>

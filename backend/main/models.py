@@ -130,6 +130,7 @@ class Event(models.Model):
     location = models.PointField(geography=True, spatial_index=True, null=True, blank=True)
     date = models.DateField()
     time = models.TimeField()
+    end_date = models.DateTimeField(null=True, blank=True)
     photo = models.ImageField(upload_to='event_photos/', null=True, blank=True)
     recurrence = models.IntegerField(null=True, blank=True)
     external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)

@@ -135,12 +135,33 @@ export default function CreateEventsScreen() {
     return d;
   });
 
+  const [endDate, setEndDate] = useState<Date>(() => {
+    if (dateParam) {
+      const d = new Date(String(dateParam));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   const [time, setTime] = useState<Date>(() => {
     const d = new Date();
     d.setHours(14, 0, 0, 0);
     return d;
   });
 
+  const [endTime, setEndTime] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(14, 0, 0, 0);
+    return d;
+  });
+
+  const [saveTime, setSaveTime] = useState()
+
+  // ====== Pickers ======z
   const [webHour, setWebHour] = useState(time.getHours());
   const [webMinute, setWebMinute] = useState(time.getMinutes());
 
@@ -161,6 +182,9 @@ export default function CreateEventsScreen() {
 
   const timeLabel = useMemo(() => `${toHM(time)} h`, [time]);
   const dateLabel = useMemo(() => toISODate(date), [date]);
+
+  const endTimeLabel = useMemo(() => `${toHM(endTime)} h`, [endTime]);
+  const endDateLabel = useMemo(() => toISODate(endDate), [endDate]);
 
   const goBackOrCalendars = () => {
     if (navigation.canGoBack()) {
@@ -266,7 +290,8 @@ export default function CreateEventsScreen() {
     setLon(null);
   }, [place]);
 
-  const openTimePicker = () => {
+  const openTimePicker = (time: any, setTime: any) => {
+    setSaveTime(() => setTime);
     if (Platform.OS === "web") {
       setWebHour(time.getHours());
       setWebMinute(time.getMinutes());
@@ -278,7 +303,7 @@ export default function CreateEventsScreen() {
 
   const onPickNativeTime = (_event: any, selected?: Date) => {
     if (Platform.OS !== "ios") setShowNativeTimePicker(false);
-    if (selected) setTime(selected);
+    if (selected) saveTime(selected);
   };
 
   const applyWebTime = () => {
@@ -286,7 +311,7 @@ export default function CreateEventsScreen() {
     d.setHours(webHour);
     d.setMinutes(webMinute);
     d.setSeconds(0, 0);
-    setTime(d);
+    saveTime(d);
     setShowWebTimePicker(false);
   };
 
@@ -370,6 +395,14 @@ export default function CreateEventsScreen() {
   const publish = async () => {
     setFormError(null);
 
+    if (endDate < date) {
+      setFormError("End date must be after start date");
+      return;
+    }
+    if ((endDate.getTime() === date.getTime()) && (endTime < time)) {
+      setFormError("End date must be after start date");
+      return;
+    }
     const titleTrimmed = title.trim();
 
     if (!titleTrimmed) {
@@ -381,7 +414,6 @@ export default function CreateEventsScreen() {
       setFormError("Please select a calendar.");
       return;
     }
-
     if (!user) {
       setFormError("User not authenticated.");
       return;
@@ -392,6 +424,9 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
+      let end_date = new Date(endDate);
+      end_date.setHours(endTime.getHours());
+
       let createdEvent: any;
 
       if (coverAsset) {
@@ -401,6 +436,7 @@ export default function CreateEventsScreen() {
         formData.append("place_name", place?.trim() ?? "");
         formData.append("date", toISODate(date));
         formData.append("time", toHMS(time));
+        formData.append("end_date", endDate.toISOString())
         formData.append("calendars", JSON.stringify(calendarsIds));
         formData.append("creator_id", String(user.id));
 
@@ -417,6 +453,7 @@ export default function CreateEventsScreen() {
           description: description?.trim() ?? "",
           place_name: place?.trim() ?? "",
           date: toISODate(date),
+          end_date,
           time: toHMS(time),
           calendars: calendarsIds,
           creator_id: user.id,
@@ -719,35 +756,36 @@ export default function CreateEventsScreen() {
           <View style={styles.divider} />
 
           <View style={styles.inputSection}>
-            <Text style={styles.sectionTitle}>Date & Time</Text>
-
-            <View
-              style={[
-                styles.dateTimeRow,
-                !isDesktop && { flexDirection: "column" },
-              ]}
-            >
-              <View style={styles.dateTimeBox}>
-                <Text style={styles.dateTimeLabel}>Date</Text>
-                <View style={styles.infoPill}>
-                  <Text style={styles.infoPillText}>{dateLabel}</Text>
-                </View>
+            <Text style={styles.sectionTitle}>Start Date</Text>
+            <View>
+              <View style={styles.infoPill}>
+                <Text style={styles.infoPillText}>{dateLabel}</Text>
               </View>
-
               <View style={styles.dateTimeBox}>
-                <Text style={styles.dateTimeLabel}>Time</Text>
-                <Pressable style={styles.infoPill} onPress={openTimePicker}>
+                <Pressable style={styles.infoPill} onPress={() => openTimePicker(time, setTime)}>
                   <Text style={styles.infoPillText}>{timeLabel}</Text>
                 </Pressable>
               </View>
+              <View style={styles.calendarCenterWrap}>
+                <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+              </View>
             </View>
+          </View>
 
-            <View style={styles.calendarCenterWrap}>
-              <MiniMonthCalendar
-                value={date}
-                onChange={setDate}
-                size={miniSize}
-              />
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>End Date</Text>
+            <View>
+              <View style={styles.infoPill}>
+                <Text style={styles.infoPillText}>{endDateLabel}</Text>
+              </View>
+              <View style={styles.dateTimeBox}>
+                <Pressable style={styles.infoPill} onPress={() => openTimePicker(endTime, setEndTime)}>
+                  <Text style={styles.infoPillText}>{endTimeLabel}</Text>
+                </Pressable>
+              </View>
+              <View style={styles.calendarCenterWrap}>
+                <MiniMonthCalendar value={endDate} onChange={setEndDate} size={miniSize} />
+              </View>
             </View>
           </View>
 
