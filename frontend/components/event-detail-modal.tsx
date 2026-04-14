@@ -25,7 +25,7 @@ const TEAL = "#1F6A6A";
 const RED = "#D64545";
 const RED_DARK = "#B22222";
 
-type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING";
+type AttendanceStatus = "ASSISTING" | "NOT_ASSISTING" | "PENDING";
 
 type EventTagItem = {
   id: number | string;
@@ -68,6 +68,25 @@ export function EventDetailModal({
     setDeletingEvent(false);
   }, [event]);
 
+  const normalizeAttendanceStatus = (value?: string | null): AttendanceStatus => {
+    if (value === "ASSISTING" || value === "NOT_ASSISTING") {
+      return value;
+    }
+    return "PENDING";
+  };
+
+  useEffect(() => {
+    if (!event?.id) return;
+
+    const initialStatus = normalizeAttendanceStatus((event as any).my_attendance_status);
+    if (initialStatus === "PENDING") return;
+
+    setAttendanceByEvent((prev) => {
+      if (prev[event.id]) return prev;
+      return { ...prev, [event.id]: initialStatus };
+    });
+  }, [event]);
+
   useEffect(() => {
     const loadEventTags = async () => {
       if (!event?.id) {
@@ -108,14 +127,16 @@ export function EventDetailModal({
         : "";
 
   const hasEventImage = eventImageRaw.length > 0;
-  const currentAttendance = attendanceByEvent[event.id] ?? "pending";
+  const currentAttendance =
+    attendanceByEvent[event.id] ?? normalizeAttendanceStatus((event as any).my_attendance_status);
 
   const handleAttendanceChange = async (value: AttendanceStatus) => {
     setAttendanceMenuOpen(false);
     setAttendanceLoading(true);
     try {
-      await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
-      setAttendanceByEvent((prev) => ({ ...prev, [event.id]: value }));
+      const response: any = await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
+      const nextStatus = normalizeAttendanceStatus(response?.status || value);
+      setAttendanceByEvent((prev) => ({ ...prev, [event.id]: nextStatus }));
     } catch (error) {
       console.error("Error updating attendance:", error);
     } finally {

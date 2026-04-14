@@ -293,6 +293,7 @@ class EventSerializer(serializers.ModelSerializer):
     creator_photo = serializers.SerializerMethodField()
     calendars = serializers.SerializerMethodField()
     attendees = serializers.SerializerMethodField()
+    my_attendance_status = serializers.SerializerMethodField()
     liked_by_me = serializers.SerializerMethodField()
     saved_by_me = serializers.SerializerMethodField()
 
@@ -304,6 +305,7 @@ class EventSerializer(serializers.ModelSerializer):
             'calendars', 'created_at',
             'distance_km', 'latitude', 'longitude',
             'photo', 'creator_username', 'creator_photo', 'attendees',
+            'my_attendance_status',
             'likes_count', 'liked_by_me', 'saved_by_me',
         ]
 
@@ -335,6 +337,21 @@ class EventSerializer(serializers.ModelSerializer):
             many=True,
             context=self.context
         ).data
+
+    def get_my_attendance_status(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        prefetched = getattr(obj, 'my_attendance_records', None)
+        if prefetched is not None:
+            return prefetched[0].status if prefetched else None
+
+        attendance = EventAttendance.objects.filter(
+            user=request.user,
+            event=obj,
+        ).only('status').first()
+        return attendance.status if attendance else None
 
     def get_liked_by_me(self, obj):
         liked_ids = self.context.get('liked_ids')
