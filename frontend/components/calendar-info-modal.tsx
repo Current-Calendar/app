@@ -9,6 +9,7 @@ import {
   Image,
   useWindowDimensions,
   Pressable,
+  ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
@@ -288,81 +289,87 @@ const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewe
               <View style={calendarInfoModalStyles.sharingSection}>
                 <Text style={calendarInfoModalStyles.sharingSectionTitle}>Shared with</Text>
 
-                {(localCalendar.co_owners ?? []).length > 0 && (
-                  <View>
-                    <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Co-Owners</Text>
-                    {(localCalendar.co_owners ?? []).map((coOwner: any, index: number) => (
-                      <View key={`coowner-${index}`} style={calendarInfoModalStyles.shareItem}>
-                        <View style={calendarInfoModalStyles.shareItemContent}>
-                          <Ionicons name="person-circle-outline" size={24} color={accent} />
-                          <View style={calendarInfoModalStyles.shareItemInfo}>
-                            <Text style={calendarInfoModalStyles.shareItemName}>{coOwner.name || coOwner.username}</Text>
-                            <Text style={calendarInfoModalStyles.shareItemUsername}>@{coOwner.username}</Text>
+              <ScrollView
+                  style={{ maxHeight: 170 }}
+                  nestedScrollEnabled={true}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {(localCalendar.co_owners ?? []).length > 0 && (
+                    <View>
+                      <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Co-Owners</Text>
+                      {(localCalendar.co_owners ?? []).map((coOwner: any, index: number) => (
+                        <View key={`coowner-${index}`} style={calendarInfoModalStyles.shareItem}>
+                          <View style={calendarInfoModalStyles.shareItemContent}>
+                            <Ionicons name="person-circle-outline" size={24} color={accent} />
+                            <View style={calendarInfoModalStyles.shareItemInfo}>
+                              <Text style={calendarInfoModalStyles.shareItemName}>{coOwner.name || coOwner.username}</Text>
+                              <Text style={calendarInfoModalStyles.shareItemUsername}>@{coOwner.username}</Text>
+                            </View>
+                          </View>
+                          <View style={calendarInfoModalStyles.shareItemActions}>
+                            <View style={calendarInfoModalStyles.permissionBadge}>
+                              <Text style={calendarInfoModalStyles.permissionBadgeText}>Editor</Text>
+                            </View>
+                            {isOwner && (
+                              <Pressable
+                                style={[
+                                  calendarInfoModalStyles.removeUserButton,
+                                  removingUserId === coOwner.id && calendarInfoModalStyles.removeUserButtonDisabled,
+                                ]}
+                                onPress={() => setUserToRemove({ ...coOwner, type: 'co-owner' })}
+                                disabled={removingUserId === coOwner.id}
+                              >
+                                {removingUserId === coOwner.id ? (
+                                  <ActivityIndicator size="small" color="#B33F37" />
+                                ) : (
+                                  <Ionicons name="close" size={16} color="#B33F37" />
+                                )}
+                              </Pressable>
+                            )}
                           </View>
                         </View>
-                        <View style={calendarInfoModalStyles.shareItemActions}>
-                          <View style={calendarInfoModalStyles.permissionBadge}>
-                            <Text style={calendarInfoModalStyles.permissionBadgeText}>Editor</Text>
-                          </View>
-                          {isOwner && (
-                            <Pressable
-                              style={[
-                                calendarInfoModalStyles.removeUserButton,
-                                removingUserId === coOwner.id && calendarInfoModalStyles.removeUserButtonDisabled,
-                              ]}
-                              onPress={() => setUserToRemove({ ...coOwner, type: 'co-owner' })}
-                              disabled={removingUserId === coOwner.id}
-                            >
-                              {removingUserId === coOwner.id ? (
-                                <ActivityIndicator size="small" color="#B33F37" />
-                              ) : (
-                                <Ionicons name="close" size={16} color="#B33F37" />
-                              )}
-                            </Pressable>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                      ))}
+                    </View>
+                  )}
 
-                {(localCalendar.viewers ?? []).length > 0 && (
-                  <View>
-                    <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Viewers</Text>
-                    {(localCalendar.viewers ?? []).map((viewer: any, index: number) => (
-                      <View key={`viewer-${index}`} style={calendarInfoModalStyles.shareItem}>
-                        <View style={calendarInfoModalStyles.shareItemContent}>
-                          <Ionicons name="person-circle-outline" size={24} color="#888" />
-                          <View style={calendarInfoModalStyles.shareItemInfo}>
-                            <Text style={calendarInfoModalStyles.shareItemName}>{viewer.name || viewer.username}</Text>
-                            <Text style={calendarInfoModalStyles.shareItemUsername}>@{viewer.username}</Text>
+                  {(localCalendar.viewers ?? []).length > 0 && (
+                    <View>
+                      <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Viewers</Text>
+                      {(localCalendar.viewers ?? []).map((viewer: any, index: number) => (
+                        <View key={`viewer-${index}`} style={calendarInfoModalStyles.shareItem}>
+                          <View style={calendarInfoModalStyles.shareItemContent}>
+                            <Ionicons name="person-circle-outline" size={24} color="#888" />
+                            <View style={calendarInfoModalStyles.shareItemInfo}>
+                              <Text style={calendarInfoModalStyles.shareItemName}>{viewer.name || viewer.username}</Text>
+                              <Text style={calendarInfoModalStyles.shareItemUsername}>@{viewer.username}</Text>
+                            </View>
+                          </View>
+                          <View style={calendarInfoModalStyles.shareItemActions}>
+                            <View style={[calendarInfoModalStyles.permissionBadge, calendarInfoModalStyles.permissionBadgeViewer]}>
+                              <Text style={[calendarInfoModalStyles.permissionBadgeText, calendarInfoModalStyles.permissionBadgeViewerText]}>Viewer</Text>
+                            </View>
+                            {isOwner && (
+                              <Pressable
+                                style={[
+                                  calendarInfoModalStyles.removeUserButton,
+                                  removingUserId === viewer.id && calendarInfoModalStyles.removeUserButtonDisabled,
+                                ]}
+                                onPress={() => setUserToRemove({ ...viewer, type: 'viewer' })}
+                                disabled={removingUserId === viewer.id}
+                              >
+                                {removingUserId === viewer.id ? (
+                                  <ActivityIndicator size="small" color="#B33F37" />
+                                ) : (
+                                  <Ionicons name="close" size={16} color="#B33F37" />
+                                )}
+                              </Pressable>
+                            )}
                           </View>
                         </View>
-                        <View style={calendarInfoModalStyles.shareItemActions}>
-                          <View style={[calendarInfoModalStyles.permissionBadge, calendarInfoModalStyles.permissionBadgeViewer]}>
-                            <Text style={[calendarInfoModalStyles.permissionBadgeText, calendarInfoModalStyles.permissionBadgeViewerText]}>Viewer</Text>
-                          </View>
-                          {isOwner && (
-                            <Pressable
-                              style={[
-                                calendarInfoModalStyles.removeUserButton,
-                                removingUserId === viewer.id && calendarInfoModalStyles.removeUserButtonDisabled,
-                              ]}
-                              onPress={() => setUserToRemove({ ...viewer, type: 'viewer' })}
-                              disabled={removingUserId === viewer.id}
-                            >
-                              {removingUserId === viewer.id ? (
-                                <ActivityIndicator size="small" color="#B33F37" />
-                              ) : (
-                                <Ionicons name="close" size={16} color="#B33F37" />
-                              )}
-                            </Pressable>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                )}
+                      ))}
+                    </View>
+                  )}
+                </ScrollView>
               </View>
             ) : (
               <Text style={calendarInfoModalStyles.noSharingText}>Not shared with anyone</Text>
