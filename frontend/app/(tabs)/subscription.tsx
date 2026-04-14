@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
+import { Ionicons } from '@expo/vector-icons';
 
 const mascotFree = require('../../assets/images/mascota-sorpresa.png');
 const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.png');
@@ -27,6 +28,10 @@ const SubscriptionScreen = () => {
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
 
+  const goToSettings = () => {
+    router.push('/settings');
+  };
+
   const goToPayment = (plan: 'FREE' | 'STANDARD' | 'BUSINESS') => {
     router.push({ pathname: '/payment', params: { plan } });
   };
@@ -41,6 +46,12 @@ const SubscriptionScreen = () => {
         <View style={styles.headerCoral} />
 
         <View style={styles.content}>
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.backButton} onPress={goToSettings} activeOpacity={0.8}>
+              <Ionicons name="chevron-back" size={20} color="#10464d" />
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.title}>Subscription</Text>
           <Text style={styles.subtitle}>
             Choose the plan that best fits your needs
@@ -183,10 +194,10 @@ const PlanCard = ({
   const buttonStyle = isActive
     ? styles.buttonSubscribed
     : isFree
-    ? styles.buttonFree
-    : highlight
-    ? styles.buttonHighlight
-    : styles.buttonBusiness;
+      ? styles.buttonFree
+      : highlight
+        ? styles.buttonHighlight
+        : styles.buttonBusiness;
   const buttonTextColor = isActive ? '#10464d' : isFree ? '#10464d' : '#ffffff';
 
   return (
@@ -497,14 +508,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   backButton: {
-    alignSelf: 'center',
-    marginTop: 6,
-    width: '42%',
+    alignSelf: 'flex-start',
     backgroundColor: '#FFFDED',
     borderWidth: 1,
     borderColor: '#10464d',
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -514,6 +524,10 @@ const styles = StyleSheet.create({
     color: '#10464d',
     fontSize: 16,
     fontWeight: '600',
+  },
+  topBar: {
+    width: '100%',
+    marginBottom: 12,
   },
 });
 
