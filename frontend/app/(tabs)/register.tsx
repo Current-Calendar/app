@@ -172,6 +172,9 @@ export default function SignUpScreen() {
 
   const getRegisterErrorMessage = (error: unknown) => {
     if (error instanceof ApiError) {
+      if (error.status === 0) {
+        return "Could not connect to the server. Check that the backend is running and try again.";
+      }
       const data = error.data as Record<string, unknown> | undefined;
       const topErrors = data?.errors;
       if (Array.isArray(topErrors) && topErrors.length > 0) {
@@ -317,6 +320,15 @@ export default function SignUpScreen() {
             </Pressable>
           </View>
 
+          <View style={styles.inlineAuthPrompt}>
+            <Text style={styles.inlineAuthPromptText}>Already have an account?</Text>
+            <Link href="/login" asChild>
+              <Pressable testID="go-login-inline-link">
+                <Text style={styles.inlineAuthPromptLink}>Log in</Text>
+              </Pressable>
+            </Link>
+          </View>
+
           <View style={styles.legalBox}>
             <Text style={styles.legalTitle}>Legal documents</Text>
             <Text style={styles.legalSubtitle}>
@@ -418,15 +430,6 @@ export default function SignUpScreen() {
             )}
           </Pressable>
         </View>
-
-        <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>Already have an account?</Text>
-          <Link href="/login" asChild>
-            <Pressable testID="go-login-link">
-              <Text style={styles.bottomLink}>Log in</Text>
-            </Pressable>
-          </Link>
-        </View>
       </View>
     </ScrollView>
   );
@@ -463,6 +466,32 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     backgroundColor: "rgba(255,255,255,0.45)",
+  },
+  inlineAuthPrompt: {
+    marginTop: 10,
+    marginBottom: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "rgba(31,106,106,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(31,106,106,0.16)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  inlineAuthPromptText: {
+    color: TEXT,
+    fontSize: 12,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  inlineAuthPromptLink: {
+    color: PINK,
+    fontSize: 13,
+    fontWeight: "900",
+    textDecorationLine: "underline",
   },
   legalBox: {
     marginTop: 14,
@@ -624,14 +653,5 @@ const styles = StyleSheet.create({
     color: "#EAF7F6",
     fontWeight: "900",
     letterSpacing: 0.3,
-  },
-  bottomRow: { marginTop: 30, alignItems: "center" },
-  bottomText: { color: TEXT, opacity: 0.65, fontSize: 13 },
-  bottomLink: {
-    marginTop: 4,
-    color: PINK,
-    fontSize: 13,
-    fontWeight: "800",
-    textDecorationLine: "underline",
   },
 });
