@@ -5,6 +5,38 @@ interface UseSearchOptions {
   delayMs?: number;
 }
 
+async function loadCalendarCategories(calendarId: string | number) {
+  try {
+    const response = await apiClient.get<any>(`/categories/for-calendar/${calendarId}/`);
+
+    return (
+      (Array.isArray(response) && response) ||
+      (Array.isArray(response?.results) && response.results) ||
+      (Array.isArray(response?.data) && response.data) ||
+      []
+    );
+  } catch (error) {
+    console.error(`Error loading categories for calendar ${calendarId}:`, error);
+    return [];
+  }
+}
+
+async function loadEventTags(eventId: string | number) {
+  try {
+    const response = await apiClient.get<any>(`/event-tags/for-event/${eventId}/`);
+
+    return (
+      (Array.isArray(response) && response) ||
+      (Array.isArray(response?.results) && response.results) ||
+      (Array.isArray(response?.data) && response.data) ||
+      []
+    );
+  } catch (error) {
+    console.error(`Error loading tags for event ${eventId}:`, error);
+    return [];
+  }
+}
+
 export function useUserSearch(query: string, options: UseSearchOptions = {}) {
   const { delayMs = 400 } = options;
 
@@ -73,7 +105,22 @@ export function useCalendarSearch(query: string, options: UseSearchOptions = {})
       try {
         const data = await apiClient.get<any[]>(`/calendars/list?q=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
-        setResults(Array.isArray(data) ? data : []);
+
+        const baseResults = Array.isArray(data) ? data : [];
+
+        const enrichedResults = await Promise.all(
+          baseResults.map(async (calendar: any) => {
+            const categories = await loadCalendarCategories(calendar.id);
+
+            return {
+              ...calendar,
+              categories,
+            };
+          })
+        );
+
+        if (!active) return;
+        setResults(enrichedResults);
       } catch (err) {
         if (!active) return;
         console.error('Error buscando calendarios:', err);
@@ -118,13 +165,26 @@ export function useEventSearch(query: string, options: UseSearchOptions = {}) {
         const data = await apiClient.get<any>(`/events/list?q=${encodeURIComponent(normalizedQuery)}`);
         if (!active) return;
 
-        let fetchedResults = [];
+        let fetchedResults: any[] = [];
         if (Array.isArray(data)) {
           fetchedResults = data;
         } else if (data && Array.isArray(data.results)) {
           fetchedResults = data.results;
         }
-        setResults(fetchedResults);
+
+        const enrichedResults = await Promise.all(
+          fetchedResults.map(async (event: any) => {
+            const tags = await loadEventTags(event.id);
+
+            return {
+              ...event,
+              tags,
+            };
+          })
+        );
+
+        if (!active) return;
+        setResults(enrichedResults);
       } catch (err) {
         if (!active) return;
         console.error('Error buscando eventos:', err);
