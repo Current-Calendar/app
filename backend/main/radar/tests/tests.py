@@ -158,7 +158,7 @@ class RadarEventsTest(APITestCase):
         own_event = Event.objects.create(
             title="My Own Event",
             date=date.today(),
-            time=time(16, 0),
+            time=time(16, 0),   
             location=Point(-3.7038, 40.4168),
             creator=self.user,
         )
