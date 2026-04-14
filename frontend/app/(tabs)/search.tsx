@@ -167,21 +167,18 @@ export default function SearchScreen() {
         }
     };
 
-    const handleUserSelect = (username: string, photo: string ) => {
-        addEntry({ type: 'user', data: { username, photo }, timestamp: Date.now() })
-        router.push(`/profile/${username}`);
+    const handleUserSelect = (user: any) => {
+        addEntry({ type: 'user', data: user, timestamp: Date.now() })
+        router.push(`/profile/${user.username}`);
     };
 
-    const handleCalendarSelect = (calendarId: string | number, name: string, cover: string) => {
-        addEntry({ type: 'calendar', data: { calendarId, name, cover }, timestamp: Date.now() })
-        router.push(`/calendar-view?calendarId=${calendarId}`);
+    const handleCalendarSelect = (cal: any) => {
+        addEntry({ type: 'calendar', data: cal, timestamp: Date.now() })
+        router.push(`/calendar-view?calendarId=${cal.id}`);
     };
 
     const handleEventSelect = (event: CalendarEvent) => {
-        const title = event.title ; 
-        const photo = event.photo; 
-        const id = event.id; 
-        addEntry({ type: 'event', data: { id, title , photo }, timestamp: Date.now() })
+        addEntry({ type: 'event', data: event, timestamp: Date.now() })
         setActiveEvent(event);
         if (event.calendarId) {
             router.push(`/calendar-view?calendarId=${event.calendarId}`);
@@ -270,7 +267,7 @@ export default function SearchScreen() {
                         return (
                             <TouchableOpacity
                                 style={styles.card}
-                                onPress={() => handleUserSelect(user.username , user.photo)}
+                                onPress={() => handleUserSelect(user)}
                                 testID={`search-user-card-${user.username}`}
                             >
                                 <Image
@@ -312,7 +309,7 @@ export default function SearchScreen() {
                         return (
                             <TouchableOpacity
                                 style={styles.card}
-                                onPress={() => handleCalendarSelect(cal.id, cal.name, cal.cover )}
+                                onPress={() => handleCalendarSelect(cal)}
                                 testID={`search-calendar-card-${cal.id}`}
                             >
                                 {cal.cover ? (
