@@ -76,7 +76,15 @@ export function ImportCalendarModal({ visible, onClose, onSuccess }: Props) {
                                 <Text style={styles.optionDesc}>Sync with Google</Text>
                             </View>
                         </Pressable>
-
+                        <Pressable style={styles.option} onPress={handleICS}>
+                            <View style={[styles.circle, { backgroundColor: '#eae0ff' }]}>
+                                <MaterialCommunityIcons name="file" size={20} color="#10464d" />
+                            </View>
+                            <View>
+                                <Text style={styles.optionTitle}>.ICS File</Text>
+                                <Text style={styles.optionDesc}>Upload from device</Text>
+                            </View>
+                        </Pressable>
 
                         <Pressable style={styles.closeBtn} onPress={onClose}>
                             <Ionicons name="close" size={22} color="#888" />
