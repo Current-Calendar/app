@@ -17,6 +17,7 @@ import { Calendar, CalendarEvent } from '@/types/calendar';
 import { AdCard } from '@/components/ads/ad-card';
 import { injectAds, isAdItem } from '@/components/ads/inject-ads';
 import { useAdsConfig } from '@/hooks/use-ads-config';
+import { useSearchHistory} from '@/hooks/use-search-history';
 
 const USE_MOCK = false;
 
@@ -101,6 +102,7 @@ export default function SearchScreen() {
     const { results: events } = useEventSearch(query);
     const { followUser: followUserRequest } = useFollowUserAction();
     const { data: adsConfig } = useAdsConfig();
+    const { addEntry, history } = useSearchHistory();
 
     useEffect(() => {
         setUsers(userResults);
@@ -122,12 +124,12 @@ export default function SearchScreen() {
         | { type: 'event'; data: any };
 
     const allResults: SearchResult[] = useMemo(() => {
-        if (!query.trim()) return [];
+        if (!query.trim()) return history;
         const usersRes: SearchResult[] = users.map((u) => ({ type: 'user', data: u }));
         const calRes: SearchResult[] = calendars.map((c) => ({ type: 'calendar', data: c }));
         const eventRes: SearchResult[] = events.map((e) => ({ type: 'event', data: e }));
         return [...usersRes, ...calRes, ...eventRes];
-    }, [query, users, calendars, events]);
+    }, [query, users, calendars, events, history]);
 
     const filtered: SearchResult[] = useMemo(() => {
         if (activeTab === 'all') return allResults;
@@ -165,15 +167,21 @@ export default function SearchScreen() {
         }
     };
 
-    const handleUserSelect = (username: string) => {
+    const handleUserSelect = (username: string, photo: string ) => {
+        addEntry({ type: 'user', data: { username, photo }, timestamp: Date.now() })
         router.push(`/profile/${username}`);
     };
 
-    const handleCalendarSelect = (calendarId: string | number) => {
+    const handleCalendarSelect = (calendarId: string | number, name: string, cover: string) => {
+        addEntry({ type: 'calendar', data: { calendarId, name, cover }, timestamp: Date.now() })
         router.push(`/calendar-view?calendarId=${calendarId}`);
     };
 
     const handleEventSelect = (event: CalendarEvent) => {
+        const title = event.title ; 
+        const photo = event.photo; 
+        const id = event.id; 
+        addEntry({ type: 'event', data: { id, title , photo }, timestamp: Date.now() })
         setActiveEvent(event);
         if (event.calendarId) {
             router.push(`/calendar-view?calendarId=${event.calendarId}`);
@@ -182,8 +190,8 @@ export default function SearchScreen() {
         router.push(`/switch-events`);
     };
 
-    const showTabs = query.trim().length > 0;
-
+    const showTabs = query.trim().length > 0 || history.length > 0;
+    
     const getEmptyMessage = () => {
         if (activeTab === 'all') return 'No results found';
         if (activeTab === 'calendars') return 'No calendars found';
@@ -242,9 +250,11 @@ export default function SearchScreen() {
                 style={styles.list}
                 contentContainerStyle={styles.listContent}
                 data={listData}
-                keyExtractor={(item: any) =>
-                    isAdItem(item) ? item.id : `${item.type}-${item.data.id}`
-                }
+                keyExtractor={(item: any) => {
+                    if (isAdItem(item)) return item.id;
+                    const id = item.data.id ?? item.data.calendarId ?? item.data.username;
+                    return `${item.type}-${id}`;
+                }}
                 ListEmptyComponent={
                     showTabs ? (
                         <View style={styles.emptyContainer}>
@@ -260,7 +270,7 @@ export default function SearchScreen() {
                         return (
                             <TouchableOpacity
                                 style={styles.card}
-                                onPress={() => handleUserSelect(user.username)}
+                                onPress={() => handleUserSelect(user.username , user.photo)}
                                 testID={`search-user-card-${user.username}`}
                             >
                                 <Image
@@ -302,7 +312,7 @@ export default function SearchScreen() {
                         return (
                             <TouchableOpacity
                                 style={styles.card}
-                                onPress={() => handleCalendarSelect(cal.id)}
+                                onPress={() => handleCalendarSelect(cal.id, cal.name, cal.cover )}
                                 testID={`search-calendar-card-${cal.id}`}
                             >
                                 {cal.cover ? (
