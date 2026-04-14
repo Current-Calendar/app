@@ -29,6 +29,7 @@ from main.notifications import views as notification_views
 from main.reports import views as report_views
 from main.labels import CategoryViewSet, EventTagViewSet
 from main.ads import views as ads_views
+from main.analytics import views as analytics_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -107,6 +108,7 @@ urlpatterns = [
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/analytics/', analytics_views.analytics_dashboard, name='analytics_dashboard'),
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
