@@ -23,10 +23,9 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const handleAddPress = () => {
     if (isAuthenticated) {
       setMenuVisible(true);
-      return;
+    } else {
+      router.push("/login");
     }
-
-    router.push("/login" as any);
   };
   const closeMenu = () => setMenuVisible(false);
 

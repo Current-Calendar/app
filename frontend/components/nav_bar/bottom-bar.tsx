@@ -21,10 +21,9 @@ export default function BottomBar({ NavButton }: Props) {
   const handleAddPress = () => {
     if (isAuthenticated) {
       setMenuVisible(true);
-      return;
+    } else {
+      router.push("/login");
     }
-
-    router.push("/login" as any);
   };
   const closeMenu = () => setMenuVisible(false);
 
@@ -43,12 +42,7 @@ export default function BottomBar({ NavButton }: Props) {
 
   return (
     <View style={navBottomBarStyles.bottomBar}>
-      <NavButton
-        icon="home"
-        onPress={() => {
-          router.push((isAuthenticated ? "/calendars" : "/login") as any);
-        }}
-      />
+      <NavButton icon="home" href="/calendars" />
       <NavButton icon="search" href="/search" />
 
       <View
