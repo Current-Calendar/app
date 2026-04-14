@@ -136,7 +136,7 @@ def recommend_events(user: User, limit=30):
             Q(calendars__creator=user)
         )
         .distinct()
-        .prefetch_related('calendars__labels')
+        .prefetch_related('calendars__categories')
         .select_related('creator')
     )
 

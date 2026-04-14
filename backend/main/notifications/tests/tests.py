@@ -2,7 +2,7 @@ import datetime
 from datetime import date, time
 from rest_framework.test import APITestCase
 from rest_framework import status
-from main.models import User, Notification, Calendar, Event, EventAttendance
+from main.models import User, Notification, Calendar, CalendarInvitation, Event, EventAttendance
 
 ENDPOINT_NOTIFICATIONS = '/api/v1/notifications/'
 ENDPOINT_MARK_AS_READ = '/api/v1/notifications/{id}/read/'
@@ -126,6 +126,12 @@ class InvitationNotificationTests(APITestCase):
             sender=self.user1,
             type='CALENDAR_INVITE',
             related_calendar=self.cal1,
+        )
+        self.calendar_invitation = CalendarInvitation.objects.create(
+            calendar=self.cal1,
+            sender=self.user1,
+            invitee=self.user3,
+            permission='VIEW',
         )
 
     def test_accept_unauthenticated(self):

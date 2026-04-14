@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 from django.contrib.gis.geos import Point
 from django.test import TestCase
 
-from main.models import Calendar, CalendarLabel, Event, User
+from main.models import Calendar, Category, Event, User
 from main.rs.utils import tokenize, most_common, dice_coefficient, compute_item_similarities
 from main.rs.calendars import (
     build_feature_set as cal_build_feature_set,
@@ -126,8 +126,8 @@ class CalendarBuildFeatureSetTests(TestCase):
             privacy="PUBLIC",
             creator=self.user,
         )
-        self.label = CalendarLabel.objects.create(name="music")
-        self.calendar.labels.add(self.label)
+        self.category = Category.objects.create(name="music")
+        self.calendar.categories.add(self.category)
 
         self.event_with_location = Event.objects.create(
             title="Concert",
@@ -138,9 +138,9 @@ class CalendarBuildFeatureSetTests(TestCase):
         )
         self.event_with_location.calendars.add(self.calendar)
 
-    def test_includes_label(self):
+    def test_includes_category(self):
         features = cal_build_feature_set(self.calendar)
-        self.assertTrue(any(f.startswith("Label_") for f in features))
+        self.assertTrue(any(f.startswith("Category_") for f in features))
 
     def test_includes_creator(self):
         features = cal_build_feature_set(self.calendar)
@@ -250,8 +250,8 @@ class EventBuildFeatureSetTests(TestCase):
         self.calendar = Calendar.objects.create(
             name="Ev Feat Cal", privacy="PUBLIC", creator=self.user
         )
-        self.label = CalendarLabel.objects.create(name="sport")
-        self.calendar.labels.add(self.label)
+        self.category = Category.objects.create(name="sport")
+        self.calendar.categories.add(self.category)
         self.event = Event.objects.create(
             title="Football Match Important",
             description="Champions league semifinal exciting match",
@@ -279,9 +279,9 @@ class EventBuildFeatureSetTests(TestCase):
         features = ev_build_feature_set(self.event)
         self.assertIn("Month_5", features)
 
-    def test_includes_calendar_label(self):
+    def test_includes_calendar_category(self):
         features = ev_build_feature_set(self.event)
-        self.assertTrue(any(f.startswith("Label_") for f in features))
+        self.assertTrue(any(f.startswith("Category_") for f in features))
 
 
 class GetSimilarEventsTests(TestCase):
