@@ -179,11 +179,12 @@ export default function SearchScreen() {
         router.push(`/calendar-view?calendarId=${cal.id}`);
     };
 
-    const handleEventSelect = (event: CalendarEvent) => {
+    const handleEventSelect = (event: CalendarEvent | any) => {
         addEntry({ type: 'event', data: event, timestamp: Date.now() })
         setActiveEvent(event);
-        if (event.calendarId) {
-            router.push(`/calendar-view?calendarId=${event.calendarId}`);
+        const calendarId = event.calendarId || (Array.isArray(event.calendars) ? String(event.calendars[0]) : null);
+        if (calendarId) {
+            router.push(`/calendar-view?calendarId=${calendarId}`);
             return;
         }
         router.push(`/switch-events`);
