@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(md|yml|yaml|txt|json\\)$\")",
+      "Bash(docker compose:*)",
+      "Bash(python -m py_compile backend/main/tests.py)",
+      "Bash(python -m py_compile backend/main/rs/tests/tests.py)",
+      "Bash(python -m py_compile backend/main/radar/tests/tests.py)",
+      "Bash(python -m py_compile backend/main/notifications/tests/tests.py)",
+      "Bash(python -m py_compile backend/main/events/tests/tests.py)",
+      "Bash(python -m py_compile backend/main/calendars/tests/tests.py)",
+      "Bash(docker info:*)",
+      "Read(//c/Users/Álvaro/Downloads/**)",
+      "Bash(python -c ':*)",
+      "Bash(pip install:*)"
+    ]
+  }
+}

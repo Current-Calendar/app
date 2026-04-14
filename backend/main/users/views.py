@@ -13,7 +13,7 @@ from utils.storage import get_signed_url
 @permission_classes([AllowAny])
 def search_users(request):
     """
-    Endpoint to register a new user.
+    Endpoint to search users.
     GET /api/v1/users/search/
     """
     query = request.GET.get("search")
@@ -26,7 +26,6 @@ def search_users(request):
 
     users = User.objects.filter(
         Q(username__icontains=query) |
-        Q(email__icontains=query) |
         Q(pronouns__icontains=query)
     ).exclude(is_superuser=True).distinct()
 
@@ -243,6 +242,29 @@ def edit_profile(request):
     }, status=status.HTTP_200_OK)
     
     
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_plan(request):
+    """
+    Endpoint to update the authenticated user's subscription plan.
+    POST /api/v1/users/me/plan/
+    Body: { "plan": "FREE" | "STANDARD" | "BUSINESS" }
+    """
+    VALID_PLANS = ('FREE', 'STANDARD', 'BUSINESS')
+    plan = request.data.get('plan')
+
+    if plan not in VALID_PLANS:
+        return Response(
+            {"error": f"Invalid plan. Must be one of: {', '.join(VALID_PLANS)}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    request.user.plan = plan
+    request.user.save(update_fields=['plan'])
+
+    return Response({'plan': plan}, status=status.HTTP_200_OK)
+
+
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_own_user(request):

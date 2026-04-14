@@ -11,17 +11,42 @@ import {
 } from "react-native";
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from '@react-navigation/native';
+import React from 'react';
 import EventsSwitch from "@/components/event-calendar/switch-event-calendar";
 import CalendarCard from "@/components/event-calendar/calendar-card";
 import CommentsModalC from "@/components/comments-modal-c";
 import { Calendar } from "@/types/calendar";
 import apiClient from "@/services/api-client";
 import { useAuth } from "@/hooks/use-auth";
-import { useRecommendedCalendars } from '@/hooks/use-recommended-calendars';
-import { AdCard } from '@/components/ads/ad-card';
-import { injectAds, isAdItem } from '@/components/ads/inject-ads';
-import { useAdsConfig } from '@/hooks/use-ads-config';
+import { useRecommendedCalendars } from "@/hooks/use-recommended-calendars";
+import { AdCard } from "@/components/ads/ad-card";
+import { injectAds, isAdItem } from "@/components/ads/inject-ads";
+import { useAdsConfig } from "@/hooks/use-ads-config";
 
+type CalendarCategory = {
+  id: number | string;
+  name: string;
+};
+
+const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
+const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
+type CookiePreference = 'accepted' | 'rejected';
+
+function readCookiePreferenceFromCookie(): CookiePreference | null {
+  if (Platform.OS !== 'web') return null;
+
+  try {
+    const pair = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith(`${COOKIE_PREFERENCE_COOKIE}=`));
+    if (!pair) return null;
+    const rawValue = decodeURIComponent(pair.split('=').slice(1).join('='));
+    return rawValue === 'accepted' || rawValue === 'rejected' ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function CalendarsScreen() {
   const router = useRouter();
@@ -30,24 +55,85 @@ export default function CalendarsScreen() {
   const hasSession = isAuthenticated || Boolean(user);
 
   const [calendars, setCalendars] = useState<Calendar[]>([]);
-  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>([]);
-  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [subscribedCalendarIds, setSubscribedCalendarIds] = useState<string[]>(
+    []
+  );
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(
+    null
+  );
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [errorSubscribeModal, setErrorSubscibeModal] = useState(false);
   const [subscribeErrorMessage, setSubscribeErrorMessage] = useState("");
+  const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
 
+  const readCookiePreference = () => {
+    if (Platform.OS !== 'web') return;
+
+    try {
+      const saved = window.localStorage.getItem(COOKIE_PREFERENCE_KEY);
+      if (!saved) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      if (saved === 'accepted' || saved === 'rejected') {
+        setCookiePreference(saved);
+        return;
+      }
+
+      const parsed = JSON.parse(saved) as { value?: CookiePreference; expiresAt?: string };
+      const isValidValue = parsed?.value === 'accepted' || parsed?.value === 'rejected';
+      const expiryMs = parsed?.expiresAt ? new Date(parsed.expiresAt).getTime() : NaN;
+      const isExpired = Number.isNaN(expiryMs) || expiryMs <= Date.now();
+
+      if (!isValidValue || isExpired) {
+        setCookiePreference(readCookiePreferenceFromCookie());
+        return;
+      }
+
+      setCookiePreference(parsed.value);
+    } catch {
+      setCookiePreference(readCookiePreferenceFromCookie());
+    }
+  };
+
+  useEffect(() => {
+    readCookiePreference();
+    if (Platform.OS !== 'web') return;
+
+    const onCookiePreferenceChanged = () => {
+      readCookiePreference();
+    };
+    window.addEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+
+    return () => {
+      window.removeEventListener('current:cookiePreferenceChanged', onCookiePreferenceChanged);
+    };
+  }, []);
+
+  const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
   const {
     calendars: backendCalendars,
     loading: loadingCalendars,
     error: calendarsError,
-  } = useRecommendedCalendars({ enabled: isAuthenticated });
+    refetch: refetchCalendars,
+  } = useRecommendedCalendars({ enabled: isAuthenticated && !isLimitedMode });
 
   const { data: adsConfig } = useAdsConfig();
 
-  if (calendarsError) {
-    Alert.alert('Error', calendarsError);
-  }
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated && !isLimitedMode) {
+        refetchCalendars();
+      }
+    }, [isAuthenticated, isLimitedMode, refetchCalendars])
+  );
 
+  useEffect(() => {
+    if (isLimitedMode) {
+      setCalendars([]);
+    }
+  }, [isLimitedMode]);
   useEffect(() => {
     if (calendarsError) {
       console.error("Error fetching data:", calendarsError);
@@ -56,10 +142,16 @@ export default function CalendarsScreen() {
   }, [calendarsError]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!hasSession) {
+      setSubscribedCalendarIds([]);
+      return;
+    }
+
     const fetchSubscribedCalendars = async () => {
       try {
-        const subscribedData = await apiClient.get<any[]>("/calendars/subscribed/");
+        const subscribedData = await apiClient.get<any[]>(
+          "/calendars/subscribed/"
+        );
         const dataArray = Array.isArray(subscribedData)
           ? subscribedData
           : (subscribedData as any)?.data || [];
@@ -71,36 +163,16 @@ export default function CalendarsScreen() {
     };
 
     void fetchSubscribedCalendars();
-  }, [isAuthenticated]);
+  }, [hasSession]);
 
   useEffect(() => {
-    const COLORS = ["#6C63FF", "#FF6584", "#43D9AD", "#FFB84C", "#FF9F43", "#00CFE8"];
+    if (isLimitedMode) {
+      setCalendars([]);
+      return;
+    }
 
-    const filteredCalendars = backendCalendars.filter((c: any) => {
-      const calendarId = String(c.id);
-      const creatorId = String(c.creator_id ?? c.creator?.id ?? "");
-      const isNotMine = !user?.id || creatorId !== String(user.id);
-      const isNotSubscribed = !subscribedCalendarIds.includes(calendarId);
-      const isVisibleByPrivacy = c.privacy === "PUBLIC";
-
-      return isVisibleByPrivacy && isNotMine && isNotSubscribed;
-    });
-
-    const mappedCalendars: Calendar[] = filteredCalendars.map((c: any, index: number) => ({
-      id: String(c.id),
-      name: c.name,
-      description: c.description || "",
-      privacy: c.privacy,
-      origin: c.origin,
-      creator: c.creator || "unknown",
-      color: COLORS[index % COLORS.length],
-      cover: c.cover || null,
-      likes_count: c.likes_count,
-      liked_by_me: c.liked_by_me || false
-    }));
-
-    setCalendars(mappedCalendars);
-  }, [backendCalendars, user, hasSession, subscribedCalendarIds]);
+    setCalendars(backendCalendars);
+  }, [backendCalendars, isLimitedMode]);
 
   const handleOpenCalendar = (id: string) => {
     router.push(`/calendar-view?calendarId=${id}`);
@@ -108,21 +180,19 @@ export default function CalendarsScreen() {
 
   const handleLike = async (id: string) => {
     try {
-      const res = await apiClient.post<{ liked: boolean }>(`/calendars/${id}/like/`);
+      const res = await apiClient.post<{ liked: boolean; likes_count: number }>(
+        `/calendars/${id}/like/`
+      );
       setCalendars((prev) =>
-        prev.map((calendar) => {
-          if (calendar.id === id) {
-            const currentLikes = calendar.likes_count ?? 0;
-            return {
-              ...calendar,
-              liked_by_me: res.liked,
-              likes_count: res.liked
-                ? currentLikes + 1
-                : Math.max(0, currentLikes - 1),
-            };
-          }
-          return calendar;
-        })
+        prev.map((calendar) =>
+          calendar.id === id
+            ? {
+                ...calendar,
+                liked_by_me: res.liked,
+                likes_count: res.likes_count,
+              }
+            : calendar
+        )
       );
     } catch (error) {
       Alert.alert("Error", "Could not like this calendar.");
@@ -145,17 +215,26 @@ export default function CalendarsScreen() {
 
   const handleSubscribe = async (id: string) => {
     try {
-      const res = await apiClient.post<{ subscribed: boolean }>(`/calendars/${id}/subscribe/`);
+      const res = await apiClient.post<{ subscribed: boolean }>(
+        `/calendars/${id}/subscribe/`
+      );
 
       if (res.subscribed) {
         setSubscribedCalendarIds((prev) => [...prev, id]);
         setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
         Alert.alert("¡Listo!", "Te has suscrito correctamente.");
       } else {
-        setSubscribedCalendarIds((prev) => prev.filter((favId) => favId !== id));
+        setSubscribedCalendarIds((prev) =>
+          prev.filter((favId) => favId !== id)
+        );
       }
     } catch (error: any) {
-      const apiError = error.response?.data?.message || error.response?.data?.error || error.message || String(error);
+      const apiError =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        String(error);
+
       if (Platform.OS !== "web") {
         Alert.alert("Error", apiError);
       } else {
@@ -165,6 +244,59 @@ export default function CalendarsScreen() {
       console.error("Subscribe error:", error);
     }
   };
+
+  if (isLimitedMode) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.inner}>
+          {isLimitedMode ? (
+            <View style={styles.limitedBanner}>
+              <Text style={styles.limitedBannerTitle}>Limited recommendation mode</Text>
+              <Text style={styles.limitedBannerBody}>
+                Recommended calendars are disabled while optional cookies are rejected.
+              </Text>
+            </View>
+          ) : null}
+
+          {!authLoading && !hasSession ? (
+            <View style={styles.authHeader}>
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/login');
+                }}
+              >
+                <Text style={styles.loginButtonText}>Log In</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.registerButton}
+                onPress={() => {
+                  if (hasSession) return;
+                  router.push('/register');
+                }}
+              >
+                <Text style={styles.registerButtonText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          <EventsSwitch />
+
+          <View style={styles.emptyStateWrap}>
+            <Text style={styles.emptyText}>No recommended calendars right now.</Text>
+            <Text style={styles.emptySubtext}>
+              Recommended calendars are hidden while optional cookies are rejected.
+            </Text>
+            <Text style={styles.emptySubtext}>
+              Accept optional cookies in Privacy settings to see calendar suggestions again.
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (loadingCalendars) {
     return (
@@ -181,13 +313,22 @@ export default function CalendarsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
+        {isLimitedMode ? (
+          <View style={styles.limitedBanner}>
+            <Text style={styles.limitedBannerTitle}>Limited recommendation mode</Text>
+            <Text style={styles.limitedBannerBody}>
+              Recommended calendars are disabled while optional cookies are rejected.
+            </Text>
+          </View>
+        ) : null}
+
         {!authLoading && !hasSession ? (
           <View style={styles.authHeader}>
             <TouchableOpacity
               style={styles.loginButton}
               onPress={() => {
                 if (hasSession) return;
-                router.push('/login');
+                router.push("/login");
               }}
             >
               <Text style={styles.loginButtonText}>Log In</Text>
@@ -197,7 +338,7 @@ export default function CalendarsScreen() {
               style={styles.registerButton}
               onPress={() => {
                 if (hasSession) return;
-                router.push('/register');
+                router.push("/register");
               }}
             >
               <Text style={styles.registerButtonText}>Sign Up</Text>
@@ -209,7 +350,7 @@ export default function CalendarsScreen() {
 
         <FlatList
           data={listData}
-          keyExtractor={(item) => isAdItem(item) ? item.id : (item as Calendar).id}
+          keyExtractor={(item) => (isAdItem(item) ? item.id : (item as Calendar).id)}
           renderItem={({ item }) => {
             if (isAdItem(item)) return <AdCard placement="feed" />;
             const calendar = item as Calendar;
@@ -269,15 +410,40 @@ export default function CalendarsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   centered: {
     justifyContent: "center",
   },
   inner: {
-    width: '100%',
+    width: "100%",
     maxWidth: 800,
     flex: 1,
+  },
+
+  limitedBanner: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#f0c88b',
+    backgroundColor: '#fff2dd',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  limitedBannerTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#7a4d00',
+    marginBottom: 2,
+  },
+
+  limitedBannerBody: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6a4706',
   },
   list: {
     paddingHorizontal: 16,

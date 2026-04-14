@@ -208,6 +208,24 @@ export function CalendarInfoModal({
                     iconSize={42}
                 />
             )}
+
+        {Array.isArray(localCalendar.categories) && localCalendar.categories.length > 0 && (
+        <View style={calendarInfoModalStyles.metaRow}>
+          <Ionicons name="pricetags-outline" size={16} color="#10464d" />
+          <View style={calendarInfoModalStyles.tagsWrap}>
+            {localCalendar.categories.map((category) => (
+              <View
+                key={String(category.id)}
+                style={calendarInfoModalStyles.tagChip}
+              >
+                <Text style={calendarInfoModalStyles.tagChipText}>
+                  {category.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
         {localCalendar.description ? (
           <Text style={calendarInfoModalStyles.description}>{localCalendar.description}</Text>
         ) : null}

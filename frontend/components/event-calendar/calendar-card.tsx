@@ -87,6 +87,23 @@ export default function CalendarCard({
           <View style={eventCalendarCalendarCardStyles.titleSection}>
             <Text style={eventCalendarCalendarCardStyles.title}>{calendar.name}</Text>
             <Text style={eventCalendarCalendarCardStyles.creator}>by {calendar.creator}</Text>
+            {Array.isArray(calendar.categories) && calendar.categories.length > 0 && (
+            <View style={eventCalendarCalendarCardStyles.metaRow}>
+              <Ionicons name="pricetags-outline" size={16} color="#10464d" />
+              <View style={eventCalendarCalendarCardStyles.tagsWrap}>
+                {calendar.categories.map((category) => (
+                  <View
+                    key={String(category.id)}
+                    style={eventCalendarCalendarCardStyles.tagChip}
+                  >
+                    <Text style={eventCalendarCalendarCardStyles.tagChipText}>
+                      {category.name}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
           </View>
           <View style={eventCalendarCalendarCardStyles.badges}>
             <View

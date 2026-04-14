@@ -13,7 +13,7 @@ import { DefaultCalendarCover } from "@/components/default-calendar-cover";
 import { useAuth } from "@/hooks/use-auth";
 import InviteUserModal from "@/components/InviteUserModal";
 
-const BG = "#E8E5D8";
+const BG = "#FFFDED";
 const TEXT = "#10464D";
 const TEAL = "#1F6A6A";
 
@@ -37,6 +37,7 @@ export type FeedEvent = {
   userAvatar?: string;
   calendarId: string;
   calendarName: string;
+  color: string;
   // List of users who marked this event as attending.
   attendees?: FeedEventAttendee[];
 };
@@ -72,10 +73,9 @@ function formatResponseDateTime(dateLike?: string) {
 }
 
 export default function EventFeedModal({ visible, onClose, event }: Props) {
-  if (!event) return null;
-
   const { user } = useAuth();
   const [inviteVisible, setInviteVisible] = useState(false);
+  if (!event) return null;
 
   const isOwner = event.username === user?.username;
 

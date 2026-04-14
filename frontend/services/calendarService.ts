@@ -25,6 +25,11 @@ export const downloadCalendar = async (id: string) => {
     if (Platform.OS === "web") {
       const response = await fetch(url, { headers: getAuthHeaders() });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error al exportar el calendario (${response.status}): ${errorText}`);
+      }
+
       const text = await response.text();
       const blob = new Blob([text], { type: "text/calendar;charset=utf-8" });
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -39,9 +44,14 @@ export const downloadCalendar = async (id: string) => {
       window.URL.revokeObjectURL(downloadUrl);
       return;
     } else {
-      const file = new File(Paths.document, `calendar-${id}.ics`);
       const response = await fetch(url, { headers: getAuthHeaders() });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error al exportar el calendario (${response.status}): ${errorText}`);
+      }
+
+      const file = new File(Paths.document, `calendar-${id}.ics`);
       const arrayBuffer = await response.arrayBuffer();
       await file.write(new Uint8Array(arrayBuffer));
       return file.uri;
@@ -98,24 +108,11 @@ export async function importGoogleCalendar() {
     const redirectUri = Linking.createURL('/');
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-    if (result.type === 'success') {
-      const response = await fetch(importUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error('Error importing calendar: ' + text);
-      }
-
-      const data = await response.json();
-      console.log('Events imported:', data);
-      alert(`Google Calendar imported. Events: ${data.count || 0}`);
-      return data;
+    if (result.type === 'success' || result.type === 'dismiss') {
+      // The import is performed server-side during the OAuth callback.
+      // No separate API call is needed here.
+      console.log('Google OAuth flow completed, import handled server-side.');
+      return { message: 'Google Calendar import initiated' };
     } else {
       console.log('Authentication cancelled or failed', result);
     }

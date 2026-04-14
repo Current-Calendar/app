@@ -236,7 +236,7 @@ export const useUserProfile = (userId?: string) => {
         const delta = previousState ? -1 : 1;
         setFollowError(null);
         setIsFollowing(!previousState);
-        setUserBeingViewed((prev) =>
+        setUserBeingViewed((prev: any) =>
             prev
                 ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) + delta) }
                 : prev
@@ -248,7 +248,7 @@ export const useUserProfile = (userId?: string) => {
             if (typeof data?.followed !== 'boolean') {
                 setFollowError('Could not update follow status. Please try again.');
                 setIsFollowing(previousState);
-                setUserBeingViewed((prev) =>
+                setUserBeingViewed((prev: any) =>
                     prev
                         ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) - delta) }
                         : prev
@@ -261,14 +261,14 @@ export const useUserProfile = (userId?: string) => {
                 : Math.max(0, (userBeingViewed.total_followers ?? 0) + (nextFollowed ? 1 : -1));
 
             setIsFollowing(nextFollowed);
-            setUserBeingViewed((prev) =>
+            setUserBeingViewed((prev: any) =>
                 prev ? { ...prev, total_followers: targetTotal } : prev
             );
         } catch (error) {
             console.error('Error follow:', error);
             setFollowError('There was a network problem. Check your connection and try again.');
             setIsFollowing(previousState);
-            setUserBeingViewed((prev) =>
+            setUserBeingViewed((prev: any) =>
                 prev
                     ? { ...prev, total_followers: Math.max(0, (prev.total_followers ?? 0) - delta) }
                     : prev

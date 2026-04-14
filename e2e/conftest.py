@@ -40,6 +40,8 @@ def base_url() -> str:
         return configured.rstrip("/") + "/"
 
     candidates = [
+        "http://frontend-e2e:8081",
+        "http://host.docker.internal:8081",
         "http://localhost:19006",
         "http://localhost:8081",
     ]
@@ -56,6 +58,7 @@ def base_url() -> str:
 @pytest.fixture()
 def driver() -> webdriver.Remote:
     headless = _as_bool(os.getenv("E2E_HEADLESS"), default=True)
+    remote_url = os.getenv("E2E_SELENIUM_REMOTE_URL")
 
     options = ChromeOptions()
     if headless:
@@ -64,8 +67,11 @@ def driver() -> webdriver.Remote:
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    service = ChromeService(ChromeDriverManager().install())
-    browser = webdriver.Chrome(service=service, options=options)
+    if remote_url:
+        browser = webdriver.Remote(command_executor=remote_url, options=options)
+    else:
+        service = ChromeService(ChromeDriverManager().install())
+        browser = webdriver.Chrome(service=service, options=options)
 
     browser.implicitly_wait(float(os.getenv("E2E_IMPLICIT_WAIT", "1.0")))
 

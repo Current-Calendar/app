@@ -87,7 +87,7 @@ def create_event(request):
 
         if not is_creator_or_co_owner:
             return Response(
-                {"errors": [f"No tienes permiso para agregar events al calendar {calendar.id}."]},
+                {"errors": ["No tienes permiso para agregar eventos a este calendario."]},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -160,10 +160,29 @@ def create_event(request):
 
 @api_view(['GET', 'PUT', 'PATCH'])
 def edit_event(request: Request, event_id):
-    if request.method != "GET" and not request.user.is_authenticated:
+    if not request.user.is_authenticated:
         return Response(None, status=status.HTTP_401_UNAUTHORIZED)
 
     event = get_object_or_404(Event, id=event_id)
+    user = request.user
+
+    current_calendars = event.calendars.all()
+    if not current_calendars.exists():
+        return Response(
+            {"error": "No tienes permiso sobre este event"},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    for calendar in current_calendars:
+        is_creator_or_co_owner = (
+            calendar.creator == user or
+            calendar.co_owners.filter(id=user.id).exists()
+        )
+        if not is_creator_or_co_owner:
+            return Response(
+                {"errors": ["No tienes permiso para editar eventos en este calendario."]},
+                status=status.HTTP_403_FORBIDDEN
+            )
     
     if request.method == 'GET':
         serializer = EventSerializer(event, context={'request': request})
@@ -171,7 +190,6 @@ def edit_event(request: Request, event_id):
     
     # Handle PUT: Update event
     data = request.data
-    user = request.user
 
     # Validate required fields are not empty if provided
     if "title" in data and not data["title"]:
@@ -252,7 +270,7 @@ def edit_event(request: Request, event_id):
         is_creator_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
 
         if not is_creator_or_co_owner:
-            return Response({"errors": [f"No tienes permiso para editar events del calendar {calendar.id}."]},
+            return Response({"errors": ["No tienes permiso para editar eventos en este calendario."]},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -318,20 +336,31 @@ def list_events(request):
     else:
         privacy_filter = Q(calendars__privacy='PUBLIC')
 
+    prefetches = [
+        'calendars',
+        Prefetch(
+            'attendances',
+            queryset=EventAttendance.objects.filter(
+                status='ASSISTING'
+            ).select_related('user'),
+        ),
+    ]
+
+    if user.is_authenticated:
+        prefetches.append(
+            Prefetch(
+                'attendances',
+                queryset=EventAttendance.objects.filter(user=user).only('status', 'event_id'),
+                to_attr='my_attendance_records',
+            )
+        )
+
     queryset = (
         Event.objects
         .filter(privacy_filter)
         .distinct().
         select_related('creator')
-        .prefetch_related(
-            'calendars',
-            Prefetch(
-                'attendances',
-                queryset=EventAttendance.objects.filter(
-                    status='ASSISTING'
-                ).select_related('user'),
-            ),
-        )
+        .prefetch_related(*prefetches)
         .order_by('-created_at')
     )
 
@@ -572,7 +601,9 @@ def recommended_events(request):
         return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
 
     events = recommend_events(user, limit=30)
-    serializer = EventSerializer(events, many=True)
+    liked_event_ids = set(EventLike.objects.filter(user=user).values_list('event_id', flat=True))
+    saved_event_ids = set(EventSave.objects.filter(user=user).values_list('event_id', flat=True))
+    serializer = EventSerializer(events, many=True, context={'request': request, 'liked_ids': liked_event_ids, 'saved_ids': saved_event_ids})
 
     cache.set(cache_key, serializer.data, 60 * 5)
 
@@ -612,6 +643,7 @@ def toggle_like_event(request, event_id):
             liked = True
 
     event.refresh_from_db(fields=['likes_count'])
+    cache.delete(f"recommended_events_{user.id}")
     return Response(
         {
             "event_id": event_id,
@@ -642,6 +674,7 @@ def toggle_save_event(request, event_id):
                 pass
             saved = True
 
+    cache.delete(f"recommended_events_{user.id}")
     return Response(
         {
             "event_id": event_id,
@@ -672,6 +705,8 @@ def rsvp_event(request, event_id):
     )
     attendance.status = status_value
     attendance.save()
+
+    cache.delete(f"recommended_events_{request.user.id}")
     
     # Convertir a ISO 8601 con Z (UTC)
     responded_at_iso = attendance.updated_at.isoformat()

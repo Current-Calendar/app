@@ -2,31 +2,51 @@
 source = .
 
 omit =
+    # Django entry points
     manage.py
     */asgi.py
     */wsgi.py
-    
+
+    # Auto-generated
     */migrations/*
-    
+
+    # Test files
     */tests/*
     */tests.py
     */test_*.py
-    
+    */tests_*.py
+
+    # Virtual environments
     *venv*
     *.venv*
+
+    # Infrastructure (WebSockets, middleware, routing)
     */consumers.py
     */middleware.py
     */routing.py
-    main/management/commands/*
+
+    # Django boilerplate
+    */__init__.py
+    */apps.py
+    */admin.py
+
+    # Configuration files
+    current/settings.py
+    current/urls.py
+    */analytics/urls.py
+
+    # Management commands and scripts
+    main/management/*
+    scripts/*
+
+    # Security utilities
     utils/security.py
-
-
 
 [report]
 exclude_lines =
     pragma: no cover
-    
+
     def __str__
     def __repr__
-    
+
     if __name__ == .__main__.:

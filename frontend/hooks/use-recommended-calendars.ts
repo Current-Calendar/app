@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/services/api-client';
 import { Calendar } from '@/types/calendar';
 
@@ -22,7 +22,7 @@ export function useRecommendedCalendars({ enabled = true }: UseRecommendedCalend
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCalendars = async () => {
+  const fetchCalendars = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -40,6 +40,8 @@ export function useRecommendedCalendars({ enabled = true }: UseRecommendedCalend
         creator: c.creator_username || c.creator || 'unknown',
         color: COLORS[index % COLORS.length],
         cover: c.cover || null,
+        likes_count: c.likes_count ?? 0,
+        liked_by_me: c.liked_by_me ?? false,
       }));
 
       setCalendars(mappedCalendars);
@@ -50,13 +52,13 @@ export function useRecommendedCalendars({ enabled = true }: UseRecommendedCalend
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (enabled) {
       void fetchCalendars();
     }
-  }, [enabled]);
+  }, [enabled, fetchCalendars]);
 
   return { calendars, loading, error, refetch: fetchCalendars };
 }

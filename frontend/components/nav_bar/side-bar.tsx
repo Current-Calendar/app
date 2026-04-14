@@ -70,6 +70,8 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   };
 
   const profileHref: string = isAuthenticated ? "/profile" : "/login";
+  const homeHref: string = isAuthenticated ? "/(tabs)/calendars" : "/login";
+  const notificationsHref: string = isAuthenticated ? "/(tabs)/notifications" : "/login";
 
   return (
     <View style={navSideBarStyles.sidebar}>
@@ -82,13 +84,13 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
       </View>
 
       <View style={navSideBarStyles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" href="/(tabs)/calendars" />
+        <SidebarItem icon="home" label="Home" href={homeHref} />
         <SidebarItem icon="search" label="Search" href="/(tabs)/search" />
         <SidebarItem icon="add-circle" label="Create" onPress={handleAddPress} />
         <SidebarItem icon="calendar" label="Discover" href="/(tabs)/switch-calendar" />
         <SidebarItem icon="compass" label="Map" href="/radar" />
         <View style={{ position: "relative" }}>
-          <SidebarItem icon="notifications" label="Notifications" href="/(tabs)/notifications" />
+          <SidebarItem icon="notifications" label="Notifications" href={notificationsHref} />
           {unreadCount > 0 && (
             <View style={{
               position: "absolute",
@@ -105,6 +107,9 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
           )}
         </View>
         <SidebarItem icon="person" label={profileHref} href={profileHref} />
+        {user?.plan === 'BUSINESS' && (
+          <SidebarItem icon="bar-chart" label="Analytics" href="/(tabs)/analytics" />
+        )}
 
         <CreateMenuModal
           visible={menuVisible}

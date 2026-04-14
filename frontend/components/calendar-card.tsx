@@ -25,6 +25,7 @@ interface CalendarCardProps {
   onPress?: () => void;
   onComment?: (id: string) => void;
   onLike?: (id: string) => void;
+  onUnsubscribe?: (id: string) => void;
 }
 
 export default function CalendarCard({
@@ -32,6 +33,7 @@ export default function CalendarCard({
   onPress,
   onComment,
   onLike,
+  onUnsubscribe,
 }: CalendarCardProps) {
   if (!calendar) return null;
 
@@ -74,14 +76,14 @@ export default function CalendarCard({
               style={calendarCardStyles.actionButton}
               activeOpacity={0.7}
             >
-              <Ionicons
+                <Ionicons
                 name={liked ? 'heart' : 'heart-outline'}
                 size={18}
                 color={liked ? '#eb8c85' : '#10464d'}
               />
-              {likesCount > 0 && (
-                <Text style={calendarCardStyles.actionText}>{likesCount}</Text>
-              )}
+              <Text style={calendarCardStyles.actionText}>
+                {likesCount > 0 ? likesCount : 'Like'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -92,6 +94,17 @@ export default function CalendarCard({
               <Ionicons name="chatbubble-outline" size={18} color="#10464d" />
               <Text style={calendarCardStyles.actionText}>Comment</Text>
             </TouchableOpacity>
+
+            {onUnsubscribe && (
+              <TouchableOpacity
+                onPress={() => onUnsubscribe?.(String(calendar.id))}
+                style={calendarCardStyles.actionButton}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="person-remove-outline" size={18} color="#10464d" />
+                <Text style={calendarCardStyles.actionText}>Unfollow</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

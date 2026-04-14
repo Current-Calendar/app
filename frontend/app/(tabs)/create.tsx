@@ -12,15 +12,16 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "@/hooks/use-auth";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { appendPhoto } from '@/services/api-client';
+import { appendPhoto } from "@/services/api-client";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import apiClient from "@/services/api-client";
 
 type PrivacyStatus = "PRIVATE" | "PUBLIC";
 type CalendarOrigin = "CURRENT" | "GOOGLE" | "APPLE";
@@ -37,24 +38,38 @@ type CreatedCalendarResponse = {
   id?: number | string;
 };
 
+type CategoryItem = {
+  id: number;
+  name: string;
+  calendars_count?: number;
+};
+
 export default function CreateScreen() {
   const router = useRouter();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { createCalendar } = useCalendarActions();
+
   const [selectedPrivacy, setSelectedPrivacy] =
     useState<PrivacyStatus>("PRIVATE");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [calendarData, setCalendarData] = useState<PublishData>({
     name: "",
     description: "",
     privacy: "PRIVATE",
     origin: "CURRENT",
   });
+
   const [coverImage, setCoverImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
   const [showRemoveCoverConfirm, setShowRemoveCoverConfirm] = useState(false);
+
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -79,12 +94,55 @@ export default function CreateScreen() {
     },
   ];
 
+  const selectedCategories = useMemo(
+    () => categories.filter((c) => selectedCategoryIds.includes(c.id)),
+    [categories, selectedCategoryIds]
+  );
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+
+        const response: any = await apiClient.get("/categories/");
+        const list =
+          (Array.isArray(response) && response) ||
+          (Array.isArray(response?.results) && response.results) ||
+          (Array.isArray(response?.data) && response.data) ||
+          [];
+        
+        console.log("CATEGORIES RESPONSE:", response);
+        console.log("CATEGORIES LIST:", list);
+        setCategories(list);
+      } catch (error: any) {
+        console.error("Error loading categories:", error);
+        setCategories([]);
+        setCategoriesError(
+          error?.message || "Failed to load calendar categories."
+        );
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  const toggleCategory = (categoryId: number) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       Alert.alert(
         "Permission required",
-        "Please allow access to your photo library.",
+        "Please allow access to your photo library."
       );
       return;
     }
@@ -118,6 +176,28 @@ export default function CreateScreen() {
     }
   };
 
+  const assignCategoriesToCalendar = async (
+    calendarId: number | string,
+    categoryIds: number[]
+  ) => {
+    const failures: string[] = [];
+
+    await Promise.all(
+      categoryIds.map(async (categoryId) => {
+        try {
+          await apiClient.post(`/categories/${categoryId}/assign_to_calendar/`, {
+            calendar_id: Number(calendarId),
+          });
+        } catch (error: any) {
+          const category = categories.find((c) => c.id === categoryId);
+          failures.push(category?.name || `Category ${categoryId}`);
+        }
+      })
+    );
+
+    return failures;
+  };
+
   const handlePublish = async () => {
     if (!calendarData.name.trim()) {
       setErrorMessage("Calendar name is required.");
@@ -137,7 +217,7 @@ export default function CreateScreen() {
     try {
       const formData = new FormData();
 
-      formData.append("name", calendarData.name);
+      formData.append("name", calendarData.name.trim());
       formData.append("description", calendarData.description);
       formData.append("privacy", selectedPrivacy);
       formData.append("origin", "CURRENT");
@@ -146,17 +226,43 @@ export default function CreateScreen() {
         await appendPhoto(formData, coverImage, "cover");
       }
 
-      const createdCalendar = await createCalendar(formData) as CreatedCalendarResponse;
+      const createdCalendar = (await createCalendar(
+        formData
+      )) as CreatedCalendarResponse;
+
       const createdCalendarId = createdCalendar?.id;
 
-      Alert.alert("Success", "Calendar created successfully.");
+      if (
+        createdCalendarId !== undefined &&
+        createdCalendarId !== null &&
+        selectedCategoryIds.length > 0
+      ) {
+        const failedCategories = await assignCategoriesToCalendar(
+          createdCalendarId,
+          selectedCategoryIds
+        );
+
+        if (failedCategories.length > 0) {
+          Alert.alert(
+            "Calendar created",
+            `The calendar was created, but these categories could not be assigned: ${failedCategories.join(", ")}`
+          );
+        } else {
+          Alert.alert("Success", "Calendar created successfully.");
+        }
+      } else {
+        Alert.alert("Success", "Calendar created successfully.");
+      }
 
       if (createdCalendarId !== undefined && createdCalendarId !== null) {
-        router.replace(`/(tabs)/calendars?selectedCalendarId=${encodeURIComponent(String(createdCalendarId))}`);
+        router.replace(
+          `/(tabs)/calendars?selectedCalendarId=${encodeURIComponent(
+            String(createdCalendarId)
+          )}`
+        );
       } else {
         router.replace("/(tabs)/calendars");
       }
-
     } catch (error: any) {
       console.log("FULL ERROR:", error);
 
@@ -178,7 +284,6 @@ export default function CreateScreen() {
     }
   };
 
-
   return (
     <View style={styles.wrapper}>
       <ScrollView
@@ -188,9 +293,7 @@ export default function CreateScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* FORM CARD */}
         <View style={[styles.card, isDesktop && styles.cardDesktop]}>
-          {/* TITLE */}
           <ThemedText
             type="title"
             lightColor="#10464d"
@@ -204,7 +307,6 @@ export default function CreateScreen() {
             Create Calendar
           </ThemedText>
 
-          {/* COVER IMAGE */}
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Cover Image</Text>
 
@@ -244,10 +346,8 @@ export default function CreateScreen() {
             )}
           </View>
 
-          {/* DIVIDER */}
           <View style={styles.divider} />
 
-          {/* CALENDAR DETAILS */}
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Calendar Details</Text>
             <TextInput
@@ -275,8 +375,66 @@ export default function CreateScreen() {
             />
           </View>
 
-          {/* DIVIDER */}
           <View style={styles.divider} />
+
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+
+            <Text style={styles.sectionSubtitle}>
+              Select one or more categories for this calendar
+            </Text>
+
+            {categoriesLoading ? (
+              <View style={styles.categoriesLoading}>
+                <ActivityIndicator color="#10464d" />
+              </View>
+            ) : categoriesError ? (
+              <Text style={styles.errorText}>{categoriesError}</Text>
+            ) : (
+              <View style={styles.categoriesWrap}>
+                {categories.map((category) => {
+                  const selected = selectedCategoryIds.includes(category.id);
+
+                  return (
+                    <Pressable
+                      key={category.id}
+                      style={[
+                        styles.categoryChip,
+                        selected && styles.categoryChipSelected,
+                      ]}
+                      onPress={() => toggleCategory(category.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          selected && styles.categoryChipTextSelected,
+                        ]}
+                      >
+                        {category.name}
+                      </Text>
+                      {selected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color="#10464d"
+                          style={{ marginLeft: 6 }}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {!!selectedCategories.length && (
+              <Text style={styles.helperText}>
+                Selected: {selectedCategories.map((c) => c.name).join(", ")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
           <View style={styles.privacySection}>
             <Text style={styles.sectionTitle}>Who can see this?</Text>
 
@@ -314,7 +472,6 @@ export default function CreateScreen() {
                   </Text>
                 </View>
 
-                {/* Radio Button */}
                 <View
                   style={[
                     styles.radioButton,
@@ -330,7 +487,6 @@ export default function CreateScreen() {
             ))}
           </View>
 
-          {/* INFO BOX */}
           <View style={styles.infoBox}>
             <Ionicons
               name="information-circle-outline"
@@ -344,18 +500,14 @@ export default function CreateScreen() {
                 : "Anyone with the link can view this calendar."}
             </Text>
           </View>
-     
 
-          {/* ERROR MESSAGE */}
-          {errorMessage && (
-            <Text style={styles.errorText}>
-              {errorMessage}
-            </Text>
-          )}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-          {/* ACTION BUTTONS */}
           <View
-            style={[styles.buttonGroup, { flexDirection: width < 380 ? "column" : "row" }]}
+            style={[
+              styles.buttonGroup,
+              { flexDirection: width < 380 ? "column" : "row" },
+            ]}
           >
             <Pressable
               style={styles.cancelButton}
@@ -393,7 +545,6 @@ export default function CreateScreen() {
         onCancel={() => setShowRemoveCoverConfirm(false)}
         onConfirm={confirmRemoveCover}
       />
-
     </View>
   );
 }
@@ -411,7 +562,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingBottom: 40,
   },
-
   card: {
     width: "100%",
   },
@@ -427,8 +577,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-
-  // INPUT SECTION
   inputSection: {
     marginBottom: 24,
   },
@@ -436,6 +584,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#10464d",
     fontWeight: "700",
+    marginBottom: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: "#6f7d7f",
     marginBottom: 12,
   },
   input: {
@@ -453,45 +606,48 @@ const styles = StyleSheet.create({
     height: 90,
     textAlignVertical: "top",
   },
-
   divider: {
     height: 1,
     backgroundColor: "#e8e8e8",
     marginVertical: 24,
   },
-
-  // SOURCE SECTION
-  sourceSection: {
-    marginBottom: 24,
-  },
-  originButtons: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  originBtn: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: "#c0756a",
-    borderRadius: 10,
-    paddingVertical: 10,
+  categoriesLoading: {
+    paddingVertical: 16,
     alignItems: "center",
-    backgroundColor: "#fff",
+    justifyContent: "center",
   },
-  originBtnActive: {
+  categoriesWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
+    backgroundColor: "#f7fbfb",
+  },
+  categoryChipSelected: {
     borderColor: "#10464d",
-    backgroundColor: "#f0f5f5",
+    backgroundColor: "#e8f2f2",
   },
-  originBtnText: {
-    color: "#999",
+  categoryChipText: {
+    color: "#10464d",
     fontSize: 13,
     fontWeight: "600",
   },
-  originBtnTextActive: {
-    color: "#10464d",
+  categoryChipTextSelected: {
+    fontWeight: "700",
   },
-
-  // PRIVACY SECTION
+  helperText: {
+    marginTop: 12,
+    fontSize: 12,
+    color: "#6b6b6b",
+  },
   privacySection: {
     marginBottom: 24,
   },
@@ -552,8 +708,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#10464d",
   },
-
-  // INFO BOX
   infoBox: {
     flexDirection: "row",
     backgroundColor: "#f0f5f5",
@@ -569,16 +723,10 @@ const styles = StyleSheet.create({
     color: "#10464d",
     lineHeight: 16,
   },
-
-  // BUTTONS
   buttonGroup: {
     flexDirection: "row",
     gap: 12,
   },
-  buttonGroupDesktop: {
-    justifyContent: "space-between",
-  },
-
   cancelButton: {
     flex: 1,
     backgroundColor: "#fff",
@@ -599,7 +747,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontFamily: Fonts?.rounded,
   },
-
   publishButton: {
     flex: 1,
     backgroundColor: "#10464d",
@@ -686,10 +833,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   errorText: {
-  color: "#d9534f",
-  fontSize: 14,
-  marginBottom: 16,
-  fontWeight: "600",
-  textAlign: "center",
-},
+    color: "#d9534f",
+    fontSize: 14,
+    marginBottom: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
 });

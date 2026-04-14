@@ -29,6 +29,7 @@ from main.notifications import views as notification_views
 from main.reports import views as report_views
 from main.labels import CategoryViewSet, EventTagViewSet
 from main.ads import views as ads_views
+from main.analytics import views as analytics_views
 from django.urls import path, include
 from django.contrib import admin
 from django.views.decorators.csrf import csrf_exempt
@@ -66,6 +67,7 @@ urlpatterns = [
     path('api/v1/users/<int:pk>/', user_views.get_user_by_id, name='get_user'),
     path('api/v1/users/me/', user_views.get_own_user, name='get_profile'),
     path('api/v1/users/me/edit/', user_views.edit_profile, name='edit_profile'),
+    path('api/v1/users/me/plan/', user_views.update_plan, name='update_plan'),
     path('api/v1/users/me/delete/', user_views.delete_own_user, name='delete_own_user'),
     path('api/v1/calendars/<int:calendar_id>/publish/', calendar_views.publish_calendar, name='publish_calendar'),
     path('api/v1/calendars/<int:calendar_id>/delete/', calendar_views.delete_calendar, name='delete_calendar'),
@@ -84,6 +86,7 @@ urlpatterns = [
     path('api/v1/calendars/<int:calendar_id>/export/', calendar_views.export_to_ics, name='export_to_ics'),
     path('api/v1/calendars/<int:calendar_id>/share/', calendar_views.get_calendar_share_info, name='get_calendar_share_info'),
     path('api/v1/calendars/<int:calendar_id>/leave/', calendar_views.leave_calendar, name='leave_calendar'),
+    path('api/v1/calendars/<int:calendar_id>/co_owners/', calendar_views.update_co_owners, name='update_co_owners'),
     path('share/calendar/<int:calendar_id>/', calendar_views.share_calendar_html, name='share_calendar_html'),
     path('api/v1/events/create/', event_views.create_event, name='create_event'),
     path('api/v1/events/<int:event_id>/edit/', event_views.edit_event, name='edit_event'),
@@ -105,6 +108,7 @@ urlpatterns = [
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/analytics/', analytics_views.analytics_dashboard, name='analytics_dashboard'),
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),
     path('api/v1/recommendations/events/', event_views.recommended_events, name='recommended_events'),
