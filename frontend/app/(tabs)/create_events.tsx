@@ -756,34 +756,36 @@ export default function CreateEventsScreen() {
           <View style={styles.divider} />
 
           <View style={styles.inputSection}>
-            <Text style={styles.sectionTitle}>Date & Time</Text>
-
-            <View
-              style={[
-                styles.dateTimeRow,
-                !isDesktop && { flexDirection: "column" },
-              ]}
-            >
-              <View style={styles.dateTimeBox}>
-                <Text style={styles.dateTimeLabel}>Date</Text>
-                <View style={styles.infoPill}>
-                  <Text style={styles.infoPillText}>{dateLabel}</Text>
-                </View>
+            <Text style={styles.sectionTitle}>Start Date</Text>
+            <View>
+              <View style={styles.infoPill}>
+                <Text style={styles.infoPillText}>{dateLabel}</Text>
               </View>
-
               <View style={styles.dateTimeBox}>
-                <Text style={styles.dateTimeLabel}>Time</Text>
-                <Pressable style={styles.infoPill} onPress={openTimePicker}>
+                <Pressable style={styles.infoPill} onPress={() => openTimePicker(time, setTime)}>
                   <Text style={styles.infoPillText}>{timeLabel}</Text>
                 </Pressable>
               </View>
+              <View style={styles.calendarCenterWrap}>
+                <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+              </View>
+            </View>
+          </View>
 
-            <View style={styles.calendarCenterWrap}>
-              <MiniMonthCalendar
-                value={date}
-                onChange={setDate}
-                size={miniSize}
-              />
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>End Date</Text>
+            <View>
+              <View style={styles.infoPill}>
+                <Text style={styles.infoPillText}>{endDateLabel}</Text>
+              </View>
+              <View style={styles.dateTimeBox}>
+                <Pressable style={styles.infoPill} onPress={() => openTimePicker(endTime, setEndTime)}>
+                  <Text style={styles.infoPillText}>{endTimeLabel}</Text>
+                </Pressable>
+              </View>
+              <View style={styles.calendarCenterWrap}>
+                <MiniMonthCalendar value={endDate} onChange={setEndDate} size={miniSize} />
+              </View>
             </View>
           </View>
 

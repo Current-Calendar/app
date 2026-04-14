@@ -265,7 +265,7 @@ export default function CalendarScreen() {
                         title: e.title,
                         description: e.description || '',
                         place_name: e.place_name || '',
-                        date: e.date,
+                        date: date.toISOString().slice(0, 10),
                         time: e.time.substring(0, 5),
                         recurrence: e.recurrence,
                         type: 'other',
@@ -280,6 +280,7 @@ export default function CalendarScreen() {
                             }))
                             : [],
                         my_attendance_status: e.my_attendance_status ?? null,
+                        show_time: dates.length === 1,
                     };
                 });
             });
