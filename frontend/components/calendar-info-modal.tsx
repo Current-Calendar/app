@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   useWindowDimensions,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from '@/types/calendar';
@@ -59,6 +60,8 @@ export function CalendarInfoModal({
   const [showCoOwners, setShowCoOwners] = useState(false);
   const [isLeavingCalendar, setIsLeavingCalendar] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState<number | null>(null);
+  const [userToRemove, setUserToRemove] = useState<any>(null);
 
   const [localCalendar, setLocalCalendar] = useState<Calendar | null>(calendar);
 
@@ -181,6 +184,38 @@ export function CalendarInfoModal({
   onCalendarUpdated?.(merged);
 };
 
+const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewer') => {
+  if (!localCalendar || !isOwner) return;
+
+  setRemovingUserId(userToRemove.id);
+
+  try {
+    const endpoint = userType === 'co-owner'
+      ? '/co_owners/'
+      : '/viewers/';
+
+    const currentUsers = userType === 'co-owner'
+      ? (localCalendar.co_owners ?? [])
+      : (localCalendar.viewers ?? []);
+
+    const updatedUsers = currentUsers.filter((u: any) => u.id !== userToRemove.id);
+    const userIds = updatedUsers.map((u: any) => u.id);
+
+    const response = await apiClient.patch(`/calendars/${localCalendar.id}${endpoint}`, {
+      [userType === 'co-owner' ? 'co_owners' : 'viewers']: userIds,
+    });
+
+    handleCalendarUpdated(response);
+    Alert.alert('Success', `@${userToRemove.username} has been removed from the calendar.`);
+  } catch (error: any) {
+    console.error('Error removing user:', error);
+    Alert.alert('Error', error?.message || 'Failed to remove user. Please try again.');
+  } finally {
+    setRemovingUserId(null);
+    setUserToRemove(null);
+  }
+};
+
   return (
     <>
       <BottomSheetModal visible={!!localCalendar} onClose={onClose}>
@@ -247,6 +282,94 @@ export function CalendarInfoModal({
           </View>
         </View>
 
+        {isOwner && (
+          <>
+            {(localCalendar.co_owners?.length ?? 0) > 0 || (localCalendar.viewers?.length ?? 0) > 0 ? (
+              <View style={calendarInfoModalStyles.sharingSection}>
+                <Text style={calendarInfoModalStyles.sharingSectionTitle}>Shared with</Text>
+
+                {(localCalendar.co_owners ?? []).length > 0 && (
+                  <View>
+                    <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Co-Owners</Text>
+                    {(localCalendar.co_owners ?? []).map((coOwner: any, index: number) => (
+                      <View key={`coowner-${index}`} style={calendarInfoModalStyles.shareItem}>
+                        <View style={calendarInfoModalStyles.shareItemContent}>
+                          <Ionicons name="person-circle-outline" size={24} color={accent} />
+                          <View style={calendarInfoModalStyles.shareItemInfo}>
+                            <Text style={calendarInfoModalStyles.shareItemName}>{coOwner.name || coOwner.username}</Text>
+                            <Text style={calendarInfoModalStyles.shareItemUsername}>@{coOwner.username}</Text>
+                          </View>
+                        </View>
+                        <View style={calendarInfoModalStyles.shareItemActions}>
+                          <View style={calendarInfoModalStyles.permissionBadge}>
+                            <Text style={calendarInfoModalStyles.permissionBadgeText}>Editor</Text>
+                          </View>
+                          {isOwner && (
+                            <Pressable
+                              style={[
+                                calendarInfoModalStyles.removeUserButton,
+                                removingUserId === coOwner.id && calendarInfoModalStyles.removeUserButtonDisabled,
+                              ]}
+                              onPress={() => setUserToRemove({ ...coOwner, type: 'co-owner' })}
+                              disabled={removingUserId === coOwner.id}
+                            >
+                              {removingUserId === coOwner.id ? (
+                                <ActivityIndicator size="small" color="#B33F37" />
+                              ) : (
+                                <Ionicons name="close" size={16} color="#B33F37" />
+                              )}
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {(localCalendar.viewers ?? []).length > 0 && (
+                  <View>
+                    <Text style={calendarInfoModalStyles.permissionCategoryTitle}>Viewers</Text>
+                    {(localCalendar.viewers ?? []).map((viewer: any, index: number) => (
+                      <View key={`viewer-${index}`} style={calendarInfoModalStyles.shareItem}>
+                        <View style={calendarInfoModalStyles.shareItemContent}>
+                          <Ionicons name="person-circle-outline" size={24} color="#888" />
+                          <View style={calendarInfoModalStyles.shareItemInfo}>
+                            <Text style={calendarInfoModalStyles.shareItemName}>{viewer.name || viewer.username}</Text>
+                            <Text style={calendarInfoModalStyles.shareItemUsername}>@{viewer.username}</Text>
+                          </View>
+                        </View>
+                        <View style={calendarInfoModalStyles.shareItemActions}>
+                          <View style={[calendarInfoModalStyles.permissionBadge, calendarInfoModalStyles.permissionBadgeViewer]}>
+                            <Text style={[calendarInfoModalStyles.permissionBadgeText, calendarInfoModalStyles.permissionBadgeViewerText]}>Viewer</Text>
+                          </View>
+                          {isOwner && (
+                            <Pressable
+                              style={[
+                                calendarInfoModalStyles.removeUserButton,
+                                removingUserId === viewer.id && calendarInfoModalStyles.removeUserButtonDisabled,
+                              ]}
+                              onPress={() => setUserToRemove({ ...viewer, type: 'viewer' })}
+                              disabled={removingUserId === viewer.id}
+                            >
+                              {removingUserId === viewer.id ? (
+                                <ActivityIndicator size="small" color="#B33F37" />
+                              ) : (
+                                <Ionicons name="close" size={16} color="#B33F37" />
+                              )}
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={calendarInfoModalStyles.noSharingText}>Not shared with anyone</Text>
+            )}
+          </>
+        )}
+
         <View
           style={[
             calendarInfoModalStyles.actions,
@@ -286,7 +409,7 @@ export function CalendarInfoModal({
             )
           )}
 
-          {isOwnerOrCoOwner && (
+          {isOwner && (
             isCompactActions ? (
               <View style={calendarInfoModalStyles.compactActionWrap}>
                 <TouchableOpacity
@@ -456,6 +579,20 @@ export function CalendarInfoModal({
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={() => {
           void handleConfirmDelete();
+        }}
+      />
+
+      <ConfirmDeleteModal
+        visible={!!userToRemove}
+        title={`Remove @${userToRemove?.username}`}
+        message={`Are you sure you want to remove @${userToRemove?.username} from "${localCalendar.name}"?`}
+        confirmLabel="Remove"
+        loading={removingUserId === userToRemove?.id}
+        onCancel={() => setUserToRemove(null)}
+        onConfirm={() => {
+          if (userToRemove) {
+            void handleRemoveUser(userToRemove, userToRemove.type);
+          }
         }}
       />
     </>

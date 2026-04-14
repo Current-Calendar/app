@@ -960,6 +960,99 @@ tagChipText: {
   fontSize: 11,
   fontWeight: "700",
 },
+sharingSection: {
+  marginTop: 20,
+  marginBottom: 16,
+  paddingTop: 16,
+  paddingBottom: 12,
+  borderTopWidth: 1,
+  borderTopColor: '#E8E5D8',
+},
+sharingSectionTitle: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: '#2D2D2D',
+  marginBottom: 12,
+},
+permissionCategoryTitle: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#888',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  marginTop: 12,
+  marginBottom: 8,
+},
+shareItem: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  backgroundColor: '#F7F6F2',
+  borderRadius: 8,
+  marginBottom: 8,
+},
+shareItemContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 10,
+  flex: 1,
+},
+shareItemActions: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+shareItemInfo: {
+  flex: 1,
+},
+shareItemName: {
+  fontSize: 13,
+  fontWeight: '600',
+  color: '#2D2D2D',
+},
+shareItemUsername: {
+  fontSize: 11,
+  color: '#888',
+  marginTop: 2,
+},
+removeUserButton: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: '#FCEAEA',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+removeUserButtonDisabled: {
+  opacity: 0.6,
+},
+permissionBadge: {
+  paddingHorizontal: 10,
+  paddingVertical: 4,
+  borderRadius: 6,
+  backgroundColor: '#10464d',
+},
+permissionBadgeText: {
+  fontSize: 11,
+  fontWeight: '600',
+  color: '#fff',
+},
+permissionBadgeViewer: {
+  backgroundColor: '#E8E5D8',
+},
+permissionBadgeViewerText: {
+  color: '#10464d',
+},
+noSharingText: {
+  fontSize: 13,
+  color: '#888',
+  fontStyle: 'italic',
+  textAlign: 'center',
+  marginTop: 16,
+  marginBottom: 16,
+},
 });
 
 export const eventDetailModalStyles = StyleSheet.create({

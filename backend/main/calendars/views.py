@@ -463,6 +463,62 @@ def update_co_owners(request, calendar_id):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_viewers(request, calendar_id):
+    """
+    Set the viewers list for a calendar. Only the calendar creator may call this.
+
+    PATCH /api/v1/calendars/<id>/viewers/
+    Body: { "viewers": [<user_id>, ...] }
+    """
+    calendar = get_object_or_404(Calendar, id=calendar_id)
+
+    if calendar.creator != request.user:
+        return Response(
+            {'error': 'Solo el creador del calendario puede gestionar los espectadores.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    raw_ids = request.data.get('viewers', [])
+    if not isinstance(raw_ids, list):
+        return Response(
+            {'error': 'El campo "viewers" debe ser una lista de IDs de usuario.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Coerce to ints and remove the creator's own id (creator cannot be a viewer)
+    try:
+        user_ids = [int(uid) for uid in raw_ids if int(uid) != calendar.creator_id]
+    except (TypeError, ValueError):
+        return Response(
+            {'error': 'Los IDs de usuario deben ser números enteros.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    users = list(User.objects.filter(id__in=user_ids))
+    if len(users) != len(set(user_ids)):
+        return Response(
+            {'error': 'Uno o más usuarios no existen.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    calendar.viewers.set(users)
+
+    return Response({
+        'id': calendar.id,
+        'name': calendar.name,
+        'description': calendar.description,
+        'privacy': calendar.privacy,
+        'cover': get_signed_url(request, calendar.cover),
+        'creator': calendar.creator.username,
+        'creator_id': calendar.creator_id,
+        'creator_username': calendar.creator.username,
+        'co_owners': _serialize_co_owners(calendar),
+        'viewers': [{"id": viewer.id, "username": viewer.username} for viewer in calendar.viewers.all()],
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, CanAddFavoriteCalendar])
 def subscribe_calendar(request, calendar_id):
@@ -639,6 +695,7 @@ def list_my_calendars(request):
             "liked_by_me": cal.id in liked_ids,
             "cover": get_signed_url(request, cal.cover),
             "co_owners": _serialize_co_owners(cal),
+            "viewers": [{"id": viewer.id, "username": viewer.username} for viewer in cal.viewers.all()],
         }
         for cal in queryset
     ]

@@ -109,16 +109,32 @@ export default function CalendarScreen() {
 
             const mergedCalendarsMap = new Map<number, any>();
 
+            // Helper to merge calendar data while preserving viewers/co_owners
+            const mergeCalendar = (existing: any, incoming: any) => {
+              if (!existing) return incoming;
+              return {
+                ...incoming,
+                viewers: Array.isArray(incoming.viewers) && incoming.viewers.length > 0
+                  ? incoming.viewers
+                  : (Array.isArray(existing.viewers) ? existing.viewers : []),
+                co_owners: Array.isArray(incoming.co_owners) && incoming.co_owners.length > 0
+                  ? incoming.co_owners
+                  : (Array.isArray(existing.co_owners) ? existing.co_owners : []),
+              };
+            };
+
             myCalendarsData.forEach((calendar: any) => {
             mergedCalendarsMap.set(calendar.id, calendar);
             });
 
             subscribedCalendarsData.forEach((calendar: any) => {
-            mergedCalendarsMap.set(calendar.id, calendar);
+            const existing = mergedCalendarsMap.get(calendar.id);
+            mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
             });
 
             coOwnedCalendarsData.forEach((calendar: any) => {
-            mergedCalendarsMap.set(calendar.id, calendar);
+            const existing = mergedCalendarsMap.get(calendar.id);
+            mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
             });
 
             const mergedCalendars = Array.from(mergedCalendarsMap.values());
