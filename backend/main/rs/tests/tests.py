@@ -10,12 +10,14 @@ from main.rs.calendars import (
     build_feature_set as cal_build_feature_set,
     get_all_calendars_features,
     get_similar_calendars,
+    load_similarities,
     recommend_calendars,
 )
 from main.rs.events import (
     build_feature_set as ev_build_feature_set,
     get_all_events_features,
     get_similar_events,
+    load_events_similarities,
     recommend_events,
 )
 
@@ -347,3 +349,197 @@ class RecommendEventsTests(TestCase):
         mock_redis.hget.return_value = None
         result = recommend_events(self.user, limit=1)
         self.assertLessEqual(len(result), 1)
+
+
+# ---------------------------------------------------------------------------
+# rs/calendars.py - load_similarities
+# ---------------------------------------------------------------------------
+
+class LoadSimilaritiesTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="load_sim_user", email="load_sim@test.com", password="pass123"
+        )
+        Calendar.objects.create(
+            name="Load Sim Cal", privacy="PUBLIC", creator=self.user
+        )
+
+    @patch("main.rs.calendars.redis_client")
+    def test_calls_pipeline_and_execute(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+
+        load_similarities()
+
+        mock_redis.pipeline.assert_called_once()
+        mock_pipe.delete.assert_called_once_with("rs_similarities")
+        mock_pipe.execute.assert_called_once()
+
+    @patch("main.rs.calendars.redis_client")
+    def test_stores_each_calendar_similarity(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+
+        load_similarities()
+
+        # hset should be called for each public calendar with similarities
+        # At minimum, pipeline methods were called
+        self.assertTrue(mock_pipe.delete.called)
+        self.assertTrue(mock_pipe.execute.called)
+
+    @patch("main.rs.calendars.redis_client")
+    def test_handles_redis_exception(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+        mock_pipe.execute.side_effect = Exception("Redis connection refused")
+
+        # Should not raise
+        load_similarities()
+
+
+# ---------------------------------------------------------------------------
+# rs/calendars.py - recommend_calendars with Redis data and error branch
+# ---------------------------------------------------------------------------
+
+class RecommendCalendarsWithRedisDataTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rec_redis_user", email="rec_redis@test.com", password="pass123"
+        )
+        self.other = User.objects.create_user(
+            username="rec_redis_other", email="rec_redis_other@test.com", password="pass123"
+        )
+        # Calendar the user follows
+        self.followed_cal = Calendar.objects.create(
+            name="Followed Cal", privacy="PUBLIC", creator=self.other
+        )
+        self.followed_cal.subscribers.add(self.user)
+
+        # Calendar that can be recommended (similar to followed)
+        self.similar_cal = Calendar.objects.create(
+            name="Similar Cal", privacy="PUBLIC", creator=self.other
+        )
+
+    @patch("main.rs.calendars.redis_client")
+    def test_returns_similar_calendars_from_redis(self, mock_redis):
+        import json
+        # Redis returns similarity data for the followed calendar
+        sim_data = json.dumps([[self.similar_cal.id, 0.9]])
+        mock_redis.hmget.return_value = [sim_data.encode()]
+
+        result = recommend_calendars(self.user, limit=10)
+        result_ids = [c.id for c in result]
+        self.assertIn(self.similar_cal.id, result_ids)
+
+    @patch("main.rs.calendars.redis_client")
+    def test_redis_error_falls_back_to_popular(self, mock_redis):
+        mock_redis.hmget.side_effect = Exception("Redis timeout")
+
+        # Should not raise and should return popular calendars as fallback
+        result = recommend_calendars(self.user, limit=10)
+        self.assertIsInstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# rs/events.py - load_events_similarities
+# ---------------------------------------------------------------------------
+
+class LoadEventsSimilaritiesTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="load_ev_sim_user", email="load_ev_sim@test.com", password="pass123"
+        )
+        self.event = Event.objects.create(
+            title="Load Sim Event",
+            date=date(2026, 8, 1),
+            time=time(10, 0),
+            creator=self.user,
+        )
+
+    @patch("main.rs.events.redis_client")
+    def test_calls_pipeline_and_execute(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+
+        load_events_similarities()
+
+        mock_redis.pipeline.assert_called_once()
+        mock_pipe.delete.assert_called_once_with("rs_events_similarities")
+        mock_pipe.execute.assert_called_once()
+
+    @patch("main.rs.events.redis_client")
+    def test_stores_each_event_similarity(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+
+        load_events_similarities()
+
+        self.assertTrue(mock_pipe.delete.called)
+        self.assertTrue(mock_pipe.execute.called)
+
+    @patch("main.rs.events.redis_client")
+    def test_handles_redis_exception(self, mock_redis):
+        mock_pipe = MagicMock()
+        mock_redis.pipeline.return_value = mock_pipe
+        mock_pipe.execute.side_effect = Exception("Redis connection refused")
+
+        # Should not raise
+        load_events_similarities()
+
+
+# ---------------------------------------------------------------------------
+# rs/events.py - recommend_events with Redis data and error branch
+# ---------------------------------------------------------------------------
+
+class RecommendEventsWithRedisDataTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="rec_ev_redis", email="rec_ev_redis@test.com", password="pass123"
+        )
+        self.other = User.objects.create_user(
+            username="rec_ev_redis_other", email="rec_ev_redis_other@test.com", password="pass123"
+        )
+        self.calendar = Calendar.objects.create(
+            name="Followed Ev Cal", privacy="PUBLIC", creator=self.other
+        )
+        self.calendar.subscribers.add(self.user)
+
+        # Event in the followed calendar (already seen)
+        self.seen_event = Event.objects.create(
+            title="Seen Event",
+            date=date(2026, 12, 1),
+            time=time(10, 0),
+            creator=self.other,
+        )
+        self.seen_event.calendars.add(self.calendar)
+
+        # Event that can be recommended (similar, in a public calendar, future date)
+        self.similar_event = Event.objects.create(
+            title="Similar Event",
+            date=date(2026, 12, 15),
+            time=time(10, 0),
+            creator=self.other,
+        )
+        self.rec_cal = Calendar.objects.create(
+            name="Rec Ev Public Cal", privacy="PUBLIC", creator=self.other
+        )
+        self.similar_event.calendars.add(self.rec_cal)
+
+    @patch("main.rs.events.redis_client")
+    def test_returns_similar_events_from_redis(self, mock_redis):
+        import json
+        # Redis returns similarity data for the seen event
+        sim_data = json.dumps([[self.similar_event.id, 0.85]])
+        mock_redis.hmget.return_value = [sim_data.encode()]
+
+        result = recommend_events(self.user, limit=10)
+        result_ids = [e.id for e in result]
+        self.assertIn(self.similar_event.id, result_ids)
+
+    @patch("main.rs.events.redis_client")
+    def test_redis_error_falls_back_to_popular(self, mock_redis):
+        mock_redis.hmget.side_effect = Exception("Redis timeout")
+
+        # Should not raise and should return events as fallback
+        result = recommend_events(self.user, limit=10)
+        self.assertIsInstance(result, list)

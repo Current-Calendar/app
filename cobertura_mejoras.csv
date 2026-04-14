@@ -1,0 +1,8 @@
+Modulo,Cobertura Previa (%),Umbral Propuesto (%),Cobertura Obtenida (%),Tests Nuevos
+main/analytics/views.py,24,85,100,11
+main/views.py,45,85,100,13
+main/permissions.py,72,85,96,34
+main/rs/calendars.py,68,85,95,5
+main/rs/events.py,69,85,98,5
+current/schema/types.py,73,85,100,11
+TOTAL PROYECTO,85,90,91,79

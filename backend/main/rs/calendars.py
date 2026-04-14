@@ -126,7 +126,7 @@ def recommend_calendars(user: User, limit=30):
 
     final_calendars = list(
         Calendar.objects.filter(id__in=sorted_ids)
-        .prefetch_related('labels', 'subscribers')
+        .prefetch_related('categories', 'subscribers')
     )
 
     id_to_cal = {cal.id: cal for cal in final_calendars}

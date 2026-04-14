@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 from django.test import TestCase, RequestFactory
 
-from main.models import Calendar, User
+from main.models import Calendar, Event, User, Notification, CalendarInvitation
 from main.entitlements import get_user_features, Planes, PLAN_FEATURES
 from main.permissions import (
     CanCreateCalendar,
@@ -12,6 +12,13 @@ from main.permissions import (
     CanAddFavoriteCalendar,
     CanAccessAnalytics,
     CanCustomizeCalendars,
+    CanCoOwnCalendars,
+    CanAcceptCalendarInvites,
+    CanReceiveCalendarViewInvites,
+    IsOwnerOrCoOwnerOfCalendar,
+    CanAssignCategoryToCalendar,
+    CanManageEventTagsForEvent,
+    CanManageCategoriesAndTags,
 )
 from utils.security import get_safe_ip
 from utils.storage import get_signed_url
@@ -284,3 +291,526 @@ class GetSignedUrlTests(TestCase):
         type(file_field).url = PropertyMock(side_effect=Exception("Storage error"))
         result = get_signed_url(request, file_field)
         self.assertIsNone(result)
+
+
+# ---------------------------------------------------------------------------
+# permissions.py  (additional permission classes)
+# ---------------------------------------------------------------------------
+
+class CanCoOwnCalendarsTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanCoOwnCalendars()
+        self.sender = User.objects.create_user(
+            username="coown_sender", email="coown_sender@test.com",
+            password="pass123", plan="STANDARD",
+        )
+        self.invitee = User.objects.create_user(
+            username="coown_invitee", email="coown_invitee@test.com",
+            password="pass123", plan="STANDARD",
+        )
+
+    def _make_request(self, user, data=None):
+        request = self.factory.post("/api/v1/calendars/invite/", data=data or {})
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/calendars/invite/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {"user": self.invitee.id}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_both_standard_allowed(self):
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_sender_free_denied(self):
+        self.sender.plan = "FREE"
+        self.sender.save()
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+        self.assertIn("Your current plan", self.permission.message)
+
+    def test_invitee_free_denied(self):
+        self.invitee.plan = "FREE"
+        self.invitee.save()
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+        self.assertIn("user you are trying to invite", self.permission.message)
+
+    def test_both_free_denied_sender_message(self):
+        self.sender.plan = "FREE"
+        self.sender.save()
+        self.invitee.plan = "FREE"
+        self.invitee.save()
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+        # Sender is checked first
+        self.assertIn("Your current plan", self.permission.message)
+
+    def test_both_business_allowed(self):
+        self.sender.plan = "BUSINESS"
+        self.sender.save()
+        self.invitee.plan = "BUSINESS"
+        self.invitee.save()
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+
+class CanAcceptCalendarInvitesTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanAcceptCalendarInvites()
+        self.sender = User.objects.create_user(
+            username="accept_sender", email="accept_sender@test.com",
+            password="pass123", plan="STANDARD",
+        )
+        self.recipient = User.objects.create_user(
+            username="accept_recip", email="accept_recip@test.com",
+            password="pass123", plan="STANDARD",
+        )
+        self.calendar = Calendar.objects.create(
+            name="InviteCal", privacy="PUBLIC", creator=self.sender,
+        )
+        self.notification = Notification.objects.create(
+            recipient=self.recipient,
+            sender=self.sender,
+            type="CALENDAR_INVITE",
+            related_calendar=self.calendar,
+            message="You have been invited",
+        )
+
+    def _make_request(self, user, data=None):
+        request = self.factory.post(f"/api/v1/notifications/{self.notification.id}/respond/")
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def _make_view(self, notification_id=None):
+        view = MagicMock()
+        view.kwargs = {"id": notification_id or self.notification.id}
+        return view
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/notifications/1/respond/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {}
+        self.assertFalse(self.permission.has_permission(request, self._make_view()))
+
+    def test_non_calendar_invite_allowed(self):
+        notif = Notification.objects.create(
+            recipient=self.recipient, sender=self.sender,
+            type="NEW_FOLLOWER", message="Someone followed you",
+        )
+        view = self._make_view(notif.id)
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertTrue(self.permission.has_permission(request, view))
+
+    def test_decline_always_allowed(self):
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="EDIT",
+        )
+        request = self._make_request(self.recipient, {"status": "DECLINE"})
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+    def test_no_invitation_found_passes_through(self):
+        # No CalendarInvitation exists for this user/calendar
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+    def test_accept_edit_invitation_standard_allowed(self):
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="EDIT",
+        )
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+    def test_accept_edit_invitation_free_denied(self):
+        self.recipient.plan = "FREE"
+        self.recipient.save()
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="EDIT",
+        )
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertFalse(self.permission.has_permission(request, self._make_view()))
+        self.assertIn("edit invitations", self.permission.message)
+
+    def test_accept_view_invitation_under_limit_allowed(self):
+        self.recipient.plan = "FREE"
+        self.recipient.save()
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="VIEW",
+        )
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+    def test_accept_view_invitation_at_limit_denied(self):
+        self.recipient.plan = "FREE"
+        self.recipient.save()
+        other = User.objects.create_user(
+            username="accept_other", email="accept_other@test.com", password="pass123",
+        )
+        for i in range(10):
+            cal = Calendar.objects.create(
+                name=f"FavAccept{i}", privacy="PUBLIC", creator=other,
+            )
+            self.recipient.subscribed_calendars.add(cal)
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="VIEW",
+        )
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertFalse(self.permission.has_permission(request, self._make_view()))
+        self.assertIn("maximum number of favorite calendars", self.permission.message)
+
+    def test_accept_view_invitation_standard_infinite_allowed(self):
+        # STANDARD plan has infinite favorite calendars
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="VIEW",
+        )
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+    def test_already_accepted_invitation_ignored(self):
+        # Create an already-accepted invitation, then a pending one
+        CalendarInvitation.objects.create(
+            calendar=self.calendar, sender=self.sender,
+            invitee=self.recipient, permission="EDIT", accepted=True,
+        )
+        # The query filters accepted=None, so accepted=True is ignored
+        request = self._make_request(self.recipient, {"status": "ACCEPT"})
+        # No pending invitation found -> passes through
+        self.assertTrue(self.permission.has_permission(request, self._make_view()))
+
+
+class CanReceiveCalendarViewInvitesTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanReceiveCalendarViewInvites()
+        self.sender = User.objects.create_user(
+            username="recv_sender", email="recv_sender@test.com",
+            password="pass123", plan="STANDARD",
+        )
+        self.invitee = User.objects.create_user(
+            username="recv_invitee", email="recv_invitee@test.com",
+            password="pass123", plan="FREE",
+        )
+
+    def _make_request(self, user, data=None):
+        request = self.factory.post("/api/v1/calendars/1/invite/")
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/calendars/1/invite/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {"user": self.invitee.id}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_missing_user_id_denied(self):
+        request = self._make_request(self.sender, {})
+        self.assertFalse(self.permission.has_permission(request, None))
+        self.assertIn("Invitee user is required", self.permission.message)
+
+    def test_invitee_under_limit_allowed(self):
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_invitee_at_limit_denied(self):
+        other = User.objects.create_user(
+            username="recv_other", email="recv_other@test.com", password="pass123",
+        )
+        for i in range(10):
+            cal = Calendar.objects.create(
+                name=f"RecvFav{i}", privacy="PUBLIC", creator=other,
+            )
+            self.invitee.subscribed_calendars.add(cal)
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_invitee_standard_infinite_allowed(self):
+        self.invitee.plan = "STANDARD"
+        self.invitee.save()
+        request = self._make_request(self.sender, {"user": self.invitee.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+
+class IsOwnerOrCoOwnerOfCalendarTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = IsOwnerOrCoOwnerOfCalendar()
+        self.owner = User.objects.create_user(
+            username="isowner_owner", email="isowner_owner@test.com", password="pass123",
+        )
+        self.co_owner = User.objects.create_user(
+            username="isowner_coowner", email="isowner_coowner@test.com", password="pass123",
+        )
+        self.stranger = User.objects.create_user(
+            username="isowner_stranger", email="isowner_stranger@test.com", password="pass123",
+        )
+        self.calendar = Calendar.objects.create(
+            name="OwnerCal", privacy="PUBLIC", creator=self.owner,
+        )
+        self.calendar.co_owners.add(self.co_owner)
+
+    def _make_request(self, user):
+        request = self.factory.get("/")
+        request.user = user
+        return request
+
+    def test_owner_allowed(self):
+        request = self._make_request(self.owner)
+        self.assertTrue(self.permission.has_object_permission(request, None, self.calendar))
+
+    def test_co_owner_allowed(self):
+        request = self._make_request(self.co_owner)
+        self.assertTrue(self.permission.has_object_permission(request, None, self.calendar))
+
+    def test_stranger_denied(self):
+        request = self._make_request(self.stranger)
+        self.assertFalse(self.permission.has_object_permission(request, None, self.calendar))
+
+
+class CanAssignCategoryToCalendarTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanAssignCategoryToCalendar()
+        self.owner = User.objects.create_user(
+            username="assign_owner", email="assign_owner@test.com", password="pass123",
+        )
+        self.co_owner = User.objects.create_user(
+            username="assign_coowner", email="assign_coowner@test.com", password="pass123",
+        )
+        self.stranger = User.objects.create_user(
+            username="assign_stranger", email="assign_stranger@test.com", password="pass123",
+        )
+        self.staff = User.objects.create_user(
+            username="assign_staff", email="assign_staff@test.com",
+            password="pass123", is_staff=True,
+        )
+        self.calendar = Calendar.objects.create(
+            name="AssignCal", privacy="PUBLIC", creator=self.owner,
+        )
+        self.calendar.co_owners.add(self.co_owner)
+
+    def _make_request(self, user, data=None):
+        request = self.factory.post("/api/v1/categories/assign/")
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/categories/assign/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {"calendar_id": self.calendar.id}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_staff_always_allowed(self):
+        request = self._make_request(self.staff, {"calendar_id": self.calendar.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_owner_allowed(self):
+        request = self._make_request(self.owner, {"calendar_id": self.calendar.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_co_owner_allowed(self):
+        request = self._make_request(self.co_owner, {"calendar_id": self.calendar.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_stranger_denied(self):
+        request = self._make_request(self.stranger, {"calendar_id": self.calendar.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_missing_calendar_id_passes_through(self):
+        request = self._make_request(self.owner, {})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_nonexistent_calendar_passes_through(self):
+        request = self._make_request(self.owner, {"calendar_id": 99999})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_has_object_permission_always_true(self):
+        request = self._make_request(self.stranger)
+        self.assertTrue(self.permission.has_object_permission(request, None, MagicMock()))
+
+
+class CanManageEventTagsForEventTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanManageEventTagsForEvent()
+        self.owner = User.objects.create_user(
+            username="evttag_owner", email="evttag_owner@test.com", password="pass123",
+        )
+        self.co_owner = User.objects.create_user(
+            username="evttag_coowner", email="evttag_coowner@test.com", password="pass123",
+        )
+        self.stranger = User.objects.create_user(
+            username="evttag_stranger", email="evttag_stranger@test.com", password="pass123",
+        )
+        self.staff = User.objects.create_user(
+            username="evttag_staff", email="evttag_staff@test.com",
+            password="pass123", is_staff=True,
+        )
+        self.calendar = Calendar.objects.create(
+            name="EventTagCal", privacy="PUBLIC", creator=self.owner,
+        )
+        self.calendar.co_owners.add(self.co_owner)
+        self.event = Event.objects.create(
+            title="TagEvent", date="2026-05-01", time="12:00:00", creator=self.owner,
+        )
+        self.event.calendars.add(self.calendar)
+
+    def _make_request(self, user, data=None):
+        request = self.factory.post("/api/v1/event-tags/assign/")
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/event-tags/assign/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {"event_id": self.event.id}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_staff_always_allowed(self):
+        request = self._make_request(self.staff, {"event_id": self.event.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_owner_of_calendar_containing_event_allowed(self):
+        request = self._make_request(self.owner, {"event_id": self.event.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_co_owner_of_calendar_containing_event_allowed(self):
+        request = self._make_request(self.co_owner, {"event_id": self.event.id})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_stranger_denied(self):
+        request = self._make_request(self.stranger, {"event_id": self.event.id})
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_missing_event_id_passes_through(self):
+        request = self._make_request(self.owner, {})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_nonexistent_event_passes_through(self):
+        request = self._make_request(self.owner, {"event_id": 99999})
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_has_object_permission_always_true(self):
+        request = self._make_request(self.stranger)
+        self.assertTrue(self.permission.has_object_permission(request, None, MagicMock()))
+
+
+class CanManageCategoriesAndTagsTests(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.permission = CanManageCategoriesAndTags()
+        self.owner = User.objects.create_user(
+            username="mgcat_owner", email="mgcat_owner@test.com", password="pass123",
+        )
+        self.co_owner = User.objects.create_user(
+            username="mgcat_coowner", email="mgcat_coowner@test.com", password="pass123",
+        )
+        self.stranger = User.objects.create_user(
+            username="mgcat_stranger", email="mgcat_stranger@test.com", password="pass123",
+        )
+        self.staff = User.objects.create_user(
+            username="mgcat_staff", email="mgcat_staff@test.com",
+            password="pass123", is_staff=True,
+        )
+        self.calendar = Calendar.objects.create(
+            name="MgCatCal", privacy="PUBLIC", creator=self.owner,
+        )
+        self.calendar.co_owners.add(self.co_owner)
+
+    def _make_request(self, user, method="post", data=None):
+        if method == "get":
+            request = self.factory.get("/api/v1/categories/")
+        else:
+            request = self.factory.post("/api/v1/categories/")
+        request.user = user
+        request.data = data or {}
+        return request
+
+    def _make_view(self, kwargs=None):
+        view = MagicMock()
+        view.kwargs = kwargs or {}
+        return view
+
+    # --- has_permission tests ---
+
+    def test_unauthenticated_denied(self):
+        request = self.factory.post("/api/v1/categories/")
+        request.user = MagicMock(is_authenticated=False)
+        request.data = {}
+        request.parser_context = {"kwargs": {}}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_staff_always_allowed(self):
+        request = self._make_request(self.staff)
+        request.parser_context = {"kwargs": {}}
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_owner_with_calendar_id_in_kwargs_allowed(self):
+        request = self._make_request(self.owner)
+        request.parser_context = {"kwargs": {"calendar_id": self.calendar.id}}
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_co_owner_with_calendar_id_in_kwargs_allowed(self):
+        request = self._make_request(self.co_owner)
+        request.parser_context = {"kwargs": {"calendar_id": self.calendar.id}}
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_stranger_with_calendar_id_in_kwargs_denied(self):
+        request = self._make_request(self.stranger)
+        request.parser_context = {"kwargs": {"calendar_id": self.calendar.id}}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_calendar_id_in_data_fallback(self):
+        request = self._make_request(self.owner, data={"calendar_id": self.calendar.id})
+        request.parser_context = {"kwargs": {}}
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    def test_stranger_with_calendar_id_in_data_denied(self):
+        request = self._make_request(self.stranger, data={"calendar_id": self.calendar.id})
+        request.parser_context = {"kwargs": {}}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_nonexistent_calendar_denied(self):
+        request = self._make_request(self.owner, data={"calendar_id": 99999})
+        request.parser_context = {"kwargs": {}}
+        self.assertFalse(self.permission.has_permission(request, None))
+
+    def test_no_calendar_id_passes_through(self):
+        request = self._make_request(self.owner)
+        request.parser_context = {"kwargs": {}}
+        self.assertTrue(self.permission.has_permission(request, None))
+
+    # --- has_object_permission tests ---
+
+    def test_get_request_allowed_for_anyone(self):
+        request = self._make_request(self.stranger, method="get")
+        self.assertTrue(self.permission.has_object_permission(request, None, MagicMock()))
+
+    def test_write_request_denied_for_non_staff(self):
+        request = self._make_request(self.owner)
+        request.method = "POST"
+        self.assertFalse(self.permission.has_object_permission(request, None, MagicMock()))
+
+    def test_write_request_allowed_for_staff(self):
+        request = self._make_request(self.staff)
+        request.method = "PUT"
+        self.assertTrue(self.permission.has_object_permission(request, None, MagicMock()))
+
+    def test_delete_request_denied_for_non_staff(self):
+        request = self._make_request(self.owner)
+        request.method = "DELETE"
+        self.assertFalse(self.permission.has_object_permission(request, None, MagicMock()))
