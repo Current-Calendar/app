@@ -9,8 +9,10 @@ import {
   useWindowDimensions,
   ScrollView,
   ActivityIndicator,
+  Alert
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -122,6 +124,7 @@ export default function CreateEventsScreen() {
 
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
   const [showWebTimePicker, setShowWebTimePicker] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [date, setDate] = useState<Date>(() => {
     if (dateParam) {
@@ -159,7 +162,7 @@ export default function CreateEventsScreen() {
     return d;
   });
 
-  const [saveTime, setSaveTime] = useState()
+const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>(null);
 
   // ====== Pickers ======z
   const [webHour, setWebHour] = useState(time.getHours());
@@ -290,11 +293,12 @@ export default function CreateEventsScreen() {
     setLon(null);
   }, [place]);
 
-  const openTimePicker = (time: any, setTime: any) => {
-    setSaveTime(() => setTime);
+  const openTimePicker = (pickerType: "start" | "end", currentTime: Date) => {
+    setActiveTimePicker(pickerType); // Mark which picker we are opening
+    
     if (Platform.OS === "web") {
-      setWebHour(time.getHours());
-      setWebMinute(time.getMinutes());
+      setWebHour(currentTime.getHours());
+      setWebMinute(currentTime.getMinutes());
       setShowWebTimePicker(true);
     } else {
       setShowNativeTimePicker(true);
@@ -303,19 +307,29 @@ export default function CreateEventsScreen() {
 
   const onPickNativeTime = (_event: any, selected?: Date) => {
     if (Platform.OS !== "ios") setShowNativeTimePicker(false);
-    if (selected) saveTime(selected);
+    
+    if (selected) {
+      // Check the flag to see which state to update
+      if (activeTimePicker === "start") setTime(selected);
+      if (activeTimePicker === "end") setEndTime(selected);
+    }
   };
 
   const applyWebTime = () => {
-    const d = new Date(time);
+    const d = new Date(activeTimePicker === "start" ? time : endTime);
     d.setHours(webHour);
     d.setMinutes(webMinute);
     d.setSeconds(0, 0);
-    saveTime(d);
+    
+    // Check the flag to see which state to update
+    if (activeTimePicker === "start") setTime(d);
+    if (activeTimePicker === "end") setEndTime(d);
+    
     setShowWebTimePicker(false);
   };
 
   const pickCoverImage = async () => {
+    setImageError(null);
     if (Platform.OS !== "web") {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -329,10 +343,16 @@ export default function CreateEventsScreen() {
       aspect: [16, 9],
       quality: 0.85,
     });
-
     if (!result.canceled) {
-      setCoverUri(result.assets[0].uri);
-      setCoverAsset(result.assets[0]);
+      const asset = result.assets[0];
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setImageError("The selected image is too large. Please choose one under 3MB.");
+          return;
+      }
+      setImageError(null);
+      setCoverUri(asset.uri);
+      setCoverAsset(asset);
     }
   };
 
@@ -519,19 +539,16 @@ export default function CreateEventsScreen() {
 
             {coverUri ? (
               <View style={styles.coverPreviewContainer}>
-                <Pressable onPress={pickCoverImage}>
-                  <View style={styles.coverPreviewInner}>
-                    <Text style={styles.coverPreviewText}>Image selected</Text>
-                  </View>
-                </Pressable>
-
+                <Image
+                  source={{ uri: coverUri }}
+                  style={styles.coverPreview}
+                />
                 <Pressable
                   style={styles.coverRemoveButton}
                   onPress={removeCoverImage}
                 >
                   <Ionicons name="close-circle" size={26} color="#fff" />
                 </Pressable>
-
                 <Pressable
                   style={styles.coverChangeButton}
                   onPress={pickCoverImage}
@@ -553,6 +570,11 @@ export default function CreateEventsScreen() {
                   Recommended: 16:9 ratio
                 </Text>
               </Pressable>
+            )}
+            {!!imageError && (
+              <Text style={{ color: RED, fontSize: 13, marginTop: 8 }}>
+                {imageError}
+              </Text>
             )}
           </View>
 
@@ -755,39 +777,45 @@ export default function CreateEventsScreen() {
 
           <View style={styles.divider} />
 
+
+          
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Start Date</Text>
             <View>
-              <View style={styles.infoPill}>
-                <Text style={styles.infoPillText}>{dateLabel}</Text>
-              </View>
-              <View style={styles.dateTimeBox}>
-                <Pressable style={styles.infoPill} onPress={() => openTimePicker(time, setTime)}>
-                  <Text style={styles.infoPillText}>{timeLabel}</Text>
-                </Pressable>
+              <View style= {styles.timeDateDiv}>
+                <View style={styles.infoPill}>
+                  <Text style={styles.infoPillText}>{dateLabel}</Text>
+                </View>
+                <View style={styles.dateTimeBox}>
+                  <Pressable style={styles.infoPill} onPress={() => openTimePicker("start", time)}>
+                    <Text style={styles.infoPillText}>{timeLabel}</Text>
+                  </Pressable>
+                </View>
               </View>
               <View style={styles.calendarCenterWrap}>
                 <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
               </View>
             </View>
           </View>
-
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>End Date</Text>
             <View>
-              <View style={styles.infoPill}>
-                <Text style={styles.infoPillText}>{endDateLabel}</Text>
-              </View>
-              <View style={styles.dateTimeBox}>
-                <Pressable style={styles.infoPill} onPress={() => openTimePicker(endTime, setEndTime)}>
-                  <Text style={styles.infoPillText}>{endTimeLabel}</Text>
-                </Pressable>
+              <View style= {styles.timeDateDiv}>
+                <View style={styles.infoPill}>
+                  <Text style={styles.infoPillText}>{dateLabel}</Text>
+                </View>
+                <View style={styles.dateTimeBox}>
+                  <Pressable style={styles.infoPill} onPress={() => openTimePicker("end", endTime)}>
+                    <Text style={styles.infoPillText}>{timeLabel}</Text>
+                  </Pressable>
+                </View>
               </View>
               <View style={styles.calendarCenterWrap}>
                 <MiniMonthCalendar value={endDate} onChange={setEndDate} size={miniSize} />
               </View>
             </View>
           </View>
+          
 
           <View
             style={[
@@ -885,7 +913,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    fontFamily: Fonts.rounded,
     textAlign: "center",
     marginVertical: 16,
     color: TEXT,
@@ -893,11 +920,21 @@ const styles = StyleSheet.create({
   inputSection: {
     marginBottom: 24,
   },
+  timeDateDiv: {
+    flexDirection: "row",
+    width: "60%",
+    alignSelf: "center"
+  },
   sectionTitle: {
     fontSize: 15,
     color: TEXT,
     fontWeight: "700",
     marginBottom: 12,
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   sectionSubtitle: {
     fontSize: 12,
@@ -1058,6 +1095,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: "#fff",
+    flex: 1
   },
   infoPillText: {
     color: "#333",
@@ -1089,8 +1127,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: TEXT,
     fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: Fonts?.rounded,
+    fontWeight: "bold"
   },
   publishButton: {
     flex: 1,
@@ -1110,8 +1147,7 @@ const styles = StyleSheet.create({
   publishText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: Fonts?.rounded,
+    fontWeight: "bold"
   },
   coverPickerEmpty: {
     borderWidth: 1.5,
