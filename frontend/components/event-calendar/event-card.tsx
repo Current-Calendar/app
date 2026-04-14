@@ -17,6 +17,7 @@ interface Props {
   onLike: (id: string) => void;
   onSave: (id: string) => void;
   onComment: (id: string) => void;
+  onReport: (id: string) => void;
 }
 
 export default function EventCard({
@@ -25,6 +26,7 @@ export default function EventCard({
   onLike,
   onSave,
   onComment,
+  onReport,
 }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -152,6 +154,13 @@ export default function EventCard({
           <Ionicons name="chatbubbles-outline" size={18} />
           {!isSmallScreen && (
             <Text style={eventCalendarEventCardStyles.actionText}>Chat</Text>
+          )}
+        </Pressable>
+
+        <Pressable style={eventCalendarEventCardStyles.actionButton} onPress={() => onReport(event.id)}>
+          <Ionicons name="flag-outline" size={18} />
+          {!isSmallScreen && (
+            <Text style={eventCalendarEventCardStyles.actionText}>Report</Text>
           )}
         </Pressable>
       </View>

@@ -17,6 +17,7 @@ import EventCard from "@/components/event-calendar/event-card";
 import EventFeedModal, { FeedEvent } from "@/components/event-feed-modal";
 import { useCalendars } from "@/hooks/use-calendars";
 import CommentsModal from "@/components/comments-modal";
+import { ReportModal } from "@/components/report-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { API_CONFIG } from "@/constants/api";
 import apiClient from "@/services/api-client";
@@ -88,6 +89,8 @@ export default function EventsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportingEventId, setReportingEventId] = useState<string | null>(null);
 
   const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
 
@@ -189,7 +192,7 @@ export default function EventsScreen() {
 
         const baseEvents: Event[] = evData
           .map((e: any) => {
-            const cal = calendarMap[e.calendars?.[0]];
+            const cal = calendarMap[Number(e.calendars?.[0])];
             return {
               id: String(e.id),
               title: e.title || e.titulo || "",
@@ -208,7 +211,7 @@ export default function EventsScreen() {
               likes_count: e.likes_count ?? 0,
               liked_by_me: e.liked_by_me ?? false,
               saved_by_me: e.saved_by_me ?? false,
-              color: cal.color || "#6C63FF",
+              color: cal?.color || "#6C63FF",
               tags: [],
               attendees: Array.isArray(e.attendees)
                 ? e.attendees.map((a: any) => ({
@@ -324,6 +327,16 @@ export default function EventsScreen() {
     setSelectedEvent(null);
   };
 
+  const handleOpenReport = (eventId: string) => {
+    setReportingEventId(eventId);
+    setReportModalVisible(true);
+  };
+
+  const handleCloseReport = () => {
+    setReportModalVisible(false);
+    setReportingEventId(null);
+  };
+
   if (loading && events.length === 0) {
     return (
       <View style={styles.loadingScreen}>
@@ -403,6 +416,7 @@ export default function EventsScreen() {
                       setCommentsModalVisible(true);
                     }
                   }}
+                  onReport={handleOpenReport}
                 />
               );
             }}
@@ -428,6 +442,13 @@ export default function EventsScreen() {
           visible={commentsModalVisible}
           onClose={() => setCommentsModalVisible(false)}
           event={selectedEvent}
+        />
+        <ReportModal
+          open={reportModalVisible}
+          onClose={handleCloseReport}
+          reportedType="EVENT"
+          reportedId={reportingEventId ? Number(reportingEventId) : 0}
+          reportedLabel={reportingEventId ? events.find(e => e.id === reportingEventId)?.title : undefined}
         />
       </View>
     </View>
