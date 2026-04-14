@@ -336,20 +336,31 @@ def list_events(request):
     else:
         privacy_filter = Q(calendars__privacy='PUBLIC')
 
+    prefetches = [
+        'calendars',
+        Prefetch(
+            'attendances',
+            queryset=EventAttendance.objects.filter(
+                status='ASSISTING'
+            ).select_related('user'),
+        ),
+    ]
+
+    if user.is_authenticated:
+        prefetches.append(
+            Prefetch(
+                'attendances',
+                queryset=EventAttendance.objects.filter(user=user).only('status', 'event_id'),
+                to_attr='my_attendance_records',
+            )
+        )
+
     queryset = (
         Event.objects
         .filter(privacy_filter)
         .distinct().
         select_related('creator')
-        .prefetch_related(
-            'calendars',
-            Prefetch(
-                'attendances',
-                queryset=EventAttendance.objects.filter(
-                    status='ASSISTING'
-                ).select_related('user'),
-            ),
-        )
+        .prefetch_related(*prefetches)
         .order_by('-created_at')
     )
 
@@ -694,6 +705,8 @@ def rsvp_event(request, event_id):
     )
     attendance.status = status_value
     attendance.save()
+
+    cache.delete(f"recommended_events_{request.user.id}")
     
     # Convertir a ISO 8601 con Z (UTC)
     responded_at_iso = attendance.updated_at.isoformat()

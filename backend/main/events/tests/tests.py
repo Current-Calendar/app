@@ -1039,6 +1039,7 @@ EVENT_DATE = date(2026, 4, 15)
 EVENT_TIME = time(18, 0)
 RSVP_ENDPOINT_TEMPLATE = '/api/v1/events/{}/rsvp/'
 EVENT_DETAIL_ENDPOINT_TEMPLATE = '/api/v1/events/{}/edit/'
+EVENT_LIST_ENDPOINT = '/api/v1/events/list'
 NONEXISTENT_EVENT_ID = 999999
 
 
@@ -1215,6 +1216,35 @@ class RSVPEventTests(APITestCase):
         self.assertGreater(len(response.data['attendees']), 0)
         responded_at = response.data['attendees'][0]['respondedAt']
         self._validate_iso_datetime(responded_at)
+
+    def test_event_detail_exposes_my_attendance_status(self):
+        """Test: GET detalle de evento incluye my_attendance_status del usuario autenticado."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='NOT_ASSISTING'
+        )
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(
+            EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('my_attendance_status', response.data)
+        self.assertEqual(response.data['my_attendance_status'], 'NOT_ASSISTING')
+
+    def test_event_list_exposes_my_attendance_status(self):
+        """Test: listado de eventos incluye my_attendance_status por evento para usuario autenticado."""
+        EventAttendance.objects.create(
+            user=self.user1,
+            event=self.event,
+            status='ASSISTING'
+        )
+        self.client.force_authenticate(self.user1)
+        response = self.client.get(EVENT_LIST_ENDPOINT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        first_event = response.data['results'][0]
+        self.assertIn('my_attendance_status', first_event)
+        self.assertEqual(first_event['my_attendance_status'], 'ASSISTING')
 
 class CreateEventDuplicateTests(APITestCase):
 

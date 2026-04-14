@@ -256,7 +256,16 @@ export default function CalendarScreen() {
                     recurrence: e.recurrence,
                     type: 'other',
                     color: calendar?.color || '#6C63FF',
-                    photo: e.photo || ""
+                    photo: e.photo || "",
+                    attendees: Array.isArray(e.attendees)
+                        ? e.attendees.map((a: any) => ({
+                            id: String(a.id ?? ''),
+                            name: a.name || a.username || '',
+                            respondedAt: a.respondedAt || a.responded_at || '',
+                            avatar: a.avatar || a.photo || undefined,
+                        }))
+                        : [],
+                    my_attendance_status: e.my_attendance_status ?? null,
                 };
             });
 
