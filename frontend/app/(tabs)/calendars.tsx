@@ -827,7 +827,7 @@ export default function CalendarScreen() {
                             selectedCategoryIds.length === 0 && styles.categoryFilterChipTextActive,
                             ]}
                         >
-                            All
+                            All Categories
                         </Text>
                         </TouchableOpacity>
 
