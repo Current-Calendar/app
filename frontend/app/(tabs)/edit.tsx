@@ -74,6 +74,7 @@ export default function EditScreen() {
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [initialCategoryIds, setInitialCategoryIds] = useState<number[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const calendarId = params.id;
 
@@ -167,7 +168,14 @@ export default function EditScreen() {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      setNewCoverImage(result.assets[0]);
+      const asset = result.assets[0];
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setImageError("The selected image is too large. Please choose one under 3MB.");
+        return;
+      }
+      setImageError(null);
+      setNewCoverImage(asset);
       setCoverRemoved(false);
     }
   };
@@ -313,7 +321,7 @@ export default function EditScreen() {
             type="title"
             lightColor="#10464d"
             darkColor="#10464d"
-            style={{ fontFamily: Fonts.rounded, textAlign: "center", marginVertical: 16 }}
+            style={{ textAlign: "center", marginVertical: 16 }}
           >
             Edit Calendar
           </ThemedText>
@@ -340,6 +348,11 @@ export default function EditScreen() {
                 <Text style={styles.coverPickerLabel}>Add a cover image</Text>
                 <Text style={styles.coverPickerSub}>Recommended: 16:9 ratio</Text>
               </Pressable>
+            )}
+            {!!imageError && (
+              <Text style={{ color: "#d9534f", fontSize: 13, marginTop: 8 }}>
+                {imageError}
+              </Text>
             )}
           </View>
 
@@ -778,8 +791,7 @@ const styles = StyleSheet.create({
   saveText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
-    fontFamily: Fonts?.rounded,
+    fontWeight: "bold"
   },
   errorText: {
     color: "#d9534f",

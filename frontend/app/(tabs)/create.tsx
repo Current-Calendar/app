@@ -70,6 +70,7 @@ export default function CreateScreen() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -155,7 +156,14 @@ export default function CreateScreen() {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      setCoverImage(result.assets[0]);
+      const asset = result.assets[0];
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setImageError("The selected image is too large. Please choose one under 3MB.");
+        return;
+      }
+      setImageError(null);
+      setCoverImage(asset);
     }
   };
 
@@ -299,7 +307,6 @@ export default function CreateScreen() {
             lightColor="#10464d"
             darkColor="#10464d"
             style={{
-              fontFamily: Fonts.rounded,
               textAlign: "center",
               marginVertical: 16,
             }}
@@ -343,6 +350,11 @@ export default function CreateScreen() {
                   Recommended: 16:9 ratio
                 </Text>
               </Pressable>
+            )}
+            {!!imageError && (
+              <Text style={{ color: "#d9534f", fontSize: 13, marginTop: 8 }}>
+                {imageError}
+              </Text>
             )}
           </View>
 
@@ -745,7 +757,6 @@ const styles = StyleSheet.create({
     color: "#10464d",
     fontSize: 18,
     fontWeight: "bold",
-    fontFamily: Fonts?.rounded,
   },
   publishButton: {
     flex: 1,
@@ -766,7 +777,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
-    fontFamily: Fonts?.rounded,
   },
   coverPickerEmpty: {
     borderWidth: 1.5,

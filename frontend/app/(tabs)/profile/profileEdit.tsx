@@ -37,6 +37,7 @@ const EditProfileScreen = () => {
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const [showRecoverConfirm, setShowRecoverConfirm] = useState(false);
   const [recoverError, setRecoverError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
  
   const handleChangePhoto = async () => {
     try {
@@ -53,6 +54,12 @@ const EditProfileScreen = () => {
       });
       if (!pickerResult.canceled) {
         const asset = pickerResult.assets[0];
+        const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setImageError("The selected image is too large. Please choose one under 3MB.");
+          return;
+        }
+        setImageError(null);
         setNewPhotoAsset(asset);
         setPhoto(asset.uri);
       }
@@ -166,6 +173,11 @@ const EditProfileScreen = () => {
           <TouchableOpacity onPress={handleChangePhoto}>
             <Text style={profileStyles.editChangePhotoText}>Change profile photo</Text>
           </TouchableOpacity>
+          {!!imageError && (
+            <Text style={{ color: "#d9534f", fontSize: 13, marginTop: 8 }}>
+              {imageError}
+            </Text>
+          )}
         </View>
  
         <View style={profileStyles.editSectionPill}>

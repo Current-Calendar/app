@@ -123,6 +123,7 @@ function MiniMonthCalendar({
     setViewYear(selected.getFullYear());
     setViewMonth(selected.getMonth());
   }, [selected.getTime()]);
+  
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -250,6 +251,7 @@ export default function EditEventsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const eventId = params.id;
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const { width } = useWindowDimensions();
   const formWidth =
@@ -662,8 +664,15 @@ export default function EditEventsScreen() {
     });
 
     if (!result.canceled) {
-      setCoverUri(result.assets[0].uri);
-      setCoverAsset(result.assets[0]);
+      const asset = result.assets[0];
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setImageError("The selected image is too large. Please choose one under 3MB.");
+          return;
+      }
+      setImageError(null);
+      setCoverUri(asset.uri);
+      setCoverAsset(asset);
     }
   };
 
@@ -835,6 +844,11 @@ export default function EditEventsScreen() {
                     <Ionicons name="camera" size={28} color={TEXT} />
                   )}
                 </Pressable>
+                {!!imageError && (
+                  <Text style={{ color: RED, fontSize: 13, marginTop: 8 }}>
+                    {imageError}
+                  </Text>
+                )}
               </View>
             </View>
 
