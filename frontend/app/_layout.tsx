@@ -11,6 +11,8 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import AuthProvider from "../context/auth-context";
 import { TutorialProvider } from "@/context/tutorial-context";
+import { usePathname, useSegments } from "expo-router";
+import { getRouteProtection } from "../routes-config";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -43,6 +45,8 @@ function RootLayoutContent() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const pathname = usePathname();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
   const [cookiePreferenceChecked, setCookiePreferenceChecked] = useState(Platform.OS !== "web");
 
@@ -90,6 +94,24 @@ function RootLayoutContent() {
     }
   }, [isAuthenticated, isLoading]);
 
+  const protection = getRouteProtection(pathname);
+  const isRedirecting = !isLoading && protection && (
+    (protection.requiresAuth && !isAuthenticated) ||
+    (protection.requiresGuest && isAuthenticated)
+  );
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (protection) {
+      if (protection.requiresAuth && !isAuthenticated) {
+        router.replace(protection.redirectOnFail as any);
+      } else if (protection.requiresGuest && isAuthenticated) {
+        router.replace(protection.redirectOnFail as any);
+      }
+    }
+  }, [isAuthenticated, isLoading, pathname, router]);
+
   const saveCookiePreference = (value: CookiePreference) => {
     setCookiePreference(value);
     if (Platform.OS !== "web") return;
@@ -116,11 +138,13 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="new-password" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
-      </Stack>
+      <View style={{ flex: 1, opacity: isRedirecting ? 0 : 1 }}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="new-password" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: "modal", title: "Modal" }} />
+        </Stack>
+      </View>
       {Platform.OS === "web" && cookiePreferenceChecked && cookiePreference === null && (
         <View style={styles.cookieBanner}>
           <View style={styles.cookieTextWrap}>

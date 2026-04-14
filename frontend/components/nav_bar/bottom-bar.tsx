@@ -18,7 +18,13 @@ export default function BottomBar({ NavButton }: Props) {
   const { isAuthenticated } = useAuth();
   const { createButtonLayout } = useTutorial();
 
-  const handleAddPress = () => setMenuVisible(true);
+  const handleAddPress = () => {
+    if (isAuthenticated) {
+      setMenuVisible(true);
+    } else {
+      router.push("/login");
+    }
+  };
   const closeMenu = () => setMenuVisible(false);
 
   const navigateTo = (path: string) => {

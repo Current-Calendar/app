@@ -164,11 +164,6 @@ export default function SignUpScreen() {
 
   const { setShowWelcome } = useTutorial();
 
-  useEffect(() => {
-    if (!isLoading && (isAuthenticated || Boolean(user))) {
-      router.replace("/(tabs)/switch-events" as any);
-    }
-  }, [isLoading, isAuthenticated, user, router]);
 
   const getRegisterErrorMessage = (error: unknown) => {
     if (error instanceof ApiError) {
@@ -191,10 +186,6 @@ export default function SignUpScreen() {
   };
 
   const onSignup = async () => {
-    if (isAuthenticated || user) {
-      router.replace("/(tabs)/switch-events" as any);
-      return;
-    }
 
     setErrorMsg(null);
     setSuccessMsg(null);

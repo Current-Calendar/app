@@ -20,7 +20,13 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const [importVisible, setImportVisible] = useState(false);
   const { unreadCount } = useNotificationsContext();
 
-  const handleAddPress = () => setMenuVisible(true);
+  const handleAddPress = () => {
+    if (isAuthenticated) {
+      setMenuVisible(true);
+    } else {
+      router.push("/login");
+    }
+  };
   const closeMenu = () => setMenuVisible(false);
 
   const navigateTo = (path: string) => {
