@@ -1057,12 +1057,18 @@ class RSVPEventTests(APITestCase):
             email=TEST_EMAIL_2,
             password=TEST_PASSWORD
         )
+        self.calendar = Calendar.objects.create(
+            name="RSVP Test Calendar",
+            privacy="PUBLIC",
+            creator=self.user1,
+        )
         self.event = Event.objects.create(
             title=EVENT_TITLE,
             date=EVENT_DATE,
             time=EVENT_TIME,
             creator=self.user1
         )
+        self.event.calendars.add(self.calendar)
 
     @staticmethod
     def _validate_iso_datetime(datetime_str):
@@ -1186,6 +1192,7 @@ class RSVPEventTests(APITestCase):
             event=self.event,
             status='NOT_ASSISTING'
         )
+        self.client.force_authenticate(self.user1)
         response = self.client.get(
             EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
         )
@@ -1200,6 +1207,7 @@ class RSVPEventTests(APITestCase):
             event=self.event,
             status='ASSISTING'
         )
+        self.client.force_authenticate(self.user1)
         response = self.client.get(
             EVENT_DETAIL_ENDPOINT_TEMPLATE.format(self.event.pk)
         )

@@ -1487,6 +1487,7 @@ class ExportToIcsTests(APITestCase):
             creator=self.user,
         )
         self.event.calendars.add(self.calendar)
+        self.client.force_authenticate(self.user)
 
     def test_export_returns_ics_content(self):
         response = self.client.get(f"/api/v1/calendars/{self.calendar.id}/export/")
