@@ -16,7 +16,7 @@ interface SidebarProps {
 export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [importVisible, setImportVisible] = useState(false);
   const { unreadCount } = useNotificationsContext();
 
@@ -108,6 +108,9 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
           )}
         </View>
         <SidebarItem icon="person" label={profileHref} href={profileHref} />
+        {user?.plan === 'BUSINESS' && (
+          <SidebarItem icon="bar-chart" label="Analytics" href="/(tabs)/analytics" />
+        )}
 
         <CreateMenuModal
           visible={menuVisible}
