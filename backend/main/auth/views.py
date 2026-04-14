@@ -15,6 +15,8 @@ from django.contrib.auth.password_validation import validate_password, Validatio
 from main.models import User, LegalAcceptance
 from main.calendars.views import _do_google_calendar_import
 from utils.login_log import get_client_ip
+from urllib.parse import quote
+from django.utils import timezone
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -181,21 +183,21 @@ def google_oauth2callback(request):
 
 def send_password_reset_email(user, reset_url):
     """Send password reset email to user"""
-    
+
     hourly_cache_key = "password_reset_hourly_count"
     hourly_attempts = cache.get(hourly_cache_key, 0)
     if hourly_attempts >= 10:
         raise Exception("HOURLY_LIMIT_REACHED")
-    
+
     daily_cache_key = "password_reset_daily_count"
     daily_attempts = cache.get(daily_cache_key, 0)
     if daily_attempts >= 100:
         raise Exception("DAILY_LIMIT_REACHED")
-    
+
     resend.api_key = settings.RESEND_API_KEY
-    
+
     params = {
-        "from": settings.RESEND_EMAIL_FROM, 
+        "from": settings.RESEND_EMAIL_FROM,
         "to": [user.email],
         "subject": "Password Reset Request",
         "html": f"""
@@ -206,17 +208,15 @@ def send_password_reset_email(user, reset_url):
             <p>If you didn't request this, ignore this email.</p>
         """
     }
-    
+
     try:
         resend.Emails.send(params)
-        cache.set(hourly_cache_key, hourly_attempts + 1, 3600)  # 1 hour = 3600 seconds
-        cache.set(daily_cache_key, daily_attempts + 1, 86400)   # 1 day = 86400 seconds
+        cache.set(hourly_cache_key, hourly_attempts + 1, 3600)
+        cache.set(daily_cache_key, daily_attempts + 1, 86400)
     except Exception as e:
-        # Check if it's a Resend API limit error
         error_message = str(e).lower()
         if "rate limit" in error_message or "quota" in error_message or "limit exceeded" in error_message:
             raise Exception("RESEND_LIMIT_REACHED")
-        print(f"Error sending email: {e}")
         raise
 
 
@@ -224,24 +224,25 @@ def send_password_reset_email(user, reset_url):
 @permission_classes([AllowAny])
 def recover_password(request):
     email = request.data.get('email')
-    source = request.data.get('source') 
-    
+    source = request.data.get('source')
+
     if not email:
         return Response(
             {"error": "Email address is required"},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
         user = User.objects.get(email=email)
+        now = timezone.now()
         payload = {
             'email': email,
-            'exp': datetime.now() + timedelta(hours=1),
-            'iat': datetime.now()
+            'exp': int((now + timedelta(hours=1)).timestamp()),
+            'iat': int(now.timestamp()),
         }
         token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
-        reset_url = f"{source}/new-password?token={token}"
-        
+        reset_url = f"{source}/new-password?token={quote(token)}"
+
         try:
             send_password_reset_email(user, reset_url)
         except Exception as e:
@@ -251,12 +252,11 @@ def recover_password(request):
                     {"error": "We're experiencing high volume of password reset requests. Please contact us directly at support@currentcalendar.es for assistance."},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
-            # For other errors, still raise
             raise
-        
+
     except User.DoesNotExist:
-        pass # don't reveal user doesn't exist
-    
+        pass
+
     return Response(
         {"message": "If an account exists with this email, a password reset link has been sent."},
         status=status.HTTP_200_OK
@@ -268,23 +268,23 @@ def recover_password(request):
 def set_new_password(request):
     token = request.data.get('token')
     new_password = request.data.get('new_password')
-    
+
     if not token or not new_password:
         return Response(
             {"error": "token and new_password are required"},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         email = payload.get('email')
-        
+
         if not email:
             return Response(
                 {"error": "Invalid token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         user = User.objects.get(email=email)
         try:
             validate_password(new_password, user=user)
@@ -293,14 +293,15 @@ def set_new_password(request):
                 {"error": "New password does not meet complexity requirements."},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
         user.set_password(new_password)
         user.save()
-        
+
         return Response(
             {"message": "Password has been reset successfully"},
             status=status.HTTP_200_OK
         )
-        
+
     except jwt.ExpiredSignatureError:
         return Response(
             {"error": "Reset token has expired"},
@@ -322,6 +323,7 @@ def set_new_password(request):
 @permission_classes([AllowAny])
 def validate_reset_token(request):
     token = request.query_params.get('token')
+
     if not token:
         return Response(
             {"error": "token is required"},
@@ -331,20 +333,20 @@ def validate_reset_token(request):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
         email = payload.get('email')
-        
+
         if not email:
             return Response(
                 {"valid": False, "error": "Invalid token"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         User.objects.get(email=email)
-        
+
         return Response(
             {"valid": True, "message": "Token is valid"},
             status=status.HTTP_200_OK
         )
-            
+
     except jwt.ExpiredSignatureError:
         return Response(
             {"valid": False, "error": "Token has expired"},
