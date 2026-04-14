@@ -122,7 +122,7 @@ function MiniMonthCalendar({
   useEffect(() => {
     setViewYear(selected.getFullYear());
     setViewMonth(selected.getMonth());
-  }, [selected]);
+  }, [selected.getTime()]);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -1535,6 +1535,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     borderRadius: 18,
     padding: 16,
+    backgroundColor: WHITE,
     borderWidth: 2,
     borderColor: "rgba(16,70,77,0.20)",
     shadowColor: TEAL_DARK,
