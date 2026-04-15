@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
 import { Ionicons } from '@expo/vector-icons';
+import profileStyles from '../../styles/profile-styles';
 
 const mascotFree = require('../../assets/images/mascota-sorpresa.png');
 const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.png');
@@ -28,10 +29,6 @@ const SubscriptionScreen = () => {
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
 
-  const goToSettings = () => {
-    router.push('/settings');
-  };
-
   const goToPayment = (plan: 'FREE' | 'STANDARD' | 'BUSINESS') => {
     router.push({ pathname: '/payment', params: { plan } });
   };
@@ -43,15 +40,18 @@ const SubscriptionScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
-        <View style={styles.headerCoral} />
+      
+      <View style={profileStyles.editHeaderGreen}>
+        <View style={profileStyles.editHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={profileStyles.editHeaderButton}>Back</Text>
+          </TouchableOpacity>
+          <View style={{ width: 60 }} />
+        </View>
+      </View>
+      <View style={profileStyles.editHeaderCoral} />
 
         <View style={styles.content}>
-          <View style={styles.topBar}>
-            <TouchableOpacity style={styles.backButton} onPress={goToSettings} activeOpacity={0.8}>
-              <Ionicons name="chevron-back" size={20} color="#10464d" />
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-          </View>
           <Text style={styles.title}>Subscription</Text>
           <Text style={styles.subtitle}>
             Choose the plan that best fits your needs
@@ -65,7 +65,6 @@ const SubscriptionScreen = () => {
               description="All core functions, but limited"
               introText="Some limitations:"
               bullets={[
-                'Unlimited interactions',
                 '10 favorites calendars max.',
                 '2 public calendars',
                 '2 private calendars',
@@ -92,7 +91,6 @@ const SubscriptionScreen = () => {
                 'Unlimited calendars',
                 'Unlimited favorites',
                 'Verified Badge',
-                'Calendar Personalisation',
                 'Full Media additions',
                 'Full Map Access',
               ]}
@@ -181,15 +179,16 @@ const PlanCard = ({
   isActive,
   onSelect,
 }: PlanCardProps) => {
-  const titleSize = isMobile ? 18 : isVerySmallScreen ? 16 : isSmallScreen ? 18 : 22;
+  const isFree = planKey === 'FREE';
+  const baseTitleSize = isMobile ? 18 : isVerySmallScreen ? 16 : isSmallScreen ? 18 : 22;
+  const titleSize = isFree ? baseTitleSize * 2 : baseTitleSize;
   const priceSize = isMobile ? 32 : isVerySmallScreen ? 24 : isSmallScreen ? 28 : 36;
   const textSize = isMobile ? 16 : isVerySmallScreen ? 11 : isSmallScreen ? 12 : 14;
   const descSize = isMobile ? 17 : isVerySmallScreen ? 12 : isSmallScreen ? 13 : 15;
   const annualTitleSize = isMobile ? 17 : isVerySmallScreen ? 13 : isSmallScreen ? 15 : 18;
   const annualPriceSize = isMobile ? 28 : isVerySmallScreen ? 18 : isSmallScreen ? 20 : 24;
-  const mascotSize = isMobile ? 90 : isVerySmallScreen ? 70 : isSmallScreen ? 80 : 100;
-
-  const isFree = planKey === 'FREE';
+  const baseMascotSize = isMobile ? 90 : isVerySmallScreen ? 70 : isSmallScreen ? 80 : 100;
+  const mascotSize = isFree ? baseMascotSize * 2.5 : baseMascotSize;
   const buttonLabel = isActive ? 'Subscribed' : isFree ? 'Start Free' : 'Subscribe';
   const buttonStyle = isActive
     ? styles.buttonSubscribed
@@ -209,7 +208,7 @@ const PlanCard = ({
       ]}
     >
       <View style={styles.planColumn}>
-        <View style={[styles.planCard, isMobile && styles.planCardMobile]}>
+        <View style={[styles.planCard, isFree && styles.planCardFree, isMobile && styles.planCardMobile, isMobile && isFree && styles.planCardFreeMobile]}>
           {/* Mascot */}
           <View style={styles.mascotContainer}>
             <Image
@@ -374,6 +373,14 @@ const styles = StyleSheet.create({
   },
   planCardMobile: {
     minHeight: undefined,
+  },
+  planCardFree: {
+    minHeight: 700,
+    justifyContent: 'center',
+  },
+  planCardFreeMobile: {
+    minHeight: undefined,
+    justifyContent: 'center',
   },
   mascotContainer: {
     alignItems: 'center',

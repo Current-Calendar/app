@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import apiClient from '@/services/api-client';
 import { API_CONFIG } from '@/constants/api';
 import { useAuth } from '@/hooks/use-auth';
+import profileStyles from '../../styles/profile-styles';
 
 const mascotFree = require('../../assets/images/mascota-sorpresa.png');
 const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.png');
@@ -124,12 +125,16 @@ export default function PaymentScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scroll, isMobile && styles.scrollMobile]}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color="#10464d" />
+        <View style={profileStyles.editHeaderGreen}>
+        <View style={profileStyles.editHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={profileStyles.editHeaderButton}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Checkout</Text>
+          <Text style={profileStyles.editHeaderTitle}>Payment</Text>
+          <View style={{ width: 60 }} />
         </View>
+      </View>
+      <View style={profileStyles.editHeaderCoral} />
 
         <View style={[styles.inner, !isMobile && styles.innerDesktop]}>
           {/* Plan summary card */}
@@ -278,7 +283,7 @@ export default function PaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e7e3d3',
+    backgroundColor: '#FFFDED',
   },
   scroll: {
     paddingBottom: 60,
@@ -313,7 +318,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   summaryCard: {
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderRadius: 24,
     paddingVertical: 24,
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   formCard: {
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#10464d',
     borderRadius: 24,

@@ -20,7 +20,7 @@ const TEAL_DARK = "#0F4E4F";
 const TEXT = "#10464D";
 
 
-const Otter = require("../assets/images/Mascota.png");
+const Otter = require("../../assets/images/Mascota.png");
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
