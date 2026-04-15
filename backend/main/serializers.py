@@ -113,8 +113,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         try:
             validate_password(attrs['password'], user=temp_user)
         except ValidationError as e:
+            improved_messages = []
+            for msg in e.messages:
+                if "too short" in msg.lower():
+                    improved_messages.append("Password must be at least 8 characters long. For security, use a mix of uppercase and lowercase letters, numbers, and symbols.")
+                elif "too similar" in msg.lower():
+                    improved_messages.append("Password is too similar to your username or email. Choose a password that doesn't resemble your personal information.")
+                elif "too common" in msg.lower():
+                    improved_messages.append("This password is too common and easily guessable. Create a strong password with a combination of letters, numbers, and symbols.")
+                elif "entirely numeric" in msg.lower():
+                    improved_messages.append("Password cannot be entirely numeric. Include letters and special characters for better security.")
+                else:
+                    improved_messages.append(msg)
             raise serializers.ValidationError({
-                "password": list(e.messages)
+                "password": improved_messages
             })
 
         return attrs
