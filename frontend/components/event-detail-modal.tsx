@@ -16,6 +16,7 @@ import { useEventActions } from '@/hooks/use-event-actions';
 import CommentsModal from "./comments-modal";
 import { DefaultCalendarCover } from '@/components/default-calendar-cover';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import InviteUserModal from "./InviteUserModal";
 import apiClient from '@/services/api-client';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -57,6 +58,7 @@ export function EventDetailModal({
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deletingEvent, setDeletingEvent] = useState(false);
+  const [inviteVisible, setInviteVisible] = useState(false);
 
   const [eventTags, setEventTags] = useState<EventTagItem[]>([]);
   const [tagsLoading, setTagsLoading] = useState(false);
@@ -66,6 +68,7 @@ export function EventDetailModal({
     setCommentsVisible(false);
     setDeleteConfirmVisible(false);
     setDeletingEvent(false);
+    setInviteVisible(false);
   }, [event]);
 
   const normalizeAttendanceStatus = (value?: string | null): AttendanceStatus => {
@@ -306,6 +309,14 @@ export function EventDetailModal({
               {canManageActions && (
                 <>
                   <Pressable
+                    style={[styles.inviteBtn, isNarrow && styles.actionFullWidth]}
+                    onPress={() => setInviteVisible(true)}
+                  >
+                    <Ionicons name="person-add-outline" size={16} color={TEXT} />
+                    <Text style={styles.inviteText}>Invite</Text>
+                  </Pressable>
+
+                  <Pressable
                     style={[styles.editBtn, isNarrow && styles.actionFullWidth]}
                     onPress={() => {
                       onClose();
@@ -365,6 +376,13 @@ export function EventDetailModal({
         onConfirm={() => {
           void handleDeleteEvent();
         }}
+      />
+
+      <InviteUserModal
+        visible={inviteVisible}
+        onClose={() => setInviteVisible(false)}
+        itemId={event.id}
+        type="event"
       />
     </>
   );
@@ -560,6 +578,24 @@ const styles = StyleSheet.create({
   },
 
   commentText: {
+    color: TEXT,
+    fontWeight: "900",
+  },
+
+  inviteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "rgba(16,70,77,0.22)",
+  },
+
+  inviteText: {
     color: TEXT,
     fontWeight: "900",
   },
