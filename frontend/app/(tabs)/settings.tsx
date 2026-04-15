@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,7 @@ const SettingsScreen = () => {
   const { user: currentUser } = useAuth();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+  const [isPasswordResetModalVisible, setIsPasswordResetModalVisible] = useState(false);
 
   const goToProfile = () => {
     router.push('/profile');
@@ -106,6 +108,7 @@ const SettingsScreen = () => {
   const isLimitedMode = Platform.OS === 'web' && cookiePreference === 'rejected';
 
   const sendPasswordReset = async () => {
+    setIsPasswordResetModalVisible(true);
     const email = currentUser?.email?.trim();
 
     if (!email) {
@@ -270,6 +273,37 @@ const SettingsScreen = () => {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isPasswordResetModalVisible}
+        onRequestClose={() => setIsPasswordResetModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="mail-unread-outline" size={48} color="#10464d" />
+            </View>
+            <Text style={styles.modalTitle}>Check your email</Text>
+            <Text style={styles.modalBody}>
+              An email with a link to change your password has been sent to your inbox.
+            </Text>
+            <View style={styles.modalWarningBox}>
+              <Ionicons name="alert-circle-outline" size={20} color="#8a2f28" />
+              <Text style={styles.modalWarningText}>
+                Before using the link, you must sign out of your account for security reasons.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => setIsPasswordResetModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -444,5 +478,77 @@ const styles = StyleSheet.create({
     color: '#10464d',
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  modalIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ebf5f3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#10464d',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalBody: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#444',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalWarningBox: {
+    flexDirection: 'row',
+    backgroundColor: '#fff0da',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 12,
+  },
+  modalWarningText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#825200',
+    fontWeight: '600',
+  },
+  modalButton: {
+    backgroundColor: '#10464d',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
