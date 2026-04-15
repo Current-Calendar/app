@@ -237,6 +237,22 @@ def edit_event(request: Request, event_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    new_date = data.get("date", event.date)
+    new_time = data.get("time", event.time)
+    if new_date and new_time:
+        try:
+            event_datetime = datetime.fromisoformat(f"{new_date}T{new_time}")
+            if event_datetime < datetime.now():
+                return Response(
+                    {"errors": ["No puedes editar un evento hacia una fecha y hora en el pasado."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except ValueError:
+            return Response(
+                {"errors": ["El formato de date o time es incorrecto."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     # Update scalar fields if present
     editable_fields = [
         "title", "description", "place_name",
