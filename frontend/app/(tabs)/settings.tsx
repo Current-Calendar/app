@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
 import { requestPasswordReset } from '@/services/password-reset';
+import profileStyles from '../../styles/profile-styles';
 
 const COOKIE_PREFERENCE_KEY = 'current_cookie_preference';
 const COOKIE_PREFERENCE_COOKIE = 'current_cookie_preference';
@@ -45,6 +46,10 @@ const SettingsScreen = () => {
   const { user: currentUser } = useAuth();
   const [cookiePreference, setCookiePreference] = useState<CookiePreference | null>(null);
   const [isSendingPasswordReset, setIsSendingPasswordReset] = useState(false);
+
+  const goToProfile = () => {
+    router.push('/profile');
+  };
 
   const readCookiePreference = React.useCallback(() => {
     if (Platform.OS !== 'web') return;
@@ -125,9 +130,17 @@ const SettingsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={profileStyles.editHeaderGreen}>
+            <View style={profileStyles.editHeaderRow}>
+              <TouchableOpacity onPress={goToProfile}>
+                <Text style={profileStyles.editHeaderButton}>Back</Text>
+              </TouchableOpacity>
+              <View style={{ width: 60 }} />
+            </View>
+          </View>
+          <View style={profileStyles.editHeaderCoral} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.heroWrap}>
-          <View style={styles.heroBackdrop} />
           <View style={styles.heroCard}>
             <Text style={styles.heroEyebrow}>Account center</Text>
             <Text style={styles.title}>Settings</Text>
@@ -276,7 +289,6 @@ const styles = StyleSheet.create({
   },
   heroWrap: {
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 8,
   },
   heroBackdrop: {

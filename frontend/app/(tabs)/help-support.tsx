@@ -1,11 +1,16 @@
 import React from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import profileStyles from '../../styles/profile-styles';
 
 const SUPPORT_EMAIL = "support@currentcalendar.es";
 
+
 export default function HelpSupportScreen() {
+  const router = useRouter();
+  
   const sendSupportEmail = async () => {
     const subject = encodeURIComponent("Current support request");
     const body = encodeURIComponent("Hello Current support team,\n\nI need help with...");
@@ -15,6 +20,15 @@ export default function HelpSupportScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={profileStyles.editHeaderGreen}>
+        <View style={profileStyles.editHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={profileStyles.editHeaderButton}>Back</Text>
+          </TouchableOpacity>
+          <View style={{ width: 60 }} />
+        </View>
+      </View>
+      <View style={profileStyles.editHeaderCoral} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Help & support</Text>
         <Text style={styles.subtitle}>

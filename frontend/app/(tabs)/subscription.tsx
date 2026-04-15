@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
 import { Ionicons } from '@expo/vector-icons';
+import profileStyles from '../../styles/profile-styles';
 
 const mascotFree = require('../../assets/images/mascota-sorpresa.png');
 const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.png');
@@ -28,10 +29,6 @@ const SubscriptionScreen = () => {
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
 
-  const goToSettings = () => {
-    router.push('/settings');
-  };
-
   const goToPayment = (plan: 'FREE' | 'STANDARD' | 'BUSINESS') => {
     router.push({ pathname: '/payment', params: { plan } });
   };
@@ -43,15 +40,18 @@ const SubscriptionScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
-        <View style={styles.headerCoral} />
+      
+      <View style={profileStyles.editHeaderGreen}>
+        <View style={profileStyles.editHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={profileStyles.editHeaderButton}>Back</Text>
+          </TouchableOpacity>
+          <View style={{ width: 60 }} />
+        </View>
+      </View>
+      <View style={profileStyles.editHeaderCoral} />
 
         <View style={styles.content}>
-          <View style={styles.topBar}>
-            <TouchableOpacity style={styles.backButton} onPress={goToSettings} activeOpacity={0.8}>
-              <Ionicons name="chevron-back" size={20} color="#10464d" />
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-          </View>
           <Text style={styles.title}>Subscription</Text>
           <Text style={styles.subtitle}>
             Choose the plan that best fits your needs
