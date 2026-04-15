@@ -402,7 +402,7 @@ export default function EditEventsScreen() {
 
       return mapped;
     } catch (e: any) {
-      setCalError(e?.message ?? "Error cargando calendarios");
+      setCalError(e?.message ?? "Error loading calendars");
       setCalendars([]);
       return [];
     } finally {
@@ -412,7 +412,7 @@ export default function EditEventsScreen() {
 
   const loadEventData = async (availableCalendars: CalendarItem[]) => {
     if (!eventId) {
-      setFormError("No se encontró el ID del evento.");
+      setFormError("Event ID not found.");
       setLoading(false);
       return;
     }
@@ -477,8 +477,7 @@ export default function EditEventsScreen() {
 
       await loadEventAssignedTags(eventId);
     } catch (e: any) {
-      setFormError(e?.message ?? "No se pudo cargar el evento");
-      Alert.alert("Error", e?.message ?? "No se pudo cargar el evento");
+      setFormError(e?.message ?? "Could not load the event");
     } finally {
       setLoading(false);
     }
@@ -489,7 +488,7 @@ export default function EditEventsScreen() {
       setLoading(true);
 
       if (!eventId) {
-        setFormError("No se encontró el ID del evento.");
+        setFormError("Event ID not found.");
         setLoading(false);
         return;
       }
@@ -700,7 +699,7 @@ export default function EditEventsScreen() {
     const selectedDateKey = toISODate(date);
 
     if (selectedDateKey < todayKey) {
-      setFormError("No puedes editar un evento para que ocurra en el pasado");
+      setFormError("You cannot edit an event to occur in the past.");
       return;
     }
 
@@ -712,23 +711,23 @@ export default function EditEventsScreen() {
       const selectedTimeStr = toHM(time);
 
       if (selectedTimeStr < currentTimeStr) {
-        setFormError("No puedes editar un evento para que ocurra en el pasado");
+        setFormError("You cannot edit an event to occur in the past.");
         return;
       }
     }
 
     if (!title.trim()) {
-      setFormError("El título es obligatorio.");
+      setFormError("Title is required.");
       return;
     }
 
     if (!selectedCalendar?.id) {
-      setFormError("Selecciona un calendario.");
+      setFormError("Please select a calendar.");
       return;
     }
 
     if (!eventId) {
-      setFormError("No se encontró el evento.");
+      setFormError("Event not found.");
       return;
     }
 
@@ -791,8 +790,9 @@ export default function EditEventsScreen() {
 
       setSuccessModalOpen(true);
     } catch (error: any) {
-      setFormError(error?.message ?? "No se pudo actualizar el evento");
-      Alert.alert("Error", error?.message ?? "No se pudo actualizar el evento");
+      setFormError(
+        error?.message ?? "You cannot edit an event to occur in the past.",
+      );
     } finally {
       setSaving(false);
     }
