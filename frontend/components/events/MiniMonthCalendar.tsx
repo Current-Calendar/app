@@ -107,7 +107,7 @@ export default function MiniMonthCalendar({
     size - innerPad * 2 - headerH - weekdaysH - gridPadTop + (rows === 6 ? 8 : 0);
 
   const cellH = Math.floor((gridAvailableH - cellGapY * rows) / rows);
-  const cellW = Math.floor((size - innerPad * 2) / 7);
+  const cellW = Math.floor((size - innerPad * 2) / 8);
 
   return (
     <View style={[styles.card, { width: size }]}>
