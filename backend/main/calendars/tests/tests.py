@@ -1482,7 +1482,7 @@ class ExportToIcsTests(APITestCase):
         from main.models import Event as EventModel
         self.event = EventModel.objects.create(
             title="Export Event",
-            date="2026-10-01",
+            date="2030-03-01",
             time="10:00:00",
             creator=self.user,
         )

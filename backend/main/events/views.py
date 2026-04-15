@@ -63,6 +63,8 @@ def create_event(request):
     
     if end_date:
         try:
+            if isinstance(end_date, str) and end_date.endswith("Z"):
+                end_date = end_date.replace("Z", "+00:00")
             end_date = datetime.fromisoformat(end_date)
         except ValueError:
             return Response(
@@ -115,6 +117,19 @@ def create_event(request):
                 {"errors": ["Latitud o longitud inválidas."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+    try:
+        event_datetime = datetime.fromisoformat(f"{date}T{time}")
+        if event_datetime < datetime.now():
+            return Response(
+                {"errors": ["No puedes crear un evento para una fecha y hora en el pasado."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    except ValueError:
+        return Response(
+            {"errors": ["El formato de date o time es incorrecto."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     
     event = Event(
         title=title,
@@ -196,6 +211,12 @@ def edit_event(request: Request, event_id):
                 status=status.HTTP_403_FORBIDDEN
             )
     
+    if event.date < datetime.now().date():
+        return Response(
+            {"errors": ["You cannot edit an event that has already occurred."]},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     if request.method == 'GET':
         serializer = EventSerializer(event, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)

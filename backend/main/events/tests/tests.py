@@ -431,7 +431,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event Test",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar.id],
         }
@@ -447,7 +447,7 @@ class CrearEventoTests(APITestCase):
         self.client.force_authenticate(self.user)
 
         payload = {
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar.id],
         }
@@ -472,7 +472,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
         }
 
@@ -484,7 +484,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar.pk],
         }
@@ -497,7 +497,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar2.pk],
         }
@@ -510,7 +510,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar3.pk],
         }
@@ -526,7 +526,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar3.pk],
         }
@@ -542,7 +542,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar3.pk],
         }
@@ -555,7 +555,7 @@ class CrearEventoTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [9999],
         }
@@ -621,7 +621,7 @@ class EditEventTests(APITestCase):
             title="Event Original",
             description="Descripcion original",
             place_name="Lugar original",
-            date="2026-03-01",
+            date="2030-03-01",
             time="18:00:00",
             creator=self.user,
         )
@@ -631,7 +631,7 @@ class EditEventTests(APITestCase):
             title="Event 3 Original",
             description="Descripcion original",
             place_name="Lugar original",
-            date="2026-03-01",
+            date="2030-03-01",
             time="18:00:00",
             creator=self.user2,
         )
@@ -641,7 +641,7 @@ class EditEventTests(APITestCase):
             title="Event 4 Original",
             description="Descripcion original",
             place_name="Lugar original",
-            date="2026-03-01",
+            date="2030-03-01",
             time="18:00:00",
             creator=self.user3,
         )
@@ -689,12 +689,12 @@ class EditEventTests(APITestCase):
 
         response = self.client.put(
             self.endpoint(),
-            {"date": "2026-06-15", "time": "20:30:00"},
+            {"date": "2030-03-01", "time": "20:30:00"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.event.refresh_from_db()
-        self.assertEqual(str(self.event.date), "2026-06-15")
+        self.assertEqual(str(self.event.date), "2030-03-01")
         self.assertEqual(str(self.event.time), "20:30:00")
 
     def test_change_calendars(self):
@@ -860,7 +860,7 @@ class EditEventTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar2.pk],
         }
@@ -873,7 +873,7 @@ class EditEventTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar1.pk],
         }
@@ -886,7 +886,7 @@ class EditEventTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
             "calendars": [self.calendar4.pk],
         }
@@ -903,7 +903,7 @@ class EditEventTests(APITestCase):
 
         payload = {
             "title": "Event",
-            "date": "2026-03-01",
+            "date": "2030-03-01",
             "time": "18:00:00",
         }
 
@@ -963,7 +963,7 @@ class EditEventExtraCoverageTests(APITestCase):
         )
         self.event = Event.objects.create(
             title="Evento foto",
-            date="2026-08-01",
+            date="2030-03-01",
             time="15:00:00",
             creator=self.user,
         )
@@ -1265,7 +1265,7 @@ class CreateEventDuplicateTests(APITestCase):
 
         self.payload = {
             "title": "Evento test",
-            "date": "2025-01-01",
+            "date": "2030-01-01",
             "time": "10:00:00",
             "calendars": [self.calendar.id]
         }
@@ -1475,7 +1475,7 @@ class CreateEventParsingTests(APITestCase):
     def test_accepts_calendars_as_json_string(self):
         payload = {
             "title": "Evento con string",
-            "date": "2026-07-01",
+            "date": "2030-03-01",
             "time": "08:00:00",
             "calendars": json.dumps([self.calendar.id]),
         }
@@ -1488,7 +1488,7 @@ class CreateEventParsingTests(APITestCase):
     def test_accepts_calendars_as_plain_string_number(self):
         payload = {
             "title": "Evento string numero",
-            "date": "2026-07-01",
+            "date": "2030-03-01",
             "time": "08:30:00",
             "calendars": str(self.calendar.id),
         }
@@ -1500,7 +1500,7 @@ class CreateEventParsingTests(APITestCase):
     def test_requires_time_field(self):
         payload = {
             "title": "Sin hora",
-            "date": "2026-07-04",
+            "date": "2030-03-01",
             "calendars": [self.calendar.id],
         }
 
@@ -1512,7 +1512,7 @@ class CreateEventParsingTests(APITestCase):
     def test_returns_validation_errors(self):
         payload = {
             "title": "Fecha invalida",
-            "date": "2026-07-06",
+            "date": "2030-03-01",
             "time": "10:00:00",
             "calendars": [self.calendar.id],
             "recurrence": "abc",  # debe ser int
@@ -1527,7 +1527,7 @@ class CreateEventParsingTests(APITestCase):
         image = SimpleUploadedFile("foto.jpg", b"filecontent", content_type="image/jpeg")
         payload = {
             "title": "Con foto",
-            "date": "2026-07-05",
+            "date": "2030-03-01",
             "time": "12:00:00",
             "calendars": [self.calendar.id],
             "photo": image,
@@ -1542,7 +1542,7 @@ class CreateEventParsingTests(APITestCase):
     def test_rejects_invalid_coordinates(self):
         payload = {
             "title": "Evento con coords malas",
-            "date": "2026-07-02",
+            "date": "2030-03-01",
             "time": "09:00:00",
             "calendars": [self.calendar.id],
             "latitud": "abc",
@@ -1557,7 +1557,7 @@ class CreateEventParsingTests(APITestCase):
     def test_saves_location_when_coordinates_are_valid(self):
         payload = {
             "title": "Evento con ubicacion",
-            "date": "2026-07-03",
+            "date": "2030-03-01",
             "time": "10:00:00",
             "calendars": [self.calendar.id],
             "latitud": 40.4168,
