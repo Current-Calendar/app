@@ -32,13 +32,15 @@ export type FeedEvent = {
   description?: string;
   location: string;
   date: string;
+  time?: string;
+  end_date?: string;
+  end_time?: string;
   image?: string;
   username: string;
   userAvatar?: string;
   calendarId: string;
   calendarName: string;
   color: string;
-  // List of users who marked this event as attending.
   attendees?: FeedEventAttendee[];
 };
 
@@ -50,7 +52,16 @@ type Props = {
 
 function formatDate(dateLike?: string) {
   if (!dateLike) return "";
-  return String(dateLike);
+  const clean = dateLike.includes("T") ? dateLike.split("T")[0] : dateLike;
+  const [y, m, d] = clean.split("-").map(Number);
+  if (!y || !m || !d) return String(dateLike);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 function formatResponseDateTime(dateLike?: string) {
@@ -83,7 +94,6 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
   const location = event.location?.trim() || "";
   const username = event.username?.trim() || "";
   const description = event.description?.trim() || "";
-  const date = formatDate(event.date);
   const calendarName = event.calendarName?.trim() || "";
   const attendees = event.attendees ?? [];
 
@@ -151,10 +161,21 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
                 </View>
               )}
 
-              {!!date && (
+              {(!!event.date || !!event.time) && (
                 <View style={styles.row}>
                   <Ionicons name="calendar-outline" size={16} color={TEXT} />
-                  <Text style={styles.rowText}>{date}</Text>
+                  <Text style={styles.rowText}>
+                    Start: {formatDate(event.date)}{event.time ? " · " + event.time : ""}
+                  </Text>
+                </View>
+              )}
+
+              {(!!event.end_date || !!event.end_time) && (
+                <View style={styles.row}>
+                  <Ionicons name="calendar" size={16} color={TEXT} />
+                  <Text style={styles.rowText}>
+                    End: {event.end_date ? formatDate(event.end_date) : ""}{event.end_time ? " · " + event.end_time : ""}
+                  </Text>
                 </View>
               )}
 

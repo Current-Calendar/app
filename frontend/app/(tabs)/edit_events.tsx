@@ -4,46 +4,38 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Image,
   TextInput,
   Platform,
-  Modal,
-  FlatList,
   useWindowDimensions,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+
 import apiClient, { appendPhoto } from "@/services/api-client";
 import { useCreateEventApi } from "@/hooks/use-create-event-api";
+import { usePlaceSearch, PlaceSuggestion } from "@/hooks/use-place-search";
+import { ThemedText } from "@/components/themed-text";
+import { Fonts } from "@/constants/theme";
+
+import MiniMonthCalendar from "@/components/events/MiniMonthCalendar";
+import CalendarSelectorModal from "@/components/events/CalendarSelectorModal";
+import EventSuccessModal from "@/components/events/EventSuccessModal";
+import EventTimePickerModal from "@/components/events/EventTimePickerModal";
 import CustomToast from "@/components/ui/custom-toast";
 
-const TEXT = "#10464D";
-const PINK = "#F2A3A6";
-const TEAL = "#1F6A6A";
-const TEAL_DARK = "#0F4E4F";
-const WHITE = "#FFFFFF";
-const RED = "#FF3B30";
-
-const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
-const NOMINATIM_LIMIT = 6;
+const TEXT = "#10464d";
+const RED = "#d9534f";
 const PLACE_DEBOUNCE_MS = 350;
 
 type CalendarItem = {
   id: string;
   name: string;
-  image?: string;
-};
-
-type PlaceSuggestion = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
+  image?: any;
 };
 
 type EventTagItem = {
@@ -66,205 +58,28 @@ const extractArray = <T,>(
 };
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
+
 const toISODate = (d: Date) =>
   `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
 const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
-  name: String(
-    raw?.name ?? raw?.nombre ?? raw?.titulo ?? raw?.title ?? "Calendar",
-  ),
-  image: raw?.cover ?? raw?.image ?? undefined,
+  name: String(raw?.name ?? raw?.title ?? "Calendar"),
 });
 
-const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-type MiniMonthCalendarProps = {
-  value: Date;
-  onChange: (d: Date) => void;
-  size?: number;
-};
-
-function MiniMonthCalendar({
-  value,
-  onChange,
-  size = 260,
-}: MiniMonthCalendarProps) {
-  const selected = startOfDay(value);
-  const [viewYear, setViewYear] = useState(selected.getFullYear());
-  const [viewMonth, setViewMonth] = useState(selected.getMonth());
-
-  useEffect(() => {
-    setViewYear(selected.getFullYear());
-    setViewMonth(selected.getMonth());
-  }, [selected.getTime()]);
-
-  const today = useMemo(() => startOfDay(new Date()), []);
-
-  const days = useMemo(() => {
-    const first = new Date(viewYear, viewMonth, 1);
-    const firstDowMondayBased = (first.getDay() + 6) % 7;
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-
-    const cells: Array<{ date: Date | null; label: string }> = [];
-    for (let i = 0; i < firstDowMondayBased; i++) {
-      cells.push({ date: null, label: "" });
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      cells.push({ date: new Date(viewYear, viewMonth, d), label: String(d) });
-    }
-    while (cells.length % 7 !== 0) {
-      cells.push({ date: null, label: "" });
-    }
-
-    return cells;
-  }, [viewYear, viewMonth]);
-
-  const goPrevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else {
-      setViewMonth((m) => m - 1);
-    }
-  };
-
-  const goNextMonth = () => {
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else {
-      setViewMonth((m) => m + 1);
-    }
-  };
-
-  const goToday = () => {
-    setViewYear(today.getFullYear());
-    setViewMonth(today.getMonth());
-    onChange(today);
-  };
-
-  const innerPad = 10;
-  const headerH = 34;
-  const weekdaysH = 18;
-  const gridPadTop = 6;
-
-  const rows = Math.max(1, Math.ceil(days.length / 7));
-  const extraH = rows === 6 ? 16 : 0;
-  const cellGapY = 2;
-
-  const gridAvailableH =
-    size - innerPad * 2 - headerH - weekdaysH - gridPadTop + extraH;
-
-  const cellH = Math.floor((gridAvailableH - cellGapY * rows) / rows);
-  const cellW = Math.floor((size - innerPad * 2) / 7);
-
-  return (
-    <View style={[miniStyles.card, { width: size, height: size + extraH }]}>
-      <View style={miniStyles.headerRow}>
-        <Pressable onPress={goPrevMonth} style={miniStyles.navBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={16} color={TEXT} />
-        </Pressable>
-
-        <Pressable onPress={goToday} style={miniStyles.monthPill}>
-          <Text style={miniStyles.monthText}>
-            {MONTH_NAMES[viewMonth]} {viewYear}
-          </Text>
-        </Pressable>
-
-        <Pressable onPress={goNextMonth} style={miniStyles.navBtn} hitSlop={8}>
-          <Ionicons name="chevron-forward" size={16} color={TEXT} />
-        </Pressable>
-      </View>
-
-      <View style={miniStyles.weekdaysRow}>
-        {WEEKDAYS.map((w, i) => (
-          <Text
-            key={`${w}-${i}`}
-            style={[miniStyles.weekday, { width: cellW }]}
-          >
-            {w}
-          </Text>
-        ))}
-      </View>
-
-      <View style={[miniStyles.grid, { paddingTop: gridPadTop }]}>
-        {days.map((cell, idx) => {
-          const d = cell.date;
-          const selectedCell = d ? isSameDay(d, selected) : false;
-          const todayCell = d ? isSameDay(d, today) : false;
-
-          return (
-            <Pressable
-              key={idx}
-              disabled={!d}
-              onPress={() => d && onChange(startOfDay(d))}
-              style={[
-                miniStyles.dayCell,
-                { width: cellW, height: cellH },
-                selectedCell && miniStyles.daySelected,
-                todayCell && miniStyles.dayToday,
-                !d && miniStyles.dayEmpty,
-              ]}
-            >
-              <Text
-                style={[
-                  miniStyles.dayText,
-                  selectedCell && miniStyles.dayTextSelected,
-                  !d && miniStyles.dayTextEmpty,
-                ]}
-              >
-                {cell.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
 export default function EditEventsScreen() {
+  const navigation = useNavigation<any>();
   const router = useRouter();
+  const { loadMyCalendars } = useCreateEventApi();
   const params = useLocalSearchParams<{ id: string }>();
   const eventId = params.id;
-  const [imageError, setImageError] = useState<string | null>(null);
 
   const { width } = useWindowDimensions();
-  const formWidth =
-    Platform.OS === "web"
-      ? Math.min(width * 0.58, 820)
-      : Math.min(width * 0.92, 420);
+  const isDesktop = width >= 768;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -295,45 +110,65 @@ export default function EditEventsScreen() {
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
 
-  const [placeLoading, setPlaceLoading] = useState(false);
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [placeFocused, setPlaceFocused] = useState(false);
-  const { loadMyCalendars } = useCreateEventApi();
+  const keepCoordinatesOnNextPlaceChangeRef = useRef(false);
 
-  const suppressNextSearchRef = useRef(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [date, setDate] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   });
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   const [time, setTime] = useState<Date>(() => {
     const d = new Date();
     d.setHours(14, 0, 0, 0);
     return d;
   });
+  const [endTime, setEndTime] = useState<Date | null>(null);
 
   const [showNativeTimePicker, setShowNativeTimePicker] = useState(false);
   const [showWebTimePicker, setShowWebTimePicker] = useState(false);
   const [webHour, setWebHour] = useState(time.getHours());
   const [webMinute, setWebMinute] = useState(time.getMinutes());
 
-  const [formError, setFormError] = useState<string | null>(null);
-  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const {
+    suggestions,
+    loading: placeLoading,
+    error: placeError,
+  } = usePlaceSearch(place, {
+    enabled: placeFocused,
+    delayMs: PLACE_DEBOUNCE_MS,
+    limit: 6,
+  });
+
+  const selectedTags = useMemo(
+    () => availableTags.filter((tag) => selectedTagIds.includes(tag.id)),
+    [availableTags, selectedTagIds],
+  );
 
   const timeLabel = useMemo(() => `${toHM(time)} h`, [time]);
   const dateLabel = useMemo(() => toISODate(date), [date]);
+  const endTimeLabel = useMemo(() => endTime instanceof Date && !isNaN(endTime.getTime()) ? `${toHM(endTime)} h` : 'End time', [endTime]);
+  const endDateLabel = useMemo(() => endDate instanceof Date && !isNaN(endDate.getTime()) ? toISODate(endDate) : 'End date', [endDate]);
 
   const goBackOrCalendars = () => {
-    if (router.canGoBack()) router.back();
-    else router.replace("/calendars");
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      router.replace("/(tabs)/calendars");
+    }
   };
 
   const closeSuccessAndGoRoot = () => {
     setSuccessModalOpen(false);
-    router.replace("/calendars");
+    router.replace(
+      `/(tabs)/calendars?selectedDate=${toISODate(date)}&selectedCalendarId=${selectedCalendar?.id ?? ""}` as any,
+    );
   };
 
   const loadTagsForCalendar = async (calendarId: string | number) => {
@@ -381,7 +216,7 @@ export default function EditEventsScreen() {
     }
   };
 
-  const loadCalendars = async () => {
+  const loadCalendars = async (): Promise<CalendarItem[]> => {
     try {
       setCalLoading(true);
       setCalError(null);
@@ -398,8 +233,8 @@ export default function EditEventsScreen() {
       const mapped = list
         .map(mapCalendarFromApi)
         .filter((c: CalendarItem) => c.id);
-      setCalendars(mapped);
 
+      setCalendars(mapped);
       return mapped;
     } catch (e: any) {
       setCalError(e?.message ?? "Error loading calendars");
@@ -433,27 +268,11 @@ export default function EditEventsScreen() {
         eventDate.setHours(0, 0, 0, 0);
         setDate(eventDate);
       }
-
-      if (event.time) {
-        const [h, min] = String(event.time).split(":").map(Number);
-        const eventTime = new Date();
-        eventTime.setHours(h, min, 0, 0);
-        setTime(eventTime);
-        setWebHour(h);
-        setWebMinute(min);
-      }
-
-      if (event.latitude && event.longitude) {
-        setLat(event.latitude);
-        setLon(event.longitude);
-      }
-
-      if (event.date) {
-        const parsedDate = new Date(event.date);
-        parsedDate.setHours(0, 0, 0, 0);
-        if (!isNaN(parsedDate.getTime())) {
-          setDate(parsedDate);
-        }
+      if (event.end_date) {
+        const [y, m, d] = String(event.end_date).split("-").map(Number);
+        const eventEndDate = new Date(y, m - 1, d);
+        eventEndDate.setHours(0, 0, 0, 0);
+        setEndDate(eventEndDate);
       }
 
       if (event.time) {
@@ -461,6 +280,19 @@ export default function EditEventsScreen() {
         const parsedTime = new Date();
         parsedTime.setHours(Number(h), Number(m), 0, 0);
         setTime(parsedTime);
+        setWebHour(Number(h));
+        setWebMinute(Number(m));
+      }
+      if (event.end_time) {
+        const [h = "14", m = "00"] = String(event.end_time).split(":");
+        const parsedEndTime = new Date();
+        parsedEndTime.setHours(Number(h), Number(m), 0, 0);
+        setEndTime(parsedEndTime);
+      }
+
+      if (event.latitude && event.longitude) {
+        setLat(event.latitude);
+        setLon(event.longitude);
       }
 
       if (event?.calendars?.length > 0) {
@@ -501,76 +333,84 @@ export default function EditEventsScreen() {
   }, [eventId]);
 
   useEffect(() => {
-    if (suppressNextSearchRef.current) {
-      suppressNextSearchRef.current = false;
+    if (keepCoordinatesOnNextPlaceChangeRef.current) {
+      keepCoordinatesOnNextPlaceChangeRef.current = false;
       return;
     }
-
-    const q = place.trim();
-    setPlaceError(null);
 
     setLat(null);
     setLon(null);
-
-    if (!q || q.length < 3) {
-      setSuggestions([]);
-      setPlaceLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const t = setTimeout(async () => {
-      try {
-        setPlaceLoading(true);
-
-        const url =
-          `${NOMINATIM_SEARCH_URL}` +
-          `?q=${encodeURIComponent(q)}` +
-          `&format=json` +
-          `&addressdetails=1` +
-          `&limit=${NOMINATIM_LIMIT}`;
-
-        const headers: Record<string, string> = {
-          Accept: "application/json",
-        };
-
-        if (Platform.OS !== "web") {
-          headers["User-Agent"] = "CurrentApp/1.0 (ISPP project)";
-        }
-
-        const res = await fetch(url, { headers });
-        const data = (await res.json()) as any[];
-
-        if (cancelled) return;
-
-        const mapped: PlaceSuggestion[] = (Array.isArray(data) ? data : [])
-          .map((x) => ({
-            place_id: Number(x?.place_id ?? 0),
-            display_name: String(x?.display_name ?? ""),
-            lat: String(x?.lat ?? ""),
-            lon: String(x?.lon ?? ""),
-          }))
-          .filter((x) => x.place_id && x.display_name && x.lat && x.lon);
-
-        setSuggestions(mapped);
-      } catch (e: any) {
-        if (cancelled) return;
-        setSuggestions([]);
-        setPlaceError(e?.message ?? "Error buscando ubicaciones");
-      } finally {
-        if (!cancelled) setPlaceLoading(false);
-      }
-    }, PLACE_DEBOUNCE_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
   }, [place]);
 
+  const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end">("start");
+
+  const openTimePicker = (which: "start" | "end", currentTime: Date) => {
+    setActiveTimePicker(which);
+    if (Platform.OS === "web") {
+      setWebHour(currentTime.getHours());
+      setWebMinute(currentTime.getMinutes());
+      setShowWebTimePicker(true);
+    } else {
+      setShowNativeTimePicker(true);
+    }
+  };
+
+  const onPickNativeTime = (_event: any, selected?: Date) => {
+    if (Platform.OS !== "ios") setShowNativeTimePicker(false);
+    if (selected) {
+      if (activeTimePicker === "start") setTime(selected);
+      if (activeTimePicker === "end") setEndTime(selected);
+    }
+  };
+
+  const applyWebTime = () => {
+    const base = activeTimePicker === "start" ? time : (endTime ?? new Date());
+    const d = new Date(base);
+    d.setHours(webHour);
+    d.setMinutes(webMinute);
+    d.setSeconds(0, 0);
+    if (activeTimePicker === "start") setTime(d);
+    if (activeTimePicker === "end") setEndTime(d);
+    setShowWebTimePicker(false);
+  };
+
+  const pickCoverImage = async () => {
+    setImageError(null);
+    if (Platform.OS !== "web") {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      const MAX_FILE_SIZE = 3 * 1024 * 1024;
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setImageError(
+          "The selected image is too large. Please choose one under 3MB.",
+        );
+        return;
+      }
+      setImageError(null);
+      setCoverUri(asset.uri);
+      setCoverAsset(asset);
+    }
+  };
+
+  const removeCoverImage = () => {
+    setCoverUri(null);
+    setCoverAsset(null);
+  };
+
   const selectSuggestion = (s: PlaceSuggestion) => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = true;
     setPlace(s.display_name);
 
     const latNum = Number(s.lat);
@@ -578,18 +418,15 @@ export default function EditEventsScreen() {
 
     setLat(Number.isFinite(latNum) ? latNum : null);
     setLon(Number.isFinite(lonNum) ? lonNum : null);
-
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   const clearPlace = () => {
-    suppressNextSearchRef.current = true;
+    keepCoordinatesOnNextPlaceChangeRef.current = false;
     setPlace("");
     setLat(null);
     setLon(null);
-    setSuggestions([]);
-    setPlaceError(null);
+    setPlaceFocused(false);
   };
 
   const toggleTag = (tagId: number) => {
@@ -639,63 +476,10 @@ export default function EditEventsScreen() {
     return { failedAdds, failedRemoves };
   };
 
-  const openTimePicker = () => {
-    if (Platform.OS === "web") {
-      setWebHour(time.getHours());
-      setWebMinute(time.getMinutes());
-      setShowWebTimePicker(true);
-    } else {
-      setShowNativeTimePicker(true);
-    }
-  };
-
-  const onPickNativeTime = (_event: any, selected?: Date) => {
-    if (Platform.OS !== "ios") setShowNativeTimePicker(false);
-    if (selected) setTime(selected);
-  };
-
-  const applyWebTime = () => {
-    const d = new Date(time);
-    d.setHours(webHour);
-    d.setMinutes(webMinute);
-    d.setSeconds(0, 0);
-    setTime(d);
-    setShowWebTimePicker(false);
-  };
-
-  const pickCoverImage = async () => {
-    if (Platform.OS !== "web") {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.9,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes)
-      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-        setImageError(
-          "The selected image is too large. Please choose one under 3MB.",
-        );
-        return;
-      }
-      setImageError(null);
-      setCoverUri(asset.uri);
-      setCoverAsset(asset);
-    }
-  };
-
   const handleUpdate = async () => {
     setFormError(null);
 
-    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayKey = toISODate(new Date());
     const selectedDateKey = toISODate(date);
 
     if (selectedDateKey < todayKey) {
@@ -705,12 +489,8 @@ export default function EditEventsScreen() {
 
     if (selectedDateKey === todayKey) {
       const now = new Date();
-      const currentHour = pad2(now.getHours());
-      const currentMinute = pad2(now.getMinutes());
-      const currentTimeStr = `${currentHour}:${currentMinute}`;
-      const selectedTimeStr = toHM(time);
-
-      if (selectedTimeStr < currentTimeStr) {
+      const currentTimeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+      if (toHM(time) < currentTimeStr) {
         setFormError("You cannot edit an event to occur in the past.");
         return;
       }
@@ -742,6 +522,8 @@ export default function EditEventsScreen() {
         formData.append("place_name", place.trim());
         formData.append("date", toISODate(date));
         formData.append("time", toHMS(time));
+        if (endDate) formData.append("end_date", toISODate(endDate));
+        if (endTime) formData.append("end_time", toHMS(endTime));
         formData.append("calendars", JSON.stringify(calendarsIds));
 
         if (lat != null && lon != null) {
@@ -760,6 +542,8 @@ export default function EditEventsScreen() {
           time: toHMS(time),
           calendars: calendarsIds,
         };
+        if (endDate) updateData.end_date = toISODate(endDate);
+        if (endTime) updateData.end_time = toHMS(endTime);
 
         if (lat != null && lon != null) {
           updateData.latitud = lat;
@@ -777,281 +561,294 @@ export default function EditEventsScreen() {
 
       if (failedAdds.length || failedRemoves.length) {
         const parts: string[] = [];
-
-        if (failedAdds.length) {
+        if (failedAdds.length)
           parts.push(`Could not add: ${failedAdds.join(", ")}`);
-        }
-        if (failedRemoves.length) {
+        if (failedRemoves.length)
           parts.push(`Could not remove: ${failedRemoves.join(", ")}`);
-        }
-
         setFormError(parts.join("\n"));
       }
 
       setSuccessModalOpen(true);
     } catch (error: any) {
-      setFormError(
-        error?.message ?? "You cannot edit an event to occur in the past.",
-      );
+      setFormError(error?.message ?? "Failed to update the event.");
     } finally {
       setSaving(false);
     }
   };
 
-  const miniSize = Math.min(280, formWidth);
   const showSuggestions = placeFocused && suggestions.length > 0;
+  const miniSize = isDesktop ? 360 : Math.min(width - 48, 320);
 
   if (loading) {
     return (
-      <>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.container}>
-          <Pressable
-            style={styles.backBtn}
-            hitSlop={12}
-            onPress={goBackOrCalendars}
-          >
-            <Ionicons name="chevron-back" size={22} color={WHITE} />
-          </Pressable>
-
-          <View
-            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-          >
-            <ActivityIndicator size="large" color={TEAL} />
-          </View>
-        </View>
-      </>
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="large" color={TEXT} />
+      </View>
     );
   }
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <CustomToast message={formError} onHide={() => setFormError(null)} />
+    <View style={styles.wrapper}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          isDesktop && styles.containerDesktop,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.card, isDesktop && styles.cardDesktop]}>
+          <ThemedText
+            type="title"
+            lightColor={TEXT}
+            darkColor={TEXT}
+            style={styles.title}
+          >
+            Edit Event
+          </ThemedText>
 
-      <View style={styles.container}>
-        <Pressable
-          style={styles.backBtn}
-          hitSlop={12}
-          onPress={goBackOrCalendars}
-        >
-          <Ionicons name="chevron-back" size={22} color={WHITE} />
-        </Pressable>
+          {/* Cover Image */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Cover Image</Text>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Text style={styles.header}>Edit Event</Text>
-
-          <View style={[styles.body, { width: formWidth }]}>
-            <View style={styles.headerRow}>
-              <View style={styles.block}>
-                <View style={styles.calendarLabelRow}>
-                  <Text style={styles.smallLabelInline}>Calendar:</Text>
-                  <Pressable
-                    style={styles.dropdownInline}
-                    onPress={() => setCalendarModalOpen(true)}
-                    disabled={calLoading || calendars.length === 0}
-                  >
-                    <Ionicons name="chevron-down" size={18} color={TEXT} />
-                  </Pressable>
+            {coverUri ? (
+              <View style={styles.coverPreviewContainer}>
+                <Image source={{ uri: coverUri }} style={styles.coverPreview} />
+                <Pressable
+                  style={styles.coverRemoveButton}
+                  onPress={removeCoverImage}
+                >
+                  <Ionicons name="close-circle" size={26} color="#fff" />
+                </Pressable>
+                <Pressable
+                  style={styles.coverChangeButton}
+                  onPress={pickCoverImage}
+                >
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Text style={styles.coverChangeText}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                style={styles.coverPickerEmpty}
+                onPress={pickCoverImage}
+              >
+                <View style={styles.coverPickerIconWrap}>
+                  <Ionicons name="image-outline" size={28} color={TEXT} />
                 </View>
+                <Text style={styles.coverPickerLabel}>Add an event cover</Text>
+                <Text style={styles.coverPickerSub}>
+                  Recommended: 16:9 ratio
+                </Text>
+              </Pressable>
+            )}
+            {!!imageError && (
+              <Text style={{ color: RED, fontSize: 13, marginTop: 8 }}>
+                {imageError}
+              </Text>
+            )}
+          </View>
 
-                <View style={styles.calendarPreview}>
-                  <View style={styles.calendarImgWrap}>
-                    {selectedCalendar?.image ? (
-                      <Image
-                        source={{ uri: selectedCalendar.image }}
-                        style={styles.calendarImg}
-                      />
-                    ) : (
-                      <View style={styles.calendarImgPlaceholder} />
-                    )}
-                  </View>
-                  {calLoading ? (
-                    <View style={{ marginTop: 6 }}>
-                      <ActivityIndicator />
-                    </View>
-                  ) : (
-                    <Text style={styles.calendarName}>
-                      {selectedCalendar?.name ??
-                        (calendars.length ? "Select" : "No calendars")}
-                    </Text>
-                  )}
-                </View>
+          <View style={styles.divider} />
 
-                {!!calError && <Text style={styles.errorText}>{calError}</Text>}
+          {/* Event Details */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Event Details</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Event title"
+              placeholderTextColor="#aaa"
+              maxLength={150}
+              value={title}
+              onChangeText={setTitle}
+            />
+
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Description (optional)"
+              placeholderTextColor="#aaa"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Calendar */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Calendar</Text>
+
+            <Pressable
+              style={styles.selectorCard}
+              onPress={() => setCalendarModalOpen(true)}
+              disabled={calLoading || calendars.length === 0}
+            >
+              <View style={styles.selectorIconWrap}>
+                <Ionicons name="calendar-outline" size={22} color={TEXT} />
               </View>
 
-              <View style={styles.block}>
-                <Text style={styles.smallLabelCentered}>Photos</Text>
-
-                <Pressable style={styles.photoBox} onPress={pickCoverImage}>
-                  {coverUri ? (
-                    <Image
-                      source={{ uri: coverUri }}
-                      style={styles.photoPreview}
-                    />
-                  ) : (
-                    <Ionicons name="camera" size={28} color={TEXT} />
-                  )}
-                </Pressable>
-                {!!imageError && (
-                  <Text style={{ color: RED, fontSize: 13, marginTop: 8 }}>
-                    {imageError}
+              <View style={styles.selectorContent}>
+                <Text style={styles.selectorLabel}>Selected calendar</Text>
+                {calLoading ? (
+                  <ActivityIndicator color={TEXT} />
+                ) : (
+                  <Text style={styles.selectorValue}>
+                    {selectedCalendar?.name ??
+                      (calendars.length ? "Select a calendar" : "No calendars")}
                   </Text>
                 )}
               </View>
+
+              <Ionicons name="chevron-down" size={20} color={TEXT} />
+            </Pressable>
+
+            {!!calError && <Text style={styles.errorText}>{calError}</Text>}
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Location */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Location</Text>
+
+            <View style={styles.placeInputWrap}>
+              <TextInput
+                maxLength={255}
+                value={place}
+                onChangeText={setPlace}
+                style={[styles.input, styles.placeInput]}
+                onFocus={() => setPlaceFocused(true)}
+                onBlur={() => {
+                  setTimeout(() => setPlaceFocused(false), 120);
+                }}
+                placeholder="Start typing an address..."
+                placeholderTextColor="#aaa"
+              />
+
+              {!!place && (
+                <Pressable
+                  style={styles.clearBtn}
+                  onPress={clearPlace}
+                  hitSlop={10}
+                >
+                  <Ionicons name="close" size={18} color={TEXT} />
+                </Pressable>
+              )}
+
+              {placeLoading && (
+                <View style={styles.placeSpinner}>
+                  <ActivityIndicator size="small" color={TEXT} />
+                </View>
+              )}
             </View>
 
-            <View style={styles.form}>
-              <Text style={styles.fieldLabel}>Title:</Text>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                style={styles.input}
-              />
+            {!!placeError && <Text style={styles.errorText}>{placeError}</Text>}
 
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
-                Description:
-              </Text>
-              <TextInput
-                value={description}
-                onChangeText={setDescription}
-                style={styles.textAreaSmall}
-                multiline
-                textAlignVertical="top"
-                scrollEnabled
-              />
-
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Place:</Text>
-
-              <View style={styles.placeRow}>
-                <TextInput
-                  value={place}
-                  onChangeText={setPlace}
-                  style={[styles.input, { flex: 1, paddingRight: 38 }]}
-                  onFocus={() => setPlaceFocused(true)}
-                  onBlur={() => {
-                    setTimeout(() => setPlaceFocused(false), 120);
-                  }}
-                  placeholder="Empieza a escribir una dirección..."
-                  placeholderTextColor="rgba(16,70,77,0.45)"
-                />
-
-                {!!place && (
+            {showSuggestions && (
+              <View style={styles.suggestBox}>
+                {suggestions.map((s) => (
                   <Pressable
-                    style={styles.clearBtn}
-                    onPress={clearPlace}
-                    hitSlop={10}
+                    key={String(s.place_id)}
+                    style={styles.suggestItem}
+                    onPress={() => selectSuggestion(s)}
                   >
-                    <Ionicons name="close" size={18} color={TEXT} />
+                    <Ionicons name="location-outline" size={16} color={TEXT} />
+                    <Text style={styles.suggestText} numberOfLines={2}>
+                      {s.display_name}
+                    </Text>
                   </Pressable>
-                )}
-
-                {placeLoading && (
-                  <View style={styles.placeSpinner}>
-                    <ActivityIndicator size="small" />
-                  </View>
-                )}
+                ))}
               </View>
+            )}
 
-              {!!placeError && (
-                <Text style={styles.errorText}>{placeError}</Text>
-              )}
-
-              {showSuggestions && (
-                <View style={styles.suggestBox}>
-                  {suggestions.map((s) => (
-                    <Pressable
-                      key={String(s.place_id)}
-                      style={styles.suggestItem}
-                      onPress={() => selectSuggestion(s)}
-                    >
-                      <Ionicons
-                        name="location-outline"
-                        size={16}
-                        color={TEXT}
-                      />
-                      <Text style={styles.suggestText} numberOfLines={2}>
-                        {s.display_name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-
-              {lat != null && lon != null && (
-                <Text style={styles.coordsText}>
-                  Coordenadas: {lat.toFixed(6)}, {lon.toFixed(6)}
-                </Text>
-              )}
-
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
-                Labels:
+            {lat != null && lon != null && (
+              <Text style={styles.helperText}>
+                Coordinates: {lat.toFixed(6)}, {lon.toFixed(6)}
               </Text>
+            )}
+          </View>
 
-              {tagsLoading ? (
-                <View style={styles.tagsLoadingWrap}>
-                  <ActivityIndicator color={TEXT} />
-                </View>
-              ) : tagsError ? (
-                <Text style={styles.errorText}>{tagsError}</Text>
-              ) : availableTags.length > 0 ? (
-                <View style={styles.tagsWrap}>
-                  {availableTags.map((tag) => {
-                    const selected = selectedTagIds.includes(tag.id);
+          <View style={styles.divider} />
 
-                    return (
-                      <Pressable
-                        key={tag.id}
+          {/* Labels */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Labels</Text>
+            <Text style={styles.sectionSubtitle}>
+              Select one or more labels for this event
+            </Text>
+
+            {tagsLoading ? (
+              <View style={styles.tagsLoadingWrap}>
+                <ActivityIndicator color={TEXT} />
+              </View>
+            ) : tagsError ? (
+              <Text style={styles.errorText}>{tagsError}</Text>
+            ) : availableTags.length > 0 ? (
+              <View style={styles.tagsWrap}>
+                {availableTags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+
+                  return (
+                    <Pressable
+                      key={tag.id}
+                      style={[
+                        styles.tagChip,
+                        selected && styles.tagChipSelected,
+                      ]}
+                      onPress={() => toggleTag(tag.id)}
+                    >
+                      <Text
                         style={[
-                          styles.tagChip,
-                          selected && styles.tagChipSelected,
+                          styles.tagChipText,
+                          selected && styles.tagChipTextSelected,
                         ]}
-                        onPress={() => toggleTag(tag.id)}
                       >
-                        <Text
-                          style={[
-                            styles.tagChipText,
-                            selected && styles.tagChipTextSelected,
-                          ]}
-                        >
-                          {tag.name}
-                        </Text>
-                        {selected && (
-                          <Ionicons
-                            name="checkmark"
-                            size={14}
-                            color={TEXT}
-                            style={{ marginLeft: 6 }}
-                          />
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : selectedCalendar?.id ? (
-                <Text style={styles.helperText}>
-                  This calendar has no available labels.
-                </Text>
-              ) : null}
+                        {tag.name}
+                      </Text>
 
-              <View style={styles.timeRow}>
-                <Text style={styles.fieldLabel}>Date:</Text>
-                <View style={styles.timePill}>
-                  <Text style={styles.timeText}>{dateLabel}</Text>
+                      {selected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color={TEXT}
+                          style={{ marginLeft: 6 }}
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : selectedCalendar?.id ? (
+              <Text style={styles.helperText}>
+                This calendar has no available labels.
+              </Text>
+            ) : null}
+
+            {!!selectedTags.length && (
+              <Text style={styles.helperText}>
+                Selected: {selectedTags.map((tag) => tag.name).join(", ")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Start Date & Time */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>Start Date</Text>
+            <View>
+              <View style={styles.timeDateDiv}>
+                <View style={styles.infoPill}>
+                  <Text style={styles.infoPillText}>{dateLabel}</Text>
+                </View>
+                <View style={styles.dateTimeBox}>
+                  <Pressable style={styles.infoPill} onPress={() => openTimePicker("start", time)}>
+                    <Text style={styles.infoPillText}>{timeLabel}</Text>
+                  </Pressable>
                 </View>
               </View>
-
-              <View style={styles.timeRow}>
-                <Text style={styles.fieldLabel}>Time:</Text>
-                <Pressable style={styles.timePill} onPress={openTimePicker}>
-                  <Text style={styles.timeText}>{timeLabel}</Text>
-                </Pressable>
-              </View>
-
               <View style={styles.calendarCenterWrap}>
                 <MiniMonthCalendar
                   value={date}
@@ -1059,684 +856,268 @@ export default function EditEventsScreen() {
                   size={miniSize}
                 />
               </View>
-
-              <Pressable
-                style={[styles.publishBtn, saving && styles.publishBtnDisabled]}
-                onPress={handleUpdate}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color="#EAF7F6" />
-                ) : (
-                  <Text style={styles.publishText}>Update</Text>
-                )}
-              </Pressable>
-
-              <View style={{ height: 40 }} />
             </View>
           </View>
-        </ScrollView>
 
-        <Modal visible={calendarModalOpen} transparent animationType="fade">
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setCalendarModalOpen(false)}
-          >
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Select calendar</Text>
-
-              {calLoading ? (
-                <View style={{ paddingVertical: 14 }}>
-                  <ActivityIndicator />
+          {/* End Date & Time */}
+          <View style={styles.inputSection}>
+            <Text style={styles.sectionTitle}>End Date</Text>
+            <View>
+              <View style={styles.timeDateDiv}>
+                <View style={styles.infoPill}>
+                  <Text style={styles.infoPillText}>{endDateLabel}</Text>
                 </View>
-              ) : (
-                <FlatList
-                  data={calendars}
-                  keyExtractor={(i) => i.id}
-                  ItemSeparatorComponent={() => (
-                    <View style={styles.modalSep} />
-                  )}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      style={styles.modalItem}
-                      onPress={async () => {
-                        setSelectedCalendar(item);
-                        setCalendarModalOpen(false);
-                        await loadTagsForCalendar(item.id);
-                      }}
-                    >
-                      <Text style={styles.modalItemText}>{item.name}</Text>
-                    </Pressable>
-                  )}
-                  ListEmptyComponent={
-                    <Text style={styles.helperText}>
-                      No calendars. Create one first.
-                    </Text>
-                  }
+                <View style={styles.dateTimeBox}>
+                  <Pressable style={styles.infoPill} onPress={() => {
+                    if (!endTime) setEndTime(new Date());
+                    openTimePicker("end", endTime ?? new Date());
+                  }}>
+                    <Text style={styles.infoPillText}>{endTimeLabel}</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={styles.calendarCenterWrap}>
+                <MiniMonthCalendar
+                  value={endDate ?? date}
+                  onChange={setEndDate}
+                  size={miniSize}
                 />
-              )}
+              </View>
             </View>
-          </Pressable>
-        </Modal>
+          </View>
 
-        <Modal visible={successModalOpen} transparent animationType="fade">
-          <Pressable
-            style={styles.successOverlay}
-            onPress={closeSuccessAndGoRoot}
+          {/* Buttons */}
+          <View
+            style={[
+              styles.buttonGroup,
+              { flexDirection: width < 380 ? "column" : "row" },
+            ]}
           >
-            <View style={styles.successCard}>
-              <View style={styles.successIconWrap}>
-                <Ionicons name="checkmark" size={28} color={WHITE} />
-              </View>
+            <Pressable
+              style={styles.cancelButton}
+              onPress={goBackOrCalendars}
+              disabled={saving}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
 
-              <Text style={styles.successTitle}>Ready!</Text>
-              <Text style={styles.successBody}>Event updated successfully</Text>
+            <Pressable
+              style={[
+                styles.publishButton,
+                saving && styles.publishButtonDisabled,
+              ]}
+              onPress={handleUpdate}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.publishText}>Update Event</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
 
-              <Pressable
-                style={styles.successBtn}
-                onPress={closeSuccessAndGoRoot}
-              >
-                <Text style={styles.successBtnText}>OK</Text>
-              </Pressable>
+      <CalendarSelectorModal
+        visible={calendarModalOpen}
+        onClose={() => setCalendarModalOpen(false)}
+        calendars={calendars}
+        loading={calLoading}
+        onSelect={async (calendar: CalendarItem) => {
+          setSelectedCalendar(calendar);
+          setCalendarModalOpen(false);
+          await loadTagsForCalendar(calendar.id);
+        }}
+      />
 
-              <Pressable
-                style={styles.successClose}
-                onPress={closeSuccessAndGoRoot}
-              >
-                <Ionicons name="close" size={18} color={TEXT} />
-              </Pressable>
-            </View>
-          </Pressable>
-        </Modal>
+      <EventSuccessModal
+        visible={successModalOpen}
+        onClose={closeSuccessAndGoRoot}
+      />
 
-        {showNativeTimePicker && (
-          <>
-            {Platform.OS === "ios" ? (
-              <Modal transparent animationType="fade">
-                <View style={styles.pickerOverlay}>
-                  <View style={styles.pickerCard}>
-                    <Text style={styles.pickerTitle}>Select time</Text>
+      <EventTimePickerModal
+        visibleNative={showNativeTimePicker}
+        visibleWeb={showWebTimePicker}
+        time={activeTimePicker === "end" ? (endTime ?? time) : time}
+        webHour={webHour}
+        webMinute={webMinute}
+        setWebHour={setWebHour}
+        setWebMinute={setWebMinute}
+        onChangeNative={onPickNativeTime}
+        onCloseNative={() => setShowNativeTimePicker(false)}
+        onCloseWeb={() => setShowWebTimePicker(false)}
+        onApplyWeb={applyWebTime}
+      />
 
-                    <DateTimePicker
-                      value={time}
-                      mode="time"
-                      display="spinner"
-                      onChange={onPickNativeTime}
-                    />
-
-                    <Pressable
-                      style={styles.pickerDone}
-                      onPress={() => setShowNativeTimePicker(false)}
-                    >
-                      <Text style={styles.pickerDoneText}>Done</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </Modal>
-            ) : (
-              <DateTimePicker
-                value={time}
-                mode="time"
-                display="spinner"
-                onChange={onPickNativeTime}
-              />
-            )}
-          </>
-        )}
-
-        {showWebTimePicker && (
-          <Modal transparent animationType="fade">
-            <View style={styles.pickerOverlay}>
-              <View style={styles.pickerCard}>
-                <Text style={styles.pickerTitle}>Select time</Text>
-
-                <View style={styles.webTimeRow}>
-                  <View style={styles.webListBox}>
-                    <FlatList
-                      data={Array.from({ length: 24 }, (_, i) => i)}
-                      keyExtractor={(i) => `h-${i}`}
-                      style={styles.webList}
-                      contentContainerStyle={styles.webListContent}
-                      showsVerticalScrollIndicator
-                      renderItem={({ item }) => {
-                        const selectedH = item === webHour;
-                        return (
-                          <Pressable
-                            onPress={() => setWebHour(item)}
-                            style={[
-                              styles.webListItem,
-                              selectedH && styles.webListItemSelected,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.webListItemText,
-                                selectedH && styles.webListItemTextSelected,
-                              ]}
-                            >
-                              {pad2(item)}
-                            </Text>
-                          </Pressable>
-                        );
-                      }}
-                    />
-                  </View>
-
-                  <View style={styles.webListBox}>
-                    <FlatList
-                      data={Array.from({ length: 60 }, (_, i) => i)}
-                      keyExtractor={(i) => `m-${i}`}
-                      style={styles.webList}
-                      contentContainerStyle={styles.webListContent}
-                      showsVerticalScrollIndicator
-                      renderItem={({ item }) => {
-                        const selectedM = item === webMinute;
-                        return (
-                          <Pressable
-                            onPress={() => setWebMinute(item)}
-                            style={[
-                              styles.webListItem,
-                              selectedM && styles.webListItemSelected,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.webListItemText,
-                                selectedM && styles.webListItemTextSelected,
-                              ]}
-                            >
-                              {pad2(item)}
-                            </Text>
-                          </Pressable>
-                        );
-                      }}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.webTimeActions}>
-                  <Pressable
-                    style={styles.webCancelBtn}
-                    onPress={() => setShowWebTimePicker(false)}
-                  >
-                    <Text style={styles.webCancelText}>Cancel</Text>
-                  </Pressable>
-
-                  <Pressable style={styles.pickerDone} onPress={applyWebTime}>
-                    <Text style={styles.pickerDoneText}>Done</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </Modal>
-        )}
-      </View>
-    </>
+      <CustomToast
+        message={formError}
+        onHide={() => setFormError(null)}
+        type="error"
+      />
+    </View>
   );
 }
 
-const miniStyles = StyleSheet.create({
+const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  container: {
+    paddingHorizontal: 24,
+    paddingBottom: 140,
+  },
+  containerDesktop: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingBottom: 40,
+  },
   card: {
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "rgba(16,70,77,0.18)",
-    backgroundColor: "rgba(255,255,255,0.45)",
-    overflow: "hidden",
-    padding: 8,
+    width: "100%",
   },
-  headerRow: {
-    height: 34,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  cardDesktop: {
+    width: "100%",
+    maxWidth: 680,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 40,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  navBtn: {
-    width: 30,
-    height: 28,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1.5,
-    borderColor: "rgba(16,70,77,0.18)",
-  },
-  monthPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: "rgba(31,106,106,0.10)",
-    borderWidth: 1.5,
-    borderColor: "rgba(31,106,106,0.18)",
-  },
-  monthText: { color: TEXT, fontWeight: "900", fontSize: 12 },
-  weekdaysRow: {
-    height: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  weekday: {
+  title: {
     textAlign: "center",
+    marginVertical: 16,
     color: TEXT,
-    fontWeight: "900",
-    fontSize: 10,
-    opacity: 0.75,
   },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  dayCell: {
+  inputSection: {
+    marginBottom: 24,
+  },
+  timeDateDiv: {
+    flexDirection: "row",
+    width: "60%",
+    alignSelf: "center",
+  },
+  sectionTitle: {
+    fontSize: 15,
+    color: TEXT,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: "#6f7d7f",
+    marginBottom: 12,
+  },
+  coverPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  input: {
+    borderWidth: 1.5,
+    borderColor: "#e0e0e0",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: "#333",
+    backgroundColor: "#fff",
+    marginBottom: 12,
+  },
+  inputMultiline: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#e8e8e8",
+    marginVertical: 24,
+  },
+  selectorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#e0e0e0",
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: "#fff",
+  },
+  selectorIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f0f5f5",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
+    marginRight: 12,
+  },
+  selectorContent: {
+    flex: 1,
+  },
+  selectorLabel: {
+    fontSize: 12,
+    color: "#6f7d7f",
     marginBottom: 2,
   },
-  dayEmpty: { backgroundColor: "transparent" },
-  dayText: { color: TEXT, fontWeight: "900", fontSize: 11 },
-  dayTextEmpty: { opacity: 0 },
-  daySelected: {
-    backgroundColor: "rgba(242,163,166,0.40)",
-    borderWidth: 1.5,
-    borderColor: PINK,
+  selectorValue: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "600",
   },
-  dayTextSelected: { color: TEXT },
-  dayToday: { borderWidth: 1.5, borderColor: TEAL },
-});
-
-const ITEM_H = 20;
-const VISIBLE_ITEMS = 3;
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  iconBtn: { padding: 6 },
-
-  scrollContent: { paddingTop: 64, paddingBottom: 120 },
-
-  header: {
-    textAlign: "center",
-    fontSize: 28,
-    fontWeight: "800",
-    color: TEXT,
-    marginTop: 6,
-    marginBottom: 6,
+  placeInputWrap: {
+    position: "relative",
   },
-
-  body: { alignSelf: "center" },
-
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 28,
-    paddingHorizontal: 6,
-    marginBottom: 10,
+  placeInput: {
+    paddingRight: 80,
+    marginBottom: 0,
   },
-  block: { flex: 1, alignItems: "center" },
-
-  calendarLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
-  },
-  smallLabelInline: { color: TEXT, fontSize: 13, fontWeight: "800" },
-  dropdownInline: {
-    width: 42,
-    height: 30,
-    borderWidth: 1.5,
-    borderColor: TEXT,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.35)",
-  },
-
-  smallLabelCentered: {
-    color: TEXT,
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: 10,
-    textAlign: "center",
-  },
-
-  calendarPreview: { alignItems: "center" },
-  calendarImgWrap: {
-    width: 74,
-    height: 74,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#EDE7D5",
-  },
-  calendarImg: {
-    width: "100%",
-    height: "100%",
-  },
-  calendarImgPlaceholder: {
-    width: "100%",
-    height: "100%",
-  },
-  calendarName: { marginTop: 6, color: TEXT, fontSize: 12, fontWeight: "800" },
-
-  photoBox: {
-    width: 90,
-    height: 82,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: TEXT,
-    backgroundColor: "rgba(255,255,255,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  photoPreview: { width: "100%", height: "100%", borderRadius: 12 },
-
-  helperText: {
-    marginTop: 6,
-    fontSize: 11,
-    color: TEXT,
-    opacity: 0.6,
-    textAlign: "center",
-  },
-
-  form: { paddingHorizontal: 6, paddingTop: 4 },
-
-  fieldLabel: { color: TEXT, fontSize: 14, fontWeight: "800", marginBottom: 6 },
-
-  input: {
-    height: 46,
-    minHeight: 46,
-    borderWidth: 2,
-    borderColor: PINK,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === "android" ? 10 : 8,
-    fontSize: 15,
-    textAlignVertical: "center",
-    backgroundColor: "rgba(255,255,255,0.45)",
-  },
-
-  textAreaSmall: {
-    height: 64,
-    borderWidth: 2,
-    borderColor: PINK,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingTop: 8,
-    backgroundColor: "rgba(255,255,255,0.45)",
-  },
-
-  timeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 10,
-  },
-  timePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: PINK,
-    backgroundColor: "rgba(255,255,255,0.6)",
-  },
-  timeText: { color: TEXT, fontWeight: "900" },
-
-  calendarCenterWrap: {
-    marginTop: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  publishBtn: {
-    marginTop: 14,
-    alignSelf: "center",
-    width: 170,
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: TEAL,
-    borderWidth: 2,
-    borderColor: "#0B3D3D",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  publishBtnDisabled: { opacity: 0.65 },
-  publishText: {
-    textAlign: "center",
-    color: "#EAF7F6",
-    fontWeight: "900",
-    fontSize: 16,
-  },
-
-  errorText: { color: RED, fontWeight: "800", marginBottom: 8 },
-
-  placeRow: { flexDirection: "row", alignItems: "center" },
   clearBtn: {
     position: "absolute",
-    right: 8,
+    right: 12,
+    top: 10,
     width: 28,
     height: 28,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1.5,
-    borderColor: "rgba(16,70,77,0.18)",
+    backgroundColor: "#f0f5f5",
   },
-  placeSpinner: { position: "absolute", right: 40 },
-
+  placeSpinner: {
+    position: "absolute",
+    right: 48,
+    top: 16,
+  },
   suggestBox: {
-    marginTop: 6,
-    borderWidth: 2,
-    borderColor: "rgba(242,163,166,0.85)",
+    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
     borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.65)",
+    backgroundColor: "#fff",
     overflow: "hidden",
   },
   suggestItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(16,70,77,0.10)",
+    borderBottomColor: "#eef3f3",
   },
-  suggestText: { flex: 1, color: TEXT, fontWeight: "800", fontSize: 12 },
-
-  coordsText: {
-    marginTop: 6,
-    fontSize: 11,
-    color: TEXT,
-    opacity: 0.75,
-    fontWeight: "800",
-  },
-
-  modalOverlay: {
+  suggestText: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-  },
-  modalCard: {
-    width: "92%",
-    maxWidth: 420,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    padding: 14,
-  },
-  modalTitle: {
     color: TEXT,
-    fontWeight: "900",
-    fontSize: 16,
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: "500",
   },
-  modalSep: { height: 1, backgroundColor: "rgba(16,70,77,0.12)" },
-  modalItem: { paddingVertical: 12, paddingHorizontal: 10 },
-  modalItemText: { color: TEXT, fontWeight: "800" },
-
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-  },
-  pickerCard: {
-    width: "92%",
-    maxWidth: 440,
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    padding: 14,
-  },
-  pickerTitle: {
-    color: TEXT,
-    fontWeight: "900",
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  pickerDone: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "rgba(31,106,106,0.12)",
-  },
-  pickerDoneText: { color: TEXT, fontWeight: "900" },
-
-  webTimeRow: { flexDirection: "row", gap: 12 },
-  webListBox: {
-    flex: 1,
-    height: ITEM_H * VISIBLE_ITEMS + 10,
-    borderWidth: 2,
-    borderColor: PINK,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.45)",
-    overflow: "hidden",
-  },
-  webList: { flex: 1 },
-  webListContent: { paddingVertical: 5 },
-  webListItem: {
-    height: ITEM_H,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    marginHorizontal: 8,
-    marginVertical: 2,
-  },
-  webListItemSelected: {
-    backgroundColor: "rgba(242,163,166,0.18)",
-    borderWidth: 1.5,
-    borderColor: PINK,
-  },
-  webListItemText: { color: TEXT, fontWeight: "800" },
-  webListItemTextSelected: { color: TEXT, fontWeight: "900" },
-
-  webTimeActions: {
-    marginTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  webCancelBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "rgba(16,70,77,0.08)",
-  },
-  webCancelText: { color: TEXT, fontWeight: "900" },
-
-  successOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.30)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 18,
-  },
-  successCard: {
-    width: "92%",
-    maxWidth: 420,
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: WHITE,
-    borderWidth: 2,
-    borderColor: "rgba(16,70,77,0.20)",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.18,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-    alignItems: "center",
-  },
-  successIconWrap: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    backgroundColor: TEAL,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#0B3D3D",
-    marginBottom: 10,
-  },
-  successTitle: {
-    color: TEXT,
-    fontWeight: "900",
-    fontSize: 18,
-    marginBottom: 4,
-  },
-  successBody: {
-    color: TEXT,
-    fontWeight: "800",
-    opacity: 0.75,
-    textAlign: "center",
-    marginBottom: 14,
-  },
-  successBtn: {
-    width: 150,
-    paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: TEAL,
-    borderWidth: 2,
-    borderColor: "#0B3D3D",
-  },
-  successBtnText: { textAlign: "center", color: "#EAF7F6", fontWeight: "900" },
-  successClose: {
-    position: "absolute",
-    right: 10,
-    top: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1.5,
-    borderColor: "rgba(16,70,77,0.25)",
-  },
-
-  backBtn: {
-    position: "absolute",
-    top: 14,
-    left: 14,
-    zIndex: 50,
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: TEAL,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#0B3D3D",
-    shadowColor: TEAL_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-
-  // nuevos estilos de tags
   tagsLoadingWrap: {
     paddingVertical: 8,
     alignItems: "flex-start",
@@ -1745,7 +1126,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 4,
   },
   tagChip: {
     flexDirection: "row",
@@ -1758,15 +1138,153 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7fbfb",
   },
   tagChipSelected: {
-    borderColor: "#10464d",
+    borderColor: TEXT,
     backgroundColor: "#e8f2f2",
   },
   tagChipText: {
-    color: "#10464d",
+    color: TEXT,
     fontSize: 13,
     fontWeight: "600",
   },
   tagChipTextSelected: {
     fontWeight: "700",
+  },
+  helperText: {
+    marginTop: 12,
+    fontSize: 12,
+    color: "#6b6b6b",
+  },
+  dateTimeBox: {
+    flex: 1,
+  },
+  infoPill: {
+    borderWidth: 1.5,
+    borderColor: "#e0e0e0",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    flex: 1,
+  },
+  infoPillText: {
+    color: "#333",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  calendarCenterWrap: {
+    marginTop: 4,
+    alignItems: "center",
+  },
+  buttonGroup: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    paddingVertical: 16,
+    borderWidth: 1.5,
+    borderColor: TEXT,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  cancelText: {
+    color: TEXT,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  publishButton: {
+    flex: 1,
+    backgroundColor: TEXT,
+    borderRadius: 30,
+    paddingVertical: 16,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  publishButtonDisabled: {
+    opacity: 0.6,
+  },
+  publishText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  coverPickerEmpty: {
+    borderWidth: 1.5,
+    borderColor: "#c8dfe1",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f5fafa",
+    gap: 6,
+  },
+  coverPickerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#e0eff0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  coverPickerLabel: {
+    fontSize: 14,
+    color: TEXT,
+    fontWeight: "600",
+  },
+  coverPickerSub: {
+    fontSize: 12,
+    color: "#999",
+  },
+  coverPreviewContainer: {
+    borderRadius: 12,
+    overflow: "hidden",
+    height: 180,
+    position: "relative",
+    backgroundColor: "#f5fafa",
+    borderWidth: 1.5,
+    borderColor: "#d8e6e7",
+  },
+  coverRemoveButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 13,
+  },
+  coverChangeButton: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  coverChangeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  errorText: {
+    color: RED,
+    fontSize: 14,
+    marginBottom: 12,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

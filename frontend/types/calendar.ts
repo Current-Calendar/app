@@ -34,8 +34,10 @@ export interface CalendarEvent {
     description: string;
     place_name: string;
     location?: { latitude: number; longitude: number } | null;
-    date: string;           // YYYY-MM-DD
+    date: string;           // YYYY-MM-DD (start date)
+    end_date?: string;      // YYYY-MM-DD (end date, optional)
     time: string;           // HH:mm
+    end_time?: string;      // HH:mm (end time, optional)
     photo?: string;         // URL to event image
     recurrence?: string | null;
     type?: EventType;       // UI-only filter type (TODO BACKEND mapping)

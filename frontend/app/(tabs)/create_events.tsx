@@ -454,9 +454,6 @@ export default function CreateEventsScreen() {
     try {
       setPublishing(true);
 
-      let end_date = new Date(endDate);
-      end_date.setHours(endTime.getHours());
-
       let createdEvent: any;
 
       if (coverAsset) {
@@ -466,7 +463,8 @@ export default function CreateEventsScreen() {
         formData.append("place_name", place?.trim() ?? "");
         formData.append("date", toISODate(date));
         formData.append("time", toHMS(time));
-        formData.append("end_date", end_date.toISOString());
+        formData.append("end_date", toISODate(endDate));
+        formData.append("end_time", toHMS(endTime));
         formData.append("calendars", JSON.stringify(calendarsIds));
         formData.append("creator_id", String(user.id));
 
@@ -483,8 +481,9 @@ export default function CreateEventsScreen() {
           description: description?.trim() ?? "",
           place_name: place?.trim() ?? "",
           date: toISODate(date),
-          end_date,
+          end_date: toISODate(endDate),
           time: toHMS(time),
+          end_time: toHMS(endTime),
           calendars: calendarsIds,
           creator_id: user.id,
         };
@@ -804,14 +803,14 @@ export default function CreateEventsScreen() {
             <View>
               <View style={styles.timeDateDiv}>
                 <View style={styles.infoPill}>
-                  <Text style={styles.infoPillText}>{dateLabel}</Text>
+                  <Text style={styles.infoPillText}>{endDateLabel}</Text>
                 </View>
                 <View style={styles.dateTimeBox}>
                   <Pressable
                     style={styles.infoPill}
                     onPress={() => openTimePicker("end", endTime)}
                   >
-                    <Text style={styles.infoPillText}>{timeLabel}</Text>
+                    <Text style={styles.infoPillText}>{endTimeLabel}</Text>
                   </Pressable>
                 </View>
               </View>

@@ -20,7 +20,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CalendarGrid } from "@/components/calendar-grid";
@@ -101,7 +101,7 @@ export default function CalendarScreen() {
   const { deleteCalendar } = useCalendarActions();
   const today = new Date();
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
+  const params = useLocalSearchParams<{ selectedCalendarId?: string; selectedDate?: string }>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isDesktop = width >= 768;
@@ -384,10 +384,16 @@ export default function CalendarScreen() {
           e.calendars.includes(Number(c.id)),
         );
 
-        const dates = getDates(
-          new Date(e.date),
-          e.end_date ? new Date(e.end_date) : new Date(e.date),
-        );
+        const parseLocalDate = (s: string) => {
+          const clean = s.includes("T") ? s.split("T")[0] : s;
+          const [y, m, d] = clean.split("-").map(Number);
+          return new Date(y, m - 1, d);
+        };
+
+        const startD = parseLocalDate(e.date);
+        const endD = e.end_date ? parseLocalDate(e.end_date) : startD;
+
+        const dates = getDates(startD, endD);
 
         return dates.map((date) => {
           return {
@@ -396,8 +402,10 @@ export default function CalendarScreen() {
             title: e.title,
             description: e.description || "",
             place_name: e.place_name || "",
-            date: date.toISOString().slice(0, 10),
+            date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+            end_date: e.end_date ? (e.end_date.includes("T") ? e.end_date.split("T")[0] : e.end_date) : undefined,
             time: e.time.substring(0, 5),
+            end_time: e.end_time ? e.end_time.substring(0, 5) : undefined,
             recurrence: e.recurrence,
             type: "other",
             color: calendar?.color || "#6C63FF",
@@ -424,6 +432,17 @@ export default function CalendarScreen() {
       setSelectedCalendarId(params.selectedCalendarId);
     }
   }, [params.selectedCalendarId]);
+
+  useEffect(() => {
+    if (params.selectedDate) {
+      const d = new Date(params.selectedDate);
+      if (!isNaN(d.getTime())) {
+        setYear(d.getFullYear());
+        setMonth(d.getMonth());
+        setSelectedDay(params.selectedDate);
+      }
+    }
+  }, [params.selectedDate]);
 
   const availableCategories = useMemo<CalendarCategory[]>(() => {
     const map = new Map<string, CalendarCategory>();
@@ -483,6 +502,16 @@ export default function CalendarScreen() {
       setSelectedCalendarId(null);
     }
   }, [filteredCalendars, selectedCalendarId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Refrescar eventos cuando se vuelve a la pantalla desde edición
+      const ids = calendars.map((c) => c.id).join(",");
+      if (ids) {
+        void refetchEvents(ids);
+      }
+    }, [calendars, refetchEvents]),
+  );
 
   const [open, setOpen] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;
@@ -1201,7 +1230,6 @@ export default function CalendarScreen() {
           style={[styles.fab, isMobile && styles.fabMobile]}
           onPress={toggleMenu}
         >
-          {" "}
           <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
             <MaterialCommunityIcons
               name="arrow-down-thick"

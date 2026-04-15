@@ -1,4 +1,3 @@
-from flask import request
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -28,6 +27,7 @@ def create_event(request):
     date = data.get("date")
     time = data.get("time")
     end_date = data.get("end_date")
+    end_time = data.get("end_time")
     calendars_ids = data.get("calendars")
 
     if calendars_ids and isinstance(calendars_ids, str):
@@ -62,13 +62,8 @@ def create_event(request):
         )
     
     if end_date:
-        try:
-            end_date = datetime.fromisoformat(end_date)
-        except ValueError:
-            return Response(
-                {"errors": ["El formato del campo 'end_date' es incorrecto."]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if not end_date.strip():
+            end_date = None
     
     if Event.objects.filter(
         creator=creator,
@@ -122,7 +117,8 @@ def create_event(request):
         place_name=data.get("place_name", ""),
         date=date,
         time=time,
-        end_date=end_date,
+        end_date=end_date if end_date else None,
+        end_time=end_time if end_time else None,
         photo=photo,
         recurrence=data.get("recurrence"),
         external_id=data.get("external_id"),
@@ -225,7 +221,7 @@ def edit_event(request: Request, event_id):
     # Update scalar fields if present
     editable_fields = [
         "title", "description", "place_name",
-        "date", "time", "recurrence", "external_id",
+        "date", "time", "end_date", "end_time", "recurrence", "external_id",
     ]
     for field in editable_fields:
         if field in data:

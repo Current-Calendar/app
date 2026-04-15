@@ -48,6 +48,9 @@ export function PublicEventDetailModal({
             )}
 
             <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+            {event.end_date && (
+              <DetailRow icon="calendar" label={"End: " + formatDate(event.end_date) + (event.end_time ? " · " + event.end_time : "")} />
+            )}
 
             {!!event.time && (
               <DetailRow icon="time-outline" label={event.time} />
@@ -97,7 +100,8 @@ function DetailRow({
 }
 
 function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
+  const clean = iso.includes("T") ? iso.split("T")[0] : iso;
+  const [y, m, d] = clean.split("-");
   const date = new Date(Number(y), Number(m) - 1, Number(d));
   return date.toLocaleDateString(undefined, {
     weekday: "long",
