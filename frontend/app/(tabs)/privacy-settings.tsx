@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import profileStyles from '../../styles/profile-styles';
+import { useRouter } from "expo-router";
+
 
 type LegalDocKey = "privacy" | "cookies" | "terms";
 
@@ -193,6 +196,7 @@ const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
 };
 
 export default function PrivacySettingsScreen() {
+  const router = useRouter();
   const [openDocs, setOpenDocs] = useState<Record<LegalDocKey, boolean>>({
     privacy: false,
     cookies: false,
@@ -254,6 +258,15 @@ export default function PrivacySettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={profileStyles.editHeaderGreen}>
+        <View style={profileStyles.editHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={profileStyles.editHeaderButton}>Back</Text>
+          </TouchableOpacity>
+          <View style={{ width: 60 }} />
+        </View>
+      </View>
+      <View style={profileStyles.editHeaderCoral} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.heroCard}>
           <Text style={styles.eyebrow}>Privacy controls</Text>
@@ -366,7 +379,7 @@ export default function PrivacySettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#efe8dc",
+    backgroundColor: "#FFFDED",
   },
   scroll: {
     flex: 1,
@@ -421,7 +434,7 @@ const styles = StyleSheet.create({
     color: "#47423d",
   },
   preferenceCard: {
-    backgroundColor: "#f8f5f1",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#d8d0c4",
@@ -491,7 +504,7 @@ const styles = StyleSheet.create({
     color: "#6f4c08",
   },
   itemWrap: {
-    backgroundColor: "#f8f5f1",
+    backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#d8d0c4",
