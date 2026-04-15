@@ -1071,8 +1071,8 @@ def export_to_ics(request, calendar_id):
         return Response({"error": "Calendar no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
 
     user = request.user
-    is_owner_or_co_owner = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists())
-    if calendar.privacy == 'PRIVATE' and not is_owner_or_co_owner:
+    has_access = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists() or calendar.viewers.filter(id=user.id).exists())
+    if calendar.privacy == 'PRIVATE' and not has_access:
         return Response({"error": "No tienes permiso para exportar este calendario."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
 
     cal = ICalCalendar()
