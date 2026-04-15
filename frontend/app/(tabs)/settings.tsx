@@ -238,7 +238,7 @@ const SettingsScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.row, styles.rowBorder]}
+              style={styles.row}
               onPress={() => router.push('/help-support' as any)}
             >
               <View style={styles.rowLeft}>
@@ -249,24 +249,6 @@ const SettingsScreen = () => {
                   <Text style={styles.rowTitle}>Help & support</Text>
                   <Text style={styles.rowSubtitle}>
                     FAQs, contact and assistance
-                  </Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#10464d" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.row}
-            //onPress={() => router.push('/about' as any)}
-            >
-              <View style={styles.rowLeft}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name="information-circle-outline" size={22} color="#10464d" />
-                </View>
-                <View>
-                  <Text style={styles.rowTitle}>About</Text>
-                  <Text style={styles.rowSubtitle}>
-                    App version and additional information
                   </Text>
                 </View>
               </View>
