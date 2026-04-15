@@ -20,6 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import apiClient, { appendPhoto } from "@/services/api-client";
 import { useCreateEventApi } from "@/hooks/use-create-event-api";
+import CustomToast from "@/components/ui/custom-toast";
 
 const TEXT = "#10464D";
 const PINK = "#F2A3A6";
@@ -55,7 +56,9 @@ type EventTagItem = {
 
 type ApiListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
-const extractArray = <T,>(response: ApiListResponse<T> | null | undefined): T[] => {
+const extractArray = <T,>(
+  response: ApiListResponse<T> | null | undefined,
+): T[] => {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.results)) return response.results;
   if (Array.isArray(response?.data)) return response.data;
@@ -70,7 +73,9 @@ const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
-  name: String(raw?.name ?? raw?.nombre ?? raw?.titulo ?? raw?.title ?? "Calendar"),
+  name: String(
+    raw?.name ?? raw?.nombre ?? raw?.titulo ?? raw?.title ?? "Calendar",
+  ),
   image: raw?.cover ?? raw?.image ?? undefined,
 });
 
@@ -123,7 +128,6 @@ function MiniMonthCalendar({
     setViewYear(selected.getFullYear());
     setViewMonth(selected.getMonth());
   }, [selected.getTime()]);
-  
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -205,7 +209,10 @@ function MiniMonthCalendar({
 
       <View style={miniStyles.weekdaysRow}>
         {WEEKDAYS.map((w, i) => (
-          <Text key={`${w}-${i}`} style={[miniStyles.weekday, { width: cellW }]}>
+          <Text
+            key={`${w}-${i}`}
+            style={[miniStyles.weekday, { width: cellW }]}
+          >
             {w}
           </Text>
         ))}
@@ -267,7 +274,9 @@ export default function EditEventsScreen() {
   const [calError, setCalError] = useState<string | null>(null);
 
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(null);
+  const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
+    null,
+  );
 
   const [availableTags, setAvailableTags] = useState<EventTagItem[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -280,7 +289,8 @@ export default function EditEventsScreen() {
   const [place, setPlace] = useState("");
 
   const [coverUri, setCoverUri] = useState<string | null>(null);
-  const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [coverAsset, setCoverAsset] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
 
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
@@ -331,15 +341,15 @@ export default function EditEventsScreen() {
       setTagsLoading(true);
       setTagsError(null);
 
-      const response = await apiClient.get(
-        `/event-tags/for-calendar/${calendarId}/`
-      ) as ApiListResponse<EventTagItem>;
+      const response = (await apiClient.get(
+        `/event-tags/for-calendar/${calendarId}/`,
+      )) as ApiListResponse<EventTagItem>;
 
       const list = extractArray(response);
       setAvailableTags(list);
 
       setSelectedTagIds((prev) =>
-        prev.filter((tagId) => list.some((tag) => tag.id === tagId))
+        prev.filter((tagId) => list.some((tag) => tag.id === tagId)),
       );
     } catch (error: any) {
       console.error("Error loading tags for calendar:", error);
@@ -353,9 +363,9 @@ export default function EditEventsScreen() {
 
   const loadEventAssignedTags = async (currentEventId: string | number) => {
     try {
-      const response = await apiClient.get(
-        `/event-tags/for-event/${currentEventId}/`
-      ) as ApiListResponse<EventTagItem>;
+      const response = (await apiClient.get(
+        `/event-tags/for-event/${currentEventId}/`,
+      )) as ApiListResponse<EventTagItem>;
 
       const assignedTags = extractArray(response);
       const assignedIds = assignedTags
@@ -385,7 +395,9 @@ export default function EditEventsScreen() {
         (Array.isArray(data?.data) && data.data) ||
         [];
 
-      const mapped = list.map(mapCalendarFromApi).filter((c: CalendarItem) => c.id);
+      const mapped = list
+        .map(mapCalendarFromApi)
+        .filter((c: CalendarItem) => c.id);
       setCalendars(mapped);
 
       return mapped;
@@ -453,7 +465,9 @@ export default function EditEventsScreen() {
 
       if (event?.calendars?.length > 0) {
         const selectedId = String(event.calendars[0]);
-        const foundCalendar = availableCalendars.find((c) => c.id === selectedId);
+        const foundCalendar = availableCalendars.find(
+          (c) => c.id === selectedId,
+        );
 
         if (foundCalendar) {
           setSelectedCalendar(foundCalendar);
@@ -583,7 +597,7 @@ export default function EditEventsScreen() {
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
   };
 
@@ -607,7 +621,7 @@ export default function EditEventsScreen() {
           const tag = availableTags.find((t) => t.id === tagId);
           failedAdds.push(tag?.name || `Tag ${tagId}`);
         }
-      })
+      }),
     );
 
     await Promise.all(
@@ -620,7 +634,7 @@ export default function EditEventsScreen() {
           const tag = availableTags.find((t) => t.id === tagId);
           failedRemoves.push(tag?.name || `Tag ${tagId}`);
         }
-      })
+      }),
     );
 
     return { failedAdds, failedRemoves };
@@ -652,7 +666,8 @@ export default function EditEventsScreen() {
 
   const pickCoverImage = async () => {
     if (Platform.OS !== "web") {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") return;
     }
 
@@ -665,10 +680,12 @@ export default function EditEventsScreen() {
 
     if (!result.canceled) {
       const asset = result.assets[0];
-      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes)
       if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-          setImageError("The selected image is too large. Please choose one under 3MB.");
-          return;
+        setImageError(
+          "The selected image is too large. Please choose one under 3MB.",
+        );
+        return;
       }
       setImageError(null);
       setCoverUri(asset.uri);
@@ -678,6 +695,27 @@ export default function EditEventsScreen() {
 
   const handleUpdate = async () => {
     setFormError(null);
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const selectedDateKey = toISODate(date);
+
+    if (selectedDateKey < todayKey) {
+      setFormError("No puedes editar un evento para que ocurra en el pasado");
+      return;
+    }
+
+    if (selectedDateKey === todayKey) {
+      const now = new Date();
+      const currentHour = pad2(now.getHours());
+      const currentMinute = pad2(now.getMinutes());
+      const currentTimeStr = `${currentHour}:${currentMinute}`;
+      const selectedTimeStr = toHM(time);
+
+      if (selectedTimeStr < currentTimeStr) {
+        setFormError("No puedes editar un evento para que ocurra en el pasado");
+        return;
+      }
+    }
 
     if (!title.trim()) {
       setFormError("El título es obligatorio.");
@@ -768,11 +806,17 @@ export default function EditEventsScreen() {
       <>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.container}>
-          <Pressable style={styles.backBtn} hitSlop={12} onPress={goBackOrCalendars}>
+          <Pressable
+            style={styles.backBtn}
+            hitSlop={12}
+            onPress={goBackOrCalendars}
+          >
             <Ionicons name="chevron-back" size={22} color={WHITE} />
           </Pressable>
 
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          >
             <ActivityIndicator size="large" color={TEAL} />
           </View>
         </View>
@@ -783,9 +827,14 @@ export default function EditEventsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
+      <CustomToast message={formError} onHide={() => setFormError(null)} />
 
       <View style={styles.container}>
-        <Pressable style={styles.backBtn} hitSlop={12} onPress={goBackOrCalendars}>
+        <Pressable
+          style={styles.backBtn}
+          hitSlop={12}
+          onPress={goBackOrCalendars}
+        >
           <Ionicons name="chevron-back" size={22} color={WHITE} />
         </Pressable>
 
@@ -826,7 +875,8 @@ export default function EditEventsScreen() {
                     </View>
                   ) : (
                     <Text style={styles.calendarName}>
-                      {selectedCalendar?.name ?? (calendars.length ? "Select" : "No calendars")}
+                      {selectedCalendar?.name ??
+                        (calendars.length ? "Select" : "No calendars")}
                     </Text>
                   )}
                 </View>
@@ -839,7 +889,10 @@ export default function EditEventsScreen() {
 
                 <Pressable style={styles.photoBox} onPress={pickCoverImage}>
                   {coverUri ? (
-                    <Image source={{ uri: coverUri }} style={styles.photoPreview} />
+                    <Image
+                      source={{ uri: coverUri }}
+                      style={styles.photoPreview}
+                    />
                   ) : (
                     <Ionicons name="camera" size={28} color={TEXT} />
                   )}
@@ -853,12 +906,16 @@ export default function EditEventsScreen() {
             </View>
 
             <View style={styles.form}>
-              {!!formError && <Text style={styles.errorText}>{formError}</Text>}
-
               <Text style={styles.fieldLabel}>Title:</Text>
-              <TextInput value={title} onChangeText={setTitle} style={styles.input} />
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                style={styles.input}
+              />
 
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description:</Text>
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
+                Description:
+              </Text>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
@@ -884,7 +941,11 @@ export default function EditEventsScreen() {
                 />
 
                 {!!place && (
-                  <Pressable style={styles.clearBtn} onPress={clearPlace} hitSlop={10}>
+                  <Pressable
+                    style={styles.clearBtn}
+                    onPress={clearPlace}
+                    hitSlop={10}
+                  >
                     <Ionicons name="close" size={18} color={TEXT} />
                   </Pressable>
                 )}
@@ -896,7 +957,9 @@ export default function EditEventsScreen() {
                 )}
               </View>
 
-              {!!placeError && <Text style={styles.errorText}>{placeError}</Text>}
+              {!!placeError && (
+                <Text style={styles.errorText}>{placeError}</Text>
+              )}
 
               {showSuggestions && (
                 <View style={styles.suggestBox}>
@@ -906,7 +969,11 @@ export default function EditEventsScreen() {
                       style={styles.suggestItem}
                       onPress={() => selectSuggestion(s)}
                     >
-                      <Ionicons name="location-outline" size={16} color={TEXT} />
+                      <Ionicons
+                        name="location-outline"
+                        size={16}
+                        color={TEXT}
+                      />
                       <Text style={styles.suggestText} numberOfLines={2}>
                         {s.display_name}
                       </Text>
@@ -921,7 +988,9 @@ export default function EditEventsScreen() {
                 </Text>
               )}
 
-              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Labels:</Text>
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>
+                Labels:
+              </Text>
 
               {tagsLoading ? (
                 <View style={styles.tagsLoadingWrap}>
@@ -937,7 +1006,10 @@ export default function EditEventsScreen() {
                     return (
                       <Pressable
                         key={tag.id}
-                        style={[styles.tagChip, selected && styles.tagChipSelected]}
+                        style={[
+                          styles.tagChip,
+                          selected && styles.tagChipSelected,
+                        ]}
                         onPress={() => toggleTag(tag.id)}
                       >
                         <Text
@@ -961,7 +1033,9 @@ export default function EditEventsScreen() {
                   })}
                 </View>
               ) : selectedCalendar?.id ? (
-                <Text style={styles.helperText}>This calendar has no available labels.</Text>
+                <Text style={styles.helperText}>
+                  This calendar has no available labels.
+                </Text>
               ) : null}
 
               <View style={styles.timeRow}>
@@ -979,7 +1053,11 @@ export default function EditEventsScreen() {
               </View>
 
               <View style={styles.calendarCenterWrap}>
-                <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+                <MiniMonthCalendar
+                  value={date}
+                  onChange={setDate}
+                  size={miniSize}
+                />
               </View>
 
               <Pressable
@@ -1015,7 +1093,9 @@ export default function EditEventsScreen() {
                 <FlatList
                   data={calendars}
                   keyExtractor={(i) => i.id}
-                  ItemSeparatorComponent={() => <View style={styles.modalSep} />}
+                  ItemSeparatorComponent={() => (
+                    <View style={styles.modalSep} />
+                  )}
                   renderItem={({ item }) => (
                     <Pressable
                       style={styles.modalItem}
@@ -1029,7 +1109,9 @@ export default function EditEventsScreen() {
                     </Pressable>
                   )}
                   ListEmptyComponent={
-                    <Text style={styles.helperText}>No calendars. Create one first.</Text>
+                    <Text style={styles.helperText}>
+                      No calendars. Create one first.
+                    </Text>
                   }
                 />
               )}
@@ -1038,7 +1120,10 @@ export default function EditEventsScreen() {
         </Modal>
 
         <Modal visible={successModalOpen} transparent animationType="fade">
-          <Pressable style={styles.successOverlay} onPress={closeSuccessAndGoRoot}>
+          <Pressable
+            style={styles.successOverlay}
+            onPress={closeSuccessAndGoRoot}
+          >
             <View style={styles.successCard}>
               <View style={styles.successIconWrap}>
                 <Ionicons name="checkmark" size={28} color={WHITE} />
@@ -1047,11 +1132,17 @@ export default function EditEventsScreen() {
               <Text style={styles.successTitle}>Ready!</Text>
               <Text style={styles.successBody}>Event updated successfully</Text>
 
-              <Pressable style={styles.successBtn} onPress={closeSuccessAndGoRoot}>
+              <Pressable
+                style={styles.successBtn}
+                onPress={closeSuccessAndGoRoot}
+              >
                 <Text style={styles.successBtnText}>OK</Text>
               </Pressable>
 
-              <Pressable style={styles.successClose} onPress={closeSuccessAndGoRoot}>
+              <Pressable
+                style={styles.successClose}
+                onPress={closeSuccessAndGoRoot}
+              >
                 <Ionicons name="close" size={18} color={TEXT} />
               </Pressable>
             </View>
@@ -1373,7 +1464,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.45)",
   },
 
-  timeRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 },
+  timeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
   timePill: {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -1384,7 +1480,11 @@ const styles = StyleSheet.create({
   },
   timeText: { color: TEXT, fontWeight: "900" },
 
-  calendarCenterWrap: { marginTop: 12, alignItems: "center", justifyContent: "center" },
+  calendarCenterWrap: {
+    marginTop: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   publishBtn: {
     marginTop: 14,
@@ -1467,7 +1567,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
   },
-  modalTitle: { color: TEXT, fontWeight: "900", fontSize: 16, marginBottom: 10 },
+  modalTitle: {
+    color: TEXT,
+    fontWeight: "900",
+    fontSize: 16,
+    marginBottom: 10,
+  },
   modalSep: { height: 1, backgroundColor: "rgba(16,70,77,0.12)" },
   modalItem: { paddingVertical: 12, paddingHorizontal: 10 },
   modalItemText: { color: TEXT, fontWeight: "800" },
@@ -1486,7 +1591,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
   },
-  pickerTitle: { color: TEXT, fontWeight: "900", fontSize: 16, marginBottom: 10 },
+  pickerTitle: {
+    color: TEXT,
+    fontWeight: "900",
+    fontSize: 16,
+    marginBottom: 10,
+  },
   pickerDone: {
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -1570,7 +1680,12 @@ const styles = StyleSheet.create({
     borderColor: "#0B3D3D",
     marginBottom: 10,
   },
-  successTitle: { color: TEXT, fontWeight: "900", fontSize: 18, marginBottom: 4 },
+  successTitle: {
+    color: TEXT,
+    fontWeight: "900",
+    fontSize: 18,
+    marginBottom: 4,
+  },
   successBody: {
     color: TEXT,
     fontWeight: "800",

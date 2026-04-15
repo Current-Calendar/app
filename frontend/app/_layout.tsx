@@ -211,10 +211,6 @@ function RootLayoutContent() {
             name="(tabs)/payment"
             options={{ headerShown: false }}
           />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: "modal", title: "Modal" }}
-          />
         </Stack>
       </View>
       {Platform.OS === "web" &&

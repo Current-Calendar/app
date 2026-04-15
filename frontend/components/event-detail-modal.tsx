@@ -9,15 +9,15 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
-import { CalendarEvent } from '@/types/calendar';
-import { useRouter } from 'expo-router';
-import { useEventActions } from '@/hooks/use-event-actions';
+import { Ionicons } from "@expo/vector-icons";
+import { CalendarEvent } from "@/types/calendar";
+import { useRouter } from "expo-router";
+import { useEventActions } from "@/hooks/use-event-actions";
 import CommentsModal from "./comments-modal";
-import { DefaultCalendarCover } from '@/components/default-calendar-cover';
-import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import { DefaultCalendarCover } from "@/components/default-calendar-cover";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import InviteUserModal from "./InviteUserModal";
-import apiClient from '@/services/api-client';
+import apiClient from "@/services/api-client";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BG = "#FFFDED";
@@ -45,14 +45,17 @@ export function EventDetailModal({
   event,
   onClose,
   canManageActions = false,
-}: EventDetailModalProps) {
+  onEditAttemptError,
+}: EventDetailModalProps & { onEditAttemptError?: (msg: string) => void }) {
   const router = useRouter();
   const { deleteEvent } = useEventActions();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isNarrow = width < 420;
 
-  const [attendanceByEvent, setAttendanceByEvent] = useState<Record<string, AttendanceStatus>>({});
+  const [attendanceByEvent, setAttendanceByEvent] = useState<
+    Record<string, AttendanceStatus>
+  >({});
   const [attendanceMenuOpen, setAttendanceMenuOpen] = useState(false);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
@@ -71,7 +74,9 @@ export function EventDetailModal({
     setInviteVisible(false);
   }, [event]);
 
-  const normalizeAttendanceStatus = (value?: string | null): AttendanceStatus => {
+  const normalizeAttendanceStatus = (
+    value?: string | null,
+  ): AttendanceStatus => {
     if (value === "ASSISTING" || value === "NOT_ASSISTING") {
       return value;
     }
@@ -81,7 +86,9 @@ export function EventDetailModal({
   useEffect(() => {
     if (!event?.id) return;
 
-    const initialStatus = normalizeAttendanceStatus((event as any).my_attendance_status);
+    const initialStatus = normalizeAttendanceStatus(
+      (event as any).my_attendance_status,
+    );
     if (initialStatus === "PENDING") return;
 
     setAttendanceByEvent((prev) => {
@@ -100,7 +107,9 @@ export function EventDetailModal({
       try {
         setTagsLoading(true);
 
-        const response: any = await apiClient.get(`/event-tags/for-event/${event.id}/`);
+        const response: any = await apiClient.get(
+          `/event-tags/for-event/${event.id}/`,
+        );
 
         const tags =
           (Array.isArray(response) && response) ||
@@ -123,21 +132,26 @@ export function EventDetailModal({
   if (!event) return null;
 
   const eventImageRaw =
-    typeof (event as any).photo === "string" && (event as any).photo.trim().length > 0
+    typeof (event as any).photo === "string" &&
+    (event as any).photo.trim().length > 0
       ? (event as any).photo.trim()
-      : typeof (event as any).image === "string" && (event as any).image.trim().length > 0
+      : typeof (event as any).image === "string" &&
+          (event as any).image.trim().length > 0
         ? (event as any).image.trim()
         : "";
 
   const hasEventImage = eventImageRaw.length > 0;
   const currentAttendance =
-    attendanceByEvent[event.id] ?? normalizeAttendanceStatus((event as any).my_attendance_status);
+    attendanceByEvent[event.id] ??
+    normalizeAttendanceStatus((event as any).my_attendance_status);
 
   const handleAttendanceChange = async (value: AttendanceStatus) => {
     setAttendanceMenuOpen(false);
     setAttendanceLoading(true);
     try {
-      const response: any = await apiClient.patch(`/events/${event.id}/rsvp/`, { status: value });
+      const response: any = await apiClient.patch(`/events/${event.id}/rsvp/`, {
+        status: value,
+      });
       const nextStatus = normalizeAttendanceStatus(response?.status || value);
       setAttendanceByEvent((prev) => ({ ...prev, [event.id]: nextStatus }));
     } catch (error) {
@@ -155,9 +169,9 @@ export function EventDetailModal({
       await deleteEvent(event.id);
       setDeleteConfirmVisible(false);
       onClose();
-      router.replace('/calendars');
+      router.replace("/calendars");
     } catch (error) {
-      console.log('Error deleting event:', error);
+      console.log("Error deleting event:", error);
     } finally {
       setDeletingEvent(false);
     }
@@ -184,7 +198,12 @@ export function EventDetailModal({
 
   return (
     <>
-      <Modal visible={!!event} transparent animationType="fade" onRequestClose={onClose}>
+      <Modal
+        visible={!!event}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
         <Pressable style={styles.overlay} onPress={onClose}>
           <Pressable
             style={[styles.card, { paddingBottom: 12 + insets.bottom }]}
@@ -202,7 +221,7 @@ export function EventDetailModal({
               />
             ) : (
               <DefaultCalendarCover
-                style={{...styles.image, backgroundColor: event.color}}
+                style={{ ...styles.image, backgroundColor: event.color }}
                 label="Evento"
                 iconSize={52}
               />
@@ -215,7 +234,10 @@ export function EventDetailModal({
                 <DetailRow icon="location-outline" label={event.place_name} />
               )}
 
-              <DetailRow icon="calendar-outline" label={formatDate(event.date)} />
+              <DetailRow
+                icon="calendar-outline"
+                label={formatDate(event.date)}
+              />
 
               {!!event.time && (
                 <DetailRow icon="time-outline" label={event.time} />
@@ -254,12 +276,22 @@ export function EventDetailModal({
                 <Text style={styles.attendanceLabel}>Attendance</Text>
 
                 <Pressable
-                  style={[styles.attendanceButton, attendanceLoading && { opacity: 0.6 }]}
-                  onPress={() => !attendanceLoading && setAttendanceMenuOpen((prev) => !prev)}
+                  style={[
+                    styles.attendanceButton,
+                    attendanceLoading && { opacity: 0.6 },
+                  ]}
+                  onPress={() =>
+                    !attendanceLoading && setAttendanceMenuOpen((prev) => !prev)
+                  }
                   testID="event-attendance-button"
                 >
-                  <Text style={styles.attendanceButtonText} testID="event-attendance-label">
-                    {attendanceLoading ? "Saving..." : getAttendanceLabel(currentAttendance)}
+                  <Text
+                    style={styles.attendanceButtonText}
+                    testID="event-attendance-label"
+                  >
+                    {attendanceLoading
+                      ? "Saving..."
+                      : getAttendanceLabel(currentAttendance)}
                   </Text>
                   <Ionicons
                     name={attendanceMenuOpen ? "chevron-up" : "chevron-down"}
@@ -283,7 +315,9 @@ export function EventDetailModal({
                       onPress={() => handleAttendanceChange("NOT_ASSISTING")}
                       testID="event-attendance-not-assisting-option"
                     >
-                      <Text style={styles.dropdownItemText}>I will not attend</Text>
+                      <Text style={styles.dropdownItemText}>
+                        I will not attend
+                      </Text>
                     </Pressable>
                   </View>
                 )}
@@ -309,16 +343,55 @@ export function EventDetailModal({
               {canManageActions && (
                 <>
                   <Pressable
-                    style={[styles.inviteBtn, isNarrow && styles.actionFullWidth]}
+                    style={[
+                      styles.inviteBtn,
+                      isNarrow && styles.actionFullWidth,
+                    ]}
                     onPress={() => setInviteVisible(true)}
                   >
-                    <Ionicons name="person-add-outline" size={16} color={TEXT} />
+                    <Ionicons
+                      name="person-add-outline"
+                      size={16}
+                      color={TEXT}
+                    />
                     <Text style={styles.inviteText}>Invite</Text>
                   </Pressable>
 
                   <Pressable
                     style={[styles.editBtn, isNarrow && styles.actionFullWidth]}
                     onPress={() => {
+                      const now = new Date();
+                      const todayKey = now.toISOString().slice(0, 10);
+                      const currentHour = String(now.getHours()).padStart(
+                        2,
+                        "0",
+                      );
+                      const currentMinute = String(now.getMinutes()).padStart(
+                        2,
+                        "0",
+                      );
+                      const currentTimeStr = `${currentHour}:${currentMinute}`;
+
+                      let isInPast = false;
+
+                      if (event.date < todayKey) {
+                        isInPast = true;
+                      } else if (event.date === todayKey && event.time) {
+                        if (event.time.slice(0, 5) < currentTimeStr) {
+                          isInPast = true;
+                        }
+                      }
+
+                      if (isInPast) {
+                        onClose();
+                        if (onEditAttemptError) {
+                          onEditAttemptError(
+                            "You cannot edit an event in the past.",
+                          );
+                        }
+                        return;
+                      }
+
                       onClose();
                       router.push({
                         pathname: "/edit_events",
@@ -342,7 +415,11 @@ export function EventDetailModal({
                     {deletingEvent ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color="#FFFFFF"
+                      />
                     )}
                     <Text style={styles.deleteText}>
                       {deletingEvent ? "Deleting..." : "Delete"}

@@ -1,1519 +1,1687 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View, TouchableOpacity, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Alert,
+  Animated,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  useWindowDimensions,
+} from "react-native";
 
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CalendarGrid } from "@/components/calendar-grid";
+import { CalendarHeader, CalendarViewMode } from "@/components/calendar-header";
+import { CalendarWeekGrid } from "@/components/calendar-week-grid";
+import { CalendarYearGrid } from "@/components/calendar-year-grid";
+import { CalendarInfoModal } from "@/components/calendar-info-modal";
+import CustomToast from "@/components/ui/custom-toast";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { CalendarSelector } from "@/components/calendar-selector";
+import { EventDetailModal } from "@/components/event-detail-modal";
 
-import { CalendarGrid } from '@/components/calendar-grid';
-import { CalendarHeader, CalendarViewMode } from '@/components/calendar-header';
-import { CalendarWeekGrid } from '@/components/calendar-week-grid';
-import { CalendarYearGrid } from '@/components/calendar-year-grid';
-import { CalendarInfoModal } from '@/components/calendar-info-modal';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { CalendarSelector } from '@/components/calendar-selector';
-import { EventDetailModal } from '@/components/event-detail-modal';
-
-import { Calendar, CalendarEvent } from '@/types/calendar';
+import { Calendar, CalendarEvent } from "@/types/calendar";
 
 import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
-import { useEventsList } from '@/hooks/use-events';
-import { useCalendarTransfer } from '@/hooks/use-calendar-transfer';
-import { useCalendarActions } from '@/hooks/use-calendar-actions';
-import { useAuth } from '@/hooks/use-auth';
-import apiClient from '@/services/api-client';
-import { ImportCalendarModal } from '@/components/import-calendar-modal';
-import { CreateMenuModal } from '@/components/nav_bar/create-menu-modal';
+import { useEventsList } from "@/hooks/use-events";
+import { useCalendarTransfer } from "@/hooks/use-calendar-transfer";
+import { useCalendarActions } from "@/hooks/use-calendar-actions";
+import { useAuth } from "@/hooks/use-auth";
+import apiClient from "@/services/api-client";
+import { ImportCalendarModal } from "@/components/import-calendar-modal";
+import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 
 const todayKey = new Date().toISOString().slice(0, 10);
 const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 type CalendarCategory = {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 };
 
 function formatSelectedDay(dateKey: string): string {
-    const [y, m, d] = dateKey.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
 }
 
 function getDates(startDate: Date, stopDate: Date) {
-    const dateArray = new Array();
-    let currentDate = startDate;
-    while (currentDate <= stopDate) {
-        dateArray.push(new Date(currentDate));
-        currentDate = new Date(currentDate);
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return dateArray;
+  const dateArray = new Array();
+  let currentDate = startDate;
+  while (currentDate <= stopDate) {
+    dateArray.push(new Date(currentDate));
+    currentDate = new Date(currentDate);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  return dateArray;
 }
 
 export default function CalendarScreen() {
-    const { isAuthenticated, user } = useAuth();
-    const { downloadCalendarFile } = useCalendarTransfer();
-    const { deleteCalendar } = useCalendarActions();
-    const today = new Date();
-    const router = useRouter();
-    const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
-    const { width } = useWindowDimensions();
-    const insets = useSafeAreaInsets();
-    const isDesktop = width >= 768;
-    const isMobile = !isDesktop;
+  const { isAuthenticated, user } = useAuth();
+  const { downloadCalendarFile } = useCalendarTransfer();
+  const { deleteCalendar } = useCalendarActions();
+  const today = new Date();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ selectedCalendarId?: string }>();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isDesktop = width >= 768;
+  const isMobile = !isDesktop;
 
-    const BOTTOM_BAR_HEIGHT = 60 + 25;
-    const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
-    const [year, setYear] = useState(today.getFullYear());
-    const [month, setMonth] = useState(today.getMonth());
-    const [weekDay, setWeekDay] = useState(today.getDate());
-    const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
-    const [calendars, setCalendars] = useState<Calendar[]>([]);
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
-    const isWeb = Platform.OS === "web";
+  const BOTTOM_BAR_HEIGHT = 60 + 25;
+  const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [weekDay, setWeekDay] = useState(today.getDate());
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const isWeb = Platform.OS === "web";
 
-    const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(null);
-    const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-    const [selectedDay, setSelectedDay] = useState<string | null>(null);
-    const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
-    const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
-    const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(null);
-    const [importModalVisible, setImportModalVisible] = useState(false);
-    const [createMenuVisible, setCreateMenuVisible] = useState(false);
-    const [loadingCalendars, setLoadingCalendars] = useState(true);
-    const [calendarsError, setCalendarsError] = useState<unknown>(null);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(
+    null,
+  );
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [infoCalendar, setInfoCalendar] = useState<Calendar | null>(null);
+  const [deletingCalendarId, setDeletingCalendarId] = useState<string | null>(
+    null,
+  );
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [createMenuVisible, setCreateMenuVisible] = useState(false);
+  const [loadingCalendars, setLoadingCalendars] = useState(true);
+  const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
-    const {
-        events: backendEvents,
-        loading: loadingEvents,
-        error: eventsError,
-        refetch: refetchEvents,
-    } = useEventsList({ autoFetch: false });
+  const {
+    events: backendEvents,
+    loading: loadingEvents,
+    error: eventsError,
+    refetch: refetchEvents,
+  } = useEventsList({ autoFetch: false });
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoadingCalendars(true);
-            setCalendarsError(null);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoadingCalendars(true);
+      setCalendarsError(null);
 
-            const [myCalendarsData, subscribedCalendarsData, coOwnedCalendarsData] = await Promise.all([
-                apiClient.get<any[]>('/calendars/my-calendars/'),
-                apiClient.get<any[]>('/calendars/subscribed/'),
-                apiClient.get<any[]>('/calendars/co_owned/'),
-            ]);
+      const [myCalendarsData, subscribedCalendarsData, coOwnedCalendarsData] =
+        await Promise.all([
+          apiClient.get<any[]>("/calendars/my-calendars/"),
+          apiClient.get<any[]>("/calendars/subscribed/"),
+          apiClient.get<any[]>("/calendars/co_owned/"),
+        ]);
 
-            const COLORS = ['#6C63FF', '#FF6584', '#43D9AD', '#FFB84C', '#FF9F43', '#00CFE8'];
+      const COLORS = [
+        "#6C63FF",
+        "#FF6584",
+        "#43D9AD",
+        "#FFB84C",
+        "#FF9F43",
+        "#00CFE8",
+      ];
 
-            const mergedCalendarsMap = new Map<number, any>();
+      const mergedCalendarsMap = new Map<number, any>();
 
-            // Helper to merge calendar data while preserving viewers/co_owners
-            const mergeCalendar = (existing: any, incoming: any) => {
-                if (!existing) return incoming;
-                return {
-                    ...incoming,
-                    viewers: Array.isArray(incoming.viewers) && incoming.viewers.length > 0
-                        ? incoming.viewers
-                        : (Array.isArray(existing.viewers) ? existing.viewers : []),
-                    co_owners: Array.isArray(incoming.co_owners) && incoming.co_owners.length > 0
-                        ? incoming.co_owners
-                        : (Array.isArray(existing.co_owners) ? existing.co_owners : []),
-                };
-            };
+      // Helper to merge calendar data while preserving viewers/co_owners
+      const mergeCalendar = (existing: any, incoming: any) => {
+        if (!existing) return incoming;
+        return {
+          ...incoming,
+          viewers:
+            Array.isArray(incoming.viewers) && incoming.viewers.length > 0
+              ? incoming.viewers
+              : Array.isArray(existing.viewers)
+                ? existing.viewers
+                : [],
+          co_owners:
+            Array.isArray(incoming.co_owners) && incoming.co_owners.length > 0
+              ? incoming.co_owners
+              : Array.isArray(existing.co_owners)
+                ? existing.co_owners
+                : [],
+        };
+      };
 
-            myCalendarsData.forEach((calendar: any) => {
-                mergedCalendarsMap.set(calendar.id, calendar);
-            });
+      myCalendarsData.forEach((calendar: any) => {
+        mergedCalendarsMap.set(calendar.id, calendar);
+      });
 
-            subscribedCalendarsData.forEach((calendar: any) => {
-                const existing = mergedCalendarsMap.get(calendar.id);
-                mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
-            });
+      subscribedCalendarsData.forEach((calendar: any) => {
+        const existing = mergedCalendarsMap.get(calendar.id);
+        mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
+      });
 
-            coOwnedCalendarsData.forEach((calendar: any) => {
-                const existing = mergedCalendarsMap.get(calendar.id);
-                mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
-            });
+      coOwnedCalendarsData.forEach((calendar: any) => {
+        const existing = mergedCalendarsMap.get(calendar.id);
+        mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
+      });
 
+      const mergedCalendars = Array.from(mergedCalendarsMap.values());
 
-            const mergedCalendars = Array.from(mergedCalendarsMap.values());
-
-            const calendarsWithCategories = await Promise.all(
-                mergedCalendars.map(async (calendar: any) => {
-                    try {
-                        const categoriesResponse: any = await apiClient.get(
-                            `/categories/for-calendar/${calendar.id}/`
-                        );
-
-                        const categories =
-                            (Array.isArray(categoriesResponse) && categoriesResponse) ||
-                            (Array.isArray(categoriesResponse?.results) && categoriesResponse.results) ||
-                            (Array.isArray(categoriesResponse?.data) && categoriesResponse.data) ||
-                            [];
-
-                        return {
-                            ...calendar,
-                            categories,
-                        };
-                    } catch (error) {
-                        console.error(`Error loading categories for calendar ${calendar.id}:`, error);
-                        return {
-                            ...calendar,
-                            categories: [],
-                        };
-                    }
-                })
-            );
-
-            const ids = calendarsWithCategories.map((c: any) => c.id).join(',');
-
-            const mappedCalendars: Calendar[] = calendarsWithCategories.map((c: any, index: number) => ({
-                id: String(c.id),
-                name: c.name,
-                description: c.description || '',
-                cover: c.cover || undefined,
-                privacy: c.privacy,
-                origin: c.origin,
-                creator: c.creator_username || 'unknown',
-                creator_username: c.creator_username,
-                color: COLORS[index % COLORS.length],
-                co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
-                viewers: Array.isArray(c.viewers) ? c.viewers : [],
-                categories: Array.isArray(c.categories) ? c.categories : [],
-            }));
-
-            setCalendars(mappedCalendars);
-
-            setInfoCalendar((prev) => {
-                if (!prev) return prev;
-                return mappedCalendars.find((c) => c.id === prev.id) ?? prev;
-            });
-
-            await refetchEvents(ids);
-        } catch (e) {
-            console.error("Error al refrescar calendarios:", e);
-            setCalendarsError(e);
-        } finally {
-            setLoadingCalendars(false);
-        }
-    }, [refetchEvents]);
-
-    const updateCalendarInState = (updatedCalendar: any) => {
-        if (updatedCalendar?.left && updatedCalendar?.id != null) {
-            const removedId = String(updatedCalendar.id);
-            setCalendars((current) => current.filter((calendar) => calendar.id !== removedId));
-            setEvents((current) => current.filter((event) => event.calendarId !== removedId));
-            setSelectedCalendarId((current) => (current === removedId ? null : current));
-            setActiveEvent((current) => (current?.calendarId === removedId ? null : current));
-            setInfoCalendar((current) => (current?.id === removedId ? null : current));
-            return;
-        }
-
-        setCalendars((current) =>
-            current.map((calendar) => {
-                if (calendar.id !== String(updatedCalendar.id)) return calendar;
-
-                return {
-                    ...calendar,
-                    ...updatedCalendar,
-                    id: String(updatedCalendar.id ?? calendar.id),
-                    name: updatedCalendar.name ?? calendar.name,
-                    description: updatedCalendar.description ?? calendar.description ?? '',
-                    cover: updatedCalendar.cover ?? calendar.cover,
-                    privacy: updatedCalendar.privacy ?? calendar.privacy,
-                    origin: updatedCalendar.origin ?? calendar.origin,
-                    creator: updatedCalendar.creator ?? calendar.creator,
-                    creator_id: updatedCalendar.creator_id ?? (calendar as any).creator_id,
-                    creator_username:
-                        updatedCalendar.creator_username ?? (calendar as any).creator_username,
-                    color: calendar.color,
-                    photo: updatedCalendar.photo || "",
-                    co_owners: Array.isArray(updatedCalendar.co_owners)
-                        ? updatedCalendar.co_owners
-                        : ((calendar as any).co_owners ?? []),
-                    viewers: Array.isArray(updatedCalendar.viewers)
-                        ? updatedCalendar.viewers
-                        : ((calendar as any).viewers ?? []),
-                    categories: Array.isArray(updatedCalendar.categories)
-                        ? updatedCalendar.categories
-                        : ((calendar as any).categories ?? []),
-                } as Calendar;
-            })
-        );
-
-        setInfoCalendar((current) => {
-            if (!current || current.id !== String(updatedCalendar.id)) return current;
-
-            return {
-                ...current,
-                ...updatedCalendar,
-                id: String(updatedCalendar.id ?? current.id),
-                name: updatedCalendar.name ?? current.name,
-                description: updatedCalendar.description ?? current.description ?? '',
-                cover: updatedCalendar.cover ?? current.cover,
-                privacy: updatedCalendar.privacy ?? current.privacy,
-                origin: updatedCalendar.origin ?? current.origin,
-                creator: updatedCalendar.creator ?? current.creator,
-                creator_id: updatedCalendar.creator_id ?? (current as any).creator_id,
-                creator_username:
-                    updatedCalendar.creator_username ?? (current as any).creator_username,
-                color: current.color,
-                co_owners: Array.isArray(updatedCalendar.co_owners)
-                    ? updatedCalendar.co_owners
-                    : ((current as any).co_owners ?? []),
-                viewers: Array.isArray(updatedCalendar.viewers)
-                    ? updatedCalendar.viewers
-                    : ((current as any).viewers ?? []),
-                categories: Array.isArray(updatedCalendar.categories)
-                    ? updatedCalendar.categories
-                    : ((current as any).categories ?? []),
-            } as Calendar;
-        });
-    };
-
-    useEffect(() => {
-        if (!isAuthenticated) {
-            setLoadingCalendars(false);
-            setCalendars([]);
-            setEvents([]);
-            router.replace('/login' as any);
-            return;
-        }
-
-        void fetchData();
-    }, [fetchData, isAuthenticated, router]);
-
-    useEffect(() => {
-        if (calendarsError || eventsError) {
-            console.error('Error fetching data:', calendarsError || eventsError);
-            Alert.alert('Error', 'Could not load calendars or events.');
-        }
-    }, [calendarsError, eventsError]);
-
-    useEffect(() => {
-        const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
-
-        const mappedEvents: CalendarEvent[] = (backendEvents ?? [])
-            .filter((e: any) =>
-                e.calendars?.some((calendarId: number) => visibleCalendarIds.has(calendarId))
-            )
-            .flatMap((e: any) => {
-                const calendar = calendars.find(c => e.calendars.includes(Number(c.id)));
-
-                const dates = getDates(new Date(e.date), e.end_date ? new Date(e.end_date) : new Date(e.date));
-
-                return dates.map(date => {
-                    return {
-                        id: String(e.id),
-                        calendarId: String(e.calendars[0] || ''),
-                        title: e.title,
-                        description: e.description || '',
-                        place_name: e.place_name || '',
-                        date: date.toISOString().slice(0, 10),
-                        time: e.time.substring(0, 5),
-                        recurrence: e.recurrence,
-                        type: 'other',
-                        color: calendar?.color || '#6C63FF',
-                        photo: e.photo || "",
-                        attendees: Array.isArray(e.attendees)
-                            ? e.attendees.map((a: any) => ({
-                                id: String(a.id ?? ''),
-                                name: a.name || a.username || '',
-                                respondedAt: a.respondedAt || a.responded_at || '',
-                                avatar: a.avatar || a.photo || undefined,
-                            }))
-                            : [],
-                        my_attendance_status: e.my_attendance_status ?? null,
-                        show_time: dates.length === 1,
-                    };
-                });
-            });
-
-        setEvents(mappedEvents);
-    }, [backendEvents, calendars]);
-
-    useEffect(() => {
-        if (params.selectedCalendarId) {
-            setSelectedCalendarId(params.selectedCalendarId);
-        }
-    }, [params.selectedCalendarId]);
-
-    const availableCategories = useMemo<CalendarCategory[]>(() => {
-        const map = new Map<string, CalendarCategory>();
-
-        calendars.forEach((calendar) => {
-            const categories = Array.isArray((calendar as any).categories)
-                ? (calendar as any).categories
-                : [];
-
-            categories.forEach((category: any) => {
-                const id = String(category?.id ?? '');
-                const name = String(category?.name ?? '');
-
-                if (id && name && !map.has(id)) {
-                    map.set(id, { id, name });
-                }
-            });
-        });
-
-        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-    }, [calendars]);
-
-    const filteredCalendars = useMemo(() => {
-        if (selectedCategoryIds.length === 0) return calendars;
-
-        return calendars.filter((calendar) => {
-            const categoryIds = Array.isArray((calendar as any).categories)
-                ? (calendar as any).categories.map((category: any) => String(category?.id))
-                : [];
-
-            return selectedCategoryIds.every((selectedId) => categoryIds.includes(selectedId));
-        });
-    }, [calendars, selectedCategoryIds]);
-
-    const toggleCategoryFilter = (categoryId: string) => {
-        setSelectedCategoryIds((prev) =>
-            prev.includes(categoryId)
-                ? prev.filter((id) => id !== categoryId)
-                : [...prev, categoryId]
-        );
-    };
-
-    useEffect(() => {
-        if (!selectedCalendarId) return;
-
-        const stillVisible = filteredCalendars.some(
-            (calendar) => calendar.id === selectedCalendarId
-        );
-
-        if (!stillVisible) {
-            setSelectedCalendarId(null);
-        }
-    }, [filteredCalendars, selectedCalendarId]);
-
-    const [open, setOpen] = useState(false);
-    const rotation = useRef(new Animated.Value(0)).current;
-    const calendarRef = useRef<View>(null);
-    const sheetY = useRef(new Animated.Value(120)).current;
-    const optionAnimations = useRef([
-        new Animated.Value(0),
-        new Animated.Value(0),
-    ]).current;
-    const [sheetHeight, setSheetHeight] = useState(0);
-
-    const fabBaseBottom = isDesktop ? 30 : BOTTOM_BAR_HEIGHT;
-    const fabLiftDistance = isDesktop
-        ? Math.max(sheetBottom + sheetHeight + 16 - fabBaseBottom, 0)
-        : 0;
-
-    const fabTranslateY = isDesktop
-        ? sheetY.interpolate({
-            inputRange: [0, 120],
-            outputRange: [-fabLiftDistance, 0],
-            extrapolate: 'clamp',
-        })
-        : 0;
-
-    const showSheet = (dateKey: string) => {
-        setSelectedDay(dateKey);
-        if (open) toggleMenu();
-        Animated.spring(sheetY, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 4,
-        }).start();
-    };
-
-    const hideSheet = () => {
-        Animated.timing(sheetY, {
-            toValue: 120,
-            duration: 200,
-            useNativeDriver: true,
-        }).start(() => setSelectedDay(null));
-    };
-
-    const handleDayPress = (dateKey: string) => {
-        if (selectedDay === dateKey) {
-            hideSheet();
-        } else {
-            showSheet(dateKey);
-        }
-    };
-
-    const handleOpenCalendarInfo = async (calendar: Calendar) => {
-        try {
-            const response: any = await apiClient.get(
-                `/categories/for-calendar/${calendar.id}/`
+      const calendarsWithCategories = await Promise.all(
+        mergedCalendars.map(async (calendar: any) => {
+          try {
+            const categoriesResponse: any = await apiClient.get(
+              `/categories/for-calendar/${calendar.id}/`,
             );
 
             const categories =
-                (Array.isArray(response) && response) ||
-                (Array.isArray(response?.results) && response.results) ||
-                (Array.isArray(response?.data) && response.data) ||
-                [];
+              (Array.isArray(categoriesResponse) && categoriesResponse) ||
+              (Array.isArray(categoriesResponse?.results) &&
+                categoriesResponse.results) ||
+              (Array.isArray(categoriesResponse?.data) &&
+                categoriesResponse.data) ||
+              [];
 
-            setInfoCalendar({
-                ...calendar,
-                categories,
-            });
-        } catch (error) {
-            console.error("Error loading calendar categories:", error);
-
-            setInfoCalendar({
-                ...calendar,
-                categories: [],
-            });
-        }
-    };
-
-    const filteredEvents = useMemo(() => {
-        let list = events;
-
-        const visibleCalendarIds = new Set(filteredCalendars.map((calendar) => calendar.id));
-        list = list.filter((event) => visibleCalendarIds.has(event.calendarId));
-
-        if (selectedCalendarId) {
-            list = list.filter((e) => e.calendarId === selectedCalendarId);
-        }
-
-        return list;
-    }, [events, filteredCalendars, selectedCalendarId]);
-
-    const eventsOfSelectedDay = useMemo(() => {
-        if (!selectedDay) return [];
-
-        return filteredEvents.filter(
-            (event) => event.date?.slice(0, 10) === selectedDay
-        );
-    }, [filteredEvents, selectedDay]);
-
-    const canManageActiveEvent = useMemo(() => {
-        if (!activeEvent || !user?.username) return false;
-
-        const eventCalendar = calendars.find((calendar) => calendar.id === activeEvent.calendarId);
-        if (!eventCalendar) return false;
-
-        const isOwner =
-            eventCalendar.creator === user.username ||
-            (eventCalendar as any).creator_username === user.username;
-
-        const isCoOwner = Array.isArray((eventCalendar as any).co_owners)
-            ? (eventCalendar as any).co_owners.some((coOwner: any) => coOwner?.username === user.username)
-            : false;
-
-        return isOwner || isCoOwner;
-    }, [activeEvent, calendars, user]);
-
-    const removeCalendarFromState = (calendarId: string) => {
-        setCalendars((current) => current.filter((item) => item.id !== calendarId));
-        setEvents((current) => current.filter((event) => event.calendarId !== calendarId));
-        setSelectedCalendarId((current) => (current === calendarId ? null : current));
-        setActiveEvent((current) => (current?.calendarId === calendarId ? null : current));
-        setInfoCalendar(null);
-    };
-
-    const handleDeleteCalendar = async (calendar: Calendar) => {
-        const calendarId = Number(calendar.id);
-
-        if (!Number.isInteger(calendarId) || calendarId <= 0) {
-            removeCalendarFromState(calendar.id);
-            return;
-        }
-
-        if (!isAuthenticated) {
-            Alert.alert('Unauthorized', 'You must be logged in to delete a calendar.');
-            return;
-        }
-
-        setDeletingCalendarId(calendar.id);
-        try {
-            await deleteCalendar(calendar.id);
-            setInfoCalendar(null);
-            await fetchData();
-        } catch (e) {
-            console.error('Delete error:', e);
-            Alert.alert('Delete failed', String(e));
-            Alert.alert('Delete failed', 'Could not delete the calendar. Please try again.');
-        } finally {
-            setDeletingCalendarId(null);
-        }
-    };
-
-    const goToLogin = useCallback(() => {
-        router.push('/login' as any);
-    }, [router]);
-
-    const goToNewEvent = useCallback(
-        (dateKey?: string | null) => {
-            if (!isAuthenticated) {
-                goToLogin();
-                return;
-            }
-
-            router.push(
-                `/create_events?date=${dateKey ?? selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ''}` as any
+            return {
+              ...calendar,
+              categories,
+            };
+          } catch (error) {
+            console.error(
+              `Error loading categories for calendar ${calendar.id}:`,
+              error,
             );
-        },
-        [goToLogin, isAuthenticated, router, selectedCalendarId, selectedDay]
-    );
+            return {
+              ...calendar,
+              categories: [],
+            };
+          }
+        }),
+      );
 
-    const goToNewCalendar = useCallback(() => {
-        if (!isAuthenticated) {
-            goToLogin();
-            return;
-        }
+      const ids = calendarsWithCategories.map((c: any) => c.id).join(",");
 
-        router.push('/(tabs)/create' as any);
-    }, [goToLogin, isAuthenticated, router]);
+      const mappedCalendars: Calendar[] = calendarsWithCategories.map(
+        (c: any, index: number) => ({
+          id: String(c.id),
+          name: c.name,
+          description: c.description || "",
+          cover: c.cover || undefined,
+          privacy: c.privacy,
+          origin: c.origin,
+          creator: c.creator_username || "unknown",
+          creator_username: c.creator_username,
+          color: COLORS[index % COLORS.length],
+          co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
+          viewers: Array.isArray(c.viewers) ? c.viewers : [],
+          categories: Array.isArray(c.categories) ? c.categories : [],
+        }),
+      );
 
-    const openImportCalendar = useCallback(() => {
-        if (!isAuthenticated) {
-            goToLogin();
-            return;
-        }
+      setCalendars(mappedCalendars);
 
-        setImportModalVisible(true);
-    }, [goToLogin, isAuthenticated]);
+      setInfoCalendar((prev) => {
+        if (!prev) return prev;
+        return mappedCalendars.find((c) => c.id === prev.id) ?? prev;
+      });
 
-    const openCreateMenu = useCallback(() => {
-        if (!isAuthenticated) {
-            goToLogin();
-            return;
-        }
+      await refetchEvents(ids);
+    } catch (e) {
+      console.error("Error al refrescar calendarios:", e);
+      setCalendarsError(e);
+    } finally {
+      setLoadingCalendars(false);
+    }
+  }, [refetchEvents]);
 
-        setCreateMenuVisible(true);
-    }, [goToLogin, isAuthenticated]);
-
-    const goToPrev = () => {
-        if (viewMode === 'week') {
-            const d = new Date(year, month, weekDay - 7);
-            setYear(d.getFullYear());
-            setMonth(d.getMonth());
-            setWeekDay(d.getDate());
-        } else if (viewMode === 'year') {
-            setYear((y) => y - 1);
-        } else {
-            if (month === 0) {
-                setMonth(11);
-                setYear((y) => y - 1);
-            } else {
-                setMonth((m) => m - 1);
-            }
-        }
-    };
-
-    const goToNext = () => {
-        if (viewMode === 'week') {
-            const d = new Date(year, month, weekDay + 7);
-            setYear(d.getFullYear());
-            setMonth(d.getMonth());
-            setWeekDay(d.getDate());
-        } else if (viewMode === 'year') {
-            setYear((y) => y + 1);
-        } else {
-            if (month === 11) {
-                setMonth(0);
-                setYear((y) => y + 1);
-            } else {
-                setMonth((m) => m + 1);
-            }
-        }
-    };
-
-    const goToToday = () => {
-        const now = new Date();
-        setYear(now.getFullYear());
-        setMonth(now.getMonth());
-        setWeekDay(now.getDate());
-    };
-
-    const handleViewModeChange = (mode: CalendarViewMode) => {
-        setViewMode(mode);
-        if (mode === 'week') {
-            const today = new Date();
-            setYear(today.getFullYear());
-            setMonth(today.getMonth());
-            setWeekDay(today.getDate());
-        }
-    };
-
-    const getHeaderLabel = (): string => {
-        if (viewMode === 'year') return String(year);
-        if (viewMode === 'week') {
-            const d = new Date(year, month, weekDay);
-            const dow = d.getDay();
-            const mondayOffset = dow === 0 ? -6 : 1 - dow;
-            const monday = new Date(d);
-            monday.setDate(d.getDate() + mondayOffset);
-            const sunday = new Date(monday);
-            sunday.setDate(monday.getDate() + 6);
-            const fmtDay = (dt: Date) => `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].substring(0, 3)}`;
-            return `${fmtDay(monday)} – ${fmtDay(sunday)} ${sunday.getFullYear()}`;
-        }
-        return `${MONTH_NAMES[month]} ${year}`;
-    };
-
-    const loading = loadingCalendars || loadingEvents;
-    if (loading) {
-        return (
-            <View style={[styles.screenWrapper, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color="#10464d" />
-            </View>
-        );
+  const updateCalendarInState = (updatedCalendar: any) => {
+    if (updatedCalendar?.left && updatedCalendar?.id != null) {
+      const removedId = String(updatedCalendar.id);
+      setCalendars((current) =>
+        current.filter((calendar) => calendar.id !== removedId),
+      );
+      setEvents((current) =>
+        current.filter((event) => event.calendarId !== removedId),
+      );
+      setSelectedCalendarId((current) =>
+        current === removedId ? null : current,
+      );
+      setActiveEvent((current) =>
+        current?.calendarId === removedId ? null : current,
+      );
+      setInfoCalendar((current) =>
+        current?.id === removedId ? null : current,
+      );
+      return;
     }
 
-    const toggleMenu = () => {
-        const isOpening = !open;
+    setCalendars((current) =>
+      current.map((calendar) => {
+        if (calendar.id !== String(updatedCalendar.id)) return calendar;
 
-        Animated.timing(rotation, {
-            toValue: open ? 0 : 1,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
+        return {
+          ...calendar,
+          ...updatedCalendar,
+          id: String(updatedCalendar.id ?? calendar.id),
+          name: updatedCalendar.name ?? calendar.name,
+          description:
+            updatedCalendar.description ?? calendar.description ?? "",
+          cover: updatedCalendar.cover ?? calendar.cover,
+          privacy: updatedCalendar.privacy ?? calendar.privacy,
+          origin: updatedCalendar.origin ?? calendar.origin,
+          creator: updatedCalendar.creator ?? calendar.creator,
+          creator_id:
+            updatedCalendar.creator_id ?? (calendar as any).creator_id,
+          creator_username:
+            updatedCalendar.creator_username ??
+            (calendar as any).creator_username,
+          color: calendar.color,
+          photo: updatedCalendar.photo || "",
+          co_owners: Array.isArray(updatedCalendar.co_owners)
+            ? updatedCalendar.co_owners
+            : ((calendar as any).co_owners ?? []),
+          viewers: Array.isArray(updatedCalendar.viewers)
+            ? updatedCalendar.viewers
+            : ((calendar as any).viewers ?? []),
+          categories: Array.isArray(updatedCalendar.categories)
+            ? updatedCalendar.categories
+            : ((calendar as any).categories ?? []),
+        } as Calendar;
+      }),
+    );
 
-        const animations = optionAnimations.map((anim, i) =>
-            Animated.timing(anim, {
-                toValue: open ? 0 : 1,
-                duration: 200,
-                delay: i * 50,
-                useNativeDriver: true,
-            })
+    setInfoCalendar((current) => {
+      if (!current || current.id !== String(updatedCalendar.id)) return current;
+
+      return {
+        ...current,
+        ...updatedCalendar,
+        id: String(updatedCalendar.id ?? current.id),
+        name: updatedCalendar.name ?? current.name,
+        description: updatedCalendar.description ?? current.description ?? "",
+        cover: updatedCalendar.cover ?? current.cover,
+        privacy: updatedCalendar.privacy ?? current.privacy,
+        origin: updatedCalendar.origin ?? current.origin,
+        creator: updatedCalendar.creator ?? current.creator,
+        creator_id: updatedCalendar.creator_id ?? (current as any).creator_id,
+        creator_username:
+          updatedCalendar.creator_username ?? (current as any).creator_username,
+        color: current.color,
+        co_owners: Array.isArray(updatedCalendar.co_owners)
+          ? updatedCalendar.co_owners
+          : ((current as any).co_owners ?? []),
+        viewers: Array.isArray(updatedCalendar.viewers)
+          ? updatedCalendar.viewers
+          : ((current as any).viewers ?? []),
+        categories: Array.isArray(updatedCalendar.categories)
+          ? updatedCalendar.categories
+          : ((current as any).categories ?? []),
+      } as Calendar;
+    });
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoadingCalendars(false);
+      setCalendars([]);
+      setEvents([]);
+      router.replace("/login" as any);
+      return;
+    }
+
+    void fetchData();
+  }, [fetchData, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (calendarsError || eventsError) {
+      console.error("Error fetching data:", calendarsError || eventsError);
+      Alert.alert("Error", "Could not load calendars or events.");
+    }
+  }, [calendarsError, eventsError]);
+
+  useEffect(() => {
+    const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+
+    const mappedEvents: CalendarEvent[] = (backendEvents ?? [])
+      .filter((e: any) =>
+        e.calendars?.some((calendarId: number) =>
+          visibleCalendarIds.has(calendarId),
+        ),
+      )
+      .flatMap((e: any) => {
+        const calendar = calendars.find((c) =>
+          e.calendars.includes(Number(c.id)),
         );
-        Animated.stagger(50, isOpening ? animations : animations.reverse()).start(() => {
-            if (!isOpening) setOpen(false);
-        });
-        if (isOpening) setOpen(true);
-    };
 
-    const rotateInterpolate = rotation.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["0deg", "180deg"],
+        const dates = getDates(
+          new Date(e.date),
+          e.end_date ? new Date(e.end_date) : new Date(e.date),
+        );
+
+        return dates.map((date) => {
+          return {
+            id: String(e.id),
+            calendarId: String(e.calendars[0] || ""),
+            title: e.title,
+            description: e.description || "",
+            place_name: e.place_name || "",
+            date: date.toISOString().slice(0, 10),
+            time: e.time.substring(0, 5),
+            recurrence: e.recurrence,
+            type: "other",
+            color: calendar?.color || "#6C63FF",
+            photo: e.photo || "",
+            attendees: Array.isArray(e.attendees)
+              ? e.attendees.map((a: any) => ({
+                  id: String(a.id ?? ""),
+                  name: a.name || a.username || "",
+                  respondedAt: a.respondedAt || a.responded_at || "",
+                  avatar: a.avatar || a.photo || undefined,
+                }))
+              : [],
+            my_attendance_status: e.my_attendance_status ?? null,
+            show_time: dates.length === 1,
+          };
+        });
+      });
+
+    setEvents(mappedEvents);
+  }, [backendEvents, calendars]);
+
+  useEffect(() => {
+    if (params.selectedCalendarId) {
+      setSelectedCalendarId(params.selectedCalendarId);
+    }
+  }, [params.selectedCalendarId]);
+
+  const availableCategories = useMemo<CalendarCategory[]>(() => {
+    const map = new Map<string, CalendarCategory>();
+
+    calendars.forEach((calendar) => {
+      const categories = Array.isArray((calendar as any).categories)
+        ? (calendar as any).categories
+        : [];
+
+      categories.forEach((category: any) => {
+        const id = String(category?.id ?? "");
+        const name = String(category?.name ?? "");
+
+        if (id && name && !map.has(id)) {
+          map.set(id, { id, name });
+        }
+      });
     });
 
-    const exportCalendar = async () => {
-        if (!selectedCalendarId) {
-            alert("Please select a calendar before exporting");
-            return;
-        }
-        try {
-            if (Platform.OS === "web") {
-                await downloadCalendarFile(selectedCalendarId);
-                alert("Calendario descargado correctamente");
-            } else {
-                const fileUri = await downloadCalendarFile(selectedCalendarId);
-                if (await Sharing.isAvailableAsync() && fileUri) {
-                    await Sharing.shareAsync(fileUri);
-                } else {
-                    alert("File saved at: " + fileUri);
-                }
-            }
-        } catch (error) {
-            alert("Could not download the calendar.");
-            console.log(error);
-        }
-    };
-
-    const exportPng = async () => {
-        try {
-            if (Platform.OS === "web") {
-                const node = document.getElementById("calendar-web");
-                if (!node) return;
-
-                const dataUrl = await toPng(node);
-                const link = document.createElement("a");
-                link.href = dataUrl;
-                link.download = "calendar.png";
-                link.click();
-            } else {
-                if (!calendarRef.current) return;
-
-                const uri = await captureRef(calendarRef.current, {
-                    format: "png",
-                    quality: 1,
-                });
-
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(uri);
-                } else {
-                    alert("Image saved at: " + uri);
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Could not export the calendar as PNG");
-        }
-    };
-
-    return (
-        <View style={styles.screenWrapper}>
-            <ScrollView
-                style={styles.container}
-                contentContainerStyle={!isDesktop ? styles.contentContainerMobile : styles.contentContainer}
-                showsVerticalScrollIndicator={false}
-            >
-                <View style={styles.toolbar}>
-                    <CalendarSelector
-                        calendars={filteredCalendars}
-                        selectedId={selectedCalendarId}
-                        onChange={setSelectedCalendarId}
-                        onInfoPress={handleOpenCalendarInfo}
-                    />
-
-                    {isDesktop ? (
-                        <View style={styles.toolbarButtons}>
-                            <TouchableOpacity
-                                style={styles.primaryBtn}
-                                activeOpacity={0.7}
-                                onPress={() => goToNewEvent()}
-                            >
-                                <Ionicons name="add" size={18} color="#fff" />
-                                <Text style={styles.primaryBtnText}>New Event</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.secondaryBtn}
-                                activeOpacity={0.7}
-                                onPress={goToNewCalendar}
-                            >
-                                <Ionicons name="calendar-outline" size={18} color="#10464d" />
-                                <Text style={styles.secondaryBtnText}>New Calendar</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.secondaryBtn}
-                                activeOpacity={0.7}
-                                onPress={openImportCalendar}
-                            >
-                                <Ionicons name="download-outline" size={18} color="#10464d" />
-                                <Text style={styles.secondaryBtnText}>Import Calendar</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <TouchableOpacity
-                            style={styles.primaryBtn}
-                            activeOpacity={0.8}
-                            onPress={openCreateMenu}
-                        >
-                            <Ionicons name="add" size={18} color="#fff" />
-                            <Text style={styles.primaryBtnText}>Create</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                <View style={styles.headerBlock}>
-                    <CalendarHeader
-                        monthLabel={getHeaderLabel()}
-                        onPrevMonth={goToPrev}
-                        onNextMonth={goToNext}
-                        onTodayPress={goToToday}
-                        viewMode={viewMode}
-                        onViewModeChange={handleViewModeChange}
-                    />
-                </View>
-
-                <View style={styles.filterBlock}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryFilterScroll}
-                    >
-                        <TouchableOpacity
-                            style={[
-                                styles.categoryFilterChip,
-                                selectedCategoryIds.length === 0 && styles.categoryFilterChipActive,
-                            ]}
-                            activeOpacity={0.8}
-                            onPress={() => setSelectedCategoryIds([])}
-                        >
-                            <Ionicons
-                                name="apps-outline"
-                                size={16}
-                                color={selectedCategoryIds.length === 0 ? "#FFFFFF" : "#10464d"}
-                            />
-                            <Text
-                                style={[
-                                    styles.categoryFilterChipText,
-                                    selectedCategoryIds.length === 0 && styles.categoryFilterChipTextActive,
-                                ]}
-                            >
-                                All Categories
-                            </Text>
-                        </TouchableOpacity>
-
-                        {availableCategories.map((category) => {
-                            const selected = selectedCategoryIds.includes(category.id);
-
-                            return (
-                                <TouchableOpacity
-                                    key={category.id}
-                                    style={[
-                                        styles.categoryFilterChip,
-                                        selected && styles.categoryFilterChipActive,
-                                    ]}
-                                    activeOpacity={0.8}
-                                    onPress={() => toggleCategoryFilter(category.id)}
-                                >
-                                    <Ionicons
-                                        name="pricetag-outline"
-                                        size={16}
-                                        color={selected ? "#FFFFFF" : "#10464d"}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.categoryFilterChipText,
-                                            selected && styles.categoryFilterChipTextActive,
-                                        ]}
-                                    >
-                                        {category.name}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
-                </View>
-
-                {!isDesktop && selectedDay && (
-                    <TouchableOpacity
-                        style={styles.mobileBanner}
-                        activeOpacity={0.85}
-                        onPress={() => goToNewEvent(selectedDay)}
-                    >
-                        <Text style={styles.mobileBannerDate}>
-                            {formatSelectedDay(selectedDay)}
-                        </Text>
-                        <View style={styles.mobileBannerBtn}>
-                            <Text style={styles.mobileBannerBtnText}>＋ Add Event</Text>
-                        </View>
-                    </TouchableOpacity>
-                )}
-
-                <View style={styles.container} id="calendar-web" ref={calendarRef}>
-                    {viewMode === 'week' && (
-                        <CalendarWeekGrid
-                            year={year}
-                            month={month}
-                            day={weekDay}
-                            events={filteredEvents}
-                            onEventPress={setActiveEvent}
-                            selectedDay={selectedDay}
-                            onDayPress={handleDayPress}
-                        />
-                    )}
-                    {viewMode === 'month' && (
-                        <CalendarGrid
-                            year={year}
-                            month={month}
-                            events={filteredEvents}
-                            onEventPress={setActiveEvent}
-                            selectedDay={selectedDay}
-                            onDayPress={handleDayPress}
-                        />
-                    )}
-                    {viewMode === 'year' && (
-                        <CalendarYearGrid
-                            year={year}
-                            events={filteredEvents}
-                            onMonthPress={(m) => {
-                                setMonth(m);
-                                setViewMode('month');
-                            }}
-                            onDayPress={handleDayPress}
-                        />
-                    )}
-                </View>
-
-                <EventDetailModal
-                    event={activeEvent}
-                    onClose={() => setActiveEvent(null)}
-                    canManageActions={canManageActiveEvent}
-                />
-
-                <CalendarInfoModal
-                    calendar={infoCalendar}
-                    onClose={() => setInfoCalendar(null)}
-                    onDelete={handleDeleteCalendar}
-                    onCalendarUpdated={updateCalendarInState}
-                    onEdit={(calendar) => {
-                        setInfoCalendar(null);
-                        router.push({
-                            pathname: '/(tabs)/edit',
-                            params: {
-                                id: calendar.id,
-                                name: calendar.name,
-                                description: calendar.description ?? '',
-                                privacy: calendar.privacy,
-                                cover: calendar.cover ?? '',
-                            },
-                        });
-                    }}
-                    isDeleting={Boolean(infoCalendar && deletingCalendarId === infoCalendar.id)}
-                />
-            </ScrollView>
-
-            {isDesktop && selectedDay && (
-                <TouchableWithoutFeedback onPress={hideSheet}>
-                    <View style={styles.scrim} />
-                </TouchableWithoutFeedback>
-            )}
-
-            {isDesktop && (
-                <Animated.View
-                    onLayout={(event) => setSheetHeight(event.nativeEvent.layout.height)}
-                    style={[
-                        styles.sheet,
-                        {
-                            bottom: sheetBottom,
-                            transform: [{ translateY: sheetY }],
-                        },
-                    ]}
-                    pointerEvents={selectedDay ? 'auto' : 'none'}
-                >
-                    <View style={styles.sheetHandle} />
-
-                    <View style={styles.sheetContent}>
-                        <View style={styles.sheetTextBlock}>
-                            <Text style={styles.sheetLabel}>Add event to</Text>
-                            <Text style={styles.sheetDate}>
-                                {selectedDay ? formatSelectedDay(selectedDay) : ""}
-                            </Text>
-                        </View>
-
-                        {eventsOfSelectedDay.length > 0 && (
-                            <ScrollView
-                                style={styles.dayEventsList}
-                                contentContainerStyle={{ paddingBottom: 6 }}
-                            >
-                                {eventsOfSelectedDay.map((event) => (
-                                    <TouchableOpacity
-                                        key={event.id}
-                                        style={styles.dayEventItem}
-                                        onPress={() => setActiveEvent(event)}
-                                    >
-                                        <Text style={styles.dayEventTime}>
-                                            {event.time?.slice(0, 5)}
-                                        </Text>
-
-                                        <Text style={styles.dayEventTitle}>
-                                            {event.title}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        )}
-
-                        <TouchableOpacity
-                            style={styles.addButton}
-                            activeOpacity={0.85}
-                            onPress={() => goToNewEvent(selectedDay)}
-                        >
-                            <Text style={styles.addButtonIcon}>＋</Text>
-                            <Text style={styles.addButtonLabel}>Add Event</Text>
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
-            )}
-
-            {optionAnimations.map((anim, index) => {
-                const menuTranslateY = anim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                });
-
-                const opacity = anim;
-                const isCalendar = index === 1;
-                const text = isCalendar ? "Export calendar" : "Download as PNG";
-                const onPress = isCalendar ? exportCalendar : exportPng;
-
-                return (
-                    <Animated.View
-                        key={index}
-                        style={{
-                            position: "absolute",
-                            bottom: fabBaseBottom + 60 + index * 45,
-                            right: 20,
-                            opacity,
-                            transform: [
-                                { translateY: fabTranslateY },
-                                { translateY: menuTranslateY },
-                            ],
-                            zIndex: 30,
-                        }}
-                        pointerEvents={open ? "auto" : "none"}
-                    >
-                        <Pressable style={styles.option} onPress={onPress}>
-                            <Text style={styles.optionText}>{text}</Text>
-                        </Pressable>
-                    </Animated.View>
-                );
-            })}
-
-            <Animated.View
-                style={{
-                    position: 'absolute',
-                    right: 20,
-                    bottom: fabBaseBottom,
-                    transform: [{ translateY: fabTranslateY }],
-                    zIndex: 30,
-                }}
-            >
-                <Pressable style={[styles.fab, isMobile && styles.fabMobile]} onPress={toggleMenu}>                    <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
-                    <MaterialCommunityIcons name="arrow-down-thick" size={28} color="white" />
-                </Animated.View>
-                </Pressable>
-            </Animated.View>
-
-            <ImportCalendarModal
-                visible={importModalVisible}
-                onClose={() => setImportModalVisible(false)}
-                onSuccess={fetchData}
-            />
-
-            <CreateMenuModal
-                visible={createMenuVisible}
-                onClose={() => setCreateMenuVisible(false)}
-                onNewEvent={() => {
-                    setCreateMenuVisible(false);
-                    goToNewEvent();
-                }}
-                onNewCalendar={() => {
-                    setCreateMenuVisible(false);
-                    goToNewCalendar();
-                }}
-                onImportCalendar={() => {
-                    setCreateMenuVisible(false);
-                    openImportCalendar();
-                }}
-            />
-        </View>
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
     );
+  }, [calendars]);
+
+  const filteredCalendars = useMemo(() => {
+    if (selectedCategoryIds.length === 0) return calendars;
+
+    return calendars.filter((calendar) => {
+      const categoryIds = Array.isArray((calendar as any).categories)
+        ? (calendar as any).categories.map((category: any) =>
+            String(category?.id),
+          )
+        : [];
+
+      return selectedCategoryIds.every((selectedId) =>
+        categoryIds.includes(selectedId),
+      );
+    });
+  }, [calendars, selectedCategoryIds]);
+
+  const toggleCategoryFilter = (categoryId: string) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId],
+    );
+  };
+
+  useEffect(() => {
+    if (!selectedCalendarId) return;
+
+    const stillVisible = filteredCalendars.some(
+      (calendar) => calendar.id === selectedCalendarId,
+    );
+
+    if (!stillVisible) {
+      setSelectedCalendarId(null);
+    }
+  }, [filteredCalendars, selectedCalendarId]);
+
+  const [open, setOpen] = useState(false);
+  const rotation = useRef(new Animated.Value(0)).current;
+  const calendarRef = useRef<View>(null);
+  const sheetY = useRef(new Animated.Value(120)).current;
+  const optionAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  const [sheetHeight, setSheetHeight] = useState(0);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+  };
+
+  const fabBaseBottom = isDesktop ? 30 : BOTTOM_BAR_HEIGHT;
+  const fabLiftDistance = isDesktop
+    ? Math.max(sheetBottom + sheetHeight + 16 - fabBaseBottom, 0)
+    : 0;
+
+  const fabTranslateY = isDesktop
+    ? sheetY.interpolate({
+        inputRange: [0, 120],
+        outputRange: [-fabLiftDistance, 0],
+        extrapolate: "clamp",
+      })
+    : 0;
+
+  const showSheet = (dateKey: string) => {
+    setSelectedDay(dateKey);
+    if (open) toggleMenu();
+    Animated.spring(sheetY, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  const hideSheet = () => {
+    Animated.timing(sheetY, {
+      toValue: 120,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setSelectedDay(null));
+  };
+
+  const handleDayPress = (dateKey: string) => {
+    if (selectedDay === dateKey) {
+      hideSheet();
+    } else {
+      showSheet(dateKey);
+    }
+  };
+
+  const handleOpenCalendarInfo = async (calendar: Calendar) => {
+    try {
+      const response: any = await apiClient.get(
+        `/categories/for-calendar/${calendar.id}/`,
+      );
+
+      const categories =
+        (Array.isArray(response) && response) ||
+        (Array.isArray(response?.results) && response.results) ||
+        (Array.isArray(response?.data) && response.data) ||
+        [];
+
+      setInfoCalendar({
+        ...calendar,
+        categories,
+      });
+    } catch (error) {
+      console.error("Error loading calendar categories:", error);
+
+      setInfoCalendar({
+        ...calendar,
+        categories: [],
+      });
+    }
+  };
+
+  const filteredEvents = useMemo(() => {
+    let list = events;
+
+    const visibleCalendarIds = new Set(
+      filteredCalendars.map((calendar) => calendar.id),
+    );
+    list = list.filter((event) => visibleCalendarIds.has(event.calendarId));
+
+    if (selectedCalendarId) {
+      list = list.filter((e) => e.calendarId === selectedCalendarId);
+    }
+
+    return list;
+  }, [events, filteredCalendars, selectedCalendarId]);
+
+  const eventsOfSelectedDay = useMemo(() => {
+    if (!selectedDay) return [];
+
+    return filteredEvents.filter(
+      (event) => event.date?.slice(0, 10) === selectedDay,
+    );
+  }, [filteredEvents, selectedDay]);
+
+  const canManageActiveEvent = useMemo(() => {
+    if (!activeEvent || !user?.username) return false;
+
+    const eventCalendar = calendars.find(
+      (calendar) => calendar.id === activeEvent.calendarId,
+    );
+    if (!eventCalendar) return false;
+
+    const isOwner =
+      eventCalendar.creator === user.username ||
+      (eventCalendar as any).creator_username === user.username;
+
+    const isCoOwner = Array.isArray((eventCalendar as any).co_owners)
+      ? (eventCalendar as any).co_owners.some(
+          (coOwner: any) => coOwner?.username === user.username,
+        )
+      : false;
+
+    return isOwner || isCoOwner;
+  }, [activeEvent, calendars, user]);
+
+  const removeCalendarFromState = (calendarId: string) => {
+    setCalendars((current) => current.filter((item) => item.id !== calendarId));
+    setEvents((current) =>
+      current.filter((event) => event.calendarId !== calendarId),
+    );
+    setSelectedCalendarId((current) =>
+      current === calendarId ? null : current,
+    );
+    setActiveEvent((current) =>
+      current?.calendarId === calendarId ? null : current,
+    );
+    setInfoCalendar(null);
+  };
+
+  const handleDeleteCalendar = async (calendar: Calendar) => {
+    const calendarId = Number(calendar.id);
+
+    if (!Number.isInteger(calendarId) || calendarId <= 0) {
+      removeCalendarFromState(calendar.id);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      Alert.alert(
+        "Unauthorized",
+        "You must be logged in to delete a calendar.",
+      );
+      return;
+    }
+
+    setDeletingCalendarId(calendar.id);
+    try {
+      await deleteCalendar(calendar.id);
+      setInfoCalendar(null);
+      await fetchData();
+    } catch (e) {
+      console.error("Delete error:", e);
+      Alert.alert("Delete failed", String(e));
+      Alert.alert(
+        "Delete failed",
+        "Could not delete the calendar. Please try again.",
+      );
+    } finally {
+      setDeletingCalendarId(null);
+    }
+  };
+
+  const goToLogin = useCallback(() => {
+    router.push("/login" as any);
+  }, [router]);
+
+  const goToNewEvent = useCallback(
+    (dateKey?: string | null) => {
+      if (!isAuthenticated) {
+        goToLogin();
+        return;
+      }
+
+      const dateToUse = dateKey ?? selectedDay ?? todayKey;
+      if (dateToUse < todayKey) {
+        showToast("You cannot create an event in the past");
+        return;
+      }
+
+      router.push(
+        `/create_events?date=${dateKey ?? selectedDay ?? todayKey}&calendarId=${selectedCalendarId ?? ""}` as any,
+      );
+    },
+    [goToLogin, isAuthenticated, router, selectedCalendarId, selectedDay],
+  );
+
+  const goToNewCalendar = useCallback(() => {
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+
+    router.push("/(tabs)/create" as any);
+  }, [goToLogin, isAuthenticated, router]);
+
+  const openImportCalendar = useCallback(() => {
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+
+    setImportModalVisible(true);
+  }, [goToLogin, isAuthenticated]);
+
+  const openCreateMenu = useCallback(() => {
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+
+    setCreateMenuVisible(true);
+  }, [goToLogin, isAuthenticated]);
+
+  const goToPrev = () => {
+    if (viewMode === "week") {
+      const d = new Date(year, month, weekDay - 7);
+      setYear(d.getFullYear());
+      setMonth(d.getMonth());
+      setWeekDay(d.getDate());
+    } else if (viewMode === "year") {
+      setYear((y) => y - 1);
+    } else {
+      if (month === 0) {
+        setMonth(11);
+        setYear((y) => y - 1);
+      } else {
+        setMonth((m) => m - 1);
+      }
+    }
+  };
+
+  const goToNext = () => {
+    if (viewMode === "week") {
+      const d = new Date(year, month, weekDay + 7);
+      setYear(d.getFullYear());
+      setMonth(d.getMonth());
+      setWeekDay(d.getDate());
+    } else if (viewMode === "year") {
+      setYear((y) => y + 1);
+    } else {
+      if (month === 11) {
+        setMonth(0);
+        setYear((y) => y + 1);
+      } else {
+        setMonth((m) => m + 1);
+      }
+    }
+  };
+
+  const goToToday = () => {
+    const now = new Date();
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+    setWeekDay(now.getDate());
+  };
+
+  const handleViewModeChange = (mode: CalendarViewMode) => {
+    setViewMode(mode);
+    if (mode === "week") {
+      const today = new Date();
+      setYear(today.getFullYear());
+      setMonth(today.getMonth());
+      setWeekDay(today.getDate());
+    }
+  };
+
+  const getHeaderLabel = (): string => {
+    if (viewMode === "year") return String(year);
+    if (viewMode === "week") {
+      const d = new Date(year, month, weekDay);
+      const dow = d.getDay();
+      const mondayOffset = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + mondayOffset);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      const fmtDay = (dt: Date) =>
+        `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].substring(0, 3)}`;
+      return `${fmtDay(monday)} – ${fmtDay(sunday)} ${sunday.getFullYear()}`;
+    }
+    return `${MONTH_NAMES[month]} ${year}`;
+  };
+
+  const loading = loadingCalendars || loadingEvents;
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.screenWrapper,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color="#10464d" />
+      </View>
+    );
+  }
+
+  const toggleMenu = () => {
+    const isOpening = !open;
+
+    Animated.timing(rotation, {
+      toValue: open ? 0 : 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    const animations = optionAnimations.map((anim, i) =>
+      Animated.timing(anim, {
+        toValue: open ? 0 : 1,
+        duration: 200,
+        delay: i * 50,
+        useNativeDriver: true,
+      }),
+    );
+    Animated.stagger(50, isOpening ? animations : animations.reverse()).start(
+      () => {
+        if (!isOpening) setOpen(false);
+      },
+    );
+    if (isOpening) setOpen(true);
+  };
+
+  const rotateInterpolate = rotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  const exportCalendar = async () => {
+    if (!selectedCalendarId) {
+      alert("Please select a calendar before exporting");
+      return;
+    }
+    try {
+      if (Platform.OS === "web") {
+        await downloadCalendarFile(selectedCalendarId);
+        alert("Calendario descargado correctamente");
+      } else {
+        const fileUri = await downloadCalendarFile(selectedCalendarId);
+        if ((await Sharing.isAvailableAsync()) && fileUri) {
+          await Sharing.shareAsync(fileUri);
+        } else {
+          alert("File saved at: " + fileUri);
+        }
+      }
+    } catch (error) {
+      alert("Could not download the calendar.");
+      console.log(error);
+    }
+  };
+
+  const exportPng = async () => {
+    try {
+      if (Platform.OS === "web") {
+        const node = document.getElementById("calendar-web");
+        if (!node) return;
+
+        const dataUrl = await toPng(node);
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = "calendar.png";
+        link.click();
+      } else {
+        if (!calendarRef.current) return;
+
+        const uri = await captureRef(calendarRef.current, {
+          format: "png",
+          quality: 1,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri);
+        } else {
+          alert("Image saved at: " + uri);
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Could not export the calendar as PNG");
+    }
+  };
+
+  return (
+    <View style={styles.screenWrapper}>
+      <CustomToast 
+        message={toastMessage} 
+        onHide={() => setToastMessage(null)} 
+        type="error" 
+      />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={
+          !isDesktop ? styles.contentContainerMobile : styles.contentContainer
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.toolbar}>
+          <CalendarSelector
+            calendars={filteredCalendars}
+            selectedId={selectedCalendarId}
+            onChange={setSelectedCalendarId}
+            onInfoPress={handleOpenCalendarInfo}
+          />
+
+          {isDesktop ? (
+            <View style={styles.toolbarButtons}>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                activeOpacity={0.7}
+                onPress={() => goToNewEvent()}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.primaryBtnText}>New Event</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                activeOpacity={0.7}
+                onPress={goToNewCalendar}
+              >
+                <Ionicons name="calendar-outline" size={18} color="#10464d" />
+                <Text style={styles.secondaryBtnText}>New Calendar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                activeOpacity={0.7}
+                onPress={openImportCalendar}
+              >
+                <Ionicons name="download-outline" size={18} color="#10464d" />
+                <Text style={styles.secondaryBtnText}>Import Calendar</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              activeOpacity={0.8}
+              onPress={openCreateMenu}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text style={styles.primaryBtnText}>Create</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.headerBlock}>
+          <CalendarHeader
+            monthLabel={getHeaderLabel()}
+            onPrevMonth={goToPrev}
+            onNextMonth={goToNext}
+            onTodayPress={goToToday}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+          />
+        </View>
+
+        <View style={styles.filterBlock}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryFilterScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.categoryFilterChip,
+                selectedCategoryIds.length === 0 &&
+                  styles.categoryFilterChipActive,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setSelectedCategoryIds([])}
+            >
+              <Ionicons
+                name="apps-outline"
+                size={16}
+                color={selectedCategoryIds.length === 0 ? "#FFFFFF" : "#10464d"}
+              />
+              <Text
+                style={[
+                  styles.categoryFilterChipText,
+                  selectedCategoryIds.length === 0 &&
+                    styles.categoryFilterChipTextActive,
+                ]}
+              >
+                All Categories
+              </Text>
+            </TouchableOpacity>
+
+            {availableCategories.map((category) => {
+              const selected = selectedCategoryIds.includes(category.id);
+
+              return (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryFilterChip,
+                    selected && styles.categoryFilterChipActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => toggleCategoryFilter(category.id)}
+                >
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={16}
+                    color={selected ? "#FFFFFF" : "#10464d"}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryFilterChipText,
+                      selected && styles.categoryFilterChipTextActive,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {!isDesktop && selectedDay && (
+          <TouchableOpacity
+            style={styles.mobileBanner}
+            activeOpacity={0.85}
+            onPress={() => goToNewEvent(selectedDay)}
+          >
+            <Text style={styles.mobileBannerDate}>
+              {formatSelectedDay(selectedDay)}
+            </Text>
+            <View style={styles.mobileBannerBtn}>
+              <Text style={styles.mobileBannerBtnText}>＋ Add Event</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.container} id="calendar-web" ref={calendarRef}>
+          {viewMode === "week" && (
+            <CalendarWeekGrid
+              year={year}
+              month={month}
+              day={weekDay}
+              events={filteredEvents}
+              onEventPress={setActiveEvent}
+              selectedDay={selectedDay}
+              onDayPress={handleDayPress}
+            />
+          )}
+          {viewMode === "month" && (
+            <CalendarGrid
+              year={year}
+              month={month}
+              events={filteredEvents}
+              onEventPress={setActiveEvent}
+              selectedDay={selectedDay}
+              onDayPress={handleDayPress}
+            />
+          )}
+          {viewMode === "year" && (
+            <CalendarYearGrid
+              year={year}
+              events={filteredEvents}
+              onMonthPress={(m) => {
+                setMonth(m);
+                setViewMode("month");
+              }}
+              onDayPress={handleDayPress}
+            />
+          )}
+        </View>
+
+        <EventDetailModal
+          event={activeEvent}
+          onClose={() => setActiveEvent(null)}
+          canManageActions={canManageActiveEvent}
+          onEditAttemptError={(msg) => showToast(msg)}
+        />
+
+        <CalendarInfoModal
+          calendar={infoCalendar}
+          onClose={() => setInfoCalendar(null)}
+          onDelete={handleDeleteCalendar}
+          onCalendarUpdated={updateCalendarInState}
+          onEdit={(calendar) => {
+            setInfoCalendar(null);
+            router.push({
+              pathname: "/(tabs)/edit",
+              params: {
+                id: calendar.id,
+                name: calendar.name,
+                description: calendar.description ?? "",
+                privacy: calendar.privacy,
+                cover: calendar.cover ?? "",
+              },
+            });
+          }}
+          isDeleting={Boolean(
+            infoCalendar && deletingCalendarId === infoCalendar.id,
+          )}
+        />
+      </ScrollView>
+
+      {isDesktop && selectedDay && (
+        <TouchableWithoutFeedback onPress={hideSheet}>
+          <View style={styles.scrim} />
+        </TouchableWithoutFeedback>
+      )}
+
+      {isDesktop && (
+        <Animated.View
+          onLayout={(event) => setSheetHeight(event.nativeEvent.layout.height)}
+          style={[
+            styles.sheet,
+            {
+              bottom: sheetBottom,
+              transform: [{ translateY: sheetY }],
+            },
+          ]}
+          pointerEvents={selectedDay ? "auto" : "none"}
+        >
+          <View style={styles.sheetHandle} />
+
+          <View style={styles.sheetContent}>
+            <View style={styles.sheetTextBlock}>
+              <Text style={styles.sheetLabel}>Add event to</Text>
+              <Text style={styles.sheetDate}>
+                {selectedDay ? formatSelectedDay(selectedDay) : ""}
+              </Text>
+            </View>
+
+            {eventsOfSelectedDay.length > 0 && (
+              <ScrollView
+                style={styles.dayEventsList}
+                contentContainerStyle={{ paddingBottom: 6 }}
+              >
+                {eventsOfSelectedDay.map((event) => (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={styles.dayEventItem}
+                    onPress={() => setActiveEvent(event)}
+                  >
+                    <Text style={styles.dayEventTime}>
+                      {event.time?.slice(0, 5)}
+                    </Text>
+
+                    <Text style={styles.dayEventTitle}>{event.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              style={styles.addButton}
+              activeOpacity={0.85}
+              onPress={() => goToNewEvent(selectedDay)}
+            >
+              <Text style={styles.addButtonIcon}>＋</Text>
+              <Text style={styles.addButtonLabel}>Add Event</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {optionAnimations.map((anim, index) => {
+        const menuTranslateY = anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [20, 0],
+        });
+
+        const opacity = anim;
+        const isCalendar = index === 1;
+        const text = isCalendar ? "Export calendar" : "Download as PNG";
+        const onPress = isCalendar ? exportCalendar : exportPng;
+
+        return (
+          <Animated.View
+            key={index}
+            style={{
+              position: "absolute",
+              bottom: fabBaseBottom + 60 + index * 45,
+              right: 20,
+              opacity,
+              transform: [
+                { translateY: fabTranslateY },
+                { translateY: menuTranslateY },
+              ],
+              zIndex: 30,
+            }}
+            pointerEvents={open ? "auto" : "none"}
+          >
+            <Pressable style={styles.option} onPress={onPress}>
+              <Text style={styles.optionText}>{text}</Text>
+            </Pressable>
+          </Animated.View>
+        );
+      })}
+
+      <Animated.View
+        style={{
+          position: "absolute",
+          right: 20,
+          bottom: fabBaseBottom,
+          transform: [{ translateY: fabTranslateY }],
+          zIndex: 30,
+        }}
+      >
+        <Pressable
+          style={[styles.fab, isMobile && styles.fabMobile]}
+          onPress={toggleMenu}
+        >
+          {" "}
+          <Animated.View style={{ transform: [{ rotate: rotateInterpolate }] }}>
+            <MaterialCommunityIcons
+              name="arrow-down-thick"
+              size={28}
+              color="white"
+            />
+          </Animated.View>
+        </Pressable>
+      </Animated.View>
+
+      <ImportCalendarModal
+        visible={importModalVisible}
+        onClose={() => setImportModalVisible(false)}
+        onSuccess={fetchData}
+      />
+
+      <CreateMenuModal
+        visible={createMenuVisible}
+        onClose={() => setCreateMenuVisible(false)}
+        onNewEvent={() => {
+          setCreateMenuVisible(false);
+          goToNewEvent();
+        }}
+        onNewCalendar={() => {
+          setCreateMenuVisible(false);
+          goToNewCalendar();
+        }}
+        onImportCalendar={() => {
+          setCreateMenuVisible(false);
+          openImportCalendar();
+        }}
+      />
+    </View>
+  );
 }
 
-
 const styles = StyleSheet.create({
-    screenWrapper: {
-        flex: 1,
-        overflow: 'visible',
-    },
-    container: {
-        flex: 1,
-        overflow: 'visible',
-    },
-    contentContainer: {
-        flexGrow: 1,
-        paddingBottom: 100,
-        paddingTop: 8,
-    },
-    contentContainerMobile: {
-        flexGrow: 1,
-        paddingBottom: 100,
-        paddingTop: 12,
-    },
-    toolbar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        marginBottom: 8,
-        gap: 12,
-        flexWrap: 'wrap',
-        overflow: 'visible',
-        zIndex: 999,
-    },
-    toolbarButtons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        overflow: 'visible',
-        zIndex: 999,
-    },
-    primaryBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#10464d',
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-    primaryBtnText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#fff',
-    },
-    secondaryBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-        borderWidth: 1.5,
-        borderColor: '#10464d',
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 1,
-    },
-    secondaryBtnText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#10464d',
-    },
-    headerBlock: {
-        marginBottom: 12,
-    },
-    filterBlock: {
-        marginBottom: 12,
-        paddingHorizontal: 4,
-    },
-    // Mobile inline add-event banner
-    mobileBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginHorizontal: 10,
-        marginBottom: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: '#10464d',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
-    mobileBannerDate: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#10464d',
-        flex: 1,
-        marginRight: 10,
-    },
-    mobileBannerBtn: {
-        backgroundColor: '#10464d',
-        paddingHorizontal: 14,
-        paddingVertical: 7,
-        borderRadius: 10,
-    },
-    mobileBannerBtnText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    scrim: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'transparent',
-    },
-    sheet: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingBottom: 32,
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: -4 },
-        elevation: 10,
-    },
-    sheetHandle: {
-        alignSelf: 'center',
-        marginTop: 10,
-        marginBottom: 6,
-        width: 36,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#D0CFC8',
-    },
-    sheetContent: {
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        gap: 10,
-    },
-    sheetTextBlock: {
-        flex: 1,
-        marginRight: 16,
-    },
-    sheetLabel: {
-        fontSize: 12,
-        color: '#888',
-        fontWeight: '500',
-        marginBottom: 2,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    sheetDate: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#10464d',
-    },
-    addButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#10464d',
-        paddingHorizontal: 18,
-        paddingVertical: 12,
-        borderRadius: 14,
-        gap: 6,
-    },
-    addButtonIcon: {
-        color: '#fff',
-        fontSize: 18,
-        lineHeight: 20,
-        fontWeight: '400',
-    },
-    addButtonLabel: {
-        color: '#fff',
-        fontSize: 15,
-        fontWeight: '700',
-        letterSpacing: 0.2,
-    },
-    fab: {
-        width: 55,
-        height: 55,
-        borderRadius: 30,
-        backgroundColor: "#10464d",
-        justifyContent: "center",
-        alignItems: "center",
-        elevation: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-    },
-    fabMobile: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-    },
-    menu: {
-        position: "absolute",
-        bottom: 100,
-        right: 20,
-        alignItems: "flex-end",
-    },
-    option: {
-        backgroundColor: "#fffded",
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        marginBottom: 10,
-        minWidth: 180,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    optionText: {
-        fontSize: 16,
-        color: "#10464d",
-    },
-    createRow: {
-        marginTop: 8,
-        paddingHorizontal: 16,
-        alignItems: 'flex-end',
-    },
+  screenWrapper: {
+    flex: 1,
+    overflow: "visible",
+  },
+  container: {
+    flex: 1,
+    overflow: "visible",
+  },
+  contentContainer: {
+    flexGrow: 1,
+    paddingBottom: 100,
+    paddingTop: 8,
+  },
+  contentContainerMobile: {
+    flexGrow: 1,
+    paddingBottom: 100,
+    paddingTop: 12,
+  },
+  toolbar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    marginBottom: 8,
+    gap: 12,
+    flexWrap: "wrap",
+    overflow: "visible",
+    zIndex: 999,
+  },
+  toolbarButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    overflow: "visible",
+    zIndex: 999,
+  },
+  primaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#10464d",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  primaryBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  secondaryBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#10464d",
+  },
+  headerBlock: {
+    marginBottom: 12,
+  },
+  filterBlock: {
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  // Mobile inline add-event banner
+  mobileBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 10,
+    marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  mobileBannerDate: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#10464d",
+    flex: 1,
+    marginRight: 10,
+  },
+  mobileBannerBtn: {
+    backgroundColor: "#10464d",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  mobileBannerBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 10,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    marginTop: 10,
+    marginBottom: 6,
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D0CFC8",
+  },
+  sheetContent: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 10,
+  },
+  sheetTextBlock: {
+    flex: 1,
+    marginRight: 16,
+  },
+  sheetLabel: {
+    fontSize: 12,
+    color: "#888",
+    fontWeight: "500",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sheetDate: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#10464d",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10464d",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    gap: 6,
+  },
+  addButtonIcon: {
+    color: "#fff",
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "400",
+  },
+  addButtonLabel: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  fab: {
+    width: 55,
+    height: 55,
+    borderRadius: 30,
+    backgroundColor: "#10464d",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  fabMobile: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  menu: {
+    position: "absolute",
+    bottom: 100,
+    right: 20,
+    alignItems: "flex-end",
+  },
+  option: {
+    backgroundColor: "#fffded",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 10,
+    minWidth: 180,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#10464d",
+  },
+  createRow: {
+    marginTop: 8,
+    paddingHorizontal: 16,
+    alignItems: "flex-end",
+  },
 
-    createBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 16,
-        borderWidth: 1.5,
-        borderColor: 'rgba(16,70,77,0.25)',
-        backgroundColor: 'rgba(255,255,255,0.55)',
-    },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(16,70,77,0.25)",
+    backgroundColor: "rgba(255,255,255,0.55)",
+  },
 
-    createBtnText: {
-        color: '#10464D',
-        fontWeight: '900',
-        fontSize: 12,
-    },
-    filterRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        marginBottom: 20,
-    },
-    dayEventsList: {
-        marginTop: 12,
-        maxHeight: 120,
-    },
+  createBtnText: {
+    color: "#10464D",
+    fontWeight: "900",
+    fontSize: 12,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  dayEventsList: {
+    marginTop: 12,
+    maxHeight: 120,
+  },
 
-    dayEventItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        paddingVertical: 6,
-    },
+  dayEventItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+  },
 
-    dayEventTime: {
-        fontWeight: "700",
-        color: "#10464d",
-        fontSize: 13,
-    },
+  dayEventTime: {
+    fontWeight: "700",
+    color: "#10464d",
+    fontSize: 13,
+  },
 
-    dayEventTitle: {
-        color: "#10464d",
-        fontSize: 13,
-    },
+  dayEventTitle: {
+    color: "#10464d",
+    fontSize: 13,
+  },
 
-    importDropdown: {
-        position: 'absolute',
-        top: 40,
-        right: 0,
-        backgroundColor: '#fff',
-        borderRadius: 14,
-        borderWidth: 1.5,
-        borderColor: '#10464d',
-        padding: 8,
-        zIndex: 999,
-        minWidth: 220,
-        shadowColor: '#000',
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 8,
-    },
-    importOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        padding: 10,
-        borderRadius: 10,
-    },
-    importIconCircle: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1.5,
-        borderColor: '#10464d',
-    },
-    importOptionTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#10464d',
-    },
-    importOptionDesc: {
-        fontSize: 12,
-        color: '#10464d',
-        opacity: 0.6,
-    },
-    modalBackground: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    modalCard: {
-        width: '90%',
-        maxWidth: 400,
-        borderRadius: 16,
-        backgroundColor: '#fffded',
-        overflow: 'hidden',
-        elevation: 5,
-    },
-    modalHeader: {
-        backgroundColor: '#10464d',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-    },
-    modalHeaderText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#fff',
-    },
-    modalBody: {
-        padding: 20,
-    },
-    modalInput: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: '#10464d',
-        marginBottom: 16,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    cancelButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        backgroundColor: '#fcfcfc',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#10464d',
-    },
-    submitButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        backgroundColor: '#10464d',
-        borderRadius: 12,
-    },
-    categoryFilterScroll: {
-        paddingHorizontal: 8,
-        gap: 10,
-    },
+  importDropdown: {
+    position: "absolute",
+    top: 40,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+    padding: 8,
+    zIndex: 999,
+    minWidth: 220,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  importOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 10,
+    borderRadius: 10,
+  },
+  importIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#10464d",
+  },
+  importOptionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#10464d",
+  },
+  importOptionDesc: {
+    fontSize: 12,
+    color: "#10464d",
+    opacity: 0.6,
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalCard: {
+    width: "90%",
+    maxWidth: 400,
+    borderRadius: 16,
+    backgroundColor: "#fffded",
+    overflow: "hidden",
+    elevation: 5,
+  },
+  modalHeader: {
+    backgroundColor: "#10464d",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  modalHeaderText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalInput: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#10464d",
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: "#fcfcfc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#10464d",
+  },
+  submitButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: "#10464d",
+    borderRadius: 12,
+  },
+  categoryFilterScroll: {
+    paddingHorizontal: 8,
+    gap: 10,
+  },
 
-    categoryFilterChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 18,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1.5,
-        borderColor: 'rgba(16,70,77,0.12)',
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 2,
-    },
+  categoryFilterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "rgba(16,70,77,0.12)",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
 
-    categoryFilterChipActive: {
-        backgroundColor: '#10464d',
-        borderColor: '#10464d',
-    },
+  categoryFilterChipActive: {
+    backgroundColor: "#10464d",
+    borderColor: "#10464d",
+  },
 
-    categoryFilterChipText: {
-        color: '#10464d',
-        fontSize: 14,
-        fontWeight: '700',
-    },
+  categoryFilterChipText: {
+    color: "#10464d",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 
-    categoryFilterChipTextActive: {
-        color: '#FFFFFF',
-    },
+  categoryFilterChipTextActive: {
+    color: "#FFFFFF",
+  },
+
+  toastContainer: {
+    position: "absolute",
+    top: 0,
+    alignSelf: "center",
+    backgroundColor: "#10464d",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 10,
+    zIndex: 1000,
+    alignItems: "center",
+    justifyContent: "center",
+    maxWidth: "85%",
+  },
+  toastText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+  },
 });

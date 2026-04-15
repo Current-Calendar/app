@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   ScrollView,
   ActivityIndicator,
-  Alert
+  Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
@@ -28,6 +28,7 @@ import MiniMonthCalendar from "@/components/events/MiniMonthCalendar";
 import CalendarSelectorModal from "@/components/events/CalendarSelectorModal";
 import EventSuccessModal from "@/components/events/EventSuccessModal";
 import EventTimePickerModal from "@/components/events/EventTimePickerModal";
+import CustomToast from "@/components/ui/custom-toast";
 
 const TEXT = "#10464d";
 const RED = "#d9534f";
@@ -50,7 +51,7 @@ type EventTagItem = {
 type ApiListResponse<T> = T[] | { results?: T[]; data?: T[] };
 
 const extractArray = <T,>(
-  response: ApiListResponse<T> | null | undefined
+  response: ApiListResponse<T> | null | undefined,
 ): T[] => {
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.results)) return response.results;
@@ -65,8 +66,7 @@ const toISODate = (d: Date) =>
 
 const toHM = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
-const toHMS = (d: Date) =>
-  `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
+const toHMS = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
 
 const mapCalendarFromApi = (raw: any): CalendarItem => ({
   id: String(raw?.id ?? raw?.pk ?? ""),
@@ -79,13 +79,11 @@ export default function CreateEventsScreen() {
   const { user } = useAuth();
   const { loadMyCalendars, createEvent } = useCreateEventApi();
 
-  const {
-    date: dateParam,
-    calendarId: calendarIdParam,
-  } = useLocalSearchParams<{
-    date: string;
-    calendarId: string;
-  }>();
+  const { date: dateParam, calendarId: calendarIdParam } =
+    useLocalSearchParams<{
+      date: string;
+      calendarId: string;
+    }>();
 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
@@ -96,7 +94,7 @@ export default function CreateEventsScreen() {
 
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState<CalendarItem | null>(
-    null
+    null,
   );
 
   const [availableTags, setAvailableTags] = useState<EventTagItem[]>([]);
@@ -162,7 +160,9 @@ export default function CreateEventsScreen() {
     return d;
   });
 
-const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>(null);
+  const [activeTimePicker, setActiveTimePicker] = useState<
+    "start" | "end" | null
+  >(null);
 
   // ====== Pickers ======z
   const [webHour, setWebHour] = useState(time.getHours());
@@ -180,7 +180,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
   const selectedTags = useMemo(
     () => availableTags.filter((tag) => selectedTagIds.includes(tag.id)),
-    [availableTags, selectedTagIds]
+    [availableTags, selectedTagIds],
   );
 
   const timeLabel = useMemo(() => `${toHM(time)} h`, [time]);
@@ -199,7 +199,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
   const goToRoot = () => {
     router.replace(
-      `/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`
+      `/(tabs)/calendars?selectedCalendarId=${selectedCalendar?.id || ""}`,
     );
   };
 
@@ -214,14 +214,14 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
       setTagsError(null);
 
       const response = (await apiClient.get(
-        `/event-tags/for-calendar/${calendarId}/`
+        `/event-tags/for-calendar/${calendarId}/`,
       )) as ApiListResponse<EventTagItem>;
 
       const list = extractArray(response);
       setAvailableTags(list);
 
       setSelectedTagIds((prev) =>
-        prev.filter((tagId) => list.some((tag) => tag.id === tagId))
+        prev.filter((tagId) => list.some((tag) => tag.id === tagId)),
       );
     } catch (error: any) {
       console.error("Error loading tags for calendar:", error);
@@ -257,9 +257,9 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
         const preSelected =
           selectedCalendar ??
           (calendarIdParam
-            ? mapped.find(
-                (c: CalendarItem) => c.id === String(calendarIdParam)
-              ) ?? mapped[0]
+            ? (mapped.find(
+                (c: CalendarItem) => c.id === String(calendarIdParam),
+              ) ?? mapped[0])
             : mapped[0]);
 
         setSelectedCalendar(preSelected);
@@ -295,7 +295,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
   const openTimePicker = (pickerType: "start" | "end", currentTime: Date) => {
     setActiveTimePicker(pickerType); // Mark which picker we are opening
-    
+
     if (Platform.OS === "web") {
       setWebHour(currentTime.getHours());
       setWebMinute(currentTime.getMinutes());
@@ -307,7 +307,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
   const onPickNativeTime = (_event: any, selected?: Date) => {
     if (Platform.OS !== "ios") setShowNativeTimePicker(false);
-    
+
     if (selected) {
       // Check the flag to see which state to update
       if (activeTimePicker === "start") setTime(selected);
@@ -320,11 +320,11 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
     d.setHours(webHour);
     d.setMinutes(webMinute);
     d.setSeconds(0, 0);
-    
+
     // Check the flag to see which state to update
     if (activeTimePicker === "start") setTime(d);
     if (activeTimePicker === "end") setEndTime(d);
-    
+
     setShowWebTimePicker(false);
   };
 
@@ -345,10 +345,12 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
     });
     if (!result.canceled) {
       const asset = result.assets[0];
-      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes) 
+      const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB = 3 * 1024 * 1024 bytes (3,145,728 bytes)
       if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-          setImageError("The selected image is too large. Please choose one under 3MB.");
-          return;
+        setImageError(
+          "The selected image is too large. Please choose one under 3MB.",
+        );
+        return;
       }
       setImageError(null);
       setCoverUri(asset.uri);
@@ -385,13 +387,13 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
   };
 
   const assignTagsToEvent = async (
     eventId: number | string,
-    tagIds: number[]
+    tagIds: number[],
   ) => {
     const failures: string[] = [];
 
@@ -406,7 +408,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
           const tag = availableTags.find((t) => t.id === tagId);
           failures.push(tag?.name || `Tag ${tagId}`);
         }
-      })
+      }),
     );
 
     return failures;
@@ -415,11 +417,19 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
   const publish = async () => {
     setFormError(null);
 
+    const todayKey = toISODate(new Date());
+    const selectedDateKey = toISODate(date);
+
+    if (selectedDateKey < todayKey) {
+      setFormError("You cannot create an event in the past");
+      return;
+    }
+
     if (endDate < date) {
       setFormError("End date must be after start date");
       return;
     }
-    if ((endDate.getTime() === date.getTime()) && (endTime < time)) {
+    if (endDate.getTime() === date.getTime() && endTime < time) {
       setFormError("End date must be after start date");
       return;
     }
@@ -456,7 +466,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
         formData.append("place_name", place?.trim() ?? "");
         formData.append("date", toISODate(date));
         formData.append("time", toHMS(time));
-        formData.append("end_date", end_date.toISOString())
+        formData.append("end_date", end_date.toISOString());
         formData.append("calendars", JSON.stringify(calendarsIds));
         formData.append("creator_id", String(user.id));
 
@@ -492,14 +502,14 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
       if (createdEventId && selectedTagIds.length > 0) {
         const failedTags = await assignTagsToEvent(
           createdEventId,
-          selectedTagIds
+          selectedTagIds,
         );
 
         if (failedTags.length > 0) {
           setFormError(
             `The event was created, but these labels could not be assigned: ${failedTags.join(
-              ", "
-            )}`
+              ", ",
+            )}`,
           );
         }
       }
@@ -539,10 +549,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
             {coverUri ? (
               <View style={styles.coverPreviewContainer}>
-                <Image
-                  source={{ uri: coverUri }}
-                  style={styles.coverPreview}
-                />
+                <Image source={{ uri: coverUri }} style={styles.coverPreview} />
                 <Pressable
                   style={styles.coverRemoveButton}
                   onPress={removeCoverImage}
@@ -582,12 +589,6 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Event Details</Text>
-
-            {!!formError && (
-              <Text style={styles.errorText} testID="create-event-error-text">
-                {formError}
-              </Text>
-            )}
 
             <TextInput
               style={styles.input}
@@ -693,11 +694,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
                     style={styles.suggestItem}
                     onPress={() => selectSuggestion(s)}
                   >
-                    <Ionicons
-                      name="location-outline"
-                      size={16}
-                      color={TEXT}
-                    />
+                    <Ionicons name="location-outline" size={16} color={TEXT} />
                     <Text style={styles.suggestText} numberOfLines={2}>
                       {s.display_name}
                     </Text>
@@ -777,45 +774,56 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
 
           <View style={styles.divider} />
 
-
-          
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>Start Date</Text>
             <View>
-              <View style= {styles.timeDateDiv}>
+              <View style={styles.timeDateDiv}>
                 <View style={styles.infoPill}>
                   <Text style={styles.infoPillText}>{dateLabel}</Text>
                 </View>
                 <View style={styles.dateTimeBox}>
-                  <Pressable style={styles.infoPill} onPress={() => openTimePicker("start", time)}>
+                  <Pressable
+                    style={styles.infoPill}
+                    onPress={() => openTimePicker("start", time)}
+                  >
                     <Text style={styles.infoPillText}>{timeLabel}</Text>
                   </Pressable>
                 </View>
               </View>
               <View style={styles.calendarCenterWrap}>
-                <MiniMonthCalendar value={date} onChange={setDate} size={miniSize} />
+                <MiniMonthCalendar
+                  value={date}
+                  onChange={setDate}
+                  size={miniSize}
+                />
               </View>
             </View>
           </View>
           <View style={styles.inputSection}>
             <Text style={styles.sectionTitle}>End Date</Text>
             <View>
-              <View style= {styles.timeDateDiv}>
+              <View style={styles.timeDateDiv}>
                 <View style={styles.infoPill}>
                   <Text style={styles.infoPillText}>{dateLabel}</Text>
                 </View>
                 <View style={styles.dateTimeBox}>
-                  <Pressable style={styles.infoPill} onPress={() => openTimePicker("end", endTime)}>
+                  <Pressable
+                    style={styles.infoPill}
+                    onPress={() => openTimePicker("end", endTime)}
+                  >
                     <Text style={styles.infoPillText}>{timeLabel}</Text>
                   </Pressable>
                 </View>
               </View>
               <View style={styles.calendarCenterWrap}>
-                <MiniMonthCalendar value={endDate} onChange={setEndDate} size={miniSize} />
+                <MiniMonthCalendar
+                  value={endDate}
+                  onChange={setEndDate}
+                  size={miniSize}
+                />
               </View>
             </View>
           </View>
-          
 
           <View
             style={[
@@ -880,6 +888,12 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
         onCloseWeb={() => setShowWebTimePicker(false)}
         onApplyWeb={applyWebTime}
       />
+
+      <CustomToast
+        message={formError}
+        onHide={() => setFormError(null)}
+        type="error"
+      />
     </View>
   );
 }
@@ -923,7 +937,7 @@ const styles = StyleSheet.create({
   timeDateDiv: {
     flexDirection: "row",
     width: "60%",
-    alignSelf: "center"
+    alignSelf: "center",
   },
   sectionTitle: {
     fontSize: 15,
@@ -1095,7 +1109,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: "#fff",
-    flex: 1
+    flex: 1,
   },
   infoPillText: {
     color: "#333",
@@ -1127,7 +1141,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: TEXT,
     fontSize: 18,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   publishButton: {
     flex: 1,
@@ -1147,7 +1161,7 @@ const styles = StyleSheet.create({
   publishText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   coverPickerEmpty: {
     borderWidth: 1.5,
