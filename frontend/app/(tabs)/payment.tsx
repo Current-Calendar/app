@@ -278,7 +278,7 @@ export default function PaymentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e7e3d3',
+    backgroundColor: '#FFFDED',
   },
   scroll: {
     paddingBottom: 60,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   summaryCard: {
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderRadius: 24,
     paddingVertical: 24,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   formCard: {
-    backgroundColor: '#eeeeee',
+    backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#10464d',
     borderRadius: 24,
