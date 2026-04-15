@@ -62,7 +62,13 @@ def create_event(request):
         )
     
     if end_date:
-        end_date = datetime.fromisoformat(end_date)
+        try:
+            end_date = datetime.fromisoformat(end_date)
+        except ValueError:
+            return Response(
+                {"errors": ["El formato del campo 'end_date' es incorrecto."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
     
     if Event.objects.filter(
         creator=creator,
