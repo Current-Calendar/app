@@ -456,7 +456,7 @@ const [activeTimePicker, setActiveTimePicker] = useState<"start" | "end" | null>
         formData.append("place_name", place?.trim() ?? "");
         formData.append("date", toISODate(date));
         formData.append("time", toHMS(time));
-        formData.append("end_date", endDate.toISOString())
+        formData.append("end_date", end_date.toISOString())
         formData.append("calendars", JSON.stringify(calendarsIds));
         formData.append("creator_id", String(user.id));
 
