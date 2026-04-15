@@ -132,7 +132,7 @@ const SettingsScreen = () => {
             <Text style={styles.heroEyebrow}>Account center</Text>
             <Text style={styles.title}>Settings</Text>
             <Text style={styles.heroBody}>
-              Manage your profile, privacy, and experience in one place.
+              Manage your profile, privacy and experience in one place.
             </Text>
             {isLimitedMode && (
               <View style={styles.limitedPill}>

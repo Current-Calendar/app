@@ -14,7 +14,7 @@ export default function TermsScreen() {
 
       <Section
         title="1. Service scope"
-        body="Current is a digital service developed as an academic project at the University of Seville that allows users to create, share, and manage event calendars. Access to and use of the Platform is subject to acceptance of these Terms, as well as the Privacy and Cookies Policy."
+        body="Current is a digital service developed as an academic project at the University of Seville that allows users to create, share and manage event calendars. Access to and use of the Platform is subject to acceptance of these Terms, as well as the Privacy and Cookies Policy."
       />
 
       <Section
@@ -41,7 +41,7 @@ export default function TermsScreen() {
         title="4. Content and intellectual property"
         bullets={[
           "Your content: You own what you post, but you grant us a free worldwide license to store and display that content.",
-          "Current rights: The design, source code, logos, and trademarks belong to the development team. Reproduction is not allowed without permission.",
+          "Current rights: The design, source code, logos and trademarks belong to the development team. Reproduction is not allowed without permission.",
         ]}
       />
 
@@ -63,7 +63,7 @@ export default function TermsScreen() {
 
       <Section
         title="7. Governing law and jurisdiction"
-        body="These Terms are governed by Spanish law (GDPR, LOPDGDD, and LSSI-CE). Any dispute shall be submitted to the courts of Seville."
+        body="These Terms are governed by Spanish law (GDPR, LOPDGDD and LSSI-CE). Any dispute shall be submitted to the courts of Seville."
       />
 
       <Section

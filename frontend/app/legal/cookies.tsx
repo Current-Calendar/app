@@ -8,14 +8,14 @@ export default function CookiesPolicyScreen() {
         <Text style={styles.eyebrow}>Current Calendar</Text>
         <Text style={styles.title}>Cookies Policy</Text>
         <Text style={styles.heroText}>
-          Here we explain which cookies we use, what they are for, and how you can
+          Here we explain which cookies we use, what they are for and how you can
           manage them.
         </Text>
       </View>
 
       <Section
         title="1. What is a cookie?"
-        body="A cookie is a small text file stored in your browser when you visit our platform. It allows the system to remember your visit, keep your session open, and analyze how you interact with the website to improve your experience."
+        body="A cookie is a small text file stored in your browser when you visit our platform. It allows the system to remember your visit, keep your session open and analyze how you interact with the website to improve your experience."
       />
 
       <Section
@@ -49,7 +49,7 @@ export default function CookiesPolicyScreen() {
 
       <Section
         title="5. How to manage or withdraw consent"
-        body="You can change your mind at any time from the platform cookie settings or from your browser privacy settings (Chrome, Firefox, Safari, and Edge)."
+        body="You can change your mind at any time from the platform cookie settings or from your browser privacy settings (Chrome, Firefox, Safari and Edge)."
       />
 
       <Section

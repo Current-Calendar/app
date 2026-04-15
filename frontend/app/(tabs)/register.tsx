@@ -71,7 +71,7 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
       },
       {
         heading: "6. Your Rights",
-        body: "You have the right to access, rectify, erase, restrict processing, object to processing, and data portability.",
+        body: "You have the right to access, rectify, erase, restrict processing, object to processing and data portability.",
         bullets: [
           "You can exercise these rights by emailing support@currentcalendar.es.",
           "To verify your identity, include a copy of your ID card or equivalent document.",
@@ -90,7 +90,7 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
     content: [
       {
         heading: "1. Service scope",
-        body: "Current is a digital service developed as an academic project at the University of Seville that allows users to create, share, and manage event calendars. Access to and use of the Platform is subject to acceptance of these Terms, as well as the Privacy and Cookies Policy.",
+        body: "Current is a digital service developed as an academic project at the University of Seville that allows users to create, share and manage event calendars. Access to and use of the Platform is subject to acceptance of these Terms, as well as the Privacy and Cookies Policy.",
       },
       {
         heading: "2. Users and access",
@@ -114,7 +114,7 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
         heading: "4. Content and intellectual property",
         bullets: [
           "Your content: You own what you post, but you grant us a free worldwide license to store and display that content.",
-          "Current rights: The design, source code, logos, and trademarks belong to the development team. Reproduction is not allowed without permission.",
+          "Current rights: The design, source code, logos and trademarks belong to the development team. Reproduction is not allowed without permission.",
         ],
       },
       {
@@ -133,7 +133,7 @@ const LEGAL_DOCS: Record<LegalDocKey, { title: string; button: string; content: 
       },
       {
         heading: "7. Governing law and jurisdiction",
-        body: "These Terms are governed by Spanish law (GDPR, LOPDGDD, and LSSI-CE). Any dispute shall be submitted to the courts of Seville.",
+        body: "These Terms are governed by Spanish law (GDPR, LOPDGDD and LSSI-CE). Any dispute shall be submitted to the courts of Seville.",
       },
     ],
   },

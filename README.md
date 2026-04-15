@@ -5,7 +5,7 @@
   ### *Go with the flow*
 </div>
 
-> A social calendar platform — create, share, and discover events with the people and communities that matter to you.
+> A social calendar platform — create, share and discover events with the people and communities that matter to you.
 
 [![CI](https://github.com/Current-Calendar/app/actions/workflows/CI_test.yml/badge.svg?branch=main)](https://github.com/Current-Calendar/app/actions/workflows/CI_test.yml)
 
@@ -15,7 +15,7 @@
 
 ## Overview
 
-**Current Calendar** is a full-stack social media application built around calendars and events. Beyond a personal organizer, it is a platform where users publish and follow public calendars, co-manage shared calendars with friends or teams, and discover what is happening nearby through an interactive map.
+**Current Calendar** is a full-stack social media application built around calendars and events. Beyond a personal organizer, it is a platform where users publish and follow public calendars, co-manage shared calendars with friends or teams and discover what is happening nearby through an interactive map.
 
 The Current community is _Currently_ ;) formed by 22 Software Engineer students who aim to develop a great service. Built from Seville, this application was born as a faculty project.
 
@@ -23,14 +23,14 @@ The Current community is _Currently_ ;) formed by 22 Software Engineer students 
 
 ## Documentation
 
-Extended documentation (in Spanish) is available in the [`docs/`](docs/) directory, covering topics such as API contracts, Redis cache usage, GraphQL queries, subscription plan restrictions, and a pilot-user guide.
+Extended documentation (in Spanish) is available in the [`docs/`](docs/) directory, covering topics such as API contracts, Redis cache usage, GraphQL queries, subscription plan restrictions and a pilot-user guide.
 
 ---
 
 ## Core Features
 
 ### Calendars
-- Create public or private calendars with cover images, descriptions, and labels
+- Create public or private calendars with cover images, descriptions and labels
 - **Co-ownership** — invite collaborators to manage a calendar together
 - **Viewer access** — grant read-only access to specific users for private calendars
 - **Subscribe** to any public calendar to follow its events in your feed
@@ -39,7 +39,7 @@ Extended documentation (in Spanish) is available in the [`docs/`](docs/) directo
 - Export calendars to the ICS standard for use in any calendar client
 
 ### Events
-- Rich event creation: title, description, photo, date, time, location (place name + GPS coordinates), and recurrence rules
+- Rich event creation: title, description, photo, date, time, location (place name + GPS coordinates) and recurrence rules
 - **RSVP** and **save** events to keep track of what you are attending
 - Like and comment on events
 - **In-event chat** — real-time messaging thread per event
@@ -47,7 +47,7 @@ Extended documentation (in Spanish) is available in the [`docs/`](docs/) directo
 ### Social Graph
 - Follow other users and be followed back
 - Browse and subscribe to public calendars created by the people you follow
-- Receive real-time **in-app notifications** for follows, invitations, likes, and event activity
+- Receive real-time **in-app notifications** for follows, invitations, likes and event activity
 
 ### Radar (Map Discovery)
 - Location-aware map that shows upcoming public events within a configurable radius

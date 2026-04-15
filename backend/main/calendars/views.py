@@ -295,7 +295,7 @@ def list_subscribed_calendars(request):
     """
     from django.db.models import Q
     
-    # Include subscribed calendars, calendars where user is co-owner, and calendars where user is viewer
+    # Include subscribed calendars, calendars where user is co-owner and calendars where user is viewer
     queryset = Calendar.objects.filter(
         Q(subscribers=request.user) | Q(co_owners=request.user) | Q(viewers=request.user)
     ).select_related('creator').prefetch_related('co_owners', 'viewers').order_by('-created_at').distinct()

@@ -38,7 +38,7 @@ class HelloWorldViewTests(TestCase):
 
     @patch("main.views.cache")
     def test_hello_world_uncached_creates_object_and_caches(self, mock_cache):
-        """When cache is empty, the view creates a MockElement, caches it, and returns DB source."""
+        """When cache is empty, the view creates a MockElement, caches it and returns DB source."""
         mock_cache.get.return_value = None
 
         request = self.factory.get("/fake-url/")

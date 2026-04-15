@@ -8,7 +8,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.eyebrow}>Current Calendar</Text>
         <Text style={styles.title}>Privacy Notice</Text>
         <Text style={styles.heroText}>
-          This document explains what data we process, why we process it, and how you can
+          This document explains what data we process, why we process it and how you can
           exercise your rights.
         </Text>
       </View>
@@ -54,7 +54,7 @@ export default function PrivacyPolicyScreen() {
 
       <Section
         title="6. Your Rights"
-        body="You have the right to access, rectify, erase, restrict processing, object to processing, and data portability."
+        body="You have the right to access, rectify, erase, restrict processing, object to processing and data portability."
         bullets={[
           "You can exercise these rights by emailing support@currentcalendar.es.",
           "To verify your identity, include a copy of your ID card or equivalent document.",
