@@ -52,6 +52,8 @@ export interface Event {
   location: string;
   date: string;
   time: string;
+  end_date?: string;
+  end_time?: string;
   image: string;
   username: string;
   userAvatar: string | ImageSourcePropType;
@@ -203,6 +205,8 @@ export default function EventsScreen() {
                 typeof (e.time || e.hora) === "string"
                   ? String(e.time || e.hora).slice(0, 5)
                   : "",
+              end_date: e.end_date ? (e.end_date.includes("T") ? e.end_date.split("T")[0] : e.end_date) : undefined,
+              end_time: e.end_time ? String(e.end_time).slice(0, 5) : undefined,
               image: resolveImageUrl(e.photo || e.foto),
               username: e.creator_username || cal?.creator || "unknown",
               userAvatar: e.creator_photo || null,

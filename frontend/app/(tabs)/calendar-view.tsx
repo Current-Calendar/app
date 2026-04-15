@@ -76,6 +76,8 @@ export default function CalendarViewScreen() {
     backendEvents.forEach((evt: any) => {
       if (evt.calendars?.length) {
         evt.calendars.forEach((calId: number) => {
+          const rawEnd = evt.end_date;
+          const cleanEnd = rawEnd ? (rawEnd.includes("T") ? rawEnd.split("T")[0] : rawEnd) : undefined;
           transformed.push({
             id: String(evt.id),
             calendarId: String(calId),
@@ -83,10 +85,13 @@ export default function CalendarViewScreen() {
             description: evt.description,
             place_name: evt.place_name,
             date: evt.date,
+            end_date: cleanEnd,
             time: evt.time,
+            end_time: evt.end_time ? evt.end_time.substring(0, 5) : undefined,
             recurrence: evt.recurrence,
             photo: evt.photo,
             color: undefined,
+            show_time: !cleanEnd || cleanEnd === evt.date,
           });
         });
       }
