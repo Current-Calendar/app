@@ -266,7 +266,7 @@ export default SettingsScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#efe8dc',
+    backgroundColor: '#FFFDED',
   },
   scrollView: {
     flex: 1,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     color: '#624000',
   },
   sectionCard: {
-    backgroundColor: '#f8f5f1',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#dacfbf',

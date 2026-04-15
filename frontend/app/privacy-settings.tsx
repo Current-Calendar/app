@@ -366,7 +366,7 @@ export default function PrivacySettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#efe8dc",
+    backgroundColor: "#FFFDED",
   },
   scroll: {
     flex: 1,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     color: "#47423d",
   },
   preferenceCard: {
-    backgroundColor: "#f8f5f1",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#d8d0c4",
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     color: "#6f4c08",
   },
   itemWrap: {
-    backgroundColor: "#f8f5f1",
+    backgroundColor: "#ffffff",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#d8d0c4",
