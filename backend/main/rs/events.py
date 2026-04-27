@@ -131,10 +131,8 @@ def recommend_events(user: User, limit=30):
         Event.objects
         .filter(id__in=sorted_ids)
         .filter(date__gte=timezone.now().date())
-        .filter(
-            Q(calendars__privacy='PUBLIC') |
-            Q(calendars__creator=user)
-        )
+        .filter(calendars__privacy='PUBLIC')
+        .exclude(creator=user)
         .distinct()
         .prefetch_related('calendars__categories')
         .select_related('creator')
@@ -150,10 +148,8 @@ def recommend_events(user: User, limit=30):
             Event.objects
             .exclude(id__in=ids_to_exclude)
             .filter(date__gte=timezone.now().date())
-            .filter(
-                Q(calendars__privacy='PUBLIC') |
-                Q(calendars__creator=user)
-            )
+            .filter(calendars__privacy='PUBLIC')
+            .exclude(creator=user)
             .distinct()
             .annotate(num_calendars=Count('calendars'))
             .order_by('date', '-num_calendars')

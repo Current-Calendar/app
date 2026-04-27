@@ -86,8 +86,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'main',
     'storages',
-    'django.contrib.gis',
-    'silk'
+    'django.contrib.gis'
 ]
 
 ASGI_APPLICATION = 'current.asgi.application'
@@ -158,7 +157,6 @@ SPECTACULAR_SETTINGS = {
 AUTH_USER_MODEL = 'main.User'
 
 MIDDLEWARE = [
-    'silk.middleware.SilkyMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'current.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
