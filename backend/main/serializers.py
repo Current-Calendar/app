@@ -8,7 +8,7 @@ from main.models import Event, EventAttendance, EventLike, EventSave
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from utils.login_log import get_client_ip
 from main.models import LoginLog
-from .models import Calendar, Notification, Report, ChatMessage, Category, EventTag
+from .models import Calendar, Notification, Report, ChatMessage, Category, EventTag, Feedback
 from utils.storage import get_signed_url
 
 User = get_user_model()
@@ -625,3 +625,10 @@ class EventDetailSerializer(serializers.ModelSerializer):
             'photo': obj.creator.photo.url if obj.creator.photo else None
         }
 
+
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = ['id', 'user', 'type', 'description', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
