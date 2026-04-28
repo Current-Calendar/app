@@ -324,6 +324,21 @@ class Report(models.Model):
         return f"Report {self.id} by {self.reporter.username} on {self.reported_type} (Status: {self.status})"
 
 
+class Feedback(models.Model):
+    TYPE_CHOICES = [
+        ('INCIDENCIA', 'Incidencia'),
+        ('BUG', 'Bug'),
+        ('MEJORA', 'Mejora'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feedback {self.id} by {self.user.username} ({self.type})"
+
+
 class MockElement(models.Model):
     name = models.CharField(max_length=100)
     geo_point = models.PointField()

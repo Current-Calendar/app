@@ -254,7 +254,7 @@ const SettingsScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.row}
+              style={[styles.row, styles.rowBorder]}
               onPress={() => router.push('/help-support' as any)}
             >
               <View style={styles.rowLeft}>
@@ -265,6 +265,24 @@ const SettingsScreen = () => {
                   <Text style={styles.rowTitle}>Help & support</Text>
                   <Text style={styles.rowSubtitle}>
                     FAQs, contact and assistance
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#10464d" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => router.push('/(tabs)/feedback' as any)}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.iconWrap}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={22} color="#10464d" />
+                </View>
+                <View>
+                  <Text style={styles.rowTitle}>Send feedback</Text>
+                  <Text style={styles.rowSubtitle}>
+                    Report an issue or suggest an improvement
                   </Text>
                 </View>
               </View>

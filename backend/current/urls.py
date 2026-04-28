@@ -109,6 +109,7 @@ urlpatterns = [
     path('api/v1/notifications/<int:id>/read/', notification_views.mark_notification_as_read, name='mark_notification_as_read'),
     path('api/v1/notifications/read-all/', notification_views.mark_all_notifications_as_read, name='mark_all_notifications_as_read'),
     path('api/v1/reports/create/', report_views.create_report, name='create_report'),
+    path('api/v1/feedback/', report_views.create_feedback, name='create_feedback'),
     path('api/v1/analytics/', analytics_views.analytics_dashboard, name='analytics_dashboard'),
     path('api/v1/events/<int:event_id>/chat/', views.event_chat_history, name='event-chat-history'),
     path('api/v1/recommendations/calendars/', calendar_views.recommended_calendars, name='recommended_calendars'),

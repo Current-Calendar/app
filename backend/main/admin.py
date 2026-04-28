@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
-from .models import User, Calendar, Event, Report
+from .models import User, Calendar, Event, Report, Feedback
 from django.contrib.auth.admin import UserAdmin
 
 @admin.register(Calendar)
@@ -28,6 +28,13 @@ class UsuarioAdmin(UserAdmin):
 class ReportAdmin(admin.ModelAdmin):
     list_display = ('reporter', 'reported_type', 'status', 'created_at')
     list_filter  = ('reported_type', 'status', 'created_at')
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    list_display = ('user', 'type', 'created_at')
+    list_filter  = ('type', 'created_at')
+    search_fields = ('user__username', 'description')
+    readonly_fields = ('user', 'type', 'description', 'created_at')
 from django.contrib import admin
 
 from .models import LoginLog
