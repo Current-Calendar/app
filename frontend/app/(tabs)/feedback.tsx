@@ -18,9 +18,9 @@ import profileStyles from '../../styles/profile-styles';
 type FeedbackType = 'INCIDENCIA' | 'BUG' | 'MEJORA';
 
 const FEEDBACK_TYPES: { value: FeedbackType; label: string; description: string; icon: string }[] = [
-  { value: 'INCIDENCIA', label: 'Incidencia', description: 'Algo no funciona como se espera', icon: 'warning-outline' },
-  { value: 'BUG', label: 'Bug', description: 'Error concreto en la aplicación', icon: 'bug-outline' },
-  { value: 'MEJORA', label: 'Mejora', description: 'Sugerencia para mejorar la app', icon: 'bulb-outline' },
+  { value: 'INCIDENCIA', label: 'Incident', description: 'Something is not working as expected', icon: 'warning-outline' },
+  { value: 'BUG', label: 'Bug', description: 'Specific error in the application', icon: 'bug-outline' },
+  { value: 'MEJORA', label: 'Improvement', description: 'Suggestion to improve the app', icon: 'bulb-outline' },
 ];
 
 const MAX_DESCRIPTION = 1000;
@@ -48,7 +48,7 @@ const FeedbackScreen = () => {
       const message =
         error instanceof ApiError
           ? error.message
-          : 'No se pudo enviar el feedback. Inténtalo de nuevo.';
+          : 'Could not send feedback. Please try again.';
       Alert.alert('Error', message);
     } finally {
       setIsSubmitting(false);
@@ -71,12 +71,12 @@ const FeedbackScreen = () => {
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={64} color="#10464d" />
           </View>
-          <Text style={styles.successTitle}>Gracias por tu feedback</Text>
+          <Text style={styles.successTitle}>Thank you for your feedback</Text>
           <Text style={styles.successBody}>
-            Hemos recibido tu mensaje. Lo revisaremos lo antes posible.
+            We have received your message. We will review it as soon as possible.
           </Text>
-          <TouchableOpacity style={styles.submitButton} onPress={() => router.back()}>
-            <Text style={styles.submitButtonText}>Volver</Text>
+          <TouchableOpacity style={[styles.submitButton, { paddingHorizontal: 48 }]} onPress={() => router.back()}>
+            <Text style={styles.submitButtonText}>Go back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -101,14 +101,14 @@ const FeedbackScreen = () => {
             <Text style={styles.heroEyebrow}>Help us improve</Text>
             <Text style={styles.title}>Send feedback</Text>
             <Text style={styles.heroBody}>
-              Cuéntanos qué ha pasado o qué podemos mejorar.
+              Tell us what happened or what we can improve.
             </Text>
           </View>
         </View>
 
         <View style={styles.content}>
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Tipo de reporte</Text>
+            <Text style={styles.sectionLabel}>Report type</Text>
             {FEEDBACK_TYPES.map((item, index) => (
               <TouchableOpacity
                 key={item.value}
@@ -158,10 +158,10 @@ const FeedbackScreen = () => {
           </View>
 
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>Descripción</Text>
+            <Text style={styles.sectionLabel}>Description</Text>
             <TextInput
               style={styles.textArea}
-              placeholder="Describe el problema o la mejora con el mayor detalle posible..."
+              placeholder="Describe the issue or improvement in as much detail as possible..."
               placeholderTextColor="#a09890"
               multiline
               numberOfLines={6}
@@ -183,7 +183,7 @@ const FeedbackScreen = () => {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text style={styles.submitButtonText}>Enviar feedback</Text>
+              <Text style={styles.submitButtonText}>Send feedback</Text>
             )}
           </TouchableOpacity>
         </View>
