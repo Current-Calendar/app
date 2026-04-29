@@ -1,4 +1,4 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, throttle_classes
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.gis.geos import Point
@@ -9,8 +9,10 @@ from django.utils import timezone
 from ..models import Event
 from ..serializers import EventSerializer
 from main.entitlements import get_user_features
+from current.throttles import HeavyEndpointThrottle
 
 @api_view(['GET'])
+@throttle_classes([HeavyEndpointThrottle])
 def radar_events(request):
     # /api/radar?lat=..&lon=..&radio=5
     lat = request.GET.get("lat")

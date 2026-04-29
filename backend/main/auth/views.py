@@ -1,5 +1,5 @@
 import os
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
@@ -17,6 +17,8 @@ from main.calendars.views import _do_google_calendar_import
 from utils.login_log import get_client_ip
 from urllib.parse import quote
 from django.utils import timezone
+from current.throttles import AuthRateThrottle
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 GOOGLE_REDIRECT_URIS = settings.GOOGLE_REDIRECT_URIS
@@ -56,6 +58,7 @@ if GOOGLE_REDIRECT_URIS and "localhost" in GOOGLE_REDIRECT_URIS:
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def register_user(request):
     """
     Endpoint to register a new user.
@@ -87,6 +90,7 @@ def register_user(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([AuthRateThrottle])
 def accept_legal_documents(request):
     required_flags = ['accepted_privacy', 'accepted_terms']
     missing_or_false = [flag for flag in required_flags if not request.data.get(flag)]
@@ -181,6 +185,7 @@ def google_oauth2callback(request):
     frontend_url = settings.FRONTEND_URL.rstrip('/')
     return redirect(f"{frontend_url}/calendars")
 
+@throttle_classes([AuthRateThrottle])
 def send_password_reset_email(user, reset_url):
     """Send password reset email to user"""
 
@@ -222,6 +227,7 @@ def send_password_reset_email(user, reset_url):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def recover_password(request):
     email = request.data.get('email')
     source = request.data.get('source')
@@ -265,6 +271,7 @@ def recover_password(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def set_new_password(request):
     token = request.data.get('token')
     new_password = request.data.get('new_password')
@@ -321,6 +328,7 @@ def set_new_password(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthRateThrottle])
 def validate_reset_token(request):
     token = request.query_params.get('token')
 
@@ -362,3 +370,6 @@ def validate_reset_token(request):
             {"valid": False, "error": "User not found"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+class ThrottledTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [AuthRateThrottle]

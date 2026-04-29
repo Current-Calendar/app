@@ -1,8 +1,10 @@
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
+
+from current.throttles import HeavyEndpointThrottle
 from ..models import Calendar, Event, EventLike, EventSave, Notification, EventAttendance, User
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
@@ -633,6 +635,7 @@ def delete_event(request, event_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([HeavyEndpointThrottle])
 def recommended_events(request):
     try:
         user_id = request.user.id

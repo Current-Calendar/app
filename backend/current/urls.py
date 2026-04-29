@@ -19,7 +19,7 @@ from rest_framework.permissions import IsAdminUser
 from graphene_django.views import GraphQLView
 from rest_framework import routers
 from main import views
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
@@ -44,7 +44,7 @@ api_router.register(r'categories', CategoryViewSet, basename='category')
 api_router.register(r'event-tags', EventTagViewSet, basename='event-tag')
 
 urlpatterns = [
-    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/', auth_views.ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
     path('api/schema/', SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name='schema'),

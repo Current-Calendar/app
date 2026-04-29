@@ -3,7 +3,7 @@ import html as html_lib
 import requests
 import socket
 import ipaddress
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -28,6 +28,7 @@ from main.rs.calendars import recommend_calendars
 from main.serializers import CalendarSummarySerializer
 from main.permissions import CanChangePrivacy, CanCoOwnCalendars, CanCreateCalendar, CanAddFavoriteCalendar, CanAcceptCalendarInvites, CanReceiveCalendarViewInvites
 from main.privacy import ACCEPTED_CALENDAR_PRIVACY_VALUES, normalize_calendar_privacy
+from current.throttles import HeavyEndpointThrottle
 
 REQUEST_TIMEOUT_SECONDS = 5
 ALLOWED_WEBCAL_HOSTS = getattr(settings, "ALLOWED_WEBCAL_HOSTS")
@@ -1106,6 +1107,7 @@ def export_to_ics(request, calendar_id):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@throttle_classes([HeavyEndpointThrottle])
 def recommended_calendars(request):
     try:
         user_id = request.user.id
@@ -1124,7 +1126,9 @@ def recommended_calendars(request):
 
     cache.set(cache_key, serializer.data, 60 * 5)
 
-    return Response(serializer.data)
+    return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def invite_calendar(request: Request, calendar_id: int) -> Response:
