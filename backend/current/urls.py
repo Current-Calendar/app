@@ -15,10 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
+from rest_framework.permissions import IsAdminUser
 from graphene_django.views import GraphQLView
 from rest_framework import routers
 from main import views
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenBlacklistView
 from main.users import views as user_views
 from main.calendars import views as calendar_views
 from main.events import views as event_views
@@ -45,9 +46,10 @@ api_router.register(r'event-tags', EventTagViewSet, basename='event-tag')
 urlpatterns = [
     path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path('api/v1/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
+    path('api/schema/', SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[IsAdminUser]), name='swagger-ui'),
+    path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=settings.DEBUG))),
     path("api/v1/", include(api_router.urls)),
     path('admin/', admin.site.urls),
     path('api/v1/auth/recover-password/', auth_views.recover_password, name='recover_password'),

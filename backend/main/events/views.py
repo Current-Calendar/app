@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
@@ -356,6 +356,7 @@ def edit_event(request: Request, event_id):
     
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_events(request):
     """
     List and search events.
@@ -471,6 +472,7 @@ def list_events(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_events_from_calendar(request):
     """
     List and search events.

@@ -131,6 +131,30 @@ export const ROUTES_CONFIG: RouteConfig[] = [
     requiresGuest: false,
     redirectOnFail: "/login",
   },
+  {
+    path: "/payment",
+    requiresAuth: true,
+    requiresGuest: false,
+    redirectOnFail: "/login",
+  },
+  {
+    path: "/analytics",
+    requiresAuth: true,
+    requiresGuest: false,
+    redirectOnFail: "/login",
+  },
+  {
+    path: "/feedback",
+    requiresAuth: true,
+    requiresGuest: false,
+    redirectOnFail: "/login",
+  },
+  {
+    path: "/help-support",
+    requiresAuth: true,
+    requiresGuest: false,
+    redirectOnFail: "/login",
+  },
 ];
 
 export function getRouteProtection(pathname: string): RouteConfig | undefined {

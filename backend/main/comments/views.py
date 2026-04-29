@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from ..models import Calendar, Comment, Event, Notification
@@ -307,15 +307,17 @@ def create_comment(request):
 
 
 @api_view(["GET", "POST"])
+@permission_classes([AllowAny])
 def comments_collection(request):
     if request.method == "GET":
         return get_comments(request)
-    if not request.user or not request.user.is_authenticated:
+    if not request.user.is_authenticated:
         return Response(status=status.HTTP_401_UNAUTHORIZED)
     return create_comment(request)
 
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def list_replies(request, comment_id):
     root = get_object_or_404(
         Comment.objects.select_related("event", "calendar", "author").prefetch_related("event__calendars"),

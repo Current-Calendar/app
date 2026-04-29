@@ -99,6 +99,10 @@ class ApiClient {
     return this.accessToken;
   }
 
+  getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
   async login(username: string, password: string) {
     const response = await this.post<TokenResponse>("/token/", { username, password });
 

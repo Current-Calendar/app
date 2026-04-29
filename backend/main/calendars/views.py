@@ -4,7 +4,7 @@ import requests
 import socket
 import ipaddress
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
@@ -583,6 +583,7 @@ def toggle_like_calendar(request, calendar_id):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def list_calendars(request):
     """
     List and search calendars.
@@ -594,7 +595,11 @@ def list_calendars(request):
         privacy     (str)  -- filter by privacy status (PRIVATE | PUBLIC)
         categories  (str)  -- filter by category IDs (comma-separated, e.g., "1,4")
     """
-    queryset = Calendar.objects.select_related('creator').all()
+    # Anonymous users can only see PUBLIC calendars.
+    if request.user.is_authenticated:
+        queryset = Calendar.objects.select_related('creator').all()
+    else:
+        queryset = Calendar.objects.select_related('creator').filter(privacy='PUBLIC')
 
     q = request.GET.get('q', '').strip()
     if q:
@@ -607,6 +612,12 @@ def list_calendars(request):
             return Response(
                 {"errors": [f"Invalid 'privacy' value. Allowed values: {', '.join(sorted(valid_privacys))}."]},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Unauthenticated users cannot filter for PRIVATE calendars.
+        if not request.user.is_authenticated and privacy != 'PUBLIC':
+            return Response(
+                {"errors": ["Authentication required to view non-public calendars."]},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
         queryset = queryset.filter(privacy=privacy)
 
@@ -766,12 +777,12 @@ def import_google_calendar(request):
     try:
         count = _do_google_calendar_import(request.user, raw_credentials)
         if count == -1:
-            return Response({"error": "Has alcanzado el límite de calendars privados permitidos. Elimina alguno para importar este calendar."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+            return Response({"error": "Has alcanzado el límite de calendars privados permitidos. Elimina alguno para importar este calendar."}, status=403)
     except Exception as e:
         print(f"Error al importar eventos: {e}")
-        return Response({"error": "Error al conectar con Google Calendar. Inténtalo de nuevo más tarde."}, status=500, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "Error al conectar con Google Calendar. Inténtalo de nuevo más tarde."}, status=500)
 
-    return Response({"message": "Eventos importados exitosamente", "count": count}, headers={"Access-Control-Allow-Origin": "*"})
+    return Response({"message": "Eventos importados exitosamente", "count": count})
 
 
 @api_view(['POST'])
@@ -784,22 +795,22 @@ def iOS_calendar_import(request):
     user_creator = request.user
 
     if not webcal_url:
-        return Response({"error": "webcal_url es requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "webcal_url es requerido"}, status=400)
 
     if webcal_url.startswith("webcal://"):
         http_url = webcal_url.replace("webcal://", "https://", 1)
     else:
         http_url = webcal_url
-    
-   
+
+
     is_safe, reason = _is_safe_calendar_url(http_url)
     if not is_safe:
-        return Response({"error": f"URL no permitida: {reason}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": f"URL no permitida: {reason}"}, status=400)
 
-  
+
     safe_ip = get_safe_ip(http_url)
     if not safe_ip:
-        return Response({"error": "La URL apunta a un destino no permitido por motivos de seguridad"}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "La URL apunta a un destino no permitido por motivos de seguridad"}, status=403)
 
     try:
     
@@ -896,14 +907,14 @@ def _is_safe_calendar_url(raw_url: str):
 def ics_import(request):
     """Endpoint para importar eventos desde un archivo ICS subido por el user."""
     if 'file' not in request.FILES:
-        return Response({"error": "Archivo ICS requerido"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "Archivo ICS requerido"}, status=400)
 
     upload = request.FILES['file']
 
     try:
         cal = ICalCalendar.from_ical(upload.read())
     except Exception as exc:  # malformed ICS
-        return Response({"error": f"Archivo ICS inválido: {exc}"}, status=400, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": f"Archivo ICS inválido: {exc}"}, status=400)
 
     momento_actual = timezone.now()
     privacy_solicitado = normalize_calendar_privacy(request.data.get('privacy', 'PRIVATE'))
@@ -950,7 +961,7 @@ def ics_import(request):
         )
         event.calendars.add(calendar)
 
-    return Response({"message": "Archivo ICS importado exitosamente"}, headers={"Access-Control-Allow-Origin": "*"})
+    return Response({"message": "Archivo ICS importado exitosamente"})
 
 
 @api_view(['GET'])
@@ -1068,12 +1079,12 @@ def export_to_ics(request, calendar_id):
     try:
         calendar = Calendar.objects.get(id=calendar_id)
     except Calendar.DoesNotExist:
-        return Response({"error": "Calendar no encontrado"}, status=404, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "Calendar no encontrado"}, status=404)
 
     user = request.user
     has_access = (calendar.creator == user or calendar.co_owners.filter(id=user.id).exists() or calendar.viewers.filter(id=user.id).exists())
     if calendar.privacy == 'PRIVATE' and not has_access:
-        return Response({"error": "No tienes permiso para exportar este calendario."}, status=403, headers={"Access-Control-Allow-Origin": "*"})
+        return Response({"error": "No tienes permiso para exportar este calendario."}, status=403)
 
     cal = ICalCalendar()
     cal.add('prodid', '-//Current Calendar//currentcalendar.es//ES')
@@ -1090,7 +1101,6 @@ def export_to_ics(request, calendar_id):
     ics_content = cal.to_ical().decode('utf-8')
     response = HttpResponse(ics_content, status=200, content_type='text/calendar; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="calendario_{calendar_id}.ics"'
-    response["Access-Control-Allow-Origin"] = "*"
     return response
 
 
@@ -1106,7 +1116,7 @@ def recommended_calendars(request):
     cache_key = f"recommended_calendars_{user_id}"
     cached_data = cache.get(cache_key)
     if cached_data:
-        return Response(cached_data, headers={"Access-Control-Allow-Origin": "*"})
+        return Response(cached_data)
 
     calendars = recommend_calendars(user, limit=30)
     liked_calendar_ids = set(CalendarLike.objects.filter(user=user).values_list('calendar_id', flat=True))
@@ -1114,7 +1124,7 @@ def recommended_calendars(request):
 
     cache.set(cache_key, serializer.data, 60 * 5)
 
-    return Response(serializer.data, headers={"Access-Control-Allow-Origin": "*"})
+    return Response(serializer.data)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def invite_calendar(request: Request, calendar_id: int) -> Response:
