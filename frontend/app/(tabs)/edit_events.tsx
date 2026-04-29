@@ -501,6 +501,15 @@ export default function EditEventsScreen() {
       return;
     }
 
+    if (endDate && endDate < date) {
+      setFormError("End date must be after start date.");
+      return;
+    }
+    if (endDate && endTime && endDate.getTime() === date.getTime() && toHM(endTime) < toHM(time)) {
+      setFormError("End date must be after start date.");
+      return;
+    }
+
     if (!selectedCalendar?.id) {
       setFormError("Please select a calendar.");
       return;
