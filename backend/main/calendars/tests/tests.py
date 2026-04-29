@@ -576,8 +576,9 @@ class ListCalendarsTests(TestCase):
     # ------------------------------------------------------------------
 
     def test_search_by_name_returns_matching_calendars(self):
-        """q parameter filters calendars by name substring (case-insensitive)."""
-        # 'Secondary' only appears in 'Secondary Private Events', so exactly 1 match expected
+        """q parameter filters calendars by name substring (case-insensitive). Requires auth to see private calendars."""
+        # 'Secondary' only appears in 'Secondary Private Events' (PRIVATE) → requires authentication
+        self.client.force_authenticate(self.owner)
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "Secondary"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item["name"] for item in response.json()]
@@ -587,7 +588,8 @@ class ListCalendarsTests(TestCase):
         self.assertNotIn("Open Events", names)
 
     def test_search_is_case_insensitive(self):
-        """Name search is case-insensitive."""
+        """Name search is case-insensitive. Requires auth to see private calendars."""
+        self.client.force_authenticate(self.owner)
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": "PRIVATE"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item["name"] for item in response.json()]
@@ -602,7 +604,8 @@ class ListCalendarsTests(TestCase):
         self.assertEqual(response.json(), [])
 
     def test_search_with_empty_q_returns_all(self):
-        """An empty q string is ignored and all calendars are returned."""
+        """An empty q string is ignored and all calendars are returned. Requires auth to see private calendars."""
+        self.client.force_authenticate(self.owner)
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"q": ""})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 4)
@@ -621,13 +624,19 @@ class ListCalendarsTests(TestCase):
             self.assertEqual(item["privacy"], "PUBLIC")
 
     def test_filter_by_privacy_privado(self):
-        """privacy=PRIVATE returns only private calendars."""
+        """privacy=PRIVATE returns only private calendars for authenticated users."""
+        self.client.force_authenticate(self.owner)
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"privacy": "PRIVATE"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
         self.assertEqual(len(data), 2)
         for item in data:
             self.assertEqual(item["privacy"], "PRIVATE")
+
+    def test_filter_by_privacy_privado_sin_auth_devuelve_401(self):
+        """privacy=PRIVATE without authentication returns 401."""
+        response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"privacy": "PRIVATE"})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_filter_by_privacy_friends_devuelve_400(self):
         """privacy=FRIENDS is no longer accepted."""
@@ -677,7 +686,9 @@ class ListCalendarsTests(TestCase):
 
     def test_creator_username_matches_actual_user(self):
         """The creator_username in the response matches the creator's username."""
+        self.client.force_authenticate(self.owner)
         response = self.client.get(ENDPOINT_LIST_CALENDARIOS, {"privacy": "PRIVATE"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()[0]["creator_username"], self.owner.username)
         
 
