@@ -70,10 +70,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   const logout = useCallback(async () => {
     try {
+      const refreshToken = apiClient.getRefreshToken();
       setUser(null);
       setIsAuthenticated(false);
       apiClient.user = null;
       await apiClient.clearTokens();
+      // Invalidate the refresh token server-side so it cannot be reused.
+      if (refreshToken) {
+        await apiClient.post('/token/blacklist/', { refresh: refreshToken }).catch(() => {});
+      }
     } catch (error) {
       console.error('Logout error:', error);
     }
