@@ -4,8 +4,10 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
+import Head from "expo-router/head";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
+import "../global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -175,6 +177,10 @@ function RootLayoutContent() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? darkTheme : lightTheme}>
+      <Head>
+        <title>Current Calendar</title>
+        <meta name="description" content="Discover, follow, and manage events with Current Calendar — your social calendar app." />
+      </Head>
       <View style={{ flex: 1, opacity: isRedirecting ? 0 : 1 }}>
         <Stack
           screenOptions={{
