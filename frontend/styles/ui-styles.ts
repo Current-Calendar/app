@@ -67,7 +67,7 @@ export const navTopBarStyles = StyleSheet.create({
     borderRadius: 18,
   },
   logo: {
-    width: 120,
+    width: 40,
     height: 40,
   },
 });

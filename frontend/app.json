@@ -24,7 +24,9 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "title": "Current Calendar",
+      "description": "Discover, follow, and manage events with Current Calendar — your social calendar app."
     },
     "plugins": [
       "expo-router",

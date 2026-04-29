@@ -120,6 +120,7 @@ export default function LoginScreen() {
             autoCapitalize="none"
             style={styles.input}
             testID="login-username-input"
+            accessibilityLabel="Username"
             ref={usernameRef}
             returnKeyType="next"
             blurOnSubmit={false}
@@ -137,6 +138,7 @@ export default function LoginScreen() {
               style={[styles.input, { paddingRight: 40 }]}
               autoCapitalize="none"
               testID="login-password-input"
+              accessibilityLabel="Password"
               ref={passwordRef}
               returnKeyType="done"
               onSubmitEditing={onLogin}
