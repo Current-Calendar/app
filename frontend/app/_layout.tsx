@@ -180,6 +180,7 @@ function RootLayoutContent() {
       <Head>
         <title>Current Calendar</title>
         <meta name="description" content="Discover, follow, and manage events with Current Calendar — your social calendar app." />
+        <meta name="keywords" content="calendar, event, social media, current, start up, innovation" />
       </Head>
       <View style={{ flex: 1, opacity: isRedirecting ? 0 : 1 }}>
         <Stack
