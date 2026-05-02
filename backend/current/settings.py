@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from logging import config
 import os
+import sys
 from pathlib import Path
 
 from django.conf.global_settings import STORAGES
@@ -35,6 +36,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
+TESTING = "test" in sys.argv
 
 ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es', 'api-testers.currentcalendar.es','127.0.0.1']
 
@@ -235,6 +237,15 @@ REST_FRAMEWORK = {
         'heavy': '15/minute',
     },
 }
+
+if TESTING:
+    # tests cen't be rate-limited or they are going to fail
+    REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+        'anon': '1000/minute',
+        'user': '1000/minute',
+        'auth': '1000/minute',
+        'heavy': '1000/minute',
+    }
 
 SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': True,
