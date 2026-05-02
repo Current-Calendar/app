@@ -56,7 +56,7 @@ def event_chat_history(request, event_id):
         return Response({"error": "Evento no encontrado"}, status=404)
 
     
-    messages = ChatMessage.objects.filter(event=event).order_by('timestamp')[:50]
+    messages = ChatMessage.objects.filter(event=event).order_by('timestamp').select_related("sender")[:50]
     
    
     serializer = ChatMessageSerializer(messages, many=True)
