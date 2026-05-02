@@ -1109,11 +1109,8 @@ def export_to_ics(request, calendar_id):
 @permission_classes([IsAuthenticated])
 @throttle_classes([HeavyEndpointThrottle])
 def recommended_calendars(request):
-    try:
-        user_id = request.user.id
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({'error': 'User not found'}, status=404)
+    user = request.user
+    user_id = user.pk
 
     cache_key = f"recommended_calendars_{user_id}"
     cached_data = cache.get(cache_key)
