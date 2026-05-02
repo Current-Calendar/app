@@ -12,6 +12,7 @@ venv
 /backend/staticfiles
 /backend/dataRS_calendars.dat
 /backend/dataRS_events.dat
+/backend/media/event_photos/
 
 .idea
 .vercel
