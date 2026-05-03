@@ -139,6 +139,9 @@ export default function CalendarScreen() {
     refetch: refetchEvents,
   } = useEventsList({ autoFetch: false });
 
+  const lastFetchRef = useRef<number>(0);
+  const STALE_TIME = 60_000;
+
   const fetchData = useCallback(async () => {
     try {
       setLoadingCalendars(true);
@@ -360,6 +363,7 @@ export default function CalendarScreen() {
       return;
     }
 
+    lastFetchRef.current = Date.now();
     void fetchData();
   }, [fetchData, isAuthenticated, router]);
 
@@ -503,11 +507,13 @@ export default function CalendarScreen() {
     }
   }, [filteredCalendars, selectedCalendarId]);
 
-useFocusEffect(
-  useCallback(() => {
-    void fetchData();
-  }, [fetchData]),
-);
+  useFocusEffect(
+    useCallback(() => {
+      if (Date.now() - lastFetchRef.current < STALE_TIME) return;
+      lastFetchRef.current = Date.now();
+      void fetchData();
+    }, [fetchData]),
+  );
 
   const [open, setOpen] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;
