@@ -503,15 +503,11 @@ export default function CalendarScreen() {
     }
   }, [filteredCalendars, selectedCalendarId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      // Refrescar eventos cuando se vuelve a la pantalla desde edición
-      const ids = calendars.map((c) => c.id).join(",");
-      if (ids) {
-        void refetchEvents(ids);
-      }
-    }, [calendars, refetchEvents]),
-  );
+useFocusEffect(
+  useCallback(() => {
+    void fetchData();
+  }, [fetchData]),
+);
 
   const [open, setOpen] = useState(false);
   const rotation = useRef(new Animated.Value(0)).current;

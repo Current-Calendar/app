@@ -71,9 +71,7 @@ export function CalendarInfoModal({
     setShowDeleteConfirm(false);
   }, [calendar]);
 
- 
   if (!localCalendar) return null;
-
 
   const accent = localCalendar.color;
   const privacy = PRIVACY_LABELS[localCalendar.privacy] ?? PRIVACY_LABELS.PRIVATE;
@@ -103,8 +101,7 @@ export function CalendarInfoModal({
       )
     );
   const hasCalendarCover =
-        typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
-
+    typeof localCalendar.cover === 'string' && localCalendar.cover.trim().length > 0;
 
   const handleDeletePress = () => {
     if (!onDelete) return;
@@ -113,7 +110,6 @@ export function CalendarInfoModal({
 
   const handleConfirmDelete = async () => {
     if (!onDelete || !localCalendar) return;
-
     try {
       await Promise.resolve(onDelete(localCalendar));
     } catch (error) {
@@ -149,12 +145,9 @@ export function CalendarInfoModal({
 
   const leaveCalendar = async () => {
     if (!localCalendar) return;
-
     try {
       setIsLeavingCalendar(true);
       await apiClient.post(`/calendars/${localCalendar.id}/leave/`);
-      
-      // Success - close the modal and notify parent
       Alert.alert('Success', `You have left the calendar "${localCalendar.name}".`);
       onClose?.();
       onCalendarUpdated?.({ id: localCalendar.id, left: true });
@@ -166,56 +159,61 @@ export function CalendarInfoModal({
   };
 
   const handleCalendarUpdated = (updatedCalendar: any) => {
-  const merged = {
-    ...localCalendar,
-    ...updatedCalendar,
-    creator: updatedCalendar?.creator ?? localCalendar.creator,
-    creator_id: updatedCalendar?.creator_id ?? (localCalendar as any).creator_id,
-    creator_username:
-      updatedCalendar?.creator_username ?? (localCalendar as any).creator_username,
-    co_owners: Array.isArray(updatedCalendar?.co_owners)
-      ? updatedCalendar.co_owners
-      : ((localCalendar as any).co_owners ?? []),
-    viewers: Array.isArray(updatedCalendar?.viewers)
-      ? updatedCalendar.viewers
-      : ((localCalendar as any).viewers ?? []),
-  } as Calendar;
+    const merged = {
+      ...localCalendar,
+      ...updatedCalendar,
+      creator: updatedCalendar?.creator ?? localCalendar.creator,
+      creator_id: updatedCalendar?.creator_id ?? (localCalendar as any).creator_id,
+      creator_username:
+        updatedCalendar?.creator_username ?? (localCalendar as any).creator_username,
+      co_owners: Array.isArray(updatedCalendar?.co_owners)
+        ? updatedCalendar.co_owners
+        : ((localCalendar as any).co_owners ?? []),
+      viewers: Array.isArray(updatedCalendar?.viewers)
+        ? updatedCalendar.viewers
+        : ((localCalendar as any).viewers ?? []),
+    } as Calendar;
 
-  setLocalCalendar(merged);
-  onCalendarUpdated?.(merged);
-};
+    setLocalCalendar(merged);
+    onCalendarUpdated?.(merged);
+  };
 
-const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewer') => {
-  if (!localCalendar || !isOwner) return;
+  const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewer') => {
+    if (!localCalendar || !isOwner) return;
 
-  setRemovingUserId(userToRemove.id);
+    setRemovingUserId(userToRemove.id);
 
-  try {
-    const endpoint = userType === 'co-owner'
-      ? '/co_owners/'
-      : '/viewers/';
+    try {
+      const field = userType === 'co-owner' ? 'co_owners' : 'viewers';
 
-    const currentUsers = userType === 'co-owner'
-      ? (localCalendar.co_owners ?? [])
-      : (localCalendar.viewers ?? []);
+      const currentUsers = userType === 'co-owner'
+        ? (localCalendar.co_owners ?? [])
+        : (localCalendar.viewers ?? []);
 
-    const updatedUsers = currentUsers.filter((u: any) => u.id !== userToRemove.id);
-    const userIds = updatedUsers.map((u: any) => u.id);
+      const updatedUsers = currentUsers.filter((u: any) => u.id !== userToRemove.id);
+      const userIds = updatedUsers.map((u: any) => u.id);
 
-    const response = await apiClient.patch(`/calendars/${localCalendar.id}${endpoint}`, {
-      [userType === 'co-owner' ? 'co_owners' : 'viewers']: userIds,
-    });
+      await apiClient.patch(`/calendars/${localCalendar.id}/${field}/`, {
+        [field]: userIds,
+      });
 
-    handleCalendarUpdated(response);
-    Alert.alert('Success', `@${userToRemove.username} has been removed from the calendar.`);
-  } catch (error: any) {
-    console.error('Error removing user:', error);
-    Alert.alert('Error', error?.message || 'Failed to remove user. Please try again.');
-  } finally {
-    setRemovingUserId(null);
-    setUserToRemove(null);
-  }
-};
+      const updatedCalendar = {
+        ...localCalendar,
+        [field]: updatedUsers,
+      } as Calendar;
+
+      setLocalCalendar(updatedCalendar);
+      onCalendarUpdated?.(updatedCalendar);
+
+      Alert.alert('Success', `@${userToRemove.username} has been removed from the calendar.`);
+    } catch (error: any) {
+      console.error('Error removing user:', error);
+      Alert.alert('Error', error?.message || 'Failed to remove user. Please try again.');
+    } finally {
+      setRemovingUserId(null);
+      setUserToRemove(null);
+    }
+  };
 
   return (
     <>
@@ -231,37 +229,38 @@ const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewe
           </TouchableOpacity>
         </View>
 
-      {hasCalendarCover ? (
-                <Image
-              source={{ uri: String(localCalendar.cover).trim() }}
-                    style={calendarInfoModalStyles.coverImage}
-                    resizeMode="cover"
-                />
-            ) : (
-                <DefaultCalendarCover
-                    style={calendarInfoModalStyles.coverImage}
-                    label="Calendario"
-                    iconSize={42}
-                />
-            )}
+        {hasCalendarCover ? (
+          <Image
+            source={{ uri: String(localCalendar.cover).trim() }}
+            style={calendarInfoModalStyles.coverImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <DefaultCalendarCover
+            style={calendarInfoModalStyles.coverImage}
+            label="Calendario"
+            iconSize={42}
+          />
+        )}
 
         {Array.isArray(localCalendar.categories) && localCalendar.categories.length > 0 && (
-        <View style={calendarInfoModalStyles.metaRow}>
-          <Ionicons name="pricetags-outline" size={16} color="#10464d" />
-          <View style={calendarInfoModalStyles.tagsWrap}>
-            {localCalendar.categories.map((category) => (
-              <View
-                key={String(category.id)}
-                style={calendarInfoModalStyles.tagChip}
-              >
-                <Text style={calendarInfoModalStyles.tagChipText}>
-                  {category.name}
-                </Text>
-              </View>
-            ))}
+          <View style={calendarInfoModalStyles.metaRow}>
+            <Ionicons name="pricetags-outline" size={16} color="#10464d" />
+            <View style={calendarInfoModalStyles.tagsWrap}>
+              {localCalendar.categories.map((category) => (
+                <View
+                  key={String(category.id)}
+                  style={calendarInfoModalStyles.tagChip}
+                >
+                  <Text style={calendarInfoModalStyles.tagChipText}>
+                    {category.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      )}
+        )}
+
         {localCalendar.description ? (
           <Text style={calendarInfoModalStyles.description}>{localCalendar.description}</Text>
         ) : null}
@@ -289,7 +288,7 @@ const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewe
               <View style={calendarInfoModalStyles.sharingSection}>
                 <Text style={calendarInfoModalStyles.sharingSectionTitle}>Shared with</Text>
 
-              <ScrollView
+                <ScrollView
                   style={{ maxHeight: 170 }}
                   nestedScrollEnabled={true}
                   showsVerticalScrollIndicator={false}
@@ -569,14 +568,14 @@ const handleRemoveUser = async (userToRemove: any, userType: 'co-owner' | 'viewe
         onCalendarUpdated={handleCalendarUpdated}
       />
 
-            {isOwnerOrCoOwner && (
-                <InviteUserModal
-                    visible={inviteVisible}
-                    onClose={() => setInviteVisible(false)}
-                    itemId={String(localCalendar.id)}
-                    type="calendar"
-                />
-            )}
+      {isOwnerOrCoOwner && (
+        <InviteUserModal
+          visible={inviteVisible}
+          onClose={() => setInviteVisible(false)}
+          itemId={String(localCalendar.id)}
+          type="calendar"
+        />
+      )}
 
       <ConfirmDeleteModal
         visible={showDeleteConfirm}
