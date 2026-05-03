@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 
@@ -6,17 +6,23 @@ import { CalendarGrid } from "@/components/calendar-grid";
 import { CalendarHeader } from "@/components/calendar-header";
 import { PublicEventDetailModal } from "@/components/public-event-detail-modal";
 import { CalendarEvent } from "@/types/calendar";
-import { useCalendars } from "@/hooks/use-calendars";
-import { useEventsList } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import InviteUserModal from "@/components/InviteUserModal";
 import { ReportModal } from "@/components/report-modal";
-import apiClient from "@/services/api-client";
+import { useCalendarQuery } from "@/hooks/querys/use-calendar-query";
 
 const MONTH_NAMES = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
+
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+function formatSelectedDay(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
+}
 
 export default function CalendarViewScreen() {
   const router = useRouter();
@@ -25,83 +31,54 @@ export default function CalendarViewScreen() {
   const calendarId = Array.isArray(params.calendarId) ? params.calendarId[0] : params.calendarId;
   const eventId    = Array.isArray(params.eventId)    ? params.eventId[0]    : params.eventId;
 
-  const { calendars: backendCalendars } = useCalendars();
-  const { events: backendEvents, loading: loadingEvents, refetch: refetchEvents } = useEventsList({ autoFetch: false });
   const { user } = useAuth();
 
-  const [fetchedCalendar, setFetchedCalendar] = useState<any>(null);
-  const [calendarNotFound, setCalendarNotFound] = useState(false);
+  const { calendar, events: rawEvents, loading, error, notFound, reload } =
+    useCalendarQuery(calendarId);
 
-  useEffect(() => {
-    if (!calendarId || backendCalendars.length === 0) return;
-    const alreadyOwned = backendCalendars.some((c) => String(c.id) === calendarId);
-    if (!alreadyOwned) {
-      setCalendarNotFound(false);
-      apiClient.get<any>(`/calendars/${calendarId}/`)
-        .then(setFetchedCalendar)
-        .catch(() => setCalendarNotFound(true));
-    }
-  }, [calendarId, backendCalendars]);
-
-  const calendar = useMemo(() => {
-    if (calendarId) {
-      return backendCalendars.find((c) => String(c.id) === calendarId) ?? fetchedCalendar ?? null;
-    }
-    return backendCalendars[0] ?? null;
-  }, [calendarId, backendCalendars, fetchedCalendar]);
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
   const today = new Date();
   const [year, setYear]   = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay]             = useState<string | null>(null);
-  const [activeEvent, setActiveEvent]             = useState<CalendarEvent | null>(null);
+  const [selectedDay, setSelectedDay]                     = useState<string | null>(null);
+  const [activeEvent, setActiveEvent]                     = useState<CalendarEvent | null>(null);
   const [openedEventFromParams, setOpenedEventFromParams] = useState(false);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [reportOpen, setReportOpen]       = useState(false);
   const [reportTarget, setReportTarget]   = useState<{ id: number; type: 'CALENDAR' | 'EVENT'; label?: string } | null>(null);
 
-  useEffect(() => {
-    if (calendar?.id) refetchEvents(String(calendar.id));
-  }, [calendar?.id]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (calendar?.id) refetchEvents(String(calendar.id));
-    }, [calendar?.id])
-  );
-
-  const events = useMemo(() => {
-    if (loadingEvents || !calendar) return [];
-    const transformed: CalendarEvent[] = [];
-    backendEvents.forEach((evt: any) => {
-      if (evt.calendars?.length) {
-        evt.calendars.forEach((calId: number) => {
-          const rawEnd = evt.end_date;
-          const cleanEnd = rawEnd ? (rawEnd.includes("T") ? rawEnd.split("T")[0] : rawEnd) : undefined;
-          transformed.push({
-            id: String(evt.id),
-            calendarId: String(calId),
-            title: evt.title,
-            description: evt.description,
-            place_name: evt.place_name,
-            date: evt.date,
-            end_date: cleanEnd,
-            time: evt.time,
-            end_time: evt.end_time ? evt.end_time.substring(0, 5) : undefined,
-            recurrence: evt.recurrence,
-            photo: evt.photo,
-            color: undefined,
-            show_time: !cleanEnd || cleanEnd === evt.date,
-          });
+  const events = useMemo<CalendarEvent[]>(() => {
+    if (!calendarId) return [];
+    const result: CalendarEvent[] = [];
+    rawEvents.forEach((evt) => {
+      if (!evt.calendarIds?.length) return;
+      evt.calendarIds.forEach((calId: string | number) => {
+        const rawEnd = evt.endDate;
+        const cleanEnd = rawEnd ? (rawEnd.includes("T") ? rawEnd.split("T")[0] : rawEnd) : undefined;
+        result.push({
+          id: String(evt.id),
+          calendarId: String(calId),
+          title: evt.title,
+          description: evt.description ?? '',
+          place_name: evt.placeName ?? '',
+          date: evt.date,
+          end_date: cleanEnd,
+          time: evt.time ?? '',
+          end_time: evt.endTime ? evt.endTime.substring(0, 5) : undefined,
+          recurrence: evt.recurrence,
+          photo: evt.photo,
+          color: undefined,
+          show_time: !cleanEnd || cleanEnd === evt.date,
         });
-      }
+      });
     });
-    return transformed.filter((e) => String(e.calendarId) === String(calendar.id));
-  }, [calendar, backendEvents, loadingEvents]);
+    return result.filter((e) => String(e.calendarId) === String(calendarId));
+  }, [rawEvents, calendarId]);
 
   const isOwner = useMemo(() => {
     if (!calendar || !user) return false;
-    return calendar.creator_username === user.username || calendar.creator === user.username;
+    return calendar.creatorUsername === user.username || String(calendar.creatorId) === String(user.id);
   }, [calendar, user]);
 
   const eventsOfSelectedDay = useMemo(() => {
@@ -115,7 +92,7 @@ export default function CalendarViewScreen() {
 
   useEffect(() => {
     if (!eventId || openedEventFromParams) return;
-    if (loadingEvents || events.length === 0) return;
+    if (loading || events.length === 0) return;
 
     const matchedEvent = events.find((e) => String(e.id) === String(eventId));
     if (!matchedEvent) {
@@ -126,14 +103,7 @@ export default function CalendarViewScreen() {
     setSelectedDay(matchedEvent.date?.slice(0, 10) ?? null);
     setActiveEvent(matchedEvent);
     setOpenedEventFromParams(true);
-  }, [eventId, events, loadingEvents, openedEventFromParams]);
-
-  const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-  function formatSelectedDay(dateKey: string): string {
-    const [y, m, d] = dateKey.split("-").map(Number);
-    const date = new Date(y, m - 1, d);
-    return `${DAY_NAMES[date.getDay()]}, ${d} ${MONTH_NAMES[m - 1]} ${y}`;
-  }
+  }, [eventId, events, loading, openedEventFromParams]);
 
   const goToPrevMonth = () => { setMonth((m) => (m === 0 ? 11 : m - 1)); setYear((y) => (month === 0 ? y - 1 : y)); };
   const goToNextMonth = () => { setMonth((m) => (m === 11 ? 0  : m + 1)); setYear((y) => (month === 11 ? y + 1 : y)); };
@@ -144,99 +114,114 @@ export default function CalendarViewScreen() {
     setReportOpen(true);
   };
 
-  return (
-    <View style={styles.screenWrapper}>
-      {calendarNotFound ? (
+  if (notFound) {
+    return (
+      <View style={styles.screenWrapper}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>This calendar no longer exists or is not accessible.</Text>
           <Pressable style={[styles.secondaryButton, { marginTop: 16 }]} onPress={() => router.back()}>
             <Text style={styles.secondaryButtonText}>Go back</Text>
           </Pressable>
         </View>
-      ) : !calendar ? (
+      </View>
+    );
+  }
+
+  if (loading || !calendar) {
+    return (
+      <View style={styles.screenWrapper}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Loading calendar...</Text>
+          <Text style={styles.emptyText}>{error ?? "Loading calendar..."}</Text>
+          {error && (
+            <Pressable style={[styles.secondaryButton, { marginTop: 16 }]} onPress={reload}>
+              <Text style={styles.secondaryButtonText}>Retry</Text>
+            </Pressable>
+          )}
         </View>
-      ) : (
-        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      </View>
+    );
+  }
 
-          <View style={styles.topRow}>
-            <Text style={styles.title}>{calendar.name}</Text>
-            <Pressable style={styles.reportBtn} onPress={() => openReport(calendar.id, 'CALENDAR', calendar.name)}>
-              <Text style={styles.reportBtnText}>Report</Text>
-            </Pressable>
-          </View>
-          <Text style={styles.subtitle}>by {calendar.creator_username || calendar.creator?.username || calendar.creator || 'Unknown'}</Text>
+  return (
+    <View style={styles.screenWrapper}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.headerBlock}>
-            <CalendarHeader
-              monthLabel={`${MONTH_NAMES[month]} ${year}`}
-              onPrevMonth={goToPrevMonth}
-              onNextMonth={goToNextMonth}
-              onTodayPress={goToToday}
-            />
-          </View>
+        <View style={styles.topRow}>
+          <Text style={styles.title}>{calendar.name}</Text>
+          <Pressable style={styles.reportBtn} onPress={() => openReport(Number(calendar.id), 'CALENDAR', calendar.name)}>
+            <Text style={styles.reportBtnText}>Report</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.subtitle}>by {calendar.creatorUsername || 'Unknown'}</Text>
 
-          <View style={styles.gridWrap}>
-            <CalendarGrid
-              year={year}
-              month={month}
-              events={events}
-              onEventPress={setActiveEvent}
-              selectedDay={selectedDay}
-              onDayPress={setSelectedDay}
-            />
-          </View>
+        <View style={styles.headerBlock}>
+          <CalendarHeader
+            monthLabel={`${MONTH_NAMES[month]} ${year}`}
+            onPrevMonth={goToPrevMonth}
+            onNextMonth={goToNextMonth}
+            onTodayPress={goToToday}
+          />
+        </View>
 
-          {selectedDay && (
-            <View style={styles.dayEventsContainer}>
-              <Text style={styles.dayEventsTitle}>{formatSelectedDay(selectedDay)}</Text>
-              {eventsOfSelectedDay.length === 0 ? (
-                <Text style={styles.noEventsText}>No events this day</Text>
-              ) : (
-                eventsOfSelectedDay.map((event) => (
-                  <TouchableOpacity key={event.id} style={styles.dayEventItem} onPress={() => setActiveEvent(event)}>
-                    <Text style={styles.dayEventTime}>{event.time}</Text>
-                    <Text style={styles.dayEventTitle}>{event.title}</Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-          )}
+        <View style={styles.gridWrap}>
+          <CalendarGrid
+            year={year}
+            month={month}
+            events={events}
+            onEventPress={setActiveEvent}
+            selectedDay={selectedDay}
+            onDayPress={setSelectedDay}
+          />
+        </View>
 
-          <View style={styles.actionsRow}>
-            {isOwner && (
-              <Pressable style={styles.inviteButton} onPress={() => setInviteVisible(true)}>
-                <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
-              </Pressable>
+        {selectedDay && (
+          <View style={styles.dayEventsContainer}>
+            <Text style={styles.dayEventsTitle}>{formatSelectedDay(selectedDay)}</Text>
+            {eventsOfSelectedDay.length === 0 ? (
+              <Text style={styles.noEventsText}>No events this day</Text>
+            ) : (
+              eventsOfSelectedDay.map((event) => (
+                <TouchableOpacity key={event.id} style={styles.dayEventItem} onPress={() => setActiveEvent(event)}>
+                  <Text style={styles.dayEventTime}>{event.time}</Text>
+                  <Text style={styles.dayEventTitle}>{event.title}</Text>
+                </TouchableOpacity>
+              ))
             )}
-            <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
-              <Text style={styles.secondaryButtonText}>Back to calendars</Text>
-            </Pressable>
           </View>
+        )}
 
-          {calendar && activeEvent && (
-            <PublicEventDetailModal
-              event={activeEvent}
-              onClose={() => setActiveEvent(null)}
-              onReport={() => openReport(Number(activeEvent.id), 'EVENT', activeEvent.title)}
-            />
+        <View style={styles.actionsRow}>
+          {isOwner && (
+            <Pressable style={styles.inviteButton} onPress={() => setInviteVisible(true)}>
+              <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
+            </Pressable>
           )}
+          <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
+            <Text style={styles.secondaryButtonText}>Back to calendars</Text>
+          </Pressable>
+        </View>
 
-          {reportOpen && reportTarget && (
-            <ReportModal
-              open={reportOpen}
-              onClose={() => setReportOpen(false)}
-              reportedType={reportTarget.type}
-              reportedId={reportTarget.id}
-              reportedLabel={reportTarget.label}
-            />
-          )}
+        {activeEvent && (
+          <PublicEventDetailModal
+            event={activeEvent}
+            onClose={() => setActiveEvent(null)}
+            onReport={() => openReport(Number(activeEvent.id), 'EVENT', activeEvent.title)}
+          />
+        )}
 
-        </ScrollView>
-      )}
+        {reportOpen && reportTarget && (
+          <ReportModal
+            open={reportOpen}
+            onClose={() => setReportOpen(false)}
+            reportedType={reportTarget.type}
+            reportedId={reportTarget.id}
+            reportedLabel={reportTarget.label}
+          />
+        )}
 
-      {calendar && isOwner && (
+      </ScrollView>
+
+      {isOwner && (
         <InviteUserModal
           visible={inviteVisible}
           onClose={() => setInviteVisible(false)}
