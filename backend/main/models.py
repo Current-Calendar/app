@@ -7,6 +7,12 @@ from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.db.models import Q
+from .limits import (
+    CALENDAR_DESCRIPTION_MAX_LENGTH,
+    EVENT_DESCRIPTION_MAX_LENGTH,
+    PROFILE_BIO_MAX_LENGTH,
+    PROFILE_PRONOUNS_MAX_LENGTH,
+)
 
 
 def calendar_cover_path(instance, filename):
@@ -20,8 +26,8 @@ class User(AbstractUser):
         ('BUSINESS', 'Business'),
     ]
     email = models.EmailField(unique=True)
-    pronouns = models.CharField(max_length=150, blank=True)
-    bio = models.TextField(blank=True)
+    pronouns = models.CharField(max_length=PROFILE_PRONOUNS_MAX_LENGTH, blank=True)
+    bio = models.TextField(max_length=PROFILE_BIO_MAX_LENGTH, blank=True)
     link = models.URLField(blank=True)
     plan = models.CharField(max_length=20, default='FREE', choices=PLAN_CHOICES)
     photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
@@ -84,7 +90,7 @@ class Calendar(models.Model):
     origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='CURRENT')
     external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
+    description = models.TextField(max_length=CALENDAR_DESCRIPTION_MAX_LENGTH, blank=True)
     cover = models.ImageField(upload_to=calendar_cover_path, null=True, blank=True)
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
@@ -125,7 +131,7 @@ class CalendarLike(models.Model):
 
 class Event(models.Model):
     title = models.CharField(max_length=150)
-    description = models.TextField(blank=True)
+    description = models.TextField(max_length=EVENT_DESCRIPTION_MAX_LENGTH, blank=True)
     place_name = models.CharField(max_length=255, blank=True)
     location = models.PointField(geography=True, spatial_index=True, null=True, blank=True)
     date = models.DateField()

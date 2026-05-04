@@ -11,6 +11,7 @@ from rest_framework import status
 from unittest.mock import patch
 from main.models import User, Calendar, Event, EventAttendance, Notification
 from main.events.views import list_events_from_calendar
+from main.limits import EVENT_DESCRIPTION_MAX_LENGTH
 
 ENDPOINT_EVENTOS = "/api/v1/events/"
 EDIT_EVENT_ENDPOINT = "/api/v1/events/{}/edit/"
@@ -569,6 +570,21 @@ class CrearEventoTests(APITestCase):
         response = self.client.get(ENDPOINT_EVENTS_CREATE)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
+    def test_error_description_demasiado_larga(self):
+        self.client.force_authenticate(self.user)
+
+        payload = {
+            "title": "Event",
+            "description": "A" * (EVENT_DESCRIPTION_MAX_LENGTH + 1),
+            "date": "2030-03-01",
+            "time": "18:00:00",
+            "calendars": [self.calendar.id],
+        }
+
+        response = self.client.post(ENDPOINT_EVENTS_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("1000", response.data["errors"][0])
+
 
 class EditEventTests(APITestCase):
     def setUp(self):
@@ -683,6 +699,17 @@ class EditEventTests(APITestCase):
         self.assertEqual(self.event.title, "Nuevo title")
         self.assertEqual(self.event.description, "Nueva description")
         self.assertEqual(self.event.place_name, "Nuevo lugar")
+
+    def test_error_edit_description_demasiado_larga(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.put(
+            self.endpoint(),
+            {"description": "A" * (EVENT_DESCRIPTION_MAX_LENGTH + 1)},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("1000", response.data["errors"][0])
 
     def test_edit_date_and_time(self):
         self.client.force_authenticate(self.user)

@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from django.test import TestCase
 from main.models import User, Calendar, CalendarLike, Notification
+from main.limits import CALENDAR_DESCRIPTION_MAX_LENGTH
 from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch, MagicMock
 
@@ -334,6 +335,16 @@ class CrearCalendarTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("description", response.json()["errors"][0])
 
+    def test_error_description_demasiado_larga(self):
+        self.client.force_authenticate(self.user)
+        payload = {
+            "name": "Calendar valido",
+            "description": "A" * (CALENDAR_DESCRIPTION_MAX_LENGTH + 1),
+        }
+        response = self.client.post(CALENDAR_ENDPOINT_CREATE, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("1000", response.json()["errors"][0])
+
     def test_error_privacy_valor_no_permitido(self):
         self.client.force_authenticate(self.user)
         payload = {
@@ -466,6 +477,15 @@ class EditarCalendarTestCase(TestCase):
             'name': 'Intento sin auth'
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_error_editar_description_demasiado_larga(self):
+        self.client.force_authenticate(user=self.creator)
+        response = self.client.patch(
+            f'/api/v1/calendars/{self.calendar.id}/edit/',
+            {'description': 'A' * (CALENDAR_DESCRIPTION_MAX_LENGTH + 1)},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("1000", response.data["errors"][0])
 
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""

@@ -20,6 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import { appendPhoto } from "@/services/api-client";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 import apiClient from "@/services/api-client";
+import { CALENDAR_DESCRIPTION_MAX_LENGTH } from "@/constants/character-limits";
 
 type PrivacyStatus = "PRIVATE" | "PUBLIC";
 
@@ -376,9 +377,13 @@ export default function EditScreen() {
               onChangeText={(text) =>
                 setCalendarData({ ...calendarData, description: text })
               }
+              maxLength={CALENDAR_DESCRIPTION_MAX_LENGTH}
               multiline
               numberOfLines={3}
             />
+            <Text style={styles.characterCount}>
+              {calendarData.description.length}/{CALENDAR_DESCRIPTION_MAX_LENGTH}
+            </Text>
           </View>
 
           <View style={styles.divider} />
@@ -799,5 +804,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  characterCount: {
+    alignSelf: "flex-end",
+    color: "#6f7d7f",
+    fontSize: 12,
+    marginTop: -6,
   },
 });

@@ -27,6 +27,7 @@ import CalendarSelectorModal from "@/components/events/CalendarSelectorModal";
 import EventSuccessModal from "@/components/events/EventSuccessModal";
 import EventTimePickerModal from "@/components/events/EventTimePickerModal";
 import CustomToast from "@/components/ui/custom-toast";
+import { EVENT_DESCRIPTION_MAX_LENGTH } from "@/constants/character-limits";
 
 const TEXT = "#10464d";
 const RED = "#d9534f";
@@ -678,9 +679,13 @@ export default function EditEventsScreen() {
               placeholderTextColor="#aaa"
               value={description}
               onChangeText={setDescription}
+              maxLength={EVENT_DESCRIPTION_MAX_LENGTH}
               multiline
               numberOfLines={4}
             />
+            <Text style={styles.characterCount}>
+              {description.length}/{EVENT_DESCRIPTION_MAX_LENGTH}
+            </Text>
           </View>
 
           <View style={styles.divider} />
@@ -1295,5 +1300,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontWeight: "600",
     textAlign: "center",
+  },
+  characterCount: {
+    alignSelf: "flex-end",
+    color: "#6f7d7f",
+    fontSize: 12,
+    marginTop: -6,
   },
 });

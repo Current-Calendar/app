@@ -6,6 +6,7 @@ from main.models import User, Calendar, CalendarLike
 from django.urls import reverse
 from django.test import TestCase
 from django.contrib.auth.hashers import check_password, identify_hasher
+from main.limits import PROFILE_BIO_MAX_LENGTH, PROFILE_PRONOUNS_MAX_LENGTH
 
 
 ENDPOINT_BUSCAR_USUARIOS = "/api/v1/users/search/"
@@ -446,6 +447,24 @@ class EditProfileValidationTests(APITestCase):
             username="editval", email="editval@example.com", password="pass1234"
         )
         self.client.force_authenticate(self.user)
+
+    def test_error_pronouns_demasiado_largos(self):
+        response = self.client.patch(
+            reverse("edit_profile"),
+            {"pronouns": "A" * (PROFILE_PRONOUNS_MAX_LENGTH + 1)},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("pronouns", response.data)
+
+    def test_error_bio_demasiado_larga(self):
+        response = self.client.patch(
+            reverse("edit_profile"),
+            {"bio": "A" * (PROFILE_BIO_MAX_LENGTH + 1)},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("bio", response.data)
 
 
 class GetFollowedCalendarsExtendedTests(APITestCase):

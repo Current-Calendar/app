@@ -21,6 +21,10 @@ import apiClient, { appendPhoto } from '@/services/api-client';
 import { requestPasswordReset } from '@/services/password-reset';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 import profileStyles from '../../../styles/profile-styles';
+import {
+  PROFILE_BIO_MAX_LENGTH,
+  PROFILE_PRONOUNS_MAX_LENGTH,
+} from '@/constants/character-limits';
 
 const EditProfileScreen = () => {
   const router = useRouter();
@@ -187,7 +191,7 @@ const EditProfileScreen = () => {
               style={profileStyles.editInput}
               value={pronouns}
               onChangeText={setPronouns}
-              maxLength={150}
+              maxLength={PROFILE_PRONOUNS_MAX_LENGTH}
               placeholder="e.g., she/her, he/him, they/them"
               placeholderTextColor="#aaa"
             />
@@ -203,8 +207,9 @@ const EditProfileScreen = () => {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              maxLength={PROFILE_BIO_MAX_LENGTH}
             />
-            <Text style={profileStyles.editCharacterCount}>{bio.length} characters</Text>
+            <Text style={profileStyles.editCharacterCount}>{bio.length}/{PROFILE_BIO_MAX_LENGTH} characters</Text>
           </View>
         </View>
  
