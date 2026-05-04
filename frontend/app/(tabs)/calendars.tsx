@@ -113,9 +113,16 @@ function mapToCalendar(c: CalendarScreenCalendar, index: number): Calendar {
     origin: c.origin as any,
     creator: c.creatorUsername,
     color: COLORS[index % COLORS.length],
-    co_owners: c.coOwners,
-    viewers: c.viewers,
-    categories: c.categories.map((cat: { id: string; name: string }) => ({
+    co_owners: (c.coOwners || []).map(u => ({
+      username: u.username,
+    })),
+    
+    viewers: (c.viewers || []).map(u => ({
+      username: u.username,
+      name: u.username
+    })),
+
+    categories: (c.categories || []).map((cat) => ({
       id: Number(cat.id),
       name: cat.name,
     })),
@@ -184,17 +191,19 @@ export default function CalendarScreen() {
   }, [error]);
 
   useEffect(() => {
-    const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+    const visibleCalendarIds = new Set(
+      filteredCalendars.map((c) => Number(c.id))
+    );
 
     const mappedEvents: CalendarEvent[] = (rawEvents ?? [])
       .filter((e: any) =>
-        e.calendarIds?.some((calendarId: string) =>
+        e.calendarIds?.some((calendarId: any) =>
           visibleCalendarIds.has(Number(calendarId)),
         ),
       )
       .flatMap((e: any) => {
         const calendar = calendars.find((c) =>
-          e.calendarIds?.includes(c.id),
+          e.calendarIds?.map(Number).includes(Number(c.id)),
         );
 
         const parseLocalDate = (s: string) => {

@@ -1,35 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
+import apiClient from '@/services/api-client';
 
-export type CalendarViewData = {
-  id: string;
-  name: string;
-  description?: string;
-  cover?: string;
-  privacy: string;
-  origin: string;
-  creatorUsername: string;
-  creatorId: number;
-  likesCount: number;
-};
+const GRAPHQL_URL = `${process.env.EXPO_PUBLIC_API_BASE}/graphql/`;
 
-export type CalendarViewEvent = {
-  id: string;
-  title: string;
-  description?: string;
-  placeName?: string;
-  date: string;
-  endDate?: string;
-  time?: string;
-  endTime?: string;
-  recurrence?: string;
-  photo?: string;
-  location?: { latitude: number; longitude: number } | null;
-  calendarIds: string[];
-};
+function graphqlHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = apiClient.getAccessToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
 
-const CALENDAR_VIEW_QUERY = `
-  query CalendarView($calendarIds: [Int]!) {
-    dashboardCalendars {
+const SINGLE_CALENDAR_WITH_EVENTS_QUERY = `
+  query GetCalendar($id: Int!) {
+    calendar(id: $id) {
       id
       name
       description
@@ -39,61 +22,25 @@ const CALENDAR_VIEW_QUERY = `
       creatorUsername
       creatorId
       likesCount
-    }
-    eventsForCalendars(calendarIds: $calendarIds) {
-      id
-      title
-      description
-      placeName
-      date
-      endDate
-      time
-      endTime
-      recurrence
-      photo
-      location {
-        latitude
-        longitude
+      events {
+        id
+        title
+        description
+        placeName
+        date
+        endDate
+        time
+        endTime
+        recurrence
+        photo
       }
-      calendarIds
     }
   }
 `;
 
-const PUBLIC_CALENDAR_QUERY = `
-  query PublicCalendar($calendarIds: [Int]!) {
-    eventsForCalendars(calendarIds: $calendarIds) {
-      id
-      title
-      description
-      placeName
-      date
-      endDate
-      time
-      endTime
-      recurrence
-      photo
-      location {
-        latitude
-        longitude
-      }
-      calendarIds
-    }
-  }
-`;
-
-type UseCalendarViewReturn = {
-  calendar: CalendarViewData | null;
-  events: CalendarViewEvent[];
-  loading: boolean;
-  error: string | null;
-  notFound: boolean;
-  reload: () => void;
-};
-
-export function useCalendarQuery(calendarId: string | undefined | null): UseCalendarViewReturn {
-  const [calendar, setCalendar] = useState<CalendarViewData | null>(null);
-  const [events, setEvents] = useState<CalendarViewEvent[]>([]);
+export function useCalendarQuery(calendarId: string | undefined | null) {
+  const [calendar, setCalendar] = useState<any | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -111,68 +58,41 @@ export function useCalendarQuery(calendarId: string | undefined | null): UseCale
     setError(null);
     setNotFound(false);
 
-    fetch('/graphql/', {
+    fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: graphqlHeaders(),
       credentials: 'include',
       body: JSON.stringify({
-        query: CALENDAR_VIEW_QUERY,
-        variables: { calendarIds: [numericId] },
+        query: SINGLE_CALENDAR_WITH_EVENTS_QUERY,
+        variables: { id: numericId },
       }),
     })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then(async (json) => {
+      .then((r) => r.json())
+      .then((json) => {
         if (cancelled) return;
 
-        if (json.errors?.length) {
-          setError(json.errors[0].message ?? 'GraphQL error');
-          return;
+        if (json.errors) {
+          throw new Error(json.errors[0].message);
         }
 
-        const allCalendars: any[] = json.data?.dashboardCalendars ?? [];
-        const rawEvents: any[] = json.data?.eventsForCalendars ?? [];
-        const found = allCalendars.find((c: any) => String(c.id) === calendarId) ?? null;
+        const calendarData = json.data?.calendar;
 
-        if (found) {
-          setCalendar(found);
-          setEvents(rawEvents);
-          return;
-        }
-
-        const publicRes = await fetch('/graphql/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            query: PUBLIC_CALENDAR_QUERY,
-            variables: { calendarIds: [numericId] },
-          }),
-        });
-        const publicJson = await publicRes.json();
-        if (cancelled) return;
-
-        if (publicJson.errors?.length) {
+        if (!calendarData) {
           setNotFound(true);
-          return;
+        } else {
+          setCalendar(calendarData);
+          const mappedEvents = (calendarData.events ?? []).map((e: any) => ({
+            ...e,
+            calendarIds: [Number(calendarData.id)],
+          }));
+          setEvents(mappedEvents);
         }
-
-        const publicEvents: any[] = publicJson.data?.eventsForCalendars ?? [];
-
-        if (publicEvents.length === 0) {
-          setNotFound(true);
-          return;
-        }
-
-        setCalendar(null);
-        setEvents(publicEvents);
       })
       .catch((err) => {
-        if (cancelled) return;
-        console.error('[useCalendarView]', err);
-        setError('Could not load this calendar. Please check your connection and try again.');
+        if (!cancelled) {
+          console.error('[useCalendarQuery]', err);
+          setError(err.message || 'Error de conexión');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -186,88 +106,34 @@ export function useCalendarQuery(calendarId: string | undefined | null): UseCale
   return { calendar, events, loading, error, notFound, reload };
 }
 
+export type CalendarScreenCategory = {
+  id: string;
+  name: string;
+};
+
+export type CalendarScreenUser = {
+  id: string;
+  username: string;
+};
+
 export type CalendarScreenCalendar = {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   cover?: string;
   privacy: string;
   origin: string;
   creatorUsername: string;
   creatorId: number;
   likesCount: number;
-  coOwners: { username: string; name?: string }[];
-  viewers: { id?: number; username: string; name?: string }[];
-  categories: { id: string; name: string }[];
+  coOwners: CalendarScreenUser[];
+  viewers: CalendarScreenUser[];
+  categories: CalendarScreenCategory[];
 };
 
-export type CalendarScreenEvent = {
-  id: string;
-  title: string;
-  description?: string;
-  placeName?: string;
-  date: string;
-  endDate?: string;
-  time?: string;
-  endTime?: string;
-  recurrence?: string;
-  photo?: string;
-  calendarIds: string[];
-};
-
-const DASHBOARD_QUERY = `
-  query Dashboard {
-    dashboard {
-      calendars {
-        id
-        name
-        description
-        cover
-        privacy
-        origin
-        creatorUsername
-        creatorId
-        likesCount
-        coOwners {
-          username
-        }
-        viewers {
-          id
-          username
-        }
-        categories {
-          id
-          name
-        }
-      }
-      events {
-        id
-        title
-        description
-        placeName
-        date
-        endDate
-        time
-        endTime
-        recurrence
-        photo
-        calendarIds
-      }
-    }
-  }
-`;
-
-type UseCalendarScreenReturn = {
-  calendars: CalendarScreenCalendar[];
-  events: CalendarScreenEvent[];
-  loading: boolean;
-  error: string | null;
-  reload: () => void;
-};
-
-export function useCalendarScreen(): UseCalendarScreenReturn {
-  const [calendars, setCalendars] = useState<CalendarScreenCalendar[]>([]);
-  const [events, setEvents] = useState<CalendarScreenEvent[]>([]);
+export function useCalendarScreen() {
+  const [calendars, setCalendars] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -276,65 +142,83 @@ export function useCalendarScreen(): UseCalendarScreenReturn {
 
   useEffect(() => {
     let cancelled = false;
-
     setLoading(true);
-    setError(null);
 
-    fetch('/graphql/', {
+    fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: graphqlHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ query: DASHBOARD_QUERY }),
+      body: JSON.stringify({
+        query: `
+          query GetDashboardData {
+            dashboardCalendars {
+              id
+              name
+              description
+              cover
+              privacy
+              origin
+              creatorUsername
+              creatorId
+              likesCount
+              coOwners {
+                id
+                username
+              }
+              viewers {
+                id
+                username
+              }
+              categories {
+                id
+                name
+              }
+              events {
+                id
+                title
+                description
+                placeName
+                date
+                endDate
+                time
+                endTime
+                recurrence
+                photo
+              }
+            }
+          }
+        `
+      }),
     })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+      .then(r => r.json())
       .then((json) => {
         if (cancelled) return;
 
-        if (json.errors?.length) {
-          setError(json.errors[0].message ?? 'GraphQL error');
-          return;
+        if (json.errors) {
+          throw new Error(json.errors[0].message);
         }
 
-        const rawCalendars: any[] = json.data?.dashboard?.calendars ?? [];
-        const rawEvents: any[] = json.data?.dashboard?.events ?? [];
+        const fetchedCalendars = json.data?.dashboardCalendars ?? [];
+        setCalendars(fetchedCalendars);
 
-        setCalendars(
-          rawCalendars.map((c: any) => ({
-            id: String(c.id),
-            name: c.name,
-            description: c.description ?? '',
-            cover: c.cover ?? undefined,
-            privacy: c.privacy,
-            origin: c.origin,
-            creatorUsername: c.creatorUsername,
-            creatorId: c.creatorId,
-            likesCount: c.likesCount ?? 0,
-            coOwners: c.coOwners ?? [],
-            viewers: c.viewers ?? [],
-            categories: (c.categories ?? []).map((cat: any) => ({
-              id: String(cat.id),
-              name: cat.name,
-            })),
+        const allEvents = fetchedCalendars.flatMap((c: any) =>
+          (c.events ?? []).map((e: any) => ({
+            ...e,
+            calendarIds: [Number(c.id)],
           }))
         );
-
-        setEvents(rawEvents);
+        setEvents(allEvents);
       })
       .catch((err) => {
-        if (cancelled) return;
-        console.error('[useCalendarScreen]', err);
-        setError('Could not load calendars. Please check your connection and try again.');
+        if (!cancelled) {
+          setError(err.message || "Error de conexión");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [reloadKey]);
 
   return { calendars, events, loading, error, reload };
