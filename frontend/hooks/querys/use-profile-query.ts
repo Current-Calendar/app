@@ -1,4 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
+import apiClient from '@/services/api-client';
+
+const GRAPHQL_URL = `${process.env.EXPO_PUBLIC_API_BASE}/graphql/`;
+
+function graphqlHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = apiClient.getAccessToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
 
 export type ProfileCalendarData = {
   id: string;
@@ -43,6 +53,7 @@ const USER_PROFILE_QUERY = `
         bio
         link
         photo
+        plan
       }
       totalFollowers
       totalFollowing
@@ -91,9 +102,9 @@ export function useProfileQuery(username: string | undefined | null): UseProfile
     setLoading(true);
     setError(null);
 
-    fetch('/graphql/', {
+    fetch(GRAPHQL_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: graphqlHeaders(),
       credentials: 'include',
       body: JSON.stringify({
         query: USER_PROFILE_QUERY,
