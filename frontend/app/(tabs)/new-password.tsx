@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { API_CONFIG } from "@/constants/api";
 const BG = "#FFFDED";
 const PINK = "#F2A3A6";
@@ -32,6 +33,8 @@ export default function ForgotPasswordScreen() {
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
@@ -122,26 +125,46 @@ export default function ForgotPasswordScreen() {
 
         <View style={[styles.form, { width: formWidth }]}>
           <Text style={styles.label}>New Password</Text>
-          <TextInput
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={styles.passwordField}>
+            <TextInput
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder=""
+              placeholderTextColor="#999"
+              autoCapitalize="none"
+              secureTextEntry={!showNewPassword}
+              style={[styles.input, styles.passwordInput]}
+            />
+            <Pressable
+              onPress={() => setShowNewPassword(!showNewPassword)}
+              style={styles.passwordToggle}
+            >
+              <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={24} color={TEXT} />
+            </Pressable>
+          </View>
 
           <Text style={[styles.label, { marginTop: 14 }]}>Repeat Password</Text>
-          <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder=""
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            secureTextEntry
-            style={styles.input}
-          />
+          <View style={styles.passwordField}>
+            <TextInput
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder=""
+              placeholderTextColor="#999"
+              autoCapitalize="none"
+              secureTextEntry={!showConfirmPassword}
+              style={[styles.input, styles.passwordInput]}
+            />
+            <Pressable
+              onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={styles.passwordToggle}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye-off" : "eye"}
+                size={24}
+                color={TEXT}
+              />
+            </Pressable>
+          </View>
 
 
           {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
@@ -236,6 +259,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 10,
     backgroundColor: "rgba(255,255,255,0.45)",
+  },
+  passwordField: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 10,
   },
 
   forgot: { alignSelf: "flex-end", marginTop: 8, marginBottom: 8 },
