@@ -171,6 +171,17 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+if DEBUG and not TESTING:
+    INSTALLED_APPS.insert(0, 'debug_toolbar')
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+
+    def always_show(request):
+        return True
+
+    DEBUG_TOOLBAR_CONFIG = {
+        "SHOW_TOOLBAR_CALLBACK": always_show,
+    }
+
 ROOT_URLCONF = 'current.urls'
 
 TEMPLATES = [
