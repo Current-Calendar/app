@@ -114,12 +114,15 @@ function mapToCalendar(c: CalendarScreenCalendar, index: number): Calendar {
     creator: c.creatorUsername,
     color: COLORS[index % COLORS.length],
     co_owners: (c.coOwners || []).map(u => ({
+      id: u.id,
       username: u.username,
+      name: u.username,
     })),
     
     viewers: (c.viewers || []).map(u => ({
+      id: u.id ? Number(u.id) : undefined,
       username: u.username,
-      name: u.username
+      name: u.username,
     })),
 
     categories: (c.categories || []).map((cat) => ({
@@ -232,7 +235,12 @@ export default function CalendarScreen() {
             type: "other",
             color: calendar?.color || "#6C63FF",
             photo: e.photo || "",
-            attendees: [],
+            attendees: (e.attendees || []).map((a: any) => ({
+              id: String(a.id),
+              name: a.name ?? a.username ?? '',
+              respondedAt: a.respondedAt ?? '',
+              avatar: a.avatar ?? undefined,
+            })),
             my_attendance_status: null,
             show_time: dates.length === 1,
           };

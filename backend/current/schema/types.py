@@ -114,9 +114,19 @@ class CalendarType(DjangoObjectType):
     def resolve_events(self, info):
         return self.events.all()
 
+class AttendanceType(graphene.ObjectType):
+    id = graphene.ID()
+    username = graphene.String()
+    name = graphene.String()
+    responded_at = graphene.String()
+    avatar = graphene.String()
+
+
 class EventType(DjangoObjectType):
     calendar_ids = graphene.List(graphene.Int)
     calendar = graphene.Field(CalendarType)
+    attendees = graphene.List(AttendanceType)
+    photo = graphene.String()
 
     class Meta:
         model = Event
@@ -149,6 +159,29 @@ class EventType(DjangoObjectType):
         if selected_ids:
             return self.calendars.filter(id__in=selected_ids).first()
         return self.calendars.first()
+
+    def resolve_attendees(self, info):
+        return [
+            AttendanceType(
+                id=str(a.id),
+                username=a.user.username,
+                name=f"{a.user.first_name} {a.user.last_name}".strip() or a.user.username,
+                responded_at=str(a.updated_at),
+                avatar=(
+                    str(a.user.photo) if str(a.user.photo).startswith('http')
+                    else info.context.build_absolute_uri(f'/media/{a.user.photo}')
+                ) if a.user.photo else None,
+            )
+            for a in self.attendances.select_related("user").all()
+        ]
+    
+    def resolve_photo(self, info):
+        if not self.photo:
+            return None
+        if str(self.photo).startswith('http'):
+            return str(self.photo)
+        request = info.context
+        return request.build_absolute_uri(f'/media/{self.photo}')
 
 def filter_events(q, week: int | None, month: int | None, year: int | None):
     if week and 1 <= week <= 53:
@@ -284,6 +317,7 @@ class Query(graphene.ObjectType):
                 Q(creator_id__in=following_ids, privacy="PUBLIC")
             )
             .select_related("creator")
+            .prefetch_related("co_owners", "viewers", "categories", "events")
             .distinct()
             .order_by("-created_at")
         )

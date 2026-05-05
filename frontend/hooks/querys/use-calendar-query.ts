@@ -33,6 +33,12 @@ const SINGLE_CALENDAR_WITH_EVENTS_QUERY = `
         endTime
         recurrence
         photo
+        attendees {
+          id
+          name
+          respondedAt
+          avatar
+        }
       }
     }
   }
@@ -184,6 +190,12 @@ export function useCalendarScreen() {
                 endTime
                 recurrence
                 photo
+                attendees {
+                  id
+                  name
+                  respondedAt
+                  avatar
+  }
               }
             }
           }
