@@ -307,13 +307,15 @@ export default function PrivacySettingsScreen() {
               >
                 <Text style={styles.rejectButtonText}>Reject optional cookies</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.preferenceButton, styles.acceptButton]}
-                activeOpacity={0.85}
-                onPress={() => saveCookiePreference("accepted")}
-              >
-                <Text style={styles.acceptButtonText}>Accept optional cookies</Text>
-              </TouchableOpacity>
+              {cookiePreference !== "accepted" && (
+                <TouchableOpacity
+                  style={[styles.preferenceButton, styles.acceptButton]}
+                  activeOpacity={0.85}
+                  onPress={() => saveCookiePreference("accepted")}
+                >
+                  <Text style={styles.acceptButtonText}>Accept optional cookies</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
