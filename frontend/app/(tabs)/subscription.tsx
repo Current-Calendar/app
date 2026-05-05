@@ -27,10 +27,10 @@ const SubscriptionScreen = () => {
   const currentPlan = (user?.plan ?? 'FREE') as PlanKey;
   const subscriptionEndDate = useMemo(() => {
     const rawDate =
-      (user as any)?.subscriptionEndsAt ??
-      (user as any)?.subscription_end_date ??
+      (user as any)?.current_period_end ??
       (user as any)?.currentPeriodEnd ??
-      (user as any)?.current_period_end;
+      (user as any)?.subscriptionEndsAt ??
+      (user as any)?.subscription_end_date;
 
     if (!rawDate) return null;
 
@@ -50,6 +50,7 @@ const SubscriptionScreen = () => {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
+      timeZone: 'Europe/Madrid',
     }).format(subscriptionEndDate);
   }, [subscriptionEndDate]);
   const [showFreeDowngradeModal, setShowFreeDowngradeModal] = useState(false);
@@ -58,7 +59,7 @@ const SubscriptionScreen = () => {
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
 
-  const goToPayment = (plan: PlanKey) => {
+  const goToPayment = (plan: PlanKey, billingCycle?: BillingCycle) => {
     const isDowngradingToFree = plan === 'FREE' && currentPlan !== 'FREE';
 
     if (isDowngradingToFree) {
@@ -66,7 +67,13 @@ const SubscriptionScreen = () => {
       return;
     }
 
-    router.push({ pathname: '/payment', params: { plan } });
+    router.push({
+      pathname: '/payment',
+      params: {
+        plan,
+        ...(billingCycle ? { billingCycle } : {}),
+      },
+    });
   };
 
   const confirmDowngradeToFree = () => {
@@ -226,6 +233,7 @@ const SubscriptionScreen = () => {
 };
 
 type PlanKey = 'FREE' | 'STANDARD' | 'BUSINESS';
+type BillingCycle = 'MONTHLY' | 'ANNUAL';
 
 type PlanCardProps = {
   title: string;
@@ -245,7 +253,7 @@ type PlanCardProps = {
   isVerySmallScreen: boolean;
   isMobile: boolean;
   isActive: boolean;
-  onSelect: (plan: PlanKey) => void;
+  onSelect: (plan: PlanKey, billingCycle?: BillingCycle) => void;
 };
 
 const PlanCard = ({
@@ -347,7 +355,10 @@ const PlanCard = ({
           {/* Pay / Select button */}
           <TouchableOpacity
             style={[styles.selectButton, buttonStyle]}
-            onPress={() => !isActive && onSelect(planKey)}
+            onPress={() =>
+              !isActive &&
+              onSelect(planKey, planKey === 'FREE' ? undefined : 'MONTHLY')
+            }
             activeOpacity={isActive ? 1 : 0.82}
             disabled={isActive}
           >
@@ -376,7 +387,7 @@ const PlanCard = ({
 
             <TouchableOpacity
               style={[styles.selectButton, buttonStyle, { marginTop: 12 }]}
-              onPress={() => !isActive && onSelect(planKey)}
+              onPress={() => !isActive && onSelect(planKey, 'ANNUAL')}
               activeOpacity={isActive ? 1 : 0.82}
               disabled={isActive}
             >

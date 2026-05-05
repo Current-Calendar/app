@@ -24,6 +24,7 @@ const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.
 const mascotBusiness = require('../../assets/images/mascota-traje.png');
 
 type PlanKey = 'FREE' | 'STANDARD' | 'BUSINESS';
+type BillingCycle = 'MONTHLY' | 'ANNUAL';
 
 const PLAN_INFO: Record<PlanKey, {
   label: string;
@@ -56,7 +57,10 @@ const PLAN_INFO: Record<PlanKey, {
 };
 
 export default function PaymentScreen() {
-  const { plan } = useLocalSearchParams<{ plan: PlanKey }>();
+  const { plan, billingCycle } = useLocalSearchParams<{
+    plan?: string;
+    billingCycle?: string;
+  }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user, setUser } = useAuth();
@@ -66,8 +70,9 @@ export default function PaymentScreen() {
   const info = PLAN_INFO[planKey];
   const isFree = planKey === 'FREE';
 
-  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
-  const [cardNumber, setCardNumber] = useState('');
+  const [billing, setBilling] = useState<'monthly' | 'annual'>(
+    billingCycle === 'ANNUAL' ? 'annual' : 'monthly'
+  ); const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
@@ -103,9 +108,27 @@ export default function PaymentScreen() {
 
     setLoading(true);
     try {
-      const updated = await apiClient.post<{ plan: string }>(
+      const billingCycleToSend =
+        billing === 'annual' ? 'ANNUAL' : 'MONTHLY';
+
+      const requestBody = isFree
+        ? { plan: planKey }
+        : {
+          plan: planKey,
+          billing_cycle: billingCycleToSend,
+        };
+
+      const updated = await apiClient.post<{
+        plan: string;
+        current_plan?: string;
+        pending_plan?: string | null;
+        billing_cycle?: string | null;
+        current_period_start?: string | null;
+        current_period_end?: string | null;
+        cancel_at_period_end?: boolean;
+      }>(
         API_CONFIG.endpoints.updatePlan,
-        { plan: planKey },
+        requestBody,
       );
       // Reflect new plan in auth context without a full refetch
       if (user) setUser({ ...user, plan: updated.plan });
@@ -126,15 +149,15 @@ export default function PaymentScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, isMobile && styles.scrollMobile]}>
         {/* Header */}
         <View style={profileStyles.editHeaderGreen}>
-        <View style={profileStyles.editHeaderRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={profileStyles.editHeaderButton}>Back</Text>
-          </TouchableOpacity>
-          <Text style={profileStyles.editHeaderTitle}>Payment</Text>
-          <View style={{ width: 60 }} />
+          <View style={profileStyles.editHeaderRow}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={profileStyles.editHeaderButton}>Back</Text>
+            </TouchableOpacity>
+            <Text style={profileStyles.editHeaderTitle}>Payment</Text>
+            <View style={{ width: 60 }} />
+          </View>
         </View>
-      </View>
-      <View style={profileStyles.editHeaderCoral} />
+        <View style={profileStyles.editHeaderCoral} />
 
         <View style={[styles.inner, !isMobile && styles.innerDesktop]}>
           {/* Plan summary card */}
@@ -181,8 +204,9 @@ export default function PaymentScreen() {
                 placeholder="Name on card"
                 placeholderTextColor="#aaa"
                 value={cardName}
-                onChangeText={setCardName}
+                onChangeText={(value) => setCardName(value.slice(0, 50))}
                 autoCapitalize="words"
+                maxLength={50}
               />
 
               <Text style={styles.fieldLabel}>Card number</Text>

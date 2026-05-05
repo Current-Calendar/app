@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from ..models import Notification, User
+from ..models import Notification, User, Subscription
 from ..serializers import UserSerializer, PublicUserSerializer, OwnProfileSerializer, EditProfileSerializer
 from rest_framework import status
 from django.db.models import Q
@@ -247,11 +247,34 @@ def edit_profile(request):
 def update_plan(request):
     """
     Endpoint to update the authenticated user's subscription plan.
+
     POST /api/v1/users/me/plan/
-    Body: { "plan": "FREE" | "STANDARD" | "BUSINESS" }
+
+    Body for paid plans:
+    {
+        "plan": "STANDARD" | "BUSINESS",
+        "billing_cycle": "MONTHLY" | "ANNUAL"
+    }
+
+    Body for free plan:
+    {
+        "plan": "FREE"
+    }
     """
-    VALID_PLANS = ('FREE', 'STANDARD', 'BUSINESS')
+
+    VALID_PLANS = (
+        Subscription.PLAN_FREE,
+        Subscription.PLAN_STANDARD,
+        Subscription.PLAN_BUSINESS,
+    )
+
+    VALID_BILLING_CYCLES = (
+        Subscription.BILLING_MONTHLY,
+        Subscription.BILLING_ANNUAL,
+    )
+
     plan = request.data.get('plan')
+    billing_cycle = request.data.get('billing_cycle', Subscription.BILLING_MONTHLY)
 
     if plan not in VALID_PLANS:
         return Response(
@@ -259,11 +282,81 @@ def update_plan(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    request.user.plan = plan
-    request.user.save(update_fields=['plan'])
+    subscription, _ = Subscription.objects.get_or_create(
+        user=request.user,
+        defaults={
+            "current_plan": request.user.plan,
+        }
+    )
 
-    return Response({'plan': plan}, status=status.HTTP_200_OK)
+    subscription.apply_pending_plan_if_needed()
 
+    if plan == Subscription.PLAN_FREE:
+        if subscription.current_plan != Subscription.PLAN_FREE:
+            if not subscription.current_period_end:
+                return Response(
+                    {
+                        "error": "Current paid subscription does not have an end date.",
+                        "detail": "The downgrade to Free cannot be scheduled because current_period_end is missing.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            subscription.schedule_downgrade_to_free()
+
+            return Response(
+                {
+                    "message": "The Free Plan will be applied at the end of the current billing period.",
+                    "plan": request.user.plan,
+                    "current_plan": subscription.current_plan,
+                    "pending_plan": subscription.pending_plan,
+                    "billing_cycle": subscription.billing_cycle,
+                    "current_period_start": subscription.current_period_start,
+                    "current_period_end": subscription.current_period_end,
+                    "cancel_at_period_end": subscription.cancel_at_period_end,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        subscription.activate_free_plan()
+
+        return Response(
+            {
+                "message": "Free Plan activated.",
+                "plan": request.user.plan,
+                "current_plan": subscription.current_plan,
+                "pending_plan": subscription.pending_plan,
+                "billing_cycle": subscription.billing_cycle,
+                "current_period_start": subscription.current_period_start,
+                "current_period_end": subscription.current_period_end,
+                "cancel_at_period_end": subscription.cancel_at_period_end,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    if billing_cycle not in VALID_BILLING_CYCLES:
+        return Response(
+            {
+                "error": f"Invalid billing_cycle. Must be one of: {', '.join(VALID_BILLING_CYCLES)}"
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    subscription.activate_paid_plan(plan, billing_cycle)
+
+    return Response(
+        {
+            "message": "Paid plan activated.",
+            "plan": request.user.plan,
+            "current_plan": subscription.current_plan,
+            "pending_plan": subscription.pending_plan,
+            "billing_cycle": subscription.billing_cycle,
+            "current_period_start": subscription.current_period_start,
+            "current_period_end": subscription.current_period_end,
+            "cancel_at_period_end": subscription.cancel_at_period_end,
+        },
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
