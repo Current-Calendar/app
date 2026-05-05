@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import apiClient, { ApiError } from '@/services/api-client';
-import { API_CONFIG } from '@/constants/api';
+import { useAuth } from "@/hooks/use-auth";
 
 // Tipos de datos esperados del backend
 export type UserSearchResult = {
@@ -29,9 +29,12 @@ interface InviteUserModalProps {
   onClose: () => void;
   itemId: string;
   type: 'calendar' | 'event';
+  hideUsers: number[];
 }
 
-const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, itemId, type }) => {
+const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, itemId, type, hideUsers = [] }) => {
+  const { user } = useAuth();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -57,7 +60,10 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
         const response = await apiClient.get<UserSearchResult[] | { data: UserSearchResult[] }>(`/users/search/?search=${encodeURIComponent(searchQuery)}`);
         
         const data = Array.isArray(response) ? response : (response as any)?.data || [];
-        setResults(data);
+
+        const users = data.filter((u: { id: number; }) => u.id !== user?.id && hideUsers.indexOf(u.id) < 0);
+
+        setResults(users);
       } catch (error) {
         console.error("Error searching users:", error);
       } finally {
@@ -66,7 +72,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  }, [user, hideUsers, searchQuery]);
 
   const handleInviteClick = (userId: string | number) => {
     if (type === 'calendar') {
