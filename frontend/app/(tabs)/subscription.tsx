@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   Image,
   ImageSourcePropType,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,13 +25,61 @@ const SubscriptionScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const currentPlan = (user?.plan ?? 'FREE') as PlanKey;
+  const subscriptionEndDate = useMemo(() => {
+    const rawDate =
+      (user as any)?.subscriptionEndsAt ??
+      (user as any)?.subscription_end_date ??
+      (user as any)?.currentPeriodEnd ??
+      (user as any)?.current_period_end;
+
+    if (!rawDate) return null;
+
+    const date = new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) return null;
+
+    return date;
+  }, [user]);
+
+  const formattedSubscriptionEndDate = useMemo(() => {
+    if (!subscriptionEndDate) {
+      return 'the end of your current billing period';
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(subscriptionEndDate);
+  }, [subscriptionEndDate]);
+  const [showFreeDowngradeModal, setShowFreeDowngradeModal] = useState(false);
 
   const isMobile = width < 768;
   const isSmallScreen = width < 1200;
   const isVerySmallScreen = width < 900;
 
-  const goToPayment = (plan: 'FREE' | 'STANDARD' | 'BUSINESS') => {
+  const goToPayment = (plan: PlanKey) => {
+    const isDowngradingToFree = plan === 'FREE' && currentPlan !== 'FREE';
+
+    if (isDowngradingToFree) {
+      setShowFreeDowngradeModal(true);
+      return;
+    }
+
     router.push({ pathname: '/payment', params: { plan } });
+  };
+
+  const confirmDowngradeToFree = () => {
+    setShowFreeDowngradeModal(false);
+
+    router.push({
+      pathname: '/payment',
+      params: {
+        plan: 'FREE',
+        downgradeAtPeriodEnd: 'true',
+        effectiveDate: subscriptionEndDate?.toISOString() ?? '',
+      },
+    });
   };
 
   return (
@@ -40,16 +89,16 @@ const SubscriptionScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
-      
-      <View style={profileStyles.editHeaderGreen}>
-        <View style={profileStyles.editHeaderRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={profileStyles.editHeaderButton}>Back</Text>
-          </TouchableOpacity>
-          <View style={{ width: 60 }} />
+
+        <View style={profileStyles.editHeaderGreen}>
+          <View style={profileStyles.editHeaderRow}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={profileStyles.editHeaderButton}>Back</Text>
+            </TouchableOpacity>
+            <View style={{ width: 60 }} />
+          </View>
         </View>
-      </View>
-      <View style={profileStyles.editHeaderCoral} />
+        <View style={profileStyles.editHeaderCoral} />
 
         <View style={styles.content}>
           <Text style={styles.title}>Subscription</Text>
@@ -132,6 +181,46 @@ const SubscriptionScreen = () => {
           </View>
         </View>
       </ScrollView>
+      <Modal
+        visible={showFreeDowngradeModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFreeDowngradeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Change to Free Plan?</Text>
+
+            <Text style={styles.modalText}>
+              Your current paid subscription will remain active until{' '}
+              <Text style={styles.modalDate}>{formattedSubscriptionEndDate}</Text>.
+            </Text>
+
+            <Text style={styles.modalText}>
+              The Free Plan will be applied after that date. You will not lose your paid
+              benefits before your current subscription ends.
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowFreeDowngradeModal(false)}
+                activeOpacity={0.82}
+              >
+                <Text style={styles.modalCancelText}>Keep paid plan</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={confirmDowngradeToFree}
+                activeOpacity={0.82}
+              >
+                <Text style={styles.modalConfirmText}>Continue to Free</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -535,6 +624,72 @@ const styles = StyleSheet.create({
   topBar: {
     width: '100%',
     marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 460,
+    backgroundColor: '#FFFDED',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 2,
+    borderColor: '#10464d',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#10464d',
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  modalText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#2f2f2f',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalDate: {
+    fontWeight: '800',
+    color: '#10464d',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 18,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#10464d',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#10464d',
+  },
+  modalCancelText: {
+    color: '#10464d',
+    fontWeight: '800',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  modalConfirmText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 
