@@ -39,13 +39,12 @@ import * as Sharing from "expo-sharing";
 import { toPng } from "html-to-image";
 import { captureRef } from "react-native-view-shot";
 
-import { useEventsList } from "@/hooks/use-events";
 import { useCalendarTransfer } from "@/hooks/use-calendar-transfer";
 import { useCalendarActions } from "@/hooks/use-calendar-actions";
 import { useAuth } from "@/hooks/use-auth";
-import apiClient from "@/services/api-client";
 import { ImportCalendarModal } from "@/components/import-calendar-modal";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
+import { useCalendarScreen, CalendarScreenCalendar } from "@/hooks/querys/use-calendar-query";
 
 const todayKey = new Date().toISOString().slice(0, 10);
 const MONTH_NAMES = [
@@ -73,6 +72,15 @@ const DAY_NAMES = [
   "Saturday",
 ];
 
+const COLORS = [
+  "#6C63FF",
+  "#FF6584",
+  "#43D9AD",
+  "#FFB84C",
+  "#FF9F43",
+  "#00CFE8",
+];
+
 type CalendarCategory = {
   id: string;
   name: string;
@@ -95,6 +103,35 @@ function getDates(startDate: Date, stopDate: Date) {
   return dateArray;
 }
 
+function mapToCalendar(c: CalendarScreenCalendar, index: number): Calendar {
+  return {
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    cover: c.cover,
+    privacy: c.privacy as any,
+    origin: c.origin as any,
+    creator: c.creatorUsername,
+    color: COLORS[index % COLORS.length],
+    co_owners: (c.coOwners || []).map(u => ({
+      id: u.id,
+      username: u.username,
+      name: u.username,
+    })),
+    
+    viewers: (c.viewers || []).map(u => ({
+      id: u.id ? Number(u.id) : undefined,
+      username: u.username,
+      name: u.username,
+    })),
+
+    categories: (c.categories || []).map((cat) => ({
+      id: Number(cat.id),
+      name: cat.name,
+    })),
+  } as Calendar;
+}
+
 export default function CalendarScreen() {
   const { isAuthenticated, user } = useAuth();
   const { downloadCalendarFile } = useCalendarTransfer();
@@ -109,11 +146,17 @@ export default function CalendarScreen() {
 
   const BOTTOM_BAR_HEIGHT = 60 + 25;
   const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
+
+  const { calendars: rawCalendars, events: rawEvents, loading, error, reload } =
+    useCalendarScreen();
+
+  const lastFetchRef = useRef<number>(0);
+  const STALE_TIME = 60_000;
+
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [weekDay, setWeekDay] = useState(today.getDate());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
-  const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const isWeb = Platform.OS === "web";
 
@@ -129,263 +172,41 @@ export default function CalendarScreen() {
   );
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [createMenuVisible, setCreateMenuVisible] = useState(false);
-  const [loadingCalendars, setLoadingCalendars] = useState(true);
-  const [calendarsError, setCalendarsError] = useState<unknown>(null);
 
-  const {
-    events: backendEvents,
-    loading: loadingEvents,
-    error: eventsError,
-    refetch: refetchEvents,
-  } = useEventsList({ autoFetch: false });
-
-  const lastFetchRef = useRef<number>(0);
-  const STALE_TIME = 60_000;
-
-  const fetchData = useCallback(async () => {
-    try {
-      setLoadingCalendars(true);
-      setCalendarsError(null);
-
-      const [myCalendarsData, subscribedCalendarsData, coOwnedCalendarsData] =
-        await Promise.all([
-          apiClient.get<any[]>("/calendars/my-calendars/"),
-          apiClient.get<any[]>("/calendars/subscribed/"),
-          apiClient.get<any[]>("/calendars/co_owned/"),
-        ]);
-
-      const COLORS = [
-        "#6C63FF",
-        "#FF6584",
-        "#43D9AD",
-        "#FFB84C",
-        "#FF9F43",
-        "#00CFE8",
-      ];
-
-      const mergedCalendarsMap = new Map<number, any>();
-
-      // Helper to merge calendar data while preserving viewers/co_owners
-      const mergeCalendar = (existing: any, incoming: any) => {
-        if (!existing) return incoming;
-        return {
-          ...incoming,
-          viewers:
-            Array.isArray(incoming.viewers) && incoming.viewers.length > 0
-              ? incoming.viewers
-              : Array.isArray(existing.viewers)
-                ? existing.viewers
-                : [],
-          co_owners:
-            Array.isArray(incoming.co_owners) && incoming.co_owners.length > 0
-              ? incoming.co_owners
-              : Array.isArray(existing.co_owners)
-                ? existing.co_owners
-                : [],
-        };
-      };
-
-      myCalendarsData.forEach((calendar: any) => {
-        mergedCalendarsMap.set(calendar.id, calendar);
-      });
-
-      subscribedCalendarsData.forEach((calendar: any) => {
-        const existing = mergedCalendarsMap.get(calendar.id);
-        mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
-      });
-
-      coOwnedCalendarsData.forEach((calendar: any) => {
-        const existing = mergedCalendarsMap.get(calendar.id);
-        mergedCalendarsMap.set(calendar.id, mergeCalendar(existing, calendar));
-      });
-
-      const mergedCalendars = Array.from(mergedCalendarsMap.values());
-
-      const calendarsWithCategories = await Promise.all(
-        mergedCalendars.map(async (calendar: any) => {
-          try {
-            const categoriesResponse: any = await apiClient.get(
-              `/categories/for-calendar/${calendar.id}/`,
-            );
-
-            const categories =
-              (Array.isArray(categoriesResponse) && categoriesResponse) ||
-              (Array.isArray(categoriesResponse?.results) &&
-                categoriesResponse.results) ||
-              (Array.isArray(categoriesResponse?.data) &&
-                categoriesResponse.data) ||
-              [];
-
-            return {
-              ...calendar,
-              categories,
-            };
-          } catch (error) {
-            console.error(
-              `Error loading categories for calendar ${calendar.id}:`,
-              error,
-            );
-            return {
-              ...calendar,
-              categories: [],
-            };
-          }
-        }),
-      );
-
-      const ids = calendarsWithCategories.map((c: any) => c.id).join(",");
-
-      const mappedCalendars: Calendar[] = calendarsWithCategories.map(
-        (c: any, index: number) => ({
-          id: String(c.id),
-          name: c.name,
-          description: c.description || "",
-          cover: c.cover || undefined,
-          privacy: c.privacy,
-          origin: c.origin,
-          creator: c.creator_username || "unknown",
-          creator_username: c.creator_username,
-          color: COLORS[index % COLORS.length],
-          co_owners: Array.isArray(c.co_owners) ? c.co_owners : [],
-          viewers: Array.isArray(c.viewers) ? c.viewers : [],
-          categories: Array.isArray(c.categories) ? c.categories : [],
-        }),
-      );
-
-      setCalendars(mappedCalendars);
-
-      setInfoCalendar((prev) => {
-        if (!prev) return prev;
-        return mappedCalendars.find((c) => c.id === prev.id) ?? prev;
-      });
-
-      await refetchEvents(ids);
-    } catch (e) {
-      console.error("Error al refrescar calendarios:", e);
-      setCalendarsError(e);
-    } finally {
-      setLoadingCalendars(false);
-    }
-  }, [refetchEvents]);
-
-  const updateCalendarInState = (updatedCalendar: any) => {
-    if (updatedCalendar?.left && updatedCalendar?.id != null) {
-      const removedId = String(updatedCalendar.id);
-      setCalendars((current) =>
-        current.filter((calendar) => calendar.id !== removedId),
-      );
-      setEvents((current) =>
-        current.filter((event) => event.calendarId !== removedId),
-      );
-      setSelectedCalendarId((current) =>
-        current === removedId ? null : current,
-      );
-      setActiveEvent((current) =>
-        current?.calendarId === removedId ? null : current,
-      );
-      setInfoCalendar((current) =>
-        current?.id === removedId ? null : current,
-      );
-      return;
-    }
-
-    setCalendars((current) =>
-      current.map((calendar) => {
-        if (calendar.id !== String(updatedCalendar.id)) return calendar;
-
-        return {
-          ...calendar,
-          ...updatedCalendar,
-          id: String(updatedCalendar.id ?? calendar.id),
-          name: updatedCalendar.name ?? calendar.name,
-          description:
-            updatedCalendar.description ?? calendar.description ?? "",
-          cover: updatedCalendar.cover ?? calendar.cover,
-          privacy: updatedCalendar.privacy ?? calendar.privacy,
-          origin: updatedCalendar.origin ?? calendar.origin,
-          creator: updatedCalendar.creator ?? calendar.creator,
-          creator_id:
-            updatedCalendar.creator_id ?? (calendar as any).creator_id,
-          creator_username:
-            updatedCalendar.creator_username ??
-            (calendar as any).creator_username,
-          color: calendar.color,
-          photo: updatedCalendar.photo || "",
-          co_owners: Array.isArray(updatedCalendar.co_owners)
-            ? updatedCalendar.co_owners
-            : ((calendar as any).co_owners ?? []),
-          viewers: Array.isArray(updatedCalendar.viewers)
-            ? updatedCalendar.viewers
-            : ((calendar as any).viewers ?? []),
-          categories: Array.isArray(updatedCalendar.categories)
-            ? updatedCalendar.categories
-            : ((calendar as any).categories ?? []),
-        } as Calendar;
-      }),
-    );
-
-    setInfoCalendar((current) => {
-      if (!current || current.id !== String(updatedCalendar.id)) return current;
-
-      return {
-        ...current,
-        ...updatedCalendar,
-        id: String(updatedCalendar.id ?? current.id),
-        name: updatedCalendar.name ?? current.name,
-        description: updatedCalendar.description ?? current.description ?? "",
-        cover: updatedCalendar.cover ?? current.cover,
-        privacy: updatedCalendar.privacy ?? current.privacy,
-        origin: updatedCalendar.origin ?? current.origin,
-        creator: updatedCalendar.creator ?? current.creator,
-        creator_id: updatedCalendar.creator_id ?? (current as any).creator_id,
-        creator_username:
-          updatedCalendar.creator_username ?? (current as any).creator_username,
-        color: current.color,
-        co_owners: Array.isArray(updatedCalendar.co_owners)
-          ? updatedCalendar.co_owners
-          : ((current as any).co_owners ?? []),
-        viewers: Array.isArray(updatedCalendar.viewers)
-          ? updatedCalendar.viewers
-          : ((current as any).viewers ?? []),
-        categories: Array.isArray(updatedCalendar.categories)
-          ? updatedCalendar.categories
-          : ((current as any).categories ?? []),
-      } as Calendar;
-    });
-  };
+  const calendars = useMemo<Calendar[]>(
+    () => rawCalendars.map(mapToCalendar),
+    [rawCalendars]
+  );
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setLoadingCalendars(false);
-      setCalendars([]);
-      setEvents([]);
       router.replace("/login" as any);
       return;
     }
-
     lastFetchRef.current = Date.now();
-    void fetchData();
-  }, [fetchData, isAuthenticated, router]);
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
-    if (calendarsError || eventsError) {
-      console.error("Error fetching data:", calendarsError || eventsError);
+    if (error) {
+      console.error("Error fetching data:", error);
       Alert.alert("Error", "Could not load calendars or events.");
     }
-  }, [calendarsError, eventsError]);
+  }, [error]);
 
   useEffect(() => {
-    const visibleCalendarIds = new Set(calendars.map((c) => Number(c.id)));
+    const visibleCalendarIds = new Set(
+      filteredCalendars.map((c) => Number(c.id))
+    );
 
-    const mappedEvents: CalendarEvent[] = (backendEvents ?? [])
+    const mappedEvents: CalendarEvent[] = (rawEvents ?? [])
       .filter((e: any) =>
-        e.calendars?.some((calendarId: number) =>
-          visibleCalendarIds.has(calendarId),
+        e.calendarIds?.some((calendarId: any) =>
+          visibleCalendarIds.has(Number(calendarId)),
         ),
       )
       .flatMap((e: any) => {
         const calendar = calendars.find((c) =>
-          e.calendars.includes(Number(c.id)),
+          e.calendarIds?.map(Number).includes(Number(c.id)),
         );
 
         const parseLocalDate = (s: string) => {
@@ -395,41 +216,39 @@ export default function CalendarScreen() {
         };
 
         const startD = parseLocalDate(e.date);
-        const endD = e.end_date ? parseLocalDate(e.end_date) : startD;
+        const endD = e.endDate ? parseLocalDate(e.endDate) : startD;
 
         const dates = getDates(startD, endD);
 
         return dates.map((date) => {
           return {
             id: String(e.id),
-            calendarId: String(e.calendars[0] || ""),
+            calendarId: String(e.calendarIds?.[0] || ""),
             title: e.title,
             description: e.description || "",
-            place_name: e.place_name || "",
+            place_name: e.placeName || "",
             date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
-            end_date: e.end_date ? (e.end_date.includes("T") ? e.end_date.split("T")[0] : e.end_date) : undefined,
-            time: e.time.substring(0, 5),
-            end_time: e.end_time ? e.end_time.substring(0, 5) : undefined,
+            end_date: e.endDate ? (e.endDate.includes("T") ? e.endDate.split("T")[0] : e.endDate) : undefined,
+            time: e.time ? e.time.substring(0, 5) : '',
+            end_time: e.endTime ? e.endTime.substring(0, 5) : undefined,
             recurrence: e.recurrence,
             type: "other",
             color: calendar?.color || "#6C63FF",
             photo: e.photo || "",
-            attendees: Array.isArray(e.attendees)
-              ? e.attendees.map((a: any) => ({
-                  id: String(a.id ?? ""),
-                  name: a.name || a.username || "",
-                  respondedAt: a.respondedAt || a.responded_at || "",
-                  avatar: a.avatar || a.photo || undefined,
-                }))
-              : [],
-            my_attendance_status: e.my_attendance_status ?? null,
+            attendees: (e.attendees || []).map((a: any) => ({
+              id: String(a.id),
+              name: a.name ?? a.username ?? '',
+              respondedAt: a.respondedAt ?? '',
+              avatar: a.avatar ?? undefined,
+            })),
+            my_attendance_status: null,
             show_time: dates.length === 1,
           };
         });
       });
 
     setEvents(mappedEvents);
-  }, [backendEvents, calendars]);
+  }, [rawEvents, calendars]);
 
   useEffect(() => {
     if (params.selectedCalendarId) {
@@ -447,6 +266,28 @@ export default function CalendarScreen() {
       }
     }
   }, [params.selectedDate]);
+
+  const updateCalendarInState = (updatedCalendar: any) => {
+    if (updatedCalendar?.left && updatedCalendar?.id != null) {
+      const removedId = String(updatedCalendar.id);
+      setEvents((current) =>
+        current.filter((event) => event.calendarId !== removedId),
+      );
+      setSelectedCalendarId((current) =>
+        current === removedId ? null : current,
+      );
+      setActiveEvent((current) =>
+        current?.calendarId === removedId ? null : current,
+      );
+      setInfoCalendar((current) =>
+        current?.id === removedId ? null : current,
+      );
+      reload();
+      return;
+    }
+
+    reload();
+  };
 
   const availableCategories = useMemo<CalendarCategory[]>(() => {
     const map = new Map<string, CalendarCategory>();
@@ -511,8 +352,8 @@ export default function CalendarScreen() {
     useCallback(() => {
       if (Date.now() - lastFetchRef.current < STALE_TIME) return;
       lastFetchRef.current = Date.now();
-      void fetchData();
-    }, [fetchData]),
+      void reload();
+    }, [reload]),
   );
 
   const [open, setOpen] = useState(false);
@@ -570,30 +411,8 @@ export default function CalendarScreen() {
     }
   };
 
-  const handleOpenCalendarInfo = async (calendar: Calendar) => {
-    try {
-      const response: any = await apiClient.get(
-        `/categories/for-calendar/${calendar.id}/`,
-      );
-
-      const categories =
-        (Array.isArray(response) && response) ||
-        (Array.isArray(response?.results) && response.results) ||
-        (Array.isArray(response?.data) && response.data) ||
-        [];
-
-      setInfoCalendar({
-        ...calendar,
-        categories,
-      });
-    } catch (error) {
-      console.error("Error loading calendar categories:", error);
-
-      setInfoCalendar({
-        ...calendar,
-        categories: [],
-      });
-    }
+  const handleOpenCalendarInfo = (calendar: Calendar) => {
+    setInfoCalendar(calendar);
   };
 
   const filteredEvents = useMemo(() => {
@@ -640,25 +459,11 @@ export default function CalendarScreen() {
     return isOwner || isCoOwner;
   }, [activeEvent, calendars, user]);
 
-  const removeCalendarFromState = (calendarId: string) => {
-    setCalendars((current) => current.filter((item) => item.id !== calendarId));
-    setEvents((current) =>
-      current.filter((event) => event.calendarId !== calendarId),
-    );
-    setSelectedCalendarId((current) =>
-      current === calendarId ? null : current,
-    );
-    setActiveEvent((current) =>
-      current?.calendarId === calendarId ? null : current,
-    );
-    setInfoCalendar(null);
-  };
-
   const handleDeleteCalendar = async (calendar: Calendar) => {
     const calendarId = Number(calendar.id);
 
     if (!Number.isInteger(calendarId) || calendarId <= 0) {
-      removeCalendarFromState(calendar.id);
+      reload();
       return;
     }
 
@@ -674,10 +479,9 @@ export default function CalendarScreen() {
     try {
       await deleteCalendar(calendar.id);
       setInfoCalendar(null);
-      await fetchData();
+      reload();
     } catch (e) {
       console.error("Delete error:", e);
-      Alert.alert("Delete failed", String(e));
       Alert.alert(
         "Delete failed",
         "Could not delete the calendar. Please try again.",
@@ -808,7 +612,6 @@ export default function CalendarScreen() {
     return `${MONTH_NAMES[month]} ${year}`;
   };
 
-  const loading = loadingCalendars || loadingEvents;
   if (loading) {
     return (
       <View
@@ -1245,7 +1048,7 @@ export default function CalendarScreen() {
       <ImportCalendarModal
         visible={importModalVisible}
         onClose={() => setImportModalVisible(false)}
-        onSuccess={fetchData}
+        onSuccess={reload}
       />
 
       <CreateMenuModal
