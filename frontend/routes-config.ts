@@ -27,14 +27,14 @@ export const ROUTES_CONFIG: RouteConfig[] = [
     requiresGuest: true,
     redirectOnFail: "/calendars",
   },
-  {
-    path: "/new-password",
-    requiresAuth: false,
-    requiresGuest: true,
-    redirectOnFail: "/calendars",
-  },
 
   // Rutas que requieren autenticación (Auth)
+    {
+    path: "/new-password",
+    requiresAuth: false,
+    requiresGuest: false,
+    redirectOnFail: "/login",
+  },
   {
     path: "/profile",
     requiresAuth: true,
