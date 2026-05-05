@@ -652,7 +652,8 @@ def list_calendars(request):
             "created_at": cal.created_at,
             "likes_count": cal.likes_count,
             "liked_by_me": cal.id in liked_ids,
-            "cover": get_signed_url(request, cal.cover)
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
         }
         for cal in queryset
     ]
