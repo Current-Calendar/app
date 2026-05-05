@@ -795,12 +795,17 @@ def invite_event(request: Request, event_id: int):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if not Notification.objects.filter(
+    if Notification.objects.filter(
         recipient=user_to_invite,
         type="EVENT_INVITE",
         related_event=event,
         sender=request.user,
     ).exists():
+        return Response(
+            {"error": f"@{user_to_invite.username} has already been invited"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    else:
         Notification.objects.create(
             recipient=user_to_invite,
             type="EVENT_INVITE",
