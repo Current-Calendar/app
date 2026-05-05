@@ -781,6 +781,14 @@ def invite_event(request: Request, event_id: int):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    for calendar in event.calendars.all():
+        # The user to invite must be a coowner if the calendar is private
+        if calendar.privacy == "PRIVATE" and not calendar.co_owners.filter(id=user_to_invite.id):
+            return Response(
+                {"error": "You can only invite coowners of the calendar to this event"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     if not Notification.objects.filter(
         recipient=user_to_invite,
         type="EVENT_INVITE",
