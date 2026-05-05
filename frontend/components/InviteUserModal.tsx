@@ -44,6 +44,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorTitle, setErrorTitle] = useState("Warning");
+  const [isSuccessModal, setIsSuccessModal] = useState(false);
 
   useEffect(() => {
     if (searchQuery.trim().length < 3) {
@@ -93,6 +94,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
     if (Platform.OS !== "web") {
       Alert.alert('Sent!', 'Invitation sent successfully.');
     } else {
+      setIsSuccessModal(true);
       setErrorTitle('Success');
       setErrorMessage('Invitation sent successfully.');
       setErrorModalVisible(true);
@@ -131,6 +133,7 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
     if (Platform.OS !== "web") {
       Alert.alert(title, finalMessage);
     } else {
+      setIsSuccessModal(false);
       setErrorTitle(title);
       setErrorMessage(finalMessage);
       setErrorModalVisible(true);
@@ -298,10 +301,12 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ visible, onClose, ite
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Text style={styles.errorModalTitle}>{errorTitle}</Text>
+          <Text style={[styles.errorModalTitle, isSuccessModal && styles.successModalTitle]}>
+            {errorTitle}
+          </Text>
           <Text style={styles.modalMessage}>{errorMessage}</Text>
           <TouchableOpacity
-            style={styles.errorModalButton}
+            style={[styles.errorModalButton, isSuccessModal && styles.successModalButton]}
             onPress={() => setErrorModalVisible(false)}
           >
             <Text style={styles.modalButtonText}>Close</Text>
@@ -353,11 +358,13 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 24, width: '80%', maxWidth: 400, alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#111', marginBottom: 8 },
   errorModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#E53935', marginBottom: 8 },
+  successModalTitle: { color: '#15803D' },
   modalMessage: { fontSize: 15, color: '#333', textAlign: 'center', marginBottom: 20 },
   modalActions: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 20 },
   modalButton: { backgroundColor: '#164E52', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8, flex: 1, marginHorizontal: 4, alignItems: 'center' },
   modalButtonCancel: { backgroundColor: '#E5E7EB' },
   errorModalButton: { backgroundColor: '#E53935', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 },
+  successModalButton: { backgroundColor: '#16A34A' },
   modalButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   radioGroup: { width: '100%', marginBottom: 10 },
   radioOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
