@@ -789,6 +789,12 @@ def invite_event(request: Request, event_id: int):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+    if event.attendances.filter(user=user_to_invite).exists():
+        return Response(
+            {"error": f"@{user_to_invite.username} has already been invited"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if not Notification.objects.filter(
         recipient=user_to_invite,
         type="EVENT_INVITE",
