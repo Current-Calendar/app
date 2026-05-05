@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404
 from django.core.cache import cache
 from main.rs.events import recommend_events
 from ..serializers import EventSerializer, EventPagination
+from ..limits import EVENT_DESCRIPTION_MAX_LENGTH
 from utils.storage import get_signed_url
 import json
 from datetime import datetime
@@ -60,6 +61,19 @@ def create_event(request):
     if not time:
         return Response(
             {"errors": ["El campo 'time' es obligatorio."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    description = data.get("description", "")
+    if not isinstance(description, str):
+        return Response(
+            {"errors": ["El campo 'description' debe ser texto."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(description) > EVENT_DESCRIPTION_MAX_LENGTH:
+        return Response(
+            {"errors": [f"El campo 'description' no puede superar los {EVENT_DESCRIPTION_MAX_LENGTH} caracteres."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
     
@@ -128,7 +142,7 @@ def create_event(request):
     
     event = Event(
         title=title,
-        description=data.get("description", ""),
+        description=description,
         place_name=data.get("place_name", ""),
         date=date,
         time=time,
@@ -238,6 +252,19 @@ def edit_event(request: Request, event_id):
             {"errors": ["El campo 'time' no puede estar vacío."]},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+    if "description" in data:
+        description = data["description"]
+        if not isinstance(description, str):
+            return Response(
+                {"errors": ["El campo 'description' debe ser texto."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(description) > EVENT_DESCRIPTION_MAX_LENGTH:
+            return Response(
+                {"errors": [f"El campo 'description' no puede superar los {EVENT_DESCRIPTION_MAX_LENGTH} caracteres."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     new_date = data.get("date", event.date)
     new_time = data.get("time", event.time)

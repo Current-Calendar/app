@@ -28,6 +28,7 @@ from main.rs.calendars import recommend_calendars
 from main.serializers import CalendarSummarySerializer
 from main.permissions import CanChangePrivacy, CanCoOwnCalendars, CanCreateCalendar, CanAddFavoriteCalendar, CanAcceptCalendarInvites, CanReceiveCalendarViewInvites
 from main.privacy import ACCEPTED_CALENDAR_PRIVACY_VALUES, normalize_calendar_privacy
+from main.limits import CALENDAR_DESCRIPTION_MAX_LENGTH
 from current.throttles import HeavyEndpointThrottle
 
 REQUEST_TIMEOUT_SECONDS = 5
@@ -114,6 +115,12 @@ def edit_calendar(request, calendar_id):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             
+            if campo == 'description' and len(valor) > CALENDAR_DESCRIPTION_MAX_LENGTH:
+                return Response(
+                    {'errors': [f"El campo 'description' no puede superar los {CALENDAR_DESCRIPTION_MAX_LENGTH} caracteres."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             if campo == 'privacy' and valor not in ESTADOS_VALIDOS:
                 return Response(
                     {'errors': [f"El privacy '{valor}' no es válido. Los valores permitidos son: {', '.join(sorted(ESTADOS_VALIDOS))}."]},
@@ -189,6 +196,12 @@ def create_calendar(request):
         return Response(
             {"errors": ["El campo 'description' debe ser texto."]},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if isinstance(description, str) and len(description) > CALENDAR_DESCRIPTION_MAX_LENGTH:
+        return Response(
+            {"errors": [f"El campo 'description' no puede superar los {CALENDAR_DESCRIPTION_MAX_LENGTH} caracteres."]},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     requested_privacy = data.get('privacy', 'PRIVATE')
