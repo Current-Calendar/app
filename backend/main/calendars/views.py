@@ -15,7 +15,7 @@ from main.models import Calendar, Event, User, Notification, CalendarLike, Calen
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError
 from django.db import transaction, IntegrityError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.http import HttpResponse
 from django.conf import settings
@@ -75,6 +75,10 @@ def delete_calendar(request, calendar_id):
     if calendar.creator != request.user:
         return Response({'error': 'You do not have permission to delete this calendar.'}, status=status.HTTP_403_FORBIDDEN)
     
+    Event.objects.filter(calendars=calendar).annotate(
+        num_calendars=Count('calendars')
+    ).filter(num_calendars=1).delete()
+
     calendar.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
