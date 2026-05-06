@@ -569,12 +569,13 @@ export function CalendarInfoModal({
       />
 
       {isOwnerOrCoOwner && (
-        <InviteUserModal
-          visible={inviteVisible}
-          onClose={() => setInviteVisible(false)}
-          itemId={String(localCalendar.id)}
-          type="calendar"
-        />
+          <InviteUserModal
+              visible={inviteVisible}
+              onClose={() => setInviteVisible(false)}
+              itemId={String(localCalendar.id)}
+              type="calendar"
+              hideUsers={localCalendar.co_owners?.map(u => u.id) || []}
+          />
       )}
 
       <ConfirmDeleteModal

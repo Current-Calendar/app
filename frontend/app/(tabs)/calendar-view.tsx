@@ -227,6 +227,7 @@ export default function CalendarViewScreen() {
           onClose={() => setInviteVisible(false)}
           itemId={String(calendar.id)}
           type="calendar"
+          hideUsers={calendar.co_owners?.map((u: { id: number; }) => u.id) || []}
         />
       )}
     </View>

@@ -1344,7 +1344,7 @@ class InviteEventTests(APITestCase):
         request = self.client.post(f"/api/v1/events/{self.event1.pk}/invite/", {
             "user": self.user2.pk,
         })
-        self.assertEqual(request.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(request.status_code, status.HTTP_400_BAD_REQUEST)
 
         self.assertEqual(1, Notification.objects.filter(recipient=self.user2, type="EVENT_INVITE", related_event=self.event1, sender=self.user1).count())
 

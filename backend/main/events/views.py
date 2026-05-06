@@ -782,12 +782,34 @@ def invite_event(request: Request, event_id: int):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if not Notification.objects.filter(
+    for calendar in event.calendars.all():
+        has_private_calendar_access = (
+            calendar.creator_id == user_to_invite.id
+            or calendar.co_owners.filter(id=user_to_invite.id).exists()
+        )
+        if calendar.privacy == "PRIVATE" and not has_private_calendar_access:
+            return Response(
+                {"error": "You can only invite users with access to the private calendar to this event"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    if event.attendances.filter(user=user_to_invite).exists():
+        return Response(
+            {"error": f"@{user_to_invite.username} has already been invited"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if Notification.objects.filter(
         recipient=user_to_invite,
         type="EVENT_INVITE",
         related_event=event,
         sender=request.user,
     ).exists():
+        return Response(
+            {"error": f"@{user_to_invite.username} has already been invited"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    else:
         Notification.objects.create(
             recipient=user_to_invite,
             type="EVENT_INVITE",

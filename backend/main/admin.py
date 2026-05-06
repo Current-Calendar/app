@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
-from .models import User, Calendar, Event, Report, Feedback
+from .models import User, Calendar, Event, Report, Feedback, LoginLog, Notification, CalendarInvitation
 from django.contrib.auth.admin import UserAdmin
+
 
 @admin.register(Calendar)
 class CalendarioAdmin(admin.ModelAdmin):
@@ -9,11 +10,13 @@ class CalendarioAdmin(admin.ModelAdmin):
     list_filter  = ('privacy', 'origin')
     search_fields = ('name', 'creator__username')
 
+
 @admin.register(Event)
 class EventoAdmin(GISModelAdmin):
     list_display = ('title', 'creator', 'place_name', 'created_at', 'date')
     search_fields = ('title', 'creator__username')
     filter_horizontal = ('calendars',) 
+
 @admin.register(User)
 class UsuarioAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
@@ -23,6 +26,17 @@ class UsuarioAdmin(UserAdmin):
     filter_horizontal = ('following', 'subscribed_calendars') 
 
     list_display = ('username', 'email', 'last_login', 'is_staff', 'total_following')    
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(CalendarInvitation)
+class CalendarInvitationAdmin(admin.ModelAdmin):
+    pass
+
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
@@ -35,9 +49,6 @@ class FeedbackAdmin(admin.ModelAdmin):
     list_filter  = ('type', 'created_at')
     search_fields = ('user__username', 'description')
     readonly_fields = ('user', 'type', 'description', 'created_at')
-from django.contrib import admin
-
-from .models import LoginLog
 
 
 @admin.register(LoginLog)

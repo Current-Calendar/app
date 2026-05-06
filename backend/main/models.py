@@ -445,4 +445,4 @@ class CalendarInvitation(models.Model):
     accepted = models.BooleanField(default=None, null=True)
 
     def __str__(self):
-        return f"Invitation to {self.recipient.username} for {self.calendar.name}"
+        return f"Invitation to {self.invitee.username} for {self.calendar.name}"
