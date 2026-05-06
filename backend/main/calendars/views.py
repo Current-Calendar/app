@@ -115,7 +115,11 @@ def edit_calendar(request, calendar_id):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             
-            if campo == 'description' and len(valor) > CALENDAR_DESCRIPTION_MAX_LENGTH:
+            if (
+                campo == 'description'
+                and isinstance(valor, str)
+                and len(valor) > CALENDAR_DESCRIPTION_MAX_LENGTH
+            ):
                 return Response(
                     {'errors': [f"El campo 'description' no puede superar los {CALENDAR_DESCRIPTION_MAX_LENGTH} caracteres."]},
                     status=status.HTTP_400_BAD_REQUEST,

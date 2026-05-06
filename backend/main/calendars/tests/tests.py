@@ -487,6 +487,16 @@ class EditarCalendarTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("1000", response.data["errors"][0])
 
+    def test_error_editar_description_no_es_string(self):
+        self.client.force_authenticate(user=self.creator)
+        response = self.client.patch(
+            f'/api/v1/calendars/{self.calendar.id}/edit/',
+            {'description': 123},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response.data["errors"][0])
+
     def test_editar_calendario_sin_permiso(self):
         """A user who is not the creator cannot edit the calendar"""
         self.client.force_authenticate(user=self.otro_user)

@@ -4,7 +4,6 @@ from rest_framework import status
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
-from django.contrib.auth import get_user as get_django_user
 from django.db.models import Q
 from django.utils import timezone
 from ..models import Event
@@ -39,9 +38,6 @@ def radar_events(request):
     user_location = Point(lon, lat, srid=4326)
 
     user = request.user
-    if not user.is_authenticated and hasattr(request, "_request"):
-        user = get_django_user(request._request)
-
     limit_days = 0
     if user.is_authenticated:
         user_features = get_user_features(user)
@@ -50,17 +46,15 @@ def radar_events(request):
     else:
         filtro_privacidad = Q(calendars__privacy='PUBLIC')
 
-    utc_today = timezone.now().date()
-    local_today = timezone.localdate()
-    min_date = min(utc_today, local_today)
-    max_date = max(utc_today, local_today) + timezone.timedelta(days=limit_days)
+    today = timezone.now().date()
+    max_date = today + timezone.timedelta(days=limit_days)
     
     events = (
         Event.objects
         .filter(
             filtro_privacidad,
             location__isnull=False,
-            date__gte=min_date,
+            date__gte=timezone.now().date(),
             date__lte=max_date
         )
         .annotate(distance=Distance("location", user_location))
