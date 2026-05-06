@@ -389,6 +389,7 @@ def list_events(request):
             queryset=EventAttendance.objects.filter(
                 status='ASSISTING'
             ).select_related('user'),
+            to_attr='assisting_attendances',
         ),
     ]
 

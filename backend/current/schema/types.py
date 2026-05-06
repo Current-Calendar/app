@@ -261,7 +261,7 @@ class Query(graphene.ObjectType):
         user = info.context.user
         if not user.is_authenticated:
             return Calendar.objects.none()
-        return Calendar.objects.filter(creator_id=user.pk)
+        return Calendar.objects.filter(creator_id=user.pk).order_by("id")
 
     def resolve_followed_calendars(self, info):
         user = info.context.user
