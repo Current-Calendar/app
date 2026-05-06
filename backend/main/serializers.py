@@ -339,11 +339,13 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.location.x if obj.location else None
 
     def get_calendars(self, obj):
-        return list(obj.calendars.values_list('id', flat=True))
-    
+        return [c.id for c in obj.calendars.all()]
+
     def get_attendees(self, obj):
         """Devuelve solo asistentes (status=ASSISTING)."""
-        attendances = obj.attendances.filter(status='ASSISTING')
+        attendances = getattr(obj, 'assisting_attendances', None)
+        if attendances is None:
+            attendances = list(obj.attendances.filter(status='ASSISTING'))
         return EventAttendeeSerializer(
             attendances,
             many=True,
