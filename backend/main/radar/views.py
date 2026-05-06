@@ -75,6 +75,7 @@ def radar_events(request):
             queryset=EventAttendance.objects.filter(
                 status='ASSISTING'
             ).select_related('user'),
+            to_attr='assisting_attendances',
         ),
     ]
     if user.is_authenticated:
@@ -104,9 +105,11 @@ def radar_events(request):
         .prefetch_related(*prefetches)
     )
 
+    event_list = list(events)
+
     liked_ids, saved_ids = set(), set()
     if user.is_authenticated:
-        event_ids = list(events.values_list('id', flat=True))
+        event_ids = [event.id for event in event_list]
         liked_ids = set(
             EventLike.objects.filter(user=user, event_id__in=event_ids)
             .values_list('event_id', flat=True)
@@ -117,7 +120,7 @@ def radar_events(request):
         )
 
     serializer = EventSerializer(
-        events,
+        event_list,
         many=True,
         context={
             'request': request,
