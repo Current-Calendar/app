@@ -159,6 +159,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
     is_following = serializers.SerializerMethodField()
     followed = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -176,6 +177,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'followed',
         )
         read_only_fields = ('id',)
+
+    def get_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.photo)
 
     def get_is_following(self, obj):
         request = self.context.get('request')

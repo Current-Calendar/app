@@ -13,6 +13,33 @@ interface SidebarProps {
   setExpanded: (value: boolean) => void;
 }
 
+const SidebarItem = ({
+  icon,
+  href,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  href?: string;
+  onPress?: () => void;
+}) => {
+  const content = (
+    <Pressable style={navSideBarStyles.sidebarItem} onPress={onPress}>
+      <Ionicons name={icon} size={22} color="#ffffff" />
+    </Pressable>
+  );
+
+  if (href) {
+    return (
+      <Link href={href as Href} asChild>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+};
+
 export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
@@ -40,33 +67,6 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
-
-  const SidebarItem = ({
-    icon,
-    href,
-    onPress,
-  }: {
-    icon: any;
-    label: string;
-    href?: string;
-    onPress?: () => void;
-  }) => {
-    const content = (
-      <Pressable style={navSideBarStyles.sidebarItem} onPress={onPress}>
-        <Ionicons name={icon} size={22} color="#ffffff" />
-      </Pressable>
-    );
-
-    if (href) {
-      return (
-        <Link href={href as Href} asChild>
-          {content}
-        </Link>
-      );
-    }
-
-    return content;
   };
 
   const profileHref: string = isAuthenticated ? "/profile" : "/login";

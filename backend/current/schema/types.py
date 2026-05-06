@@ -40,10 +40,13 @@ class UserType(DjangoObjectType):
     def resolve_photo(self, info):
         if not self.photo:
             return None
-        request = info.context
-        if str(self.photo).startswith('http'):
-            return str(self.photo)
-        return request.build_absolute_uri(f'/media/{self.photo}')
+        try:
+            url = self.photo.url
+            if url.startswith('http'):
+                return url
+            return info.context.build_absolute_uri(url)
+        except Exception:
+            return None
 
 class CategoryType(DjangoObjectType):
     class Meta:
