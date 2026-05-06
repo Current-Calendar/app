@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import time
 from rest_framework.test import APITestCase
 from django.utils import timezone
 from rest_framework import status
@@ -154,10 +154,10 @@ class RadarEventsTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_creator_sees_own_events(self):
-        self.client.login(username="user1", password="testpass")
+        self.client.force_authenticate(user=self.user)
         own_event = Event.objects.create(
             title="My Own Event",
-            date=date.today(),
+            date=timezone.now().date(),
             time=time(16, 0),   
             location=Point(-3.7038, 40.4168),
             creator=self.user,
