@@ -208,6 +208,30 @@ class RadarEventsTest(APITestCase):
         titles = [e["title"] for e in response.data]
         self.assertIn("Event Private", titles)
 
+    def test_calendar_owner_sees_private_calendar_event_created_by_co_owner(self):
+        owned_calendar = Calendar.objects.create(
+            name="Owned Private",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+        owned_calendar.co_owners.add(self.other)
+
+        co_owner_event = Event.objects.create(
+            title="Event by Co-Owner",
+            date=timezone.now().date(),
+            time=time(17, 0),
+            location=Point(-3.7038, 40.4168),
+            creator=self.other,
+        )
+        co_owner_event.calendars.add(owned_calendar)
+
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertIn("Event by Co-Owner", titles)
+
     def test_viewer_sees_private_calendar_event(self):
         self.private_calendar.viewers.add(self.user)
         self.client.login(username="user1", password="testpass")
