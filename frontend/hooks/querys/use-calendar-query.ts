@@ -137,7 +137,7 @@ export type CalendarScreenCalendar = {
   categories: CalendarScreenCategory[];
 };
 
-export function useCalendarScreen() {
+export function useCalendarScreen(month: number, year: number) {
   const [calendars, setCalendars] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +157,7 @@ export function useCalendarScreen() {
       body: JSON.stringify({
         query: `
           query GetDashboardData {
-            dashboardCalendars {
+            dashboardCalendars(month: ${month + 1}, year: ${year}) {
               id
               name
               description
@@ -195,7 +195,7 @@ export function useCalendarScreen() {
                   name
                   respondedAt
                   avatar
-  }
+                }
               }
             }
           }
@@ -231,7 +231,7 @@ export function useCalendarScreen() {
       });
 
     return () => { cancelled = true; };
-  }, [reloadKey]);
+  }, [month, year, reloadKey]);
 
   return { calendars, events, loading, error, reload };
 }

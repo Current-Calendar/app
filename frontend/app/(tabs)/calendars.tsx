@@ -147,18 +147,18 @@ export default function CalendarScreen() {
   const BOTTOM_BAR_HEIGHT = 60 + 25;
   const sheetBottom = isDesktop ? 0 : BOTTOM_BAR_HEIGHT + insets.bottom;
 
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+
   const { calendars: rawCalendars, events: rawEvents, loading, error, reload } =
-    useCalendarScreen();
+    useCalendarScreen(month, year);
 
   const lastFetchRef = useRef<number>(0);
   const STALE_TIME = 60_000;
 
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
   const [weekDay, setWeekDay] = useState(today.getDate());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const isWeb = Platform.OS === "web";
 
   const [selectedCalendarId, setSelectedCalendarId] = useState<string | null>(
     null,
@@ -192,6 +192,22 @@ export default function CalendarScreen() {
       Alert.alert("Error", "Could not load calendars or events.");
     }
   }, [error]);
+
+  const filteredCalendars = useMemo(() => {
+    if (selectedCategoryIds.length === 0) return calendars;
+
+    return calendars.filter((calendar) => {
+      const categoryIds = Array.isArray((calendar as any).categories)
+        ? (calendar as any).categories.map((category: any) =>
+            String(category?.id),
+          )
+        : [];
+
+      return selectedCategoryIds.every((selectedId) =>
+        categoryIds.includes(selectedId),
+      );
+    });
+  }, [calendars, selectedCategoryIds]);
 
   useEffect(() => {
     const visibleCalendarIds = new Set(
@@ -248,7 +264,7 @@ export default function CalendarScreen() {
       });
 
     setEvents(mappedEvents);
-  }, [rawEvents, calendars]);
+  }, [filteredCalendars, rawEvents, calendars]);
 
   useEffect(() => {
     if (params.selectedCalendarId) {
@@ -311,22 +327,6 @@ export default function CalendarScreen() {
       a.name.localeCompare(b.name),
     );
   }, [calendars]);
-
-  const filteredCalendars = useMemo(() => {
-    if (selectedCategoryIds.length === 0) return calendars;
-
-    return calendars.filter((calendar) => {
-      const categoryIds = Array.isArray((calendar as any).categories)
-        ? (calendar as any).categories.map((category: any) =>
-            String(category?.id),
-          )
-        : [];
-
-      return selectedCategoryIds.every((selectedId) =>
-        categoryIds.includes(selectedId),
-      );
-    });
-  }, [calendars, selectedCategoryIds]);
 
   const toggleCategoryFilter = (categoryId: string) => {
     setSelectedCategoryIds((prev) =>
