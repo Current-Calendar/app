@@ -317,6 +317,13 @@ class UsuarioPasswordResetTests(APITestCase):
         response = self.client.post(self.RECOVER_URL, {"source": "http://localhost:8081"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
+    
+    def test_recover_password_bad_email_format(self):
+        response = self.client.post(
+            self.RECOVER_URL, {"email": "not-an-email", "source": "http://localhost:8081"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
 
     @patch("main.auth.views.resend.Emails.send")
     def test_recover_password_hourly_rate_limit(self, mock_send):
