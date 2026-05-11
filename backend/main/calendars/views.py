@@ -508,7 +508,10 @@ def update_viewers(request, calendar_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    removed_viewers = set(calendar.viewers.all()) - set(users)
     calendar.viewers.set(users)
+    for removed_user in removed_viewers:
+        removed_user.subscribed_calendars.remove(calendar)
 
     return Response({
         'id': calendar.id,
