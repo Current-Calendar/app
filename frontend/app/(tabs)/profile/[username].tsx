@@ -428,18 +428,24 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
+  const [localFollowersCount, setLocalFollowersCount] = useState(0);
+
   useEffect(() => {
-    if (data) setIsFollowing(data.isFollowing);
+    if (data) {
+      setIsFollowing(data.isFollowing);
+      setLocalFollowersCount(data.totalFollowers);
+    }
   }, [data]);
 
   const handleFollowToggle = async () => {
     if (!data) return;
     setFollowError(null);
     try {
-      const res = await apiClient.post<{ following: boolean }>(
+      const res = await apiClient.post<{ followed: boolean }>(
         `/users/${data.user.id}/follow/`
       );
-      setIsFollowing(res.following);
+      setIsFollowing(res.followed);
+      setLocalFollowersCount((prev) => (res.followed ? prev + 1 : prev - 1));
     } catch {
       setFollowError('Could not update follow status. Please try again.');
     }
@@ -482,7 +488,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
     );
   }
 
-  const { user, totalFollowers, totalFollowing } = data;
+  const { user, totalFollowing } = data;
 
   return (
     <SafeAreaView style={profileStyles.container}>
@@ -505,7 +511,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
 
           <ProfileStats
             calendarsCount={publicCalendarsData.length}
-            totalFollowers={totalFollowers}
+            totalFollowers={localFollowersCount}
             totalFollowing={totalFollowing}
             onPressFollowers={() => openFollowList('followers')}
             onPressFollowing={() => openFollowList('following')}
