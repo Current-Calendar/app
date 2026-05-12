@@ -199,7 +199,10 @@ const OwnProfile = () => {
 
   useEffect(() => {
     if (!data) return;
-    setMyCalendars(data.publicCalendars.map(toCalendarData));
+    setMyCalendars([
+      ...data.publicCalendars.map(toCalendarData),
+      ...data.privateCalendars.map(toCalendarData),
+    ]);
     setFollowingCalendars(data.followingCalendars.map(toCalendarData));
   }, [data]);
 

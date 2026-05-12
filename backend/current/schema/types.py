@@ -198,6 +198,7 @@ def filter_events(q, week: int | None, month: int | None, year: int | None):
 class PublicUserProfileType(graphene.ObjectType):
     user = graphene.Field(UserType)
     public_calendars = graphene.List(CalendarType)
+    private_calendars = graphene.List(CalendarType)
     following_calendars = graphene.List(CalendarType)
     total_followers = graphene.Int()
     total_following = graphene.Int()
@@ -362,6 +363,12 @@ class Query(graphene.ObjectType):
             creator=target, privacy="PUBLIC"
         ).select_related("creator").prefetch_related("co_owners", "viewers", "categories")
 
+        private_calendars = []
+        if current_user.is_authenticated and current_user == target:
+            private_calendars = Calendar.objects.filter(
+                creator=target, privacy="PRIVATE"
+            ).select_related("creator").prefetch_related("co_owners", "viewers", "categories")
+
         following_calendars = Calendar.objects.filter(
             subscribers=target
         ).select_related("creator").prefetch_related("co_owners", "viewers", "categories")
@@ -374,6 +381,7 @@ class Query(graphene.ObjectType):
         return PublicUserProfileType(
             user=target,
             public_calendars=list(public_calendars),
+            private_calendars=list(private_calendars),
             following_calendars=list(following_calendars),
             total_followers=target.followers_set.count(),
             total_following=target.following.count(),
