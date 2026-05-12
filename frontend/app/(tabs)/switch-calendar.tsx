@@ -221,7 +221,6 @@ export default function CalendarsScreen() {
 
       if (res.subscribed) {
         setSubscribedCalendarIds((prev) => [...prev, id]);
-        setCalendars((prev) => prev.filter((calendar) => calendar.id !== id));
         Alert.alert("¡Listo!", "Te has suscrito correctamente.");
       } else {
         setSubscribedCalendarIds((prev) =>

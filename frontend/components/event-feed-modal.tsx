@@ -259,6 +259,7 @@ export default function EventFeedModal({ visible, onClose, event }: Props) {
         onClose={() => setInviteVisible(false)}
         itemId={event.id}
         type="event"
+        hideUsers={[]}
       />
     )}
     </>

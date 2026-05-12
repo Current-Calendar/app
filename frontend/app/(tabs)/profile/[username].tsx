@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,86 +12,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { User } from '../../../types/auth';
-import { useAuth } from "@/hooks/use-auth";
+
+import { useAuth } from '@/hooks/use-auth';
 import CalendarCard, { CalendarData } from '../../../components/calendar-card';
 import CommentsModalC from '../../../components/comments-modal-c';
 import { ConfirmDeleteModal } from '../../../components/confirm-delete-modal';
 import profileStyles from '../../../styles/profile-styles';
 import apiClient from '../../../services/api-client';
 import LogoutModal from '../../../components/logout-modal';
-
-import { useUserProfile, CalendarItem } from '../../../hooks/use-public-profile';
-import { useFollowedCalendars } from '../../../hooks/use-followed-calendars';
 import { ReportModal } from '@/components/report-modal';
 import { Calendar } from '@/types/calendar';
 import FollowListModal from '../../../components/follow-list-modal';
 import { useUserFollows } from '@/hooks/use-user-follows';
+import { useProfileQuery, ProfileCalendarData } from '../../../hooks/querys/use-profile-query';
 
-type OwnProfileCalendarResponse = {
-  id: number;
-  name: string;
-  description?: string | null;
-  cover?: string | null;
-  privacy: string;
-  origin: string;
-  creator: string;
-  created_at: string;
-  likes_count?: number;
-  liked_by_me?: boolean;
-};
-
-type OwnProfileResponse = {
-  id: number;
-  username: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  email: string;
-  pronouns?: string | null;
-  bio?: string | null;
-  link?: string | null;
-  photo?: string | null;
-  plan: string;
-  total_followers: number;
-  total_following: number;
-  calendars: OwnProfileCalendarResponse[];
-  following_calendars: OwnProfileCalendarResponse[];
-};
-
-type ProfileMetrics = {
-  total_followers: number;
-  total_following: number;
-  calendars_count: number;
-};
-
-const mapUserFromApi = (payload: OwnProfileResponse): User => ({
-  id: payload.id,
-  username: payload.username,
-  email: payload.email,
-  bio: payload.bio ?? undefined,
-  pronouns: payload.pronouns ?? undefined,
-  photo: payload.photo ?? undefined,
-  plan: payload.plan,
-});
-
-const mapCalendarsFromApi = (items: OwnProfileCalendarResponse[]): CalendarData[] =>
-  items.map((item) => ({
-    id: String(item.id),
-    name: item.name,
-    description: item.description ?? undefined,
-    cover: item.cover ?? undefined,
-    privacy: item.privacy,
-    likes_count: item.likes_count ?? 0,
-    liked_by_me: item.liked_by_me ?? false,
-  }));
-
-const toCalendarData = (item: CalendarItem): CalendarData => ({
+const toCalendarData = (item: ProfileCalendarData): CalendarData => ({
   id: String(item.id),
   name: item.name,
   description: item.description,
   cover: item.cover,
-  likes_count: (item as any).likes_count ?? 0,
-  liked_by_me: (item as any).liked_by_me ?? false,
+  privacy: item.privacy,
+  likes_count: item.likesCount ?? 0,
+  liked_by_me: item.likedByMe ?? false,
 });
 
 const handleLikeInList = async (
@@ -130,6 +72,24 @@ const ProfileAvatar = ({ uri }: { uri?: string }) => (
     />
   </View>
 );
+
+const PlanBadge = ({ plan }: { plan?: string }) => {
+  if (plan === 'STANDARD') {
+    return (
+      <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
+        <Ionicons name="star" size={14} color="#fff" />
+      </View>
+    );
+  }
+  if (plan === 'BUSINESS') {
+    return (
+      <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
+        <Ionicons name="star" size={14} color="#fff" />
+      </View>
+    );
+  }
+  return null;
+};
 
 const StatBox = ({
   label,
@@ -196,10 +156,63 @@ const CalendarSectionPill = ({
   </View>
 );
 
+function useCalendarInteractions() {
+  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+
+  const handleComment = useCallback((id: string, list: CalendarData[]) => {
+    const found = list.find((c) => String(c.id) === id);
+    if (!found) return;
+    setSelectedCalendar({
+      id: found.id as string,
+      name: found.name,
+      description: found.description || '',
+      privacy: (found.privacy as 'PRIVATE' | 'PUBLIC') || 'PUBLIC',
+      origin: 'CURRENT',
+      creator: '',
+      color: '#10464d',
+      cover: found.cover ?? undefined,
+      likes_count: found.likes_count ?? 0,
+      liked_by_me: found.liked_by_me ?? false,
+    });
+    setCommentsVisible(true);
+  }, []);
+
+  const closeComments = useCallback(() => {
+    setCommentsVisible(false);
+    setSelectedCalendar(null);
+  }, []);
+
+  return { selectedCalendar, commentsVisible, handleComment, closeComments };
+}
+
 const OwnProfile = () => {
   const router = useRouter();
-
   const { user: currentUser, logout } = useAuth();
+
+  const { data, loading, error, reload } = useProfileQuery(currentUser?.username);
+
+  useFocusEffect(useCallback(() => { reload(); }, [reload]));
+
+  const [myCalendars, setMyCalendars] = useState<CalendarData[]>([]);
+  const [followingCalendars, setFollowingCalendars] = useState<CalendarData[]>([]);
+
+  useEffect(() => {
+    if (!data) return;
+    setMyCalendars(data.publicCalendars.map(toCalendarData));
+    setFollowingCalendars(data.followingCalendars.map(toCalendarData));
+  }, [data]);
+
+  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
+  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
+    data?.user.id,
+    Boolean(data)
+  );
+  const openFollowList = (type: 'followers' | 'following') => {
+    setActiveFollowList(type);
+    reloadFollows();
+  };
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const performLogout = async () => {
@@ -213,136 +226,45 @@ const OwnProfile = () => {
     }
   };
 
-  const [shownUser, setShownUser] = useState<User | null>(null);
-  const [metrics, setMetrics] = useState<ProfileMetrics>({
-    total_followers: 0,
-    total_following: 0,
-    calendars_count: 0,
-  });
-  const [myCalendars, setMyCalendars] = useState<CalendarData[]>([]);
-  const [followingCalendars, setFollowingCalendars] = useState<CalendarData[]>([]);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
-  const [commentsVisible, setCommentsVisible] = useState(false);
-  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
   const [unsubscribeModalVisible, setUnsubscribeModalVisible] = useState(false);
-  const [pendingUnsubscribeCalendarId, setPendingUnsubscribeCalendarId] = useState<string | null>(null);
+  const [pendingUnsubscribeId, setPendingUnsubscribeId] = useState<string | null>(null);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
-  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
-    shownUser?.id,
-    Boolean(shownUser)
-  );
 
-  useEffect(() => {
-    if (!currentUser) { setShownUser(null); return; }
-
-    let isMounted = true;
-
-    const fetchOwnProfile = async () => {
-      setIsLoadingProfile(true);
-      setProfileError(null);
-      try {
-        const data: OwnProfileResponse = await apiClient.get('/users/me/');
-        if (!isMounted) return;
-        setShownUser(mapUserFromApi(data));
-        setMetrics({
-          total_followers: data.total_followers ?? 0,
-          total_following: data.total_following ?? 0,
-          calendars_count: data.calendars?.length ?? 0,
-        });
-        setMyCalendars(mapCalendarsFromApi(data.calendars));
-        setFollowingCalendars(mapCalendarsFromApi(data.following_calendars));
-      } catch (error) {
-        console.error('Error loading your profile:', error);
-        if (isMounted) {
-          setProfileError("We couldn't load your profile. Please check your connection and try again.");
-        }
-      } finally {
-        if (isMounted) setIsLoadingProfile(false);
+  const openUnsubscribeModal = (id: string) => {
+    setPendingUnsubscribeId(id);
+    setUnsubscribeModalVisible(true);
+  };
+  const cancelUnsubscribe = () => {
+    if (isUnsubscribing) return;
+    setUnsubscribeModalVisible(false);
+    setPendingUnsubscribeId(null);
+  };
+  const confirmUnsubscribe = async () => {
+    if (!pendingUnsubscribeId) return;
+    setIsUnsubscribing(true);
+    try {
+      const response = await apiClient.post<{ subscribed: boolean; calendar_id: number }>(
+        `/calendars/${pendingUnsubscribeId}/subscribe/`
+      );
+      if (!response.subscribed) {
+        setFollowingCalendars((prev) => prev.filter((c) => String(c.id) !== pendingUnsubscribeId));
       }
-    };
+      setUnsubscribeModalVisible(false);
+    } catch {
+      Alert.alert('Error', 'Could not unsubscribe from this calendar. Please try again.');
+    } finally {
+      setIsUnsubscribing(false);
+      setPendingUnsubscribeId(null);
+    }
+  };
 
-    fetchOwnProfile();
-    return () => { isMounted = false; };
-  }, [currentUser, reloadKey]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      setReloadKey((prev) => prev + 1);
-    }, [])
-  );
+  const { selectedCalendar, commentsVisible, handleComment, closeComments } =
+    useCalendarInteractions();
 
   const handleLikeMy = (id: string) => handleLikeInList(id, setMyCalendars);
   const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendars);
 
-  const openUnsubscribeModal = (id: string) => {
-    setPendingUnsubscribeCalendarId(id);
-    setUnsubscribeModalVisible(true);
-  };
-
-  const handleUnsubscribe = async (id: string) => {
-    try {
-      const response = await apiClient.post<{ subscribed: boolean; calendar_id: number }>(
-        `/calendars/${id}/subscribe/`
-      );
-      if (!response.subscribed) {
-        setFollowingCalendars((prev) => prev.filter((cal) => String(cal.id) !== id));
-      }
-    } catch (error) {
-      console.error('Error unsubscribing from calendar:', error);
-      Alert.alert('Error', 'Could not unsubscribe from this calendar. Please try again.');
-    }
-  };
-
-  const confirmUnsubscribe = async () => {
-    if (!pendingUnsubscribeCalendarId) return;
-    setIsUnsubscribing(true);
-    try {
-      await handleUnsubscribe(pendingUnsubscribeCalendarId);
-      setUnsubscribeModalVisible(false);
-    } finally {
-      setIsUnsubscribing(false);
-      setPendingUnsubscribeCalendarId(null);
-    }
-  };
-
-  const cancelUnsubscribe = () => {
-    if (isUnsubscribing) return;
-    setUnsubscribeModalVisible(false);
-    setPendingUnsubscribeCalendarId(null);
-  };
-
-  const handleComment = (id: string, list: CalendarData[]) => {
-    const found = list.find((c) => String(c.id) === id);
-    if (found) {
-      setSelectedCalendar({
-        id: found.id as string,
-        name: found.name,
-        description: found.description || '',
-        privacy: (found.privacy as 'PRIVATE' | 'PUBLIC') || 'PUBLIC',
-        origin: 'CURRENT',
-        creator: '',
-        color: '#10464d',
-        cover: found.cover ?? undefined,
-        likes_count: found.likes_count ?? 0,
-        liked_by_me: found.liked_by_me ?? false,
-      });
-      setCommentsVisible(true);
-    }
-  };
-
-  const handleLogout = () => {
-    setShowLogoutModal(true);
-  };
-
-  const openFollowList = (type: 'followers' | 'following') => {
-    setActiveFollowList(type);
-    reloadFollows();
-  };
-
-  if (isLoadingProfile) {
+  if (loading) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
         <ActivityIndicator size="large" color="#10464d" />
@@ -350,57 +272,46 @@ const OwnProfile = () => {
     );
   }
 
-  if (profileError) {
+  if (error) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
-        <Text style={profileStyles.errorText}>{profileError}</Text>
-        <TouchableOpacity
-          style={profileStyles.actionButton}
-          onPress={() => setReloadKey((k) => k + 1)}
-        >
+        <Text style={profileStyles.errorText}>{error}</Text>
+        <TouchableOpacity style={profileStyles.actionButton} onPress={reload}>
           <Text style={profileStyles.actionButtonText}>Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  if (!shownUser) return null;
+  if (!data) return null;
+
+  const { user, totalFollowers, totalFollowing } = data;
 
   return (
     <SafeAreaView style={profileStyles.container}>
       <ScrollView style={profileStyles.scrollView} contentContainerStyle={{ paddingBottom: 64 }}>
-
         <ProfileHeader />
 
         <View style={profileStyles.profileSection}>
-          <ProfileAvatar uri={shownUser.photo} />
+          <ProfileAvatar uri={user.photo} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <Text style={profileStyles.name}>{shownUser.username}</Text>
-            {shownUser.plan === "STANDARD" ? (
-              <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
-                <Ionicons name="star" size={14} color="#fff" />
-              </View>
-            ) : shownUser.plan === "BUSINESS" ? (
-              <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
-                <Ionicons name="star" size={14} color="#fff" />
-              </View>
-            ) : null}
+            <Text style={profileStyles.name}>{user.username}</Text>
+            <PlanBadge plan={user.plan} />
           </View>
-          {shownUser.pronouns ? (
-            <Text style={profileStyles.pronouns}>{shownUser.pronouns}</Text>
-          ) : null}
+
+          {user.pronouns ? <Text style={profileStyles.pronouns}>{user.pronouns}</Text> : null}
 
           <View style={profileStyles.bioSection}>
             <Text style={profileStyles.bio}>
-              {shownUser.bio || 'Add a bio so others can get to know you.'}
+              {user.bio || 'Add a bio so others can get to know you.'}
             </Text>
           </View>
 
           <ProfileStats
-            calendarsCount={metrics.calendars_count}
-            totalFollowers={metrics.total_followers}
-            totalFollowing={metrics.total_following}
+            calendarsCount={myCalendars.length}
+            totalFollowers={totalFollowers}
+            totalFollowing={totalFollowing}
             onPressFollowers={() => openFollowList('followers')}
             onPressFollowing={() => openFollowList('following')}
           />
@@ -408,17 +319,14 @@ const OwnProfile = () => {
           <View style={profileStyles.buttonsRow}>
             <TouchableOpacity
               style={[profileStyles.actionButton, profileStyles.logoutButton]}
-              onPress={handleLogout}
+              onPress={() => setShowLogoutModal(true)}
             >
               <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
                 Log out
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                profileStyles.actionButton,
-                profileStyles.settingsButton,
-              ]}
+              style={[profileStyles.actionButton, profileStyles.settingsButton]}
               onPress={() => router.push('/settings' as any)}
             >
               <Text style={[profileStyles.actionButtonText, profileStyles.logoutButtonText]}>
@@ -466,7 +374,6 @@ const OwnProfile = () => {
             )}
           </CalendarSectionPill>
         </View>
-
       </ScrollView>
 
       <FollowListModal
@@ -497,7 +404,7 @@ const OwnProfile = () => {
 
       <CommentsModalC
         visible={commentsVisible}
-        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
+        onClose={closeComments}
         calendar={selectedCalendar}
       />
     </SafeAreaView>
@@ -507,69 +414,62 @@ const OwnProfile = () => {
 const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  const [reportOpen, setReportOpen] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<Calendar | null>(null);
-  const [commentsVisible, setCommentsVisible] = useState(false);
+
+  const { data, loading, error } = useProfileQuery(targetUsername);
+
   const [followingCalendarsData, setFollowingCalendarsData] = useState<CalendarData[]>([]);
   const [publicCalendarsData, setPublicCalendarsData] = useState<CalendarData[]>([]);
-  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
-
-  const {
-    userBeingViewed,
-    calendars,
-    isFollowing,
-    isLoading,
-    userNotFound,
-    followError,
-    handleFollowToggle,
-  } = useUserProfile(targetUsername);
-
-  const { calendars: followingCalendars, loading: followingLoading } =
-    useFollowedCalendars(userBeingViewed?.username, {
-      enabled: !!userBeingViewed && !!currentUser,
-    });
-
-  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
-    userBeingViewed?.id,
-    Boolean(userBeingViewed)
-  );
 
   useEffect(() => {
-    setFollowingCalendarsData(followingCalendars.map(toCalendarData));
-  }, [followingCalendars]);
+    if (!data) return;
+    setFollowingCalendarsData(data.followingCalendars.map(toCalendarData));
+    setPublicCalendarsData(data.publicCalendars.map(toCalendarData));
+  }, [data]);
+
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followError, setFollowError] = useState<string | null>(null);
+  const [localFollowersCount, setLocalFollowersCount] = useState(0);
 
   useEffect(() => {
-    setPublicCalendarsData(calendars.map(toCalendarData));
-  }, [calendars]);
+    if (data) {
+      setIsFollowing(data.isFollowing);
+      setLocalFollowersCount(data.totalFollowers);
+    }
+  }, [data]);
 
-  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendarsData);
-  const handleLikePublic = (id: string) => handleLikeInList(id, setPublicCalendarsData);
-
-  const handleComment = (id: string, list: CalendarData[]) => {
-    const found = list.find((c) => String(c.id) === id);
-    if (found) {
-      setSelectedCalendar({
-        id: found.id as string,
-        name: found.name,
-        description: found.description || '',
-        privacy: (found.privacy as 'PRIVATE' | 'PUBLIC') || 'PUBLIC',
-        origin: 'CURRENT',
-        creator: '',
-        color: '#10464d',
-        cover: found.cover ?? undefined,
-        likes_count: found.likes_count ?? 0,
-        liked_by_me: found.liked_by_me ?? false,
-      });
-      setCommentsVisible(true);
+  const handleFollowToggle = async () => {
+    if (!data) return;
+    setFollowError(null);
+    try {
+      const res = await apiClient.post<{ followed: boolean }>(
+        `/users/${data.user.id}/follow/`
+      );
+      setIsFollowing(res.followed);
+      setLocalFollowersCount((prev) => (res.followed ? prev + 1 : prev - 1));
+    } catch {
+      setFollowError('Could not update follow status. Please try again.');
     }
   };
 
+  const [activeFollowList, setActiveFollowList] = useState<'followers' | 'following' | null>(null);
+  const { followers, following, loading: followsLoading, reload: reloadFollows } = useUserFollows(
+    data?.user.id,
+    Boolean(data)
+  );
   const openFollowList = (type: 'followers' | 'following') => {
     setActiveFollowList(type);
     reloadFollows();
   };
 
-  if (isLoading) {
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const { selectedCalendar, commentsVisible, handleComment, closeComments } =
+    useCalendarInteractions();
+
+  const handleLikeFollowing = (id: string) => handleLikeInList(id, setFollowingCalendarsData);
+  const handleLikePublic = (id: string) => handleLikeInList(id, setPublicCalendarsData);
+
+  if (loading) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
         <ActivityIndicator size="large" color="#10464d" />
@@ -577,49 +477,42 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
     );
   }
 
-  if (userNotFound || !userBeingViewed) {
+  if (error || !data) {
     return (
       <SafeAreaView style={[profileStyles.container, profileStyles.centerContent]}>
         <Ionicons name="person-remove-outline" size={60} color="#dddcce" />
-        <Text style={profileStyles.errorText}>This profile is not available.</Text>
+        <Text style={profileStyles.errorText}>
+          {error ?? 'This profile is not available.'}
+        </Text>
       </SafeAreaView>
     );
   }
 
+  const { user, totalFollowing } = data;
+
   return (
     <SafeAreaView style={profileStyles.container}>
       <ScrollView style={profileStyles.scrollView}>
-
         <ProfileHeader />
 
         <View style={profileStyles.profileSection}>
-          <ProfileAvatar uri={userBeingViewed.photo} />
+          <ProfileAvatar uri={user.photo} />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <Text style={profileStyles.name}>{userBeingViewed.username}</Text>
-            {userBeingViewed.plan === "STANDARD" ? (
-              <View style={{ backgroundColor: '#eb8c85', borderRadius: 10, padding: 2 }}>
-                <Ionicons name="star" size={14} color="#fff" />
-              </View>
-            ) : userBeingViewed.plan === "BUSINESS" ? (
-              <View style={{ backgroundColor: 'gold', borderRadius: 10, padding: 2 }}>
-                <Ionicons name="star" size={14} color="#fff" />
-              </View>
-            ) : null}
-
+            <Text style={profileStyles.name}>{user.username}</Text>
+            <PlanBadge plan={user.plan} />
           </View>
-          {userBeingViewed.pronouns ? (
-            <Text style={profileStyles.pronouns}>{userBeingViewed.pronouns}</Text>
-          ) : null}
+
+          {user.pronouns ? <Text style={profileStyles.pronouns}>{user.pronouns}</Text> : null}
 
           <View style={profileStyles.bioSection}>
-            <Text style={profileStyles.bio}>{userBeingViewed.bio}</Text>
+            <Text style={profileStyles.bio}>{user.bio}</Text>
           </View>
 
           <ProfileStats
-            calendarsCount={userBeingViewed.public_calendars?.length ?? 0}
-            totalFollowers={userBeingViewed.total_followers || 0}
-            totalFollowing={userBeingViewed.total_following || 0}
+            calendarsCount={publicCalendarsData.length}
+            totalFollowers={localFollowersCount}
+            totalFollowing={totalFollowing}
             onPressFollowers={() => openFollowList('followers')}
             onPressFollowing={() => openFollowList('following')}
           />
@@ -647,9 +540,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
             </TouchableOpacity>
           </View>
 
-          {followError ? (
-            <Text style={profileStyles.errorText}>{followError}</Text>
-          ) : null}
+          {followError ? <Text style={profileStyles.errorText}>{followError}</Text> : null}
         </View>
 
         <View style={profileStyles.divider} />
@@ -663,8 +554,6 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
               <Text style={profileStyles.emptyText}>
                 Log in to see which calendars from this profile you follow.
               </Text>
-            ) : followingLoading ? (
-              <ActivityIndicator size="small" color="#10464d" style={{ marginVertical: 8 }} />
             ) : followingCalendarsData.length > 0 ? (
               followingCalendarsData.map((cal) => (
                 <CalendarCard
@@ -683,7 +572,7 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
           </CalendarSectionPill>
 
           <CalendarSectionPill
-            title={`${userBeingViewed.username}'s calendars`}
+            title={`${user.username}'s calendars`}
             count={publicCalendarsData.length}
           >
             {publicCalendarsData.length > 0 ? (
@@ -701,7 +590,6 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
             )}
           </CalendarSectionPill>
         </View>
-
       </ScrollView>
 
       <FollowListModal
@@ -716,13 +604,13 @@ const PublicProfile = ({ targetUsername }: { targetUsername: string }) => {
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         reportedType="USER"
-        reportedId={userBeingViewed.id}
-        reportedLabel={userBeingViewed.username}
+        reportedId={user.id}
+        reportedLabel={user.username}
       />
 
       <CommentsModalC
         visible={commentsVisible}
-        onClose={() => { setCommentsVisible(false); setSelectedCalendar(null); }}
+        onClose={closeComments}
         calendar={selectedCalendar}
       />
     </SafeAreaView>

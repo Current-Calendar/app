@@ -307,12 +307,6 @@ const SettingsScreen = () => {
             <Text style={styles.modalBody}>
               An email with a link to change your password has been sent to your inbox.
             </Text>
-            <View style={styles.modalWarningBox}>
-              <Ionicons name="alert-circle-outline" size={20} color="#8a2f28" />
-              <Text style={styles.modalWarningText}>
-                Before using the link, you must sign out of your account for security reasons.
-              </Text>
-            </View>
             <TouchableOpacity
               style={styles.modalButton}
               onPress={() => setIsPasswordResetModalVisible(false)}

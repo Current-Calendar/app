@@ -159,6 +159,7 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
     is_following = serializers.SerializerMethodField()
     followed = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -176,6 +177,9 @@ class PublicUserSerializer(serializers.ModelSerializer):
             'followed',
         )
         read_only_fields = ('id',)
+
+    def get_photo(self, obj):
+        return get_signed_url(self.context.get('request'), obj.photo)
 
     def get_is_following(self, obj):
         request = self.context.get('request')
@@ -227,7 +231,7 @@ class CalendarSummarySerializer(serializers.ModelSerializer):
     creator = serializers.CharField(source="creator.username")
     liked_by_me = serializers.SerializerMethodField()
 
-    likes_count = serializers.IntegerField(source='likes.count', read_only=True)
+    likes_count = serializers.IntegerField(read_only=True)
     class Meta:
         model = Calendar
         fields = (
@@ -403,11 +407,13 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.location.x if obj.location else None
 
     def get_calendars(self, obj):
-        return list(obj.calendars.values_list('id', flat=True))
-    
+        return [c.id for c in obj.calendars.all()]
+
     def get_attendees(self, obj):
         """Devuelve solo asistentes (status=ASSISTING)."""
-        attendances = obj.attendances.filter(status='ASSISTING')
+        attendances = getattr(obj, 'assisting_attendances', None)
+        if attendances is None:
+            attendances = list(obj.attendances.filter(status='ASSISTING'))
         return EventAttendeeSerializer(
             attendances,
             many=True,

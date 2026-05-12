@@ -462,6 +462,7 @@ export function EventDetailModal({
         onClose={() => setInviteVisible(false)}
         itemId={event.id}
         type="event"
+        hideUsers={[]}
       />
     </>
   );

@@ -133,10 +133,13 @@ export default function SearchScreen() {
     const { results: events } = useEventSearch(query);
     const { followUser: followUserRequest } = useFollowUserAction();
     const { data: adsConfig } = useAdsConfig();
-    const { addEntry, history } = useSearchHistory();
+    const { addEntry, history, patchUserPhotos } = useSearchHistory();
 
     useEffect(() => {
         setUsers(userResults);
+        if (userResults.length > 0) {
+            patchUserPhotos(userResults.map(u => ({ username: u.username, photo: u.photo ?? null })));
+        }
     }, [userResults]);
 
     useEffect(() => {

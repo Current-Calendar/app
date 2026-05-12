@@ -1,5 +1,7 @@
 from django.http import HttpResponse
 from django.utils.deprecation import MiddlewareMixin
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 class CorsMiddleware(MiddlewareMixin):
     allowed_origins = {
@@ -33,3 +35,16 @@ class CorsMiddleware(MiddlewareMixin):
         response["Access-Control-Max-Age"] = "86400"
         
         return response
+
+class JWTAuthMiddleware(MiddlewareMixin):
+    def process_request(self, request):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return
+        token = auth_header.split(" ")[1]
+        try:
+            jwt_auth = JWTAuthentication()
+            validated_token = jwt_auth.get_validated_token(token)
+            request.user = jwt_auth.get_user(validated_token)
+        except (InvalidToken, TokenError):
+            pass
