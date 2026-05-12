@@ -31,11 +31,13 @@ export default function TopBar() {
       </Pressable>
 
       <View style={navTopBarStyles.logoContainer}>
-        <Image
-          source={require("../../assets/images/icon-current-white.png")}
-          style={navTopBarStyles.logo}
-          resizeMode="contain"
-        />
+        <Pressable onPress={() => router.push("/calendars")}>
+          <Image
+            source={require("../../assets/images/icon-current-white.png")}
+            style={navTopBarStyles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
       </View>
       <Pressable
         style={styles.bellWrap}

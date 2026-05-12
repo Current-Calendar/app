@@ -55,7 +55,6 @@ export default function BottomBar({ NavButton }: Props) {
       </View>
 
       <NavButton icon="calendar" href="/switch-calendar" />
-      <NavButton icon="people" />
       <NavButton icon="compass" href="/radar" />
       {user?.plan === 'BUSINESS' && (
         <NavButton icon="bar-chart" href="/(tabs)/analytics" />

@@ -365,7 +365,7 @@ const s = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 48,
+    paddingBottom: 100, // Increased bottom padding to prevent overlap with navbar
   },
   centered: {
     flex: 1,
