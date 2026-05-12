@@ -154,6 +154,12 @@ export default function CalendarViewScreen() {
         </View>
         <Text style={styles.subtitle}>by {calendar.creatorUsername || 'Unknown'}</Text>
 
+        <View style={styles.backButtonWrap}>
+          <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
+            <Text style={styles.secondaryButtonText}>Back to calendars</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.headerBlock}>
           <CalendarHeader
             monthLabel={`${MONTH_NAMES[month]} ${year}`}
@@ -196,9 +202,6 @@ export default function CalendarViewScreen() {
               <Text style={styles.secondaryButtonText}>Invite to calendar</Text>
             </Pressable>
           )}
-          <Pressable style={styles.secondaryButton} onPress={() => router.push("/switch-calendar")}>
-            <Text style={styles.secondaryButtonText}>Back to calendars</Text>
-          </Pressable>
         </View>
 
         {activeEvent && (
@@ -275,6 +278,12 @@ const styles = StyleSheet.create({
     color: "#5E6E6E",
     fontWeight: "600",
     paddingHorizontal: 16,
+  },
+  backButtonWrap: {
+    paddingHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
+    alignItems: "flex-start",
   },
   reportBtn: {
     backgroundColor: "#10464d",

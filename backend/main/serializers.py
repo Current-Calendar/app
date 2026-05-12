@@ -420,6 +420,16 @@ class NotificationSerializer(serializers.ModelSerializer):
     def get_related_event_title(self, obj):
         return obj.related_event.title if obj.related_event_id else None
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # If it's an event notification but has no calendar set, fallback to the first calendar of the event
+        if data.get('related_event') and not data.get('related_calendar'):
+            first_calendar = instance.related_event.calendars.first()
+            if first_calendar:
+                data['related_calendar'] = first_calendar.id
+                data['related_calendar_name'] = first_calendar.name
+        return data
+
     def validate(self, attrs):
         if self.instance and len(attrs) > 1:
             for field in attrs.keys():
