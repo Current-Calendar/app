@@ -63,7 +63,7 @@ export const navTopBarStyles = StyleSheet.create({
   profileAvatar: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#ccc',
+    backgroundColor: '#d1faff',
     borderRadius: 18,
   },
   logo: {

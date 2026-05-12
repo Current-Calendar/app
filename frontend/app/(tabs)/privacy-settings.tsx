@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 28,
+    paddingBottom: 100, // Increased bottom padding to prevent overlap with navbar
   },
   heroCard: {
     backgroundColor: "#10464d",

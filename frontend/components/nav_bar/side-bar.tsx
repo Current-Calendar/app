@@ -76,11 +76,13 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   return (
     <View style={navSideBarStyles.sidebar}>
       <View style={navSideBarStyles.sidebarTop}>
-        <Image
-          source={require("../../assets/images/icon-current-white.png")}
-          style={navSideBarStyles.sidebarLogo}
-          resizeMode="contain"
-        />
+        <Pressable onPress={() => router.push("/calendars")}>
+          <Image
+            source={require("../../assets/images/icon-current-white.png")}
+            style={navSideBarStyles.sidebarLogo}
+            resizeMode="contain"
+          />
+        </Pressable>
       </View>
 
       <View style={navSideBarStyles.sidebarCenter}>
