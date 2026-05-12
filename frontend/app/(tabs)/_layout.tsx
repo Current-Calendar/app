@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, Link, Slot, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -18,10 +18,50 @@ import { WelcomeModal } from "@/components/tutorial/welcome-modal";
 import { TutorialOverlay } from "@/components/tutorial/tutorial-overlay";
 import { NotificationsProvider } from "@/context/notification-context";
 
+const NavButton = ({
+  icon,
+  href,
+  onPress,
+  measureCreate,
+  createButtonLayout,
+}: {
+  icon: any;
+  href?: Href;
+  onPress?: () => void;
+  measureCreate?: boolean;
+  createButtonLayout?: React.RefObject<{ x: number; y: number; width: number; height: number }>;
+}) => {
+  const button = (
+    <Pressable style={styles.navButton} onPress={onPress}>
+      <Ionicons name={icon} size={24} color="#ffffff" />
+    </Pressable>
+  );
+
+  if (measureCreate) {
+    return (
+      <View
+        onLayout={(e) => {
+          (e.target as any)?.measure?.((_px: number, _py: number, pw: number, ph: number, pageX: number, pageY: number) => {
+            if (createButtonLayout) {
+              createButtonLayout.current = { x: pageX, y: pageY, width: pw, height: ph };
+            }
+          });
+        }}
+      >
+        {href ? <Link href={href} asChild>{button}</Link> : button}
+      </View>
+    );
+  }
+
+  if (href) {
+    return <Link href={href} asChild>{button}</Link>;
+  }
+  return button;
+};
+
 function InnerLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
-  const [expanded, setExpanded] = useState(false);
   const { isLoading } = useAuth();
   const router = useRouter();
 
@@ -53,48 +93,6 @@ function InnerLayout() {
     return () => clearTimeout(t);
   }, []);
 
-  const contentRef = useRef<View>(null);
-
-  const NavButton = ({
-    icon,
-    href,
-    onPress,
-    measureCreate,
-  }: {
-    icon: any;
-    href?: Href;
-    onPress?: () => void;
-    measureCreate?: boolean;
-  }) => {
-    const button = (
-      <Pressable style={styles.navButton} onPress={onPress}>
-        <Ionicons name={icon} size={24} color="#ffffff" />
-      </Pressable>
-    );
-
-    if (measureCreate) {
-      return (
-        <View
-          onLayout={(e) => {
-            const { x, y, width: w, height: h } = e.nativeEvent.layout;
-            contentRef.current?.measure((_fx, _fy, _fw, contentH) => {
-              (e.target as any)?.measure?.((px: number, py: number, pw: number, ph: number, pageX: number, pageY: number) => {
-                createButtonLayout.current = { x: pageX, y: pageY, width: pw, height: ph };
-              });
-            });
-          }}
-        >
-          {href ? <Link href={href} asChild>{button}</Link> : button}
-        </View>
-      );
-    }
-
-    if (href) {
-      return <Link href={href} asChild>{button}</Link>;
-    }
-    return button;
-  };
-
   if (isLoading) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
@@ -106,14 +104,14 @@ function InnerLayout() {
   return (
     <View style={styles.container}>
       <WelcomeModal />
-      {isDesktop && <Sidebar expanded={expanded} setExpanded={setExpanded} />}
+      {isDesktop && <Sidebar />}
 
-      <View ref={contentRef} style={styles.content}>
+      <View style={styles.content}>
         {!isDesktop && <TopBar />}
         <Slot />
         {!isDesktop && <BottomBar NavButton={(props: any) =>
           props.icon === "add-circle"
-            ? <NavButton {...props} measureCreate />
+            ? <NavButton {...props} measureCreate createButtonLayout={createButtonLayout} />
             : <NavButton {...props} />
         } />}
         <TutorialOverlay />

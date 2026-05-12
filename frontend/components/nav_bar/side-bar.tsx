@@ -1,6 +1,6 @@
 import { View, Pressable, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Link, type Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { ImportCalendarModal } from '@/components/import-calendar-modal';
@@ -8,39 +8,20 @@ import { navSideBarStyles } from "@/styles/ui-styles";
 import { CreateMenuModal } from "@/components/nav_bar/create-menu-modal";
 import { useNotificationsContext } from "@/context/notification-context";
 
-interface SidebarProps {
-  expanded: boolean;
-  setExpanded: (value: boolean) => void;
-}
-
 const SidebarItem = ({
   icon,
-  href,
   onPress,
 }: {
   icon: any;
   label: string;
-  href?: string;
   onPress?: () => void;
-}) => {
-  const content = (
-    <Pressable style={navSideBarStyles.sidebarItem} onPress={onPress}>
-      <Ionicons name={icon} size={22} color="#ffffff" />
-    </Pressable>
-  );
+}) => (
+  <Pressable style={navSideBarStyles.sidebarItem} onPress={onPress}>
+    <Ionicons name={icon} size={22} color="#ffffff" />
+  </Pressable>
+);
 
-  if (href) {
-    return (
-      <Link href={href as Href} asChild>
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
-};
-
-export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
+export default function Sidebar() {
   const [menuVisible, setMenuVisible] = useState(false);
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
@@ -70,7 +51,7 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
   };
 
   const profileHref: string = isAuthenticated ? "/profile" : "/login";
-  const homeHref: string = isAuthenticated ? "/(tabs)/calendars" : "/login";
+  const homeHref: string = isAuthenticated ? "/calendars" : "/login";
   const notificationsHref: string = isAuthenticated ? "/(tabs)/notifications" : "/login";
 
   return (
@@ -84,13 +65,13 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
       </View>
 
       <View style={navSideBarStyles.sidebarCenter}>
-        <SidebarItem icon="home" label="Home" href={homeHref} />
-        <SidebarItem icon="search" label="Search" href="/(tabs)/search" />
+        <SidebarItem icon="home" label="Home" onPress={() => router.push(homeHref as any)} />
+        <SidebarItem icon="search" label="Search" onPress={() => router.push("/(tabs)/search" as any)} />
         <SidebarItem icon="add-circle" label="Create" onPress={handleAddPress} />
-        <SidebarItem icon="calendar" label="Discover" href="/(tabs)/switch-calendar" />
-        <SidebarItem icon="compass" label="Map" href="/radar" />
+        <SidebarItem icon="calendar" label="Discover" onPress={() => router.push("/(tabs)/switch-calendar" as any)} />
+        <SidebarItem icon="compass" label="Map" onPress={() => router.push("/radar" as any)} />
         <View style={{ position: "relative" }}>
-          <SidebarItem icon="notifications" label="Notifications" href={notificationsHref} />
+          <SidebarItem icon="notifications" label="Notifications" onPress={() => router.push(notificationsHref as any)} />
           {unreadCount > 0 && (
             <View style={{
               position: "absolute",
@@ -106,42 +87,41 @@ export default function Sidebar({ expanded, setExpanded }: SidebarProps) {
             }} />
           )}
         </View>
-        <SidebarItem icon="person" label={profileHref} href={profileHref} />
+        <SidebarItem icon="person" label="Profile" onPress={() => router.push(profileHref as any)} />
         {user?.plan === 'BUSINESS' && (
-          <SidebarItem icon="bar-chart" label="Analytics" href="/(tabs)/analytics" />
+          <SidebarItem icon="bar-chart" label="Analytics" onPress={() => router.push("/(tabs)/analytics" as any)} />
         )}
-
-        <CreateMenuModal
-          visible={menuVisible}
-          onClose={closeMenu}
-          onNewEvent={() => {
-            if (isAuthenticated) {
-              navigateTo(`/create_events?date=${getTodayFormatted()}`);
-            } else {
-              closeMenu();
-              router.push("/login");
-            }
-          }}
-          onNewCalendar={() => {
-            if (isAuthenticated) {
-              navigateTo("/create");
-            } else {
-              closeMenu();
-              router.push("/login");
-            }
-          }}
-          onImportCalendar={() => {
-            if (isAuthenticated) {
-              closeMenu();
-              setImportVisible(true);
-            } else {
-              closeMenu();
-              router.push("/login");
-            }
-          }}
-        />
       </View>
 
+      <CreateMenuModal
+        visible={menuVisible}
+        onClose={closeMenu}
+        onNewEvent={() => {
+          if (isAuthenticated) {
+            navigateTo(`/create_events?date=${getTodayFormatted()}`);
+          } else {
+            closeMenu();
+            router.push("/login");
+          }
+        }}
+        onNewCalendar={() => {
+          if (isAuthenticated) {
+            navigateTo("/create");
+          } else {
+            closeMenu();
+            router.push("/login");
+          }
+        }}
+        onImportCalendar={() => {
+          if (isAuthenticated) {
+            closeMenu();
+            setImportVisible(true);
+          } else {
+            closeMenu();
+            router.push("/login");
+          }
+        }}
+      />
       <ImportCalendarModal visible={importVisible} onClose={() => setImportVisible(false)} />
     </View>
   );
