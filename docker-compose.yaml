@@ -43,6 +43,42 @@ services:
     networks:
       - current_network
 
+  celery_worker:
+    container_name: celery_worker_container
+    env_file:
+      - .env
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.backend.dev
+    command: celery -A current worker --loglevel=info
+    volumes:
+      - ./backend/:/backend/
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - current_network
+
+  celery_beat:
+    container_name: celery_beat_container
+    env_file:
+      - .env
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.backend.dev
+    command: celery -A current beat --loglevel=info
+    volumes:
+      - ./backend/:/backend/
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - current_network
+
   sonarqube:
     image: sonarqube:community
     container_name: sonarqube_container

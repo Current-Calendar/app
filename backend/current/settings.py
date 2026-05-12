@@ -18,6 +18,7 @@ from pathlib import Path
 from django.conf.global_settings import STORAGES
 from dotenv import load_dotenv
 from datetime import timedelta
+from celery.schedules import crontab
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -230,6 +231,22 @@ CACHES = {
             "PASSWORD": os.getenv("REDIS_PASSWORD"),
         }
     }
+}
+
+# Celery configuration
+CELERY_BROKER_URL = redis_location
+CELERY_RESULT_BACKEND = redis_location
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    "apply-pending-subscription-downgrades-every-hour": {
+        "task": "main.tasks.apply_pending_subscription_downgrades",
+        "schedule": crontab(minute=0),
+    },
 }
 
 REST_FRAMEWORK = {

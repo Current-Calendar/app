@@ -8,6 +8,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.db.models import Q
 from dateutil.relativedelta import relativedelta
+from django.db import transaction
 
 def calendar_cover_path(instance, filename):
     ext = os.path.splitext(filename)[1] or '.jpg'
@@ -138,6 +139,7 @@ class Subscription(models.Model):
 
         return None
 
+    @transaction.atomic
     def activate_free_plan(self):
         self.current_plan = self.PLAN_FREE
         self.billing_cycle = None
@@ -161,6 +163,7 @@ class Subscription(models.Model):
             'updated_at',
         ])
 
+    @transaction.atomic
     def activate_paid_plan(self, plan, billing_cycle):
         if plan == self.PLAN_FREE:
             self.activate_free_plan()
@@ -196,6 +199,7 @@ class Subscription(models.Model):
             'updated_at',
         ])
 
+    @transaction.atomic
     def schedule_downgrade_to_free(self):
         if self.current_plan == self.PLAN_FREE:
             self.activate_free_plan()
@@ -210,6 +214,7 @@ class Subscription(models.Model):
             'updated_at',
         ])
 
+    @transaction.atomic
     def apply_pending_plan_if_needed(self):
         if (
             self.pending_plan
@@ -241,6 +246,29 @@ class Subscription(models.Model):
                 'current_period_end',
                 'updated_at',
             ])
+
+    @transaction.atomic
+    def ensure_current_period_for_paid_plan(self):
+        if self.current_plan == self.PLAN_FREE:
+            return
+
+        if self.current_period_end:
+            return
+
+        now = timezone.now()
+
+        self.billing_cycle = self.billing_cycle or self.BILLING_MONTHLY
+        self.current_period_start = self.current_period_start or now
+        self.current_period_end = self.calculate_period_end(self.current_period_start)
+        self.status = self.STATUS_ACTIVE
+
+        self.save(update_fields=[
+            'billing_cycle',
+            'current_period_start',
+            'current_period_end',
+            'status',
+            'updated_at',
+        ])
 
     def __str__(self):
         return f'{self.user.username} - {self.current_plan}'

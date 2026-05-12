@@ -7,6 +7,8 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from ..models import Calendar
 from utils.storage import get_signed_url
+from django.db import transaction
+from django.utils import timezone
 
 
 @api_view(['GET'])
@@ -282,14 +284,29 @@ def update_plan(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    subscription, _ = Subscription.objects.get_or_create(
-        user=request.user,
-        defaults={
-            "current_plan": request.user.plan,
-        }
-    )
+    with transaction.atomic():
+        subscription, _ = Subscription.objects.select_for_update().get_or_create(
+            user=request.user,
+            defaults={
+                "current_plan": request.user.plan,
+                "billing_cycle": (
+                    Subscription.BILLING_MONTHLY
+                    if request.user.plan != Subscription.PLAN_FREE
+                    else None
+                ),
+                "current_period_start": (
+                    timezone.now()
+                    if request.user.plan != Subscription.PLAN_FREE
+                    else None
+                ),
+                "status": Subscription.STATUS_ACTIVE,
+            }
+        )
 
-    subscription.apply_pending_plan_if_needed()
+        if subscription.current_plan != Subscription.PLAN_FREE and not subscription.current_period_end:
+            subscription.ensure_current_period_for_paid_plan()
+
+        subscription.apply_pending_plan_if_needed()
 
     if plan == Subscription.PLAN_FREE:
         if subscription.current_plan != Subscription.PLAN_FREE:
