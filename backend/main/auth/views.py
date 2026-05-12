@@ -18,6 +18,7 @@ from utils.login_log import get_client_ip
 from urllib.parse import quote
 from django.utils import timezone
 from current.throttles import AuthRateThrottle
+from django.core.validators import validate_email
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 
@@ -231,16 +232,18 @@ def send_password_reset_email(user, reset_url):
 def recover_password(request):
     email = request.data.get('email')
     source = request.data.get('source')
-    valid_email = email and isinstance(email, str) and "@" in email and "." in email.split("@")[-1]
-    if not valid_email:
-        return Response(
-            {"error": "A valid email address is required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
 
     if not email:
         return Response(
             {"error": "Email address is required"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        validate_email(email)
+    except ValidationError:
+        return Response(
+            {"error": "Invalid email address"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
