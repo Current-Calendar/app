@@ -1,5 +1,7 @@
 import graphene
 import logging
+from datetime import date
+import calendar
 from graphene_django import DjangoObjectType
 from django.contrib.gis.db.models import PointField
 from django.db.models import Q
@@ -330,11 +332,16 @@ class Query(graphene.ObjectType):
 
         # Can't filter the events in the previous query because Django does an INNER JOIN and that
         # doesn't return calendars that don't have events
-        for calendar in calendars:
-            calendar.filtered_events = Event.objects.filter(
-                Q(calendars__id=calendar.id) &
-                (Q(date__month__lte=month) & Q(end_date__month__gte=month) | Q(date__month=month) & Q(end_date=None)) &
-                (Q(date__year__lte=year) & Q(end_date__year__gte=year) | Q(date__year=year) & Q(end_date=None)),
+        for cal in calendars:
+            first_day = date(year, month, 1)
+            days_in_month = calendar.monthrange(year, month)[1]
+            last_day = date(year, month, days_in_month)
+
+            cal.filtered_events = Event.objects.filter(
+                Q(calendars__id=cal.id) & (
+                    (Q(date__lte=last_day) & Q(end_date__gte=first_day))
+                    | (Q(date__gte=first_day) & Q(date__lte=last_day) & Q(end_date=None))
+                )
             ).prefetch_related("attendances")
 
         return calendars
