@@ -11,13 +11,15 @@ import "../global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Font from "expo-font";
+import { Ionicons } from "@expo/vector-icons";
 
 import { APP_BACKGROUND, Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/hooks/use-auth";
 import AuthProvider from "../context/auth-context";
 import { TutorialProvider } from "@/context/tutorial-context";
-import { usePathname, useSegments } from "expo-router";
+import { usePathname } from "expo-router";
 import { getRouteProtection } from "../routes-config";
 
 export const unstable_settings = {
@@ -64,10 +66,10 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
+  const [fontsLoaded] = Font.useFonts(Ionicons.font);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { isAuthenticated, isLoading } = useAuth();
-  const segments = useSegments();
   const pathname = usePathname();
   const [cookiePreference, setCookiePreference] =
     useState<CookiePreference | null>(null);
@@ -147,6 +149,8 @@ function RootLayoutContent() {
       }
     }
   }, [isAuthenticated, isLoading, pathname, router]);
+
+  if (!fontsLoaded) return null;
 
   const saveCookiePreference = (value: CookiePreference) => {
     setCookiePreference(value);
