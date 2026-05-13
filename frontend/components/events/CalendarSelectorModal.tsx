@@ -24,6 +24,7 @@ type Props = {
   calendars: CalendarItem[];
   loading: boolean;
   onSelect: (calendar: CalendarItem) => void;
+  onCreateCalendar?: () => void;
 };
 
 export default function CalendarSelectorModal({
@@ -32,6 +33,7 @@ export default function CalendarSelectorModal({
   calendars,
   loading,
   onSelect,
+  onCreateCalendar,
 }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -57,9 +59,16 @@ export default function CalendarSelectorModal({
                 </Pressable>
               )}
               ListEmptyComponent={
-                <Text style={styles.helperText}>
-                  No calendars available. Create one first.
-                </Text>
+                <View style={styles.emptyWrap}>
+                  <Text style={styles.helperText}>
+                    You don't have any calendars yet.
+                  </Text>
+                  {onCreateCalendar && (
+                    <Pressable style={styles.createBtn} onPress={onCreateCalendar}>
+                      <Text style={styles.createBtnText}>Create a calendar</Text>
+                    </Pressable>
+                  )}
+                </View>
               }
             />
           )}
@@ -102,11 +111,26 @@ const styles = StyleSheet.create({
     color: TEXT,
     fontWeight: "600",
   },
+  emptyWrap: {
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 12,
+  },
   helperText: {
-    marginTop: 12,
-    fontSize: 12,
+    fontSize: 13,
     color: "#6b6b6b",
     textAlign: "center",
+  },
+  createBtn: {
+    backgroundColor: TEXT,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  createBtnText: {
+    color: WHITE,
+    fontWeight: "700",
+    fontSize: 14,
   },
   loadingWrap: {
     paddingVertical: 14,

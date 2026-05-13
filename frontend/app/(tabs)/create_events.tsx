@@ -619,7 +619,7 @@ export default function CreateEventsScreen() {
             <Pressable
               style={styles.selectorCard}
               onPress={() => setCalendarModalOpen(true)}
-              disabled={calLoading || calendars.length === 0}
+              disabled={calLoading}
             >
               <View style={styles.selectorIconWrap}>
                 <Ionicons name="calendar-outline" size={22} color={TEXT} />
@@ -866,6 +866,10 @@ export default function CreateEventsScreen() {
           setSelectedCalendar(calendar);
           setCalendarModalOpen(false);
           await loadTagsForCalendar(calendar.id);
+        }}
+        onCreateCalendar={() => {
+          setCalendarModalOpen(false);
+          router.push("/create");
         }}
       />
 
