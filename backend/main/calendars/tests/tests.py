@@ -1747,3 +1747,159 @@ class LeaveCalendarTests(APITestCase):
         # Verify user is removed from both
         self.assertFalse(self.calendar.co_owners.filter(id=self.co_owner.id).exists())
         self.assertFalse(self.calendar.viewers.filter(id=self.co_owner.id).exists())
+
+
+class UpdateCoOwnersTests(APITestCase):
+    """Tests for PATCH /api/v1/calendars/<id>/co_owners/"""
+
+    def setUp(self):
+        self.creator = User.objects.create_user(
+            username="coowners_creator",
+            email="coowners_creator@example.com",
+            password="testpass123",
+        )
+        self.co_owner_a = User.objects.create_user(
+            username="coowners_a",
+            email="coowners_a@example.com",
+            password="testpass123",
+        )
+        self.co_owner_b = User.objects.create_user(
+            username="coowners_b",
+            email="coowners_b@example.com",
+            password="testpass123",
+        )
+        self.other = User.objects.create_user(
+            username="coowners_other",
+            email="coowners_other@example.com",
+            password="testpass123",
+        )
+        self.calendar = Calendar.objects.create(
+            name="CoOwners Calendar",
+            privacy="PRIVATE",
+            creator=self.creator,
+        )
+        self.calendar.co_owners.add(self.co_owner_a, self.co_owner_b)
+        # Both co-owners are subscribed to the calendar
+        self.co_owner_a.subscribed_calendars.add(self.calendar)
+        self.co_owner_b.subscribed_calendars.add(self.calendar)
+
+    def _url(self):
+        return f"/api/v1/calendars/{self.calendar.id}/co_owners/"
+
+    def test_revoke_co_owner_removes_subscription(self):
+        """Revoking a co-owner must also remove their calendar subscription."""
+        self.client.force_authenticate(self.creator)
+
+        # Remove co_owner_a by sending only co_owner_b
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": [self.co_owner_b.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.co_owner_a.refresh_from_db()
+        self.assertFalse(
+            self.co_owner_a.subscribed_calendars.filter(id=self.calendar.id).exists(),
+            "Revoked co-owner should no longer be subscribed to the calendar.",
+        )
+        # co_owner_b keeps their subscription
+        self.co_owner_b.refresh_from_db()
+        self.assertTrue(
+            self.co_owner_b.subscribed_calendars.filter(id=self.calendar.id).exists(),
+        )
+
+    def test_revoke_all_co_owners_clears_all_subscriptions(self):
+        """Removing all co-owners must unsubscribe every one of them."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": []},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.co_owner_a.refresh_from_db()
+        self.co_owner_b.refresh_from_db()
+        self.assertFalse(
+            self.co_owner_a.subscribed_calendars.filter(id=self.calendar.id).exists(),
+        )
+        self.assertFalse(
+            self.co_owner_b.subscribed_calendars.filter(id=self.calendar.id).exists(),
+        )
+
+    def test_keep_co_owner_preserves_subscription(self):
+        """A co-owner that stays in the list must keep their subscription."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": [self.co_owner_a.id, self.co_owner_b.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.co_owner_a.refresh_from_db()
+        self.assertTrue(
+            self.co_owner_a.subscribed_calendars.filter(id=self.calendar.id).exists(),
+        )
+
+    def test_non_creator_cannot_update_co_owners(self):
+        """Only the calendar creator may call this endpoint."""
+        self.client.force_authenticate(self.co_owner_a)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": []},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unauthenticated_returns_401(self):
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": []},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invalid_payload_returns_400(self):
+        """Non-list payload must be rejected."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": "not-a-list"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_nonexistent_user_returns_400(self):
+        """Referencing a user that does not exist must be rejected."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": [999999]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_creator_id_silently_excluded(self):
+        """Including the creator's own ID must be ignored, not cause an error."""
+        self.client.force_authenticate(self.creator)
+
+        response = self.client.patch(
+            self._url(),
+            {"co_owners": [self.creator.id, self.co_owner_a.id]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(
+            self.calendar.co_owners.filter(id=self.creator.id).exists(),
+        )

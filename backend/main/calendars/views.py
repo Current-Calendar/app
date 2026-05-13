@@ -453,7 +453,10 @@ def update_co_owners(request, calendar_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    removed_co_owners = set(calendar.co_owners.all()) - set(users)
     calendar.co_owners.set(users)
+    for removed_user in removed_co_owners:
+        removed_user.subscribed_calendars.remove(calendar)
 
     return Response({
         'id': calendar.id,
@@ -508,7 +511,10 @@ def update_viewers(request, calendar_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    removed_viewers = set(calendar.viewers.all()) - set(users)
     calendar.viewers.set(users)
+    for removed_user in removed_viewers:
+        removed_user.subscribed_calendars.remove(calendar)
 
     return Response({
         'id': calendar.id,

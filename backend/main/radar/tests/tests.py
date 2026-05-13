@@ -1,4 +1,4 @@
-from datetime import date, time
+from datetime import time
 from rest_framework.test import APITestCase
 from django.core.cache import cache
 from django.utils import timezone
@@ -159,7 +159,7 @@ class RadarEventsTest(APITestCase):
         self.client.login(username="user1", password="testpass")
         own_event = Event.objects.create(
             title="My Own Event",
-            date=date.today(),
+            date=timezone.now().date(),
             time=time(16, 0),
             location=Point(-3.7038, 40.4168),
             creator=self.user,

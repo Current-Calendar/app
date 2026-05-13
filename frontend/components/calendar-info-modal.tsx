@@ -193,13 +193,14 @@ export function CalendarInfoModal({
       const updatedUsers = currentUsers.filter((u: any) => u.id !== userToRemove.id);
       const userIds = updatedUsers.map((u: any) => u.id);
 
-      await apiClient.patch(`/calendars/${localCalendar.id}/${field}/`, {
+      const response = await apiClient.patch<any>(`/calendars/${localCalendar.id}/${field}/`, {
         [field]: userIds,
       });
 
       const updatedCalendar = {
         ...localCalendar,
-        [field]: updatedUsers,
+        co_owners: Array.isArray(response?.co_owners) ? response.co_owners : (localCalendar.co_owners ?? []),
+        viewers: Array.isArray(response?.viewers) ? response.viewers : (field === 'viewers' ? updatedUsers : (localCalendar.viewers ?? [])),
       } as Calendar;
 
       setLocalCalendar(updatedCalendar);
