@@ -359,10 +359,8 @@ class Query(graphene.ObjectType):
 
         current_user = info.context.user
 
-        is_own_profile = current_user.is_authenticated and current_user == target
-        calendar_filter = {"creator": target} if is_own_profile else {"creator": target, "privacy": "PUBLIC"}
         public_calendars = Calendar.objects.filter(
-            **calendar_filter
+            creator=target, privacy="PUBLIC"
         ).select_related("creator").prefetch_related("co_owners", "viewers", "categories")
 
         private_calendars = []
