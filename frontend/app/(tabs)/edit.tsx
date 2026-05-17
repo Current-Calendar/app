@@ -378,7 +378,9 @@ export default function EditScreen() {
               }
               multiline
               numberOfLines={3}
+              maxLength={500}
             />
+            <Text style={styles.charCount}>{calendarData.description.length}/500</Text>
           </View>
 
           <View style={styles.divider} />
@@ -586,6 +588,12 @@ const styles = StyleSheet.create({
   inputMultiline: {
     height: 90,
     textAlignVertical: "top",
+  },
+  charCount: {
+    fontSize: 12,
+    color: "#999",
+    textAlign: "right",
+    marginTop: 4,
   },
   divider: {
     height: 1,
