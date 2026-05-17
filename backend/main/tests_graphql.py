@@ -633,4 +633,151 @@ class HolidaysTests(GraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         data = response.json()
+
+
+class DashboardCalendarsGraphQLTests(GraphQLTestCase):
+    """Tests for dashboardCalendars(month, year) GraphQL query."""
+
+    GRAPHQL_URL = "/graphql/"
+    client_class = APIClient
+
+    QUERY = """
+        query($month: Int!, $year: Int!) {
+            dashboardCalendars(month: $month, year: $year) {
+                id
+                name
+                events {
+                    id
+                    title
+                    date
+                }
+            }
+        }
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="dash_user", email="dash@example.com", password="pass"
+        )
+        self.other = User.objects.create_user(
+            username="dash_other", email="dash_other@example.com", password="pass"
+        )
+        self.cal = Calendar.objects.create(
+            name="My Calendar", privacy="PRIVATE", creator=self.user
+        )
+        self.event_in = Event.objects.create(
+            title="In Month",
+            date=date(2026, 5, 10),
+            time=time(10, 0),
+            creator=self.user,
+        )
+        self.event_in.calendars.add(self.cal)
+
+        self.event_out = Event.objects.create(
+            title="Out Of Month",
+            date=date(2026, 4, 15),
+            time=time(10, 0),
+            creator=self.user,
+        )
+        self.event_out.calendars.add(self.cal)
+
+        self.event_span = Event.objects.create(
+            title="Spanning Event",
+            date=date(2026, 4, 28),
+            end_date=date(2026, 5, 3),
+            time=time(10, 0),
+            creator=self.user,
+        )
+        self.event_span.calendars.add(self.cal)
+
+    def _query(self, month, year):
+        return self.query(self.QUERY, variables={"month": month, "year": year})
+
+    def test_unauthenticated_returns_empty(self):
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        self.assertEqual(data["data"]["dashboardCalendars"], [])
+
+    def test_returns_own_calendar(self):
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        names = [c["name"] for c in data["data"]["dashboardCalendars"]]
+        self.assertIn("My Calendar", names)
+
+    def test_only_events_in_requested_month_are_returned(self):
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        cal_data = next(
+            c for c in data["data"]["dashboardCalendars"] if c["name"] == "My Calendar"
+        )
+        titles = [e["title"] for e in cal_data["events"]]
+        self.assertIn("In Month", titles)
+        self.assertNotIn("Out Of Month", titles)
+
+    def test_spanning_event_appears_in_month_it_overlaps(self):
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        cal_data = next(
+            c for c in data["data"]["dashboardCalendars"] if c["name"] == "My Calendar"
+        )
+        titles = [e["title"] for e in cal_data["events"]]
+        self.assertIn("Spanning Event", titles)
+
+    def test_spanning_event_does_not_appear_when_outside_month(self):
+        self.client.force_login(self.user)
+        response = self._query(6, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        cal_data = next(
+            (c for c in data["data"]["dashboardCalendars"] if c["name"] == "My Calendar"),
+            None,
+        )
+        if cal_data:
+            titles = [e["title"] for e in cal_data["events"]]
+            self.assertNotIn("Spanning Event", titles)
+
+    def test_does_not_return_other_users_private_calendar(self):
+        Calendar.objects.create(
+            name="Other Private", privacy="PRIVATE", creator=self.other
+        )
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        names = [c["name"] for c in data["data"]["dashboardCalendars"]]
+        self.assertNotIn("Other Private", names)
+
+    def test_returns_public_calendar_of_followed_user(self):
+        followed_user = User.objects.create_user(
+            username="dash_followed", email="dash_followed@example.com", password="pass"
+        )
+        self.user.following.add(followed_user)
+        Calendar.objects.create(
+            name="Followed Public", privacy="PUBLIC", creator=followed_user
+        )
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        names = [c["name"] for c in data["data"]["dashboardCalendars"]]
+        self.assertIn("Followed Public", names)
+
+    def test_subscriber_sees_calendar(self):
+        sub_cal = Calendar.objects.create(
+            name="Subscribed Cal", privacy="PUBLIC", creator=self.other
+        )
+        sub_cal.subscribers.add(self.user)
+        self.client.force_login(self.user)
+        response = self._query(5, 2026)
+        self.assertResponseNoErrors(response)
+        data = response.json()
+        names = [c["name"] for c in data["data"]["dashboardCalendars"]]
+        self.assertIn("Subscribed Cal", names)
         self.assertEqual(len(data["data"]["holidays"]), 0)

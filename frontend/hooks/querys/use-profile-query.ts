@@ -38,6 +38,7 @@ export type ProfileQueryResult = {
   totalFollowing: number;
   isFollowing: boolean;
   publicCalendars: ProfileCalendarData[];
+  privateCalendars: ProfileCalendarData[];
   followingCalendars: ProfileCalendarData[];
 };
 
@@ -59,6 +60,15 @@ const USER_PROFILE_QUERY = `
       totalFollowing
       isFollowing
       publicCalendars {
+        id
+        name
+        description
+        cover
+        privacy
+        likesCount
+        likedByMe
+      }
+      privateCalendars {
         id
         name
         description
