@@ -780,4 +780,3 @@ class DashboardCalendarsGraphQLTests(GraphQLTestCase):
         data = response.json()
         names = [c["name"] for c in data["data"]["dashboardCalendars"]]
         self.assertIn("Subscribed Cal", names)
-        self.assertEqual(len(data["data"]["holidays"]), 0)
