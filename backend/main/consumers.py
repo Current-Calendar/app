@@ -1,6 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.core.cache import cache
 from .models import Event, ChatMessage, User
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -54,5 +55,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         event = Event.objects.get(id=event_id)
     
         msg = ChatMessage.objects.create(sender=user, event=event, text=text)
-        
+
+        cache.delete(f"event_chat_history_{event_id}")
+
         return ChatMessageSerializer(msg).data

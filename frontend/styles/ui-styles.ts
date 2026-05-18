@@ -63,7 +63,7 @@ export const navTopBarStyles = StyleSheet.create({
   profileAvatar: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#ccc',
+    backgroundColor: '#d1faff',
     borderRadius: 18,
   },
   logo: {
@@ -74,7 +74,9 @@ export const navTopBarStyles = StyleSheet.create({
 
 export const navSideBarStyles = StyleSheet.create({
   sidebar: {
+    flex: 1,
     width: 80,
+    maxWidth: 80,
     backgroundColor: '#10464d',
     paddingVertical: 20,
     justifyContent: 'space-between',
@@ -138,12 +140,16 @@ export const navSideBarStyles = StyleSheet.create({
   sidebarCenter: {
     flex: 1,
     justifyContent: 'center',
-    gap: 30,
+    alignItems: 'center',
+    gap: 24,
+    overflow: 'visible',
   },
   sidebarItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    justifyContent: 'center',
+    minHeight: 30,
+    minWidth: 30,
   },
   closeBtn: {
     marginTop: 10,

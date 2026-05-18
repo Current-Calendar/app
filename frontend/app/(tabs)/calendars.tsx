@@ -302,6 +302,13 @@ export default function CalendarScreen() {
       return;
     }
 
+    if (updatedCalendar?.id != null) {
+      setInfoCalendar((current) =>
+        current?.id === String(updatedCalendar.id)
+          ? { ...current, ...updatedCalendar }
+          : current,
+      );
+    }
     reload();
   };
 

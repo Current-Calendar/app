@@ -21,7 +21,7 @@ class User(AbstractUser):
     ]
     email = models.EmailField(unique=True)
     pronouns = models.CharField(max_length=150, blank=True)
-    bio = models.TextField(blank=True)
+    bio = models.TextField(blank=True, max_length=150)
     link = models.URLField(blank=True)
     plan = models.CharField(max_length=20, default='FREE', choices=PLAN_CHOICES)
     photo = models.ImageField(upload_to='profiles/', null=True, blank=True)
@@ -84,7 +84,7 @@ class Calendar(models.Model):
     origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='CURRENT')
     external_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
     name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, max_length=500)
     cover = models.ImageField(upload_to=calendar_cover_path, null=True, blank=True)
     privacy = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='PRIVATE')
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_calendars')
@@ -445,4 +445,4 @@ class CalendarInvitation(models.Model):
     accepted = models.BooleanField(default=None, null=True)
 
     def __str__(self):
-        return f"Invitation to {self.recipient.username} for {self.calendar.name}"
+        return f"Invitation to {self.invitee.username} for {self.calendar.name}"

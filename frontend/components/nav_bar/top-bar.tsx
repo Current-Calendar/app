@@ -8,7 +8,7 @@ import { useNotifications } from "@/hooks/use-notifications";
 
 export default function TopBar() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { unreadCount } = useNotifications();
   const goProfileOrLogin = () => {
     router.push((isAuthenticated ? "/profile" : "/login") as Href);
@@ -21,15 +21,23 @@ export default function TopBar() {
   return (
     <View style={navTopBarStyles.topBar}>
       <Pressable style={navTopBarStyles.profileContainer} onPress={goProfileOrLogin}>
-        <View style={navTopBarStyles.profileAvatar} />
+        {user?.photo ? (
+          <Image source={{ uri: user.photo }} style={navTopBarStyles.profileAvatar} />
+        ) : (
+          <View style={[navTopBarStyles.profileAvatar, { alignItems: "center", justifyContent: "center" }]}>
+            <Ionicons name="person" size={20} color="#fff" />
+          </View>
+        )}
       </Pressable>
 
       <View style={navTopBarStyles.logoContainer}>
-        <Image
-          source={require("../../assets/images/icon-current-white.png")}
-          style={navTopBarStyles.logo}
-          resizeMode="contain"
-        />
+        <Pressable onPress={() => router.push("/calendars")}>
+          <Image
+            source={require("../../assets/images/icon-current-white.png")}
+            style={navTopBarStyles.logo}
+            resizeMode="contain"
+          />
+        </Pressable>
       </View>
       <Pressable
         style={styles.bellWrap}

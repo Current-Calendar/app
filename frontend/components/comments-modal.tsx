@@ -493,6 +493,7 @@ export default function CommentsModal({
                     onChangeText={setText}
                     editable={!sending}
                     multiline={false}
+                    maxLength={500}
                   />
 
                   <Pressable onPress={handleSubmit} disabled={sending || !text.trim()}>
@@ -577,13 +578,16 @@ const styles = StyleSheet.create({
     zIndex: 40,
     width: 28,
     height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
 
   closeText: {
-    fontSize: 22,
-    color: TEXT,
+    fontSize: 16,
+    color: "#ffffff",
+    lineHeight: 18,
   },
 
   image: {

@@ -41,10 +41,13 @@ class UserType(DjangoObjectType):
     def resolve_photo(self, info):
         if not self.photo:
             return None
-        request = info.context
-        if str(self.photo).startswith('http'):
-            return str(self.photo)
-        return request.build_absolute_uri(f'/media/{self.photo}')
+        try:
+            url = self.photo.url
+            if url.startswith('http'):
+                return url
+            return info.context.build_absolute_uri(url)
+        except Exception:
+            return None
 
 class CategoryType(DjangoObjectType):
     class Meta:
@@ -267,7 +270,7 @@ class Query(graphene.ObjectType):
         user = info.context.user
         if not user.is_authenticated:
             return Calendar.objects.none()
-        return Calendar.objects.filter(creator_id=user.pk)
+        return Calendar.objects.filter(creator_id=user.pk).order_by("id")
 
     def resolve_followed_calendars(self, info):
         user = info.context.user

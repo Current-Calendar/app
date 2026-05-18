@@ -203,8 +203,9 @@ const EditProfileScreen = () => {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              maxLength={150}
             />
-            <Text style={profileStyles.editCharacterCount}>{bio.length} characters</Text>
+            <Text style={profileStyles.editCharacterCount}>{bio.length}/150</Text>
           </View>
         </View>
  

@@ -1,8 +1,9 @@
-from datetime import date, time
+from datetime import time
 from rest_framework.test import APITestCase
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import status
-from main.models import Calendar, Event
+from main.models import Calendar, Event, EventAttendance
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 
@@ -11,6 +12,7 @@ User = get_user_model()
 class RadarEventsTest(APITestCase):
 
     def setUp(self):
+        cache.clear()
         self.url = "/api/v1/radar/?lat=40.4168&lon=-3.7038&radio=10"
 
         self.user = User.objects.create_user(
@@ -157,8 +159,8 @@ class RadarEventsTest(APITestCase):
         self.client.login(username="user1", password="testpass")
         own_event = Event.objects.create(
             title="My Own Event",
-            date=date.today(),
-            time=time(16, 0),   
+            date=timezone.now().date(),
+            time=time(16, 0),
             location=Point(-3.7038, 40.4168),
             creator=self.user,
         )
@@ -170,3 +172,97 @@ class RadarEventsTest(APITestCase):
         response = self.client.get(self.url)
         titles = [e["title"] for e in response.data]
         self.assertIn("My Own Event", titles)
+
+    def test_invited_attendee_sees_private_event(self):
+        EventAttendance.objects.create(
+            user=self.user,
+            event=self.private_event,
+            status="ASSISTING",
+        )
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertIn("Event Private", titles)
+
+    def test_pending_attendee_does_not_see_private_event(self):
+        EventAttendance.objects.create(
+            user=self.user,
+            event=self.private_event,
+            status="PENDING",
+        )
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertNotIn("Event Private", titles)
+
+    def test_co_owner_sees_private_calendar_event(self):
+        self.private_calendar.co_owners.add(self.user)
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertIn("Event Private", titles)
+
+    def test_calendar_owner_sees_private_calendar_event_created_by_co_owner(self):
+        owned_calendar = Calendar.objects.create(
+            name="Owned Private",
+            privacy="PRIVATE",
+            creator=self.user,
+        )
+        owned_calendar.co_owners.add(self.other)
+
+        co_owner_event = Event.objects.create(
+            title="Event by Co-Owner",
+            date=timezone.now().date(),
+            time=time(17, 0),
+            location=Point(-3.7038, 40.4168),
+            creator=self.other,
+        )
+        co_owner_event.calendars.add(owned_calendar)
+
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertIn("Event by Co-Owner", titles)
+
+    def test_viewer_sees_private_calendar_event(self):
+        self.private_calendar.viewers.add(self.user)
+        self.client.login(username="user1", password="testpass")
+
+        response = self.client.get(self.url)
+
+        titles = [e["title"] for e in response.data]
+        self.assertIn("Event Private", titles)
+
+    def test_radar_results_are_cached(self):
+        self.client.login(username="user1", password="testpass")
+
+        first_response = self.client.get(self.url)
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        first_titles = [e["title"] for e in first_response.data]
+
+        new_event = Event.objects.create(
+            title="Brand New Event",
+            date=timezone.now().date(),
+            time=time(18, 0),
+            location=Point(-3.7038, 40.4168),
+            creator=self.other,
+        )
+        new_event.calendars.add(self.public_calendar)
+
+        cached_response = self.client.get(self.url)
+        cached_titles = [e["title"] for e in cached_response.data]
+        self.assertEqual(first_titles, cached_titles)
+        self.assertNotIn("Brand New Event", cached_titles)
+
+        cache.clear()
+        fresh_response = self.client.get(self.url)
+        fresh_titles = [e["title"] for e in fresh_response.data]
+        self.assertIn("Brand New Event", fresh_titles)

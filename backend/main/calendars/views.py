@@ -453,7 +453,10 @@ def update_co_owners(request, calendar_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    removed_co_owners = set(calendar.co_owners.all()) - set(users)
     calendar.co_owners.set(users)
+    for removed_user in removed_co_owners:
+        removed_user.subscribed_calendars.remove(calendar)
 
     return Response({
         'id': calendar.id,
@@ -508,7 +511,10 @@ def update_viewers(request, calendar_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    removed_viewers = set(calendar.viewers.all()) - set(users)
     calendar.viewers.set(users)
+    for removed_user in removed_viewers:
+        removed_user.subscribed_calendars.remove(calendar)
 
     return Response({
         'id': calendar.id,
@@ -656,7 +662,8 @@ def list_calendars(request):
             "created_at": cal.created_at,
             "likes_count": cal.likes_count,
             "liked_by_me": cal.id in liked_ids,
-            "cover": get_signed_url(request, cal.cover)
+            "cover": get_signed_url(request, cal.cover),
+            "co_owners": _serialize_co_owners(cal),
         }
         for cal in queryset
     ]
@@ -1186,7 +1193,7 @@ def invite_calendar(request: Request, calendar_id: int) -> Response:
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if invite_type == "EDIT" and calendar.co_owners.filter(id=user_to_invite.id).exists():
+    if calendar.co_owners.filter(id=user_to_invite.id).exists():
         return Response(
             {"error": "User is already a co-owner of the calendar"},
             status=status.HTTP_400_BAD_REQUEST,
