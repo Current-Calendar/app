@@ -60,7 +60,6 @@ def radar_events(request):
             | Q(calendars__creator=user)
             | Q(calendars__co_owners=user)
             | Q(calendars__viewers=user)
-            | Q(attendances__user=user, attendances__status='ASSISTING')
         )
     else:
         filtro_privacidad = Q(calendars__privacy='PUBLIC')

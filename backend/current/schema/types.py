@@ -1,10 +1,11 @@
 import graphene
 import logging
+from datetime import date
+import calendar
 from graphene_django import DjangoObjectType
 from django.contrib.gis.db.models import PointField
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from graphene_django.converter import convert_django_field
-from django.contrib.auth import get_user
 
 from main.models import Event, User, Calendar, Category
 
@@ -106,13 +107,13 @@ class CalendarType(DjangoObjectType):
         return self.creator_id
 
     def resolve_cover(self, info):
-            if not self.cover:
-                return None
-            if str(self.cover).startswith('http'):
-                return str(self.cover)
-            
-            request = info.context
-            return request.build_absolute_uri(f'/media/{self.cover}')
+        if not self.cover:
+            return None
+        if str(self.cover).startswith('http'):
+            return str(self.cover)
+
+        request = info.context
+        return request.build_absolute_uri(f'/media/{self.cover}')
 
     def resolve_events(self, info):
         return self.events.all()
@@ -208,8 +209,12 @@ class Query(graphene.ObjectType):
     all_public_calendars = graphene.List(CalendarType)
     my_calendars = graphene.List(CalendarType)
     followed_calendars = graphene.List(CalendarType)
-    dashboard_calendars = graphene.List(CalendarType)
-    
+    dashboard_calendars = graphene.List(
+        CalendarType,
+        month=graphene.Int(required=True),
+        year=graphene.Int(required=True),
+    )
+
     calendar = graphene.Field(CalendarType, id=graphene.Int(required=True))
 
     events_for_calendars = graphene.List(
@@ -255,7 +260,7 @@ class Query(graphene.ObjectType):
         q = Q(privacy="PUBLIC")
         if user.is_authenticated:
             q |= Q(creator=user) | Q(co_owners=user) | Q(viewers=user) | Q(subscribers=user)
-        
+
         return Calendar.objects.filter(q, pk=id).distinct().first()
 
     def resolve_all_public_calendars(self, info):
@@ -303,28 +308,42 @@ class Query(graphene.ObjectType):
         events = calendar.events.all()
         return filter_events(events, week, month, year)
 
-    def resolve_dashboard_calendars(self, info):
+    def resolve_dashboard_calendars(self, info, month: int, year: int):
         user = info.context.user
-        
+
         if not user.is_authenticated:
             return Calendar.objects.none()
 
         following_ids = user.following.values_list('id', flat=True)
-        
-        return (
-            Calendar.objects
-            .filter(
-                Q(creator=user) |
-                Q(co_owners=user) |
-                Q(subscribers=user) |
-                Q(viewers=user) |
-                Q(creator_id__in=following_ids, privacy="PUBLIC")
+
+        first_day = date(year, month, 1)
+        days_in_month = calendar.monthrange(year, month)[1]
+        last_day = date(year, month, days_in_month)
+
+        calendars = (
+            Calendar.objects.filter(
+                Q(creator=user)
+                | Q(co_owners=user)
+                | Q(subscribers=user)
+                | Q(viewers=user)
+                | Q(creator_id__in=following_ids, privacy="PUBLIC")
             )
             .select_related("creator")
-            .prefetch_related("co_owners", "viewers", "categories", "events")
+            .prefetch_related("co_owners", "viewers", "categories")
+            .prefetch_related(
+                Prefetch(
+                    "events",
+                    queryset=Event.objects.filter(
+                        (Q(date__lte=last_day) & Q(end_date__gte=first_day))
+                        | Q(date__gte=first_day) & Q(date__lte=last_day) & Q(end_date=None)
+                    ),
+                ),
+            )
             .distinct()
             .order_by("-created_at")
         )
+
+        return calendars
 
     def resolve_events_for_calendars(self, info, calendar_ids):
         user = info.context.user
