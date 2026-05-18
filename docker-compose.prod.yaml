@@ -9,3 +9,23 @@ services:
       context: ./backend/
       dockerfile: Dockerfile.backend.pro
     restart: unless-stopped
+
+  celery_worker_prod:
+    container_name: celery_worker_container_prod
+    env_file:
+      - .env
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.backend.pro
+    command: celery -A current worker --loglevel=info
+    restart: unless-stopped
+
+  celery_beat_prod:
+    container_name: celery_beat_container_prod
+    env_file:
+      - .env
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile.backend.pro
+    command: celery -A current beat --loglevel=info
+    restart: unless-stopped

@@ -24,7 +24,6 @@ const mascotStandard = require('../../assets/images/mascota-feliz-ojos-cerrados.
 const mascotBusiness = require('../../assets/images/mascota-traje.png');
 
 type PlanKey = 'FREE' | 'STANDARD' | 'BUSINESS';
-type BillingCycle = 'MONTHLY' | 'ANNUAL';
 
 const PLAN_INFO: Record<PlanKey, {
   label: string;
@@ -57,9 +56,10 @@ const PLAN_INFO: Record<PlanKey, {
 };
 
 export default function PaymentScreen() {
-  const { plan, billingCycle } = useLocalSearchParams<{
+  const { plan, billingCycle, downgradeAtPeriodEnd } = useLocalSearchParams<{
     plan?: string;
     billingCycle?: string;
+    downgradeAtPeriodEnd?: string;
   }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -69,6 +69,7 @@ export default function PaymentScreen() {
   const planKey: PlanKey = (plan && plan in PLAN_INFO) ? plan as PlanKey : 'FREE';
   const info = PLAN_INFO[planKey];
   const isFree = planKey === 'FREE';
+  const isScheduledFreeDowngrade = isFree && downgradeAtPeriodEnd === 'true';
 
   const [billing, setBilling] = useState<'monthly' | 'annual'>(
     billingCycle === 'ANNUAL' ? 'annual' : 'monthly'
@@ -268,7 +269,11 @@ export default function PaymentScreen() {
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#2d7a4f" />
               <Text style={styles.successText}>
-                {isFree ? 'You are now on the Free Plan!' : `Subscribed to ${info.label}!`}
+                {isScheduledFreeDowngrade
+                  ? 'Your plan will be Free after your current plan ends.'
+                  : isFree
+                    ? 'You are now on the Free Plan!'
+                    : `Subscribed to ${info.label}!`}
                 {' '}Redirecting…
               </Text>
             </View>
