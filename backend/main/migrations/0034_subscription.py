@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('main', '0032_feedback_model'),
+        ('main', '0033_limit_bio_and_calendar_description'),
     ]
 
     operations = [
