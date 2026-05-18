@@ -42,7 +42,13 @@ def radar_events(request):
     if user.is_authenticated:
         user_features = get_user_features(user)
         limit_days = user_features['max_days_difference_radar']
-        filtro_privacidad = Q(calendars__privacy='PUBLIC') | Q(creator=user)
+        filtro_privacidad = (
+            Q(calendars__privacy='PUBLIC')
+            | Q(creator=user)
+            | Q(calendars__creator=user)
+            | Q(calendars__co_owners=user)
+            | Q(calendars__viewers=user)
+        )
     else:
         filtro_privacidad = Q(calendars__privacy='PUBLIC')
 
