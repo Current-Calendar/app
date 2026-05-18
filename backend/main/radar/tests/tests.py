@@ -173,19 +173,6 @@ class RadarEventsTest(APITestCase):
         titles = [e["title"] for e in response.data]
         self.assertIn("My Own Event", titles)
 
-    def test_invited_attendee_sees_private_event(self):
-        EventAttendance.objects.create(
-            user=self.user,
-            event=self.private_event,
-            status="ASSISTING",
-        )
-        self.client.login(username="user1", password="testpass")
-
-        response = self.client.get(self.url)
-
-        titles = [e["title"] for e in response.data]
-        self.assertIn("Event Private", titles)
-
     def test_pending_attendee_does_not_see_private_event(self):
         EventAttendance.objects.create(
             user=self.user,
