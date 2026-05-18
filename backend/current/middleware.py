@@ -8,7 +8,8 @@ class CorsMiddleware(MiddlewareMixin):
         "http://localhost:8081",
         "https://current-web-pre.onrender.com",
         "https://staging.currentcalendar.es",
-        "https://testers.currentcalendar.es"
+        "https://testers.currentcalendar.es",
+        "https://currentcalendar.es"
     }
 
     def process_request(self, request):

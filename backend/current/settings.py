@@ -39,7 +39,7 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 TESTING = "test" in sys.argv
 
-ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es', 'api-testers.currentcalendar.es','127.0.0.1']
+ALLOWED_HOSTS = ['*'] if DEBUG else ['localhost', 'api-current-pre.onrender.com', 'api-staging.currentcalendar.es', 'api-testers.currentcalendar.es','127.0.0.1', 'api.currentcalendar.es']
 
 # Trust HTTPS from reverse proxies (tunnel, Render, etc.)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
