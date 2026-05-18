@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import AllowAny
 from graphene_django.views import GraphQLView
 from rest_framework import routers
 from main import views
@@ -47,8 +47,8 @@ urlpatterns = [
     path('api/v1/token/', auth_views.ThrottledTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/token/blacklist/', TokenBlacklistView.as_view(), name='token_blacklist'),
-    path('api/schema/', SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name='schema'),
-    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[IsAdminUser]), name='swagger-ui'),
+    path('api/schema/', SpectacularAPIView.as_view(permission_classes=[AllowAny]), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[AllowAny]), name='swagger-ui'),
     path("graphql/", csrf_exempt(GraphQLView.as_view(graphiql=settings.DEBUG))),
     path("api/v1/", include(api_router.urls)),
     path('admin/', admin.site.urls),
