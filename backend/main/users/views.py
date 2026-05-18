@@ -284,6 +284,12 @@ def update_plan(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    if plan != Subscription.PLAN_FREE and billing_cycle not in VALID_BILLING_CYCLES:
+        return Response(
+            {"error": f"Invalid billing_cycle. Must be one of: {', '.join(VALID_BILLING_CYCLES)}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     with transaction.atomic():
         subscription, _ = Subscription.objects.select_for_update().get_or_create(
             user=request.user,
@@ -308,23 +314,39 @@ def update_plan(request):
 
         subscription.apply_pending_plan_if_needed()
 
-    if plan == Subscription.PLAN_FREE:
-        if subscription.current_plan != Subscription.PLAN_FREE:
-            if not subscription.current_period_end:
+        if plan == Subscription.PLAN_FREE:
+            if subscription.current_plan != Subscription.PLAN_FREE:
+                if not subscription.current_period_end:
+                    return Response(
+                        {
+                            "error": "Current paid subscription does not have an end date.",
+                            "detail": "The downgrade to Free cannot be scheduled because current_period_end is missing.",
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                subscription.schedule_downgrade_to_free()
+
                 return Response(
                     {
-                        "error": "Current paid subscription does not have an end date.",
-                        "detail": "The downgrade to Free cannot be scheduled because current_period_end is missing.",
+                        "message": "The Free Plan will be applied at the end of the current billing period.",
+                        "plan": subscription.current_plan,
+                        "current_plan": subscription.current_plan,
+                        "pending_plan": subscription.pending_plan,
+                        "billing_cycle": subscription.billing_cycle,
+                        "current_period_start": subscription.current_period_start,
+                        "current_period_end": subscription.current_period_end,
+                        "cancel_at_period_end": subscription.cancel_at_period_end,
                     },
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=status.HTTP_200_OK,
                 )
 
-            subscription.schedule_downgrade_to_free()
+            subscription.activate_free_plan()
 
             return Response(
                 {
-                    "message": "The Free Plan will be applied at the end of the current billing period.",
-                    "plan": request.user.plan,
+                    "message": "Free Plan activated.",
+                    "plan": subscription.current_plan,
                     "current_plan": subscription.current_plan,
                     "pending_plan": subscription.pending_plan,
                     "billing_cycle": subscription.billing_cycle,
@@ -335,12 +357,12 @@ def update_plan(request):
                 status=status.HTTP_200_OK,
             )
 
-        subscription.activate_free_plan()
+        subscription.activate_paid_plan(plan, billing_cycle)
 
         return Response(
             {
-                "message": "Free Plan activated.",
-                "plan": request.user.plan,
+                "message": "Paid plan activated.",
+                "plan": subscription.current_plan,
                 "current_plan": subscription.current_plan,
                 "pending_plan": subscription.pending_plan,
                 "billing_cycle": subscription.billing_cycle,
@@ -350,30 +372,6 @@ def update_plan(request):
             },
             status=status.HTTP_200_OK,
         )
-
-    if billing_cycle not in VALID_BILLING_CYCLES:
-        return Response(
-            {
-                "error": f"Invalid billing_cycle. Must be one of: {', '.join(VALID_BILLING_CYCLES)}"
-            },
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    subscription.activate_paid_plan(plan, billing_cycle)
-
-    return Response(
-        {
-            "message": "Paid plan activated.",
-            "plan": request.user.plan,
-            "current_plan": subscription.current_plan,
-            "pending_plan": subscription.pending_plan,
-            "billing_cycle": subscription.billing_cycle,
-            "current_period_start": subscription.current_period_start,
-            "current_period_end": subscription.current_period_end,
-            "cancel_at_period_end": subscription.cancel_at_period_end,
-        },
-        status=status.HTTP_200_OK,
-    )
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

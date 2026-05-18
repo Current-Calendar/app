@@ -19,6 +19,8 @@ services:
       dockerfile: Dockerfile.backend.pro
     command: celery -A current worker --loglevel=info
     restart: unless-stopped
+    depends_on:
+      - api-prod
 
   celery_beat_prod:
     container_name: celery_beat_container_prod
@@ -29,3 +31,5 @@ services:
       dockerfile: Dockerfile.backend.pro
     command: celery -A current beat --loglevel=info
     restart: unless-stopped
+    depends_on:
+      - api-prod
