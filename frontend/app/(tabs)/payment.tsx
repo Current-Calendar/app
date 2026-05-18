@@ -56,7 +56,11 @@ const PLAN_INFO: Record<PlanKey, {
 };
 
 export default function PaymentScreen() {
-  const { plan } = useLocalSearchParams<{ plan: PlanKey }>();
+  const { plan, billingCycle, downgradeAtPeriodEnd } = useLocalSearchParams<{
+    plan?: string;
+    billingCycle?: string;
+    downgradeAtPeriodEnd?: string;
+  }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user, setUser } = useAuth();
@@ -65,9 +69,11 @@ export default function PaymentScreen() {
   const planKey: PlanKey = (plan && plan in PLAN_INFO) ? plan as PlanKey : 'FREE';
   const info = PLAN_INFO[planKey];
   const isFree = planKey === 'FREE';
+  const isScheduledFreeDowngrade = isFree && downgradeAtPeriodEnd === 'true';
 
-  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly');
-  const [cardNumber, setCardNumber] = useState('');
+  const [billing, setBilling] = useState<'monthly' | 'annual'>(
+    billingCycle === 'ANNUAL' ? 'annual' : 'monthly'
+  ); const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
@@ -103,9 +109,27 @@ export default function PaymentScreen() {
 
     setLoading(true);
     try {
-      const updated = await apiClient.post<{ plan: string }>(
+      const billingCycleToSend =
+        billing === 'annual' ? 'ANNUAL' : 'MONTHLY';
+
+      const requestBody = isFree
+        ? { plan: planKey }
+        : {
+          plan: planKey,
+          billing_cycle: billingCycleToSend,
+        };
+
+      const updated = await apiClient.post<{
+        plan: string;
+        current_plan?: string;
+        pending_plan?: string | null;
+        billing_cycle?: string | null;
+        current_period_start?: string | null;
+        current_period_end?: string | null;
+        cancel_at_period_end?: boolean;
+      }>(
         API_CONFIG.endpoints.updatePlan,
-        { plan: planKey },
+        requestBody,
       );
       // Reflect new plan in auth context without a full refetch
       if (user) setUser({ ...user, plan: updated.plan });
@@ -126,15 +150,15 @@ export default function PaymentScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, isMobile && styles.scrollMobile]}>
         {/* Header */}
         <View style={profileStyles.editHeaderGreen}>
-        <View style={profileStyles.editHeaderRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={profileStyles.editHeaderButton}>Back</Text>
-          </TouchableOpacity>
-          <Text style={profileStyles.editHeaderTitle}>Payment</Text>
-          <View style={{ width: 60 }} />
+          <View style={profileStyles.editHeaderRow}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={profileStyles.editHeaderButton}>Back</Text>
+            </TouchableOpacity>
+            <Text style={profileStyles.editHeaderTitle}>Payment</Text>
+            <View style={{ width: 60 }} />
+          </View>
         </View>
-      </View>
-      <View style={profileStyles.editHeaderCoral} />
+        <View style={profileStyles.editHeaderCoral} />
 
         <View style={[styles.inner, !isMobile && styles.innerDesktop]}>
           {/* Plan summary card */}
@@ -181,8 +205,9 @@ export default function PaymentScreen() {
                 placeholder="Name on card"
                 placeholderTextColor="#aaa"
                 value={cardName}
-                onChangeText={setCardName}
+                onChangeText={(value) => setCardName(value.slice(0, 50))}
                 autoCapitalize="words"
+                maxLength={50}
               />
 
               <Text style={styles.fieldLabel}>Card number</Text>
@@ -244,7 +269,11 @@ export default function PaymentScreen() {
             <View style={styles.successBox}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#2d7a4f" />
               <Text style={styles.successText}>
-                {isFree ? 'You are now on the Free Plan!' : `Subscribed to ${info.label}!`}
+                {isScheduledFreeDowngrade
+                  ? 'Your plan will be Free after your current plan ends.'
+                  : isFree
+                    ? 'You are now on the Free Plan!'
+                    : `Subscribed to ${info.label}!`}
                 {' '}Redirecting…
               </Text>
             </View>

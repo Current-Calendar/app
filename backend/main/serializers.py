@@ -3,7 +3,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from main.models import Event, EventAttendance, EventLike, EventSave
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from utils.login_log import get_client_ip
@@ -263,6 +263,12 @@ class OwnProfileSerializer(serializers.ModelSerializer):
     calendars = CalendarSummarySerializer(source="created_calendars", many=True)
     following_calendars = CalendarSummarySerializer(source="subscribed_calendars", many=True)
 
+    current_period_start = serializers.SerializerMethodField()
+    current_period_end = serializers.SerializerMethodField()
+    pending_plan = serializers.SerializerMethodField()
+    cancel_at_period_end = serializers.SerializerMethodField()
+    billing_cycle = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = (
@@ -281,6 +287,13 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "calendars",
             "following_calendars",
             "co_owned_calendars",
+
+            # Subscription data
+            "current_period_start",
+            "current_period_end",
+            "pending_plan",
+            "cancel_at_period_end",
+            "billing_cycle",
         )
         read_only_fields = (
             "id",
@@ -291,7 +304,58 @@ class OwnProfileSerializer(serializers.ModelSerializer):
             "calendars",
             "following_calendars",
             "co_owned_calendars",
+            "current_period_start",
+            "current_period_end",
+            "pending_plan",
+            "cancel_at_period_end",
+            "billing_cycle",
         )
+
+    def _get_subscription(self, obj):
+        try:
+            return obj.subscription
+        except ObjectDoesNotExist:
+            return None
+
+    def get_current_period_start(self, obj):
+        subscription = self._get_subscription(obj)
+
+        if not subscription or not subscription.current_period_start:
+            return None
+
+        return subscription.current_period_start.isoformat()
+
+    def get_current_period_end(self, obj):
+        subscription = self._get_subscription(obj)
+
+        if not subscription or not subscription.current_period_end:
+            return None
+
+        return subscription.current_period_end.isoformat()
+
+    def get_pending_plan(self, obj):
+        subscription = self._get_subscription(obj)
+
+        if not subscription:
+            return None
+
+        return subscription.pending_plan
+
+    def get_cancel_at_period_end(self, obj):
+        subscription = self._get_subscription(obj)
+
+        if not subscription:
+            return False
+
+        return subscription.cancel_at_period_end
+
+    def get_billing_cycle(self, obj):
+        subscription = self._get_subscription(obj)
+
+        if not subscription:
+            return None
+
+        return subscription.billing_cycle
 
 
 class EventPagination(PageNumberPagination):

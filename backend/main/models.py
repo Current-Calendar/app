@@ -7,7 +7,8 @@ from django.contrib.gis.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.db.models import Q
-
+from dateutil.relativedelta import relativedelta
+from django.db import transaction
 
 def calendar_cover_path(instance, filename):
     ext = os.path.splitext(filename)[1] or '.jpg'
@@ -45,6 +46,232 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+class Subscription(models.Model):
+    PLAN_FREE = 'FREE'
+    PLAN_STANDARD = 'STANDARD'
+    PLAN_BUSINESS = 'BUSINESS'
+
+    PLAN_CHOICES = [
+        (PLAN_FREE, 'Free'),
+        (PLAN_STANDARD, 'Standard'),
+        (PLAN_BUSINESS, 'Business'),
+    ]
+
+    STATUS_ACTIVE = 'ACTIVE'
+    STATUS_CANCELLED = 'CANCELLED'
+    STATUS_EXPIRED = 'EXPIRED'
+
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, 'Active'),
+        (STATUS_CANCELLED, 'Cancelled'),
+        (STATUS_EXPIRED, 'Expired'),
+    ]
+
+    BILLING_MONTHLY = 'MONTHLY'
+    BILLING_ANNUAL = 'ANNUAL'
+
+    BILLING_CYCLE_CHOICES = [
+        (BILLING_MONTHLY, 'Monthly'),
+        (BILLING_ANNUAL, 'Annual'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscription'
+    )
+
+    current_plan = models.CharField(
+        max_length=20,
+        choices=PLAN_CHOICES,
+        default=PLAN_FREE
+    )
+
+    pending_plan = models.CharField(
+        max_length=20,
+        choices=PLAN_CHOICES,
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE
+    )
+
+    billing_cycle = models.CharField(
+        max_length=20,
+        choices=BILLING_CYCLE_CHOICES,
+        null=True,
+        blank=True
+    )
+
+    current_period_start = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    current_period_end = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    cancel_at_period_end = models.BooleanField(
+        default=False
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    def calculate_period_end(self, start_date):
+        if self.billing_cycle == self.BILLING_MONTHLY:
+            return start_date + relativedelta(months=1)
+
+        if self.billing_cycle == self.BILLING_ANNUAL:
+            return start_date + relativedelta(years=1)
+
+        return None
+
+    @transaction.atomic
+    def activate_free_plan(self):
+        self.current_plan = self.PLAN_FREE
+        self.billing_cycle = None
+        self.status = self.STATUS_ACTIVE
+        self.current_period_start = None
+        self.current_period_end = None
+        self.pending_plan = None
+        self.cancel_at_period_end = False
+
+        self.user.plan = self.PLAN_FREE
+        self.user.save(update_fields=['plan'])
+
+        self.save(update_fields=[
+            'current_plan',
+            'billing_cycle',
+            'status',
+            'current_period_start',
+            'current_period_end',
+            'pending_plan',
+            'cancel_at_period_end',
+            'updated_at',
+        ])
+
+    @transaction.atomic
+    def activate_paid_plan(self, plan, billing_cycle):
+        if plan == self.PLAN_FREE:
+            self.activate_free_plan()
+            return
+
+        if plan not in [self.PLAN_STANDARD, self.PLAN_BUSINESS]:
+            raise ValueError('Invalid paid plan')
+
+        if billing_cycle not in [self.BILLING_MONTHLY, self.BILLING_ANNUAL]:
+            raise ValueError('Invalid billing cycle')
+
+        now = timezone.now()
+
+        self.current_plan = plan
+        self.billing_cycle = billing_cycle
+        self.status = self.STATUS_ACTIVE
+        self.current_period_start = now
+        self.current_period_end = self.calculate_period_end(now)
+        self.pending_plan = None
+        self.cancel_at_period_end = False
+
+        self.user.plan = plan
+        self.user.save(update_fields=['plan'])
+
+        self.save(update_fields=[
+            'current_plan',
+            'billing_cycle',
+            'status',
+            'current_period_start',
+            'current_period_end',
+            'pending_plan',
+            'cancel_at_period_end',
+            'updated_at',
+        ])
+
+    @transaction.atomic
+    def schedule_downgrade_to_free(self):
+        if self.current_plan == self.PLAN_FREE:
+            self.activate_free_plan()
+            return
+
+        self.pending_plan = self.PLAN_FREE
+        self.cancel_at_period_end = True
+
+        self.save(update_fields=[
+            'pending_plan',
+            'cancel_at_period_end',
+            'updated_at',
+        ])
+
+    @transaction.atomic
+    def apply_pending_plan_if_needed(self):
+        if (
+            self.pending_plan
+            and self.cancel_at_period_end
+            and self.current_period_end
+            and timezone.now() >= self.current_period_end
+        ):
+            self.current_plan = self.pending_plan
+            self.user.plan = self.pending_plan
+
+            self.pending_plan = None
+            self.cancel_at_period_end = False
+            self.status = self.STATUS_ACTIVE
+
+            if self.current_plan == self.PLAN_FREE:
+                self.billing_cycle = None
+                self.current_period_start = None
+                self.current_period_end = None
+
+            self.user.save(update_fields=['plan'])
+
+            self.save(update_fields=[
+                'current_plan',
+                'pending_plan',
+                'cancel_at_period_end',
+                'status',
+                'billing_cycle',
+                'current_period_start',
+                'current_period_end',
+                'updated_at',
+            ])
+
+    @transaction.atomic
+    def ensure_current_period_for_paid_plan(self):
+        if self.current_plan == self.PLAN_FREE:
+            return
+
+        if self.current_period_end:
+            return
+
+        now = timezone.now()
+
+        self.billing_cycle = self.billing_cycle or self.BILLING_MONTHLY
+        self.current_period_start = self.current_period_start or now
+        self.current_period_end = self.calculate_period_end(self.current_period_start)
+        self.status = self.STATUS_ACTIVE
+
+        self.save(update_fields=[
+            'billing_cycle',
+            'current_period_start',
+            'current_period_end',
+            'status',
+            'updated_at',
+        ])
+
+    def __str__(self):
+        return f'{self.user.username} - {self.current_plan}'
 
 class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
