@@ -56,10 +56,11 @@ const PLAN_INFO: Record<PlanKey, {
 };
 
 export default function PaymentScreen() {
-  const { plan, billingCycle, downgradeAtPeriodEnd } = useLocalSearchParams<{
+  const { plan, billingCycle, downgradeAtPeriodEnd, reactivate } = useLocalSearchParams<{
     plan?: string;
     billingCycle?: string;
     downgradeAtPeriodEnd?: string;
+    reactivate?: string;
   }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -70,10 +71,12 @@ export default function PaymentScreen() {
   const info = PLAN_INFO[planKey];
   const isFree = planKey === 'FREE';
   const isScheduledFreeDowngrade = isFree && downgradeAtPeriodEnd === 'true';
+  const isReactivating = reactivate === 'true';
 
   const [billing, setBilling] = useState<'monthly' | 'annual'>(
     billingCycle === 'ANNUAL' ? 'annual' : 'monthly'
-  ); const [cardNumber, setCardNumber] = useState('');
+  );
+  const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardName, setCardName] = useState('');
@@ -109,15 +112,15 @@ export default function PaymentScreen() {
 
     setLoading(true);
     try {
-      const billingCycleToSend =
-        billing === 'annual' ? 'ANNUAL' : 'MONTHLY';
+      const billingCycleToSend = billing === 'annual' ? 'ANNUAL' : 'MONTHLY';
 
       const requestBody = isFree
         ? { plan: planKey }
         : {
-          plan: planKey,
-          billing_cycle: billingCycleToSend,
-        };
+            plan: planKey,
+            billing_cycle: billingCycleToSend,
+            ...(isReactivating ? { reactivate: true } : {}),
+          };
 
       const updated = await apiClient.post<{
         plan: string;
@@ -127,12 +130,30 @@ export default function PaymentScreen() {
         current_period_start?: string | null;
         current_period_end?: string | null;
         cancel_at_period_end?: boolean;
+        cancelAtPeriodEnd?: boolean;
+        pending_downgrade?: boolean;
+        pendingDowngrade?: boolean;
       }>(
         API_CONFIG.endpoints.updatePlan,
         requestBody,
       );
-      // Reflect new plan in auth context without a full refetch
-      if (user) setUser({ ...user, plan: updated.plan });
+
+      // Update ALL subscription-related fields in auth context so the
+      // subscription screen reflects the new state immediately, without a reload.
+      if (user) {
+        setUser({
+          ...user,
+          plan: updated.plan,
+          ...(updated.current_period_end !== undefined && { current_period_end: updated.current_period_end }),
+          ...(updated.current_period_start !== undefined && { current_period_start: updated.current_period_start }),
+          ...(updated.cancel_at_period_end !== undefined && { cancel_at_period_end: updated.cancel_at_period_end }),
+          ...(updated.cancelAtPeriodEnd !== undefined && { cancelAtPeriodEnd: updated.cancelAtPeriodEnd }),
+          ...(updated.pending_downgrade !== undefined && { pending_downgrade: updated.pending_downgrade }),
+          ...(updated.pendingDowngrade !== undefined && { pendingDowngrade: updated.pendingDowngrade }),
+          ...(updated.billing_cycle !== undefined && { billing_cycle: updated.billing_cycle }),
+        });
+      }
+
       setSuccess(true);
       setTimeout(() => router.replace('/subscription'), 1800);
     } catch (err) {
@@ -271,9 +292,11 @@ export default function PaymentScreen() {
               <Text style={styles.successText}>
                 {isScheduledFreeDowngrade
                   ? 'Your plan will be Free after your current plan ends.'
-                  : isFree
-                    ? 'You are now on the Free Plan!'
-                    : `Subscribed to ${info.label}!`}
+                  : isReactivating
+                    ? `${info.label} reactivated successfully!`
+                    : isFree
+                      ? 'You are now on the Free Plan!'
+                      : `Subscribed to ${info.label}!`}
                 {' '}Redirecting…
               </Text>
             </View>
@@ -291,7 +314,11 @@ export default function PaymentScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.confirmText}>
-                  {isFree ? 'Start Free' : `Pay ${price}`}
+                  {isReactivating
+                    ? `Reactivate ${info.label}`
+                    : isFree
+                      ? 'Start Free'
+                      : `Pay ${price}`}
                 </Text>
               )}
             </TouchableOpacity>

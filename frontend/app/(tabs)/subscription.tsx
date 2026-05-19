@@ -25,6 +25,25 @@ const SubscriptionScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
   const currentPlan = (user?.plan ?? 'FREE') as PlanKey;
+
+  const hasPendingDowngrade = useMemo(() => {
+    return (
+      (user as any)?.cancel_at_period_end === true ||
+      (user as any)?.cancelAtPeriodEnd === true ||
+      (user as any)?.pending_downgrade === true ||
+      (user as any)?.pendingDowngrade === true
+    );
+  }, [user]);
+
+  const pendingDowngradePlan = useMemo(() => {
+    if (!hasPendingDowngrade) return null;
+    return (
+      (user as any)?.pending_downgrade_from ??
+      (user as any)?.pendingDowngradeFrom ??
+      currentPlan 
+    ) as PlanKey;
+  }, [hasPendingDowngrade, user, currentPlan]);
+
   const subscriptionEndDate = useMemo(() => {
     const rawDate =
       (user as any)?.current_period_end ??
@@ -53,6 +72,17 @@ const SubscriptionScreen = () => {
       timeZone: 'Europe/Madrid',
     }).format(subscriptionEndDate);
   }, [subscriptionEndDate]);
+
+  const shortEndDate = useMemo(() => {
+    if (!subscriptionEndDate) return null;
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: 'Europe/Madrid',
+    }).format(subscriptionEndDate);
+  }, [subscriptionEndDate]);
+
   const [showFreeDowngradeModal, setShowFreeDowngradeModal] = useState(false);
 
   const isMobile = width < 768;
@@ -60,18 +90,21 @@ const SubscriptionScreen = () => {
   const isVerySmallScreen = width < 900;
 
   const goToPayment = (plan: PlanKey, billingCycle?: BillingCycle) => {
-    const isDowngradingToFree = plan === 'FREE' && currentPlan !== 'FREE';
-
+    // Downgrade to Free: active paid plan, no pending downgrade yet → show confirmation modal
+    const isDowngradingToFree = plan === 'FREE' && currentPlan !== 'FREE' && !hasPendingDowngrade;
     if (isDowngradingToFree) {
       setShowFreeDowngradeModal(true);
       return;
     }
+
+    const isReactivating = hasPendingDowngrade && plan !== 'FREE';
 
     router.push({
       pathname: '/payment',
       params: {
         plan,
         ...(billingCycle ? { billingCycle } : {}),
+        ...(isReactivating ? { reactivate: 'true' } : {}),
       },
     });
   };
@@ -131,7 +164,9 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
-              isActive={currentPlan === 'FREE'}
+              isActive={currentPlan === 'FREE' && !hasPendingDowngrade}
+              isPendingActive={hasPendingDowngrade}
+              shortEndDate={shortEndDate}
               onSelect={goToPayment}
             />
 
@@ -157,7 +192,8 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
-              isActive={currentPlan === 'STANDARD'}
+              isActive={currentPlan === 'STANDARD' && !hasPendingDowngrade}
+              isPendingReactivate={hasPendingDowngrade && pendingDowngradePlan === 'STANDARD'}
               onSelect={goToPayment}
             />
 
@@ -182,7 +218,8 @@ const SubscriptionScreen = () => {
               isSmallScreen={isSmallScreen}
               isVerySmallScreen={isVerySmallScreen}
               isMobile={isMobile}
-              isActive={currentPlan === 'BUSINESS'}
+              isActive={currentPlan === 'BUSINESS' && !hasPendingDowngrade}
+              isPendingReactivate={hasPendingDowngrade && pendingDowngradePlan === 'BUSINESS'}
               onSelect={goToPayment}
             />
           </View>
@@ -253,6 +290,12 @@ type PlanCardProps = {
   isVerySmallScreen: boolean;
   isMobile: boolean;
   isActive: boolean;
+  /** Free plan: downgrade is scheduled, shows "After [date]" disabled */
+  isPendingActive?: boolean;
+  /** Short end-date label for the Free plan pending button */
+  shortEndDate?: string | null;
+  /** Paid plan: user is leaving this plan, shows "Reactivate" */
+  isPendingReactivate?: boolean;
   onSelect: (plan: PlanKey, billingCycle?: BillingCycle) => void;
 };
 
@@ -274,6 +317,9 @@ const PlanCard = ({
   isVerySmallScreen,
   isMobile,
   isActive,
+  isPendingActive = false,
+  shortEndDate,
+  isPendingReactivate = false,
   onSelect,
 }: PlanCardProps) => {
   const isFree = planKey === 'FREE';
@@ -286,15 +332,41 @@ const PlanCard = ({
   const annualPriceSize = isMobile ? 28 : isVerySmallScreen ? 18 : isSmallScreen ? 20 : 24;
   const baseMascotSize = isMobile ? 90 : isVerySmallScreen ? 70 : isSmallScreen ? 80 : 100;
   const mascotSize = isFree ? baseMascotSize * 2.5 : baseMascotSize;
-  const buttonLabel = isActive ? 'Subscribed' : isFree ? 'Start Free' : 'Subscribe';
-  const buttonStyle = isActive
-    ? styles.buttonSubscribed
-    : isFree
-      ? styles.buttonFree
-      : highlight
-        ? styles.buttonHighlight
-        : styles.buttonBusiness;
-  const buttonTextColor = isActive ? '#10464d' : isFree ? '#10464d' : '#ffffff';
+
+  // --- Button label & style logic ---
+  let buttonLabel: string;
+  let buttonStyle: object;
+  let buttonTextColor: string;
+  let buttonDisabled: boolean;
+
+  if (isActive) {
+    buttonLabel = 'Subscribed';
+    buttonStyle = styles.buttonSubscribed;
+    buttonTextColor = '#10464d';
+    buttonDisabled = true;
+  } else if (isPendingActive) {
+    // Free plan with a scheduled downgrade
+    buttonLabel = shortEndDate ? `After ${shortEndDate}` : 'Active after period';
+    buttonStyle = styles.buttonPendingFree;
+    buttonTextColor = '#888888';
+    buttonDisabled = true;
+  } else if (isPendingReactivate) {
+    // Paid plan the user is leaving — allow them to cancel the downgrade
+    buttonLabel = 'Reactivate';
+    buttonStyle = highlight ? styles.buttonHighlight : styles.buttonBusiness;
+    buttonTextColor = '#ffffff';
+    buttonDisabled = false;
+  } else if (isFree) {
+    buttonLabel = 'Start Free';
+    buttonStyle = styles.buttonFree;
+    buttonTextColor = '#10464d';
+    buttonDisabled = false;
+  } else {
+    buttonLabel = 'Subscribe';
+    buttonStyle = highlight ? styles.buttonHighlight : styles.buttonBusiness;
+    buttonTextColor = '#ffffff';
+    buttonDisabled = false;
+  }
 
   return (
     <View
@@ -352,15 +424,15 @@ const PlanCard = ({
             <Text style={[styles.footerText, { fontSize: titleSize - 2 }]}>{footer}</Text>
           ) : null}
 
-          {/* Pay / Select button */}
+          {/* Primary button */}
           <TouchableOpacity
             style={[styles.selectButton, buttonStyle]}
             onPress={() =>
-              !isActive &&
+              !buttonDisabled &&
               onSelect(planKey, planKey === 'FREE' ? undefined : 'MONTHLY')
             }
-            activeOpacity={isActive ? 1 : 0.82}
-            disabled={isActive}
+            activeOpacity={buttonDisabled ? 1 : 0.82}
+            disabled={buttonDisabled}
           >
             <Text style={[styles.selectButtonText, { fontSize: textSize + 1, color: buttonTextColor }]}>
               {buttonLabel}
@@ -387,12 +459,16 @@ const PlanCard = ({
 
             <TouchableOpacity
               style={[styles.selectButton, buttonStyle, { marginTop: 12 }]}
-              onPress={() => !isActive && onSelect(planKey, 'ANNUAL')}
-              activeOpacity={isActive ? 1 : 0.82}
-              disabled={isActive}
+              onPress={() => !buttonDisabled && onSelect(planKey, 'ANNUAL')}
+              activeOpacity={buttonDisabled ? 1 : 0.82}
+              disabled={buttonDisabled}
             >
               <Text style={[styles.selectButtonText, { fontSize: textSize + 1, color: buttonTextColor }]}>
-                {isActive ? 'Subscribed' : `${buttonLabel} (Annual)`}
+                {buttonDisabled
+                  ? buttonLabel
+                  : isPendingReactivate
+                    ? 'Reactivate (Annual)'
+                    : `${buttonLabel} (Annual)`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -571,6 +647,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#10464d',
   },
+  // Free plan button when a downgrade is scheduled — greyed out, disabled
+  buttonPendingFree: {
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#cccccc',
+  },
   buttonHighlight: {
     backgroundColor: '#10464d',
   },
@@ -703,4 +785,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
