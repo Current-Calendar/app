@@ -469,8 +469,12 @@ export default function MapComponent({ location, events }: { location: any; even
           <div className="radarSidebarHeader">
             <h2 className="radarSidebarTitle">Radar Nearby Events</h2>
             <p className="radarSidebarSubtitle">
-              {nearbyEvents.length} result{nearbyEvents.length === 1 ? "" : "s"} around your location
+              {nearbyEvents.length} result{nearbyEvents.length === 1 ? "" : "s"} around your location.
+              
             </p>
+            <p className="radarSidebarSubtitle">
+    <em style={{ opacity: 0.6 }}>Events may take a while to appear.</em>
+          </p>
           </div>
 
           <div className="radarSidebarList" style={compactListStyle}>
